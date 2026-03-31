@@ -34,6 +34,7 @@ from .cli_build import (  # noqa: F401
 from .cli_build import app as build_app
 from .cli_cleanup import app as cleanup_app
 from .cli_configure import app as configure_app
+from .cli_debug import app as debug_app
 from .cli_doctor import app as doctor_app
 
 # Re-export helpers for backward compatibility with tests
@@ -48,6 +49,7 @@ from .cli_submit import app as submit_app
 # Re-export API functions for tests
 from .dataplane_api import (  # noqa: F401
     cancel_operation,
+    connect_debug_container,
     get_compute_status,
     get_operation_status,
     list_operations,
@@ -125,6 +127,7 @@ job_app.command(name="start")(submit_app.registered_commands[0].callback)
 job_app.command(name="batch")(submit_app.registered_commands[1].callback)
 job_app.command(name="vscode")(submit_app.registered_commands[2].callback)
 job_app.command(name="cancel")(submit_app.registered_commands[3].callback)
+job_app.command(name="debug")(debug_app.registered_commands[0].callback)
 job_app.command(name="running")(status_app.registered_commands[0].callback)
 job_app.command(name="pending")(status_app.registered_commands[1].callback)
 job_app.command(name="done")(status_app.registered_commands[2].callback)

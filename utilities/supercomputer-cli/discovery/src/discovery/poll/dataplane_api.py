@@ -790,3 +790,45 @@ def _extract_tool_report_logs(data: ToolReport) -> list[str]:
     else:
         raw_lines = str(logs_field).splitlines()
     return [line for line in (entry.strip() for entry in raw_lines) if line]
+
+
+def connect_debug_container(
+    project_name: str,
+    operation_id: str,
+    workspace_url: str,
+    pod_index: int = 0,
+) -> dict[str, Any]:
+    """Start a debug session on a running operation.
+
+    Calls the :connect endpoint which auto-resolves the container name.
+    The service creates a Dev Tunnel on behalf of the user and provisions an
+    ephemeral debug container.
+
+    Args:
+        project_name: The project name
+        operation_id: The operation ID of a running tool execution
+        workspace_url: The workspace URL
+        pod_index: Pod index (0=leader/main, 1+=workers)
+
+    Returns:
+        Dict with tunnelId, tunnelName, debugSessionId, status, message, etc.
+    """
+    if not project_name or not operation_id:
+        msg = "project_name and operation_id required"
+        raise PollError(msg)
+    token = get_access_token()
+
+    pod_query = f"?pod={pod_index}" if pod_index != 0 else ""
+    url = (
+        f"{workspace_url.rstrip('/')}/tools/projects/{project_name}"
+        f"/operations/{operation_id}:connect{pod_query}"
+    )
+    debug(f"POST {url}")
+
+    with _create_client() as client:
+        resp = client.post(
+            url,
+            headers=AuthHeaders(Authorization=f"Bearer {token}").model_dump(),  # type: ignore
+        )
+    resp.raise_for_status()
+    return resp.json() if resp.content else {}
