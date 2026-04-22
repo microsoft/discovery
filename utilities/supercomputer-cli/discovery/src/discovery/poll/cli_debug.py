@@ -10,6 +10,7 @@ from discovery.common.logging import debug, error, info, success
 from .cli_helpers import emit_env, format_service_error, get_config_file_path, load_project_config
 from .dataplane_api import PollError, connect_debug_container
 
+
 app = typer.Typer()
 
 
@@ -51,15 +52,18 @@ def debug_command(
         raise typer.Exit(code=1) from exc
 
     tunnel_id = result.get("tunnelId", "unknown")
+    tunnel_name = result.get("tunnelName") or tunnel_id
     session_id = result.get("debugSessionId", "unknown")
     status = result.get("status", "unknown")
 
     success("Debug session created!")
+    info(f"  Tunnel name:  {tunnel_name}")
     info(f"  Tunnel ID:    {tunnel_id}")
     info(f"  Session ID:   {session_id}")
+    info(f"  Pod index:    {pod}")
     info(f"  Status:       {status}")
     info("")
     info("Connect via VS Code:")
-    info(f"  1. Open VS Code")
-    info(f"  2. Go to Remote Explorer → Tunnels")
-    info(f'  3. Find "{tunnel_id}" and click Connect')
+    info("  1. Open VS Code")
+    info("  2. Go to Remote Explorer → Tunnels")
+    info(f'  3. Find "{tunnel_name}" and click Connect')

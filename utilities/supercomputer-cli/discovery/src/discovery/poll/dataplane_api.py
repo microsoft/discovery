@@ -49,8 +49,10 @@ from discovery.poll.models.auth import AuthHeaders
 from discovery.poll.models.compute import ComputeUsageModel
 from discovery.poll.models.tool_response import (
     OperationsListResponse,
+    PodInfo,
     ToolExecutionResponse,
     ToolReport,
+    ToolRunPodsResponse,
 )
 from discovery.poll.models.tool_run import ToolRunRequest
 
@@ -832,3 +834,55 @@ def connect_debug_container(
         )
     resp.raise_for_status()
     return resp.json() if resp.content else {}
+
+
+class OperationNotFoundError(PollError):
+    """Raised when the pods preview endpoint returns 404 for an operation id."""
+
+
+def get_operation_pods(
+    project_name: str,
+    operation_id: str,
+    workspace_url: str,
+) -> list[PodInfo]:
+    """Fetch the pod list for a running tool execution (preview endpoint).
+
+    Calls ``GET /tools/projects/{project}/preview/operations/{operationId}/pods``.
+    Returns an empty list if the operation isn't Running or if the server
+    couldn't query the cluster. Raises :class:`OperationNotFoundError` if the
+    server returns 404 (unknown operation id). Other HTTP errors propagate as
+    :class:`httpx.HTTPStatusError`.
+
+    Args:
+        project_name: The project name
+        operation_id: The operation ID of the tool execution
+        workspace_url: The workspace URL
+
+    Returns:
+        List of :class:`PodInfo` entries, sorted leader/main first then workers.
+    """
+    if not project_name or not operation_id:
+        msg = "project_name and operation_id required"
+        raise PollError(msg)
+
+    token = get_access_token()
+    url = (
+        f"{workspace_url.rstrip('/')}/tools/projects/{project_name}"
+        f"/preview/operations/{operation_id}/pods"
+    )
+    debug(f"GET {url}")
+
+    with _create_client() as client:
+        resp = client.get(
+            url,
+            headers=AuthHeaders(Authorization=f"Bearer {token}").model_dump(),  # type: ignore
+        )
+
+    if resp.status_code == 404:
+        msg = f"Operation '{operation_id}' not found in project '{project_name}'"
+        raise OperationNotFoundError(msg)
+    resp.raise_for_status()
+
+    if not resp.content or not resp.content.strip():
+        return []
+    return ToolRunPodsResponse.model_validate(resp.json()).pods
