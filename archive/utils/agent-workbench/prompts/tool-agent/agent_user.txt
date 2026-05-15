@@ -1,0 +1,149 @@
+SECTION 2 - Dynamic Context (Agent-Specific):
+
+**Agent Details:**
+- Agent Name: {agent_name}
+- Agent Description: {agent_description}
+- Primary Domain: {domain}
+- Tool/Technology Focus: {tool_focus}
+- Model Endpoint: {model_endpoint}
+
+**Resource Hints:**
+{resource_hints}
+
+**Dockerfile Analysis:**
+{dockerfile_content}
+
+**API Documentation & Capabilities:**
+{api_documentation}
+
+** Additional tools and libraries:**
+CRITICAL: Parse the Dockerfile thoroughly to identify ALL available packages, libraries, and tools. List them in a compact, agent-friendly format.
+
+The agent instructions MUST include an "## Additional tools and libraries" section that comprehensively lists:
+- ALL Python packages from conda/mamba/pip install commands (e.g., numpy, pandas, scipy, matplotlib, seaborn, rdkit, openbabel, biopython, MDAnalysis, pymatgen, pyscf, scikit-learn, scikit-bio, scanpy, sympy, pyarrow, ruamel.yaml, etc.)
+- ALL CLI tools and system packages from apt-get/yum/apk commands (e.g., wget, tar, bash, obabel, etc.)
+- ALL custom tools or binaries added via COPY, ADD, or wget/curl
+- Runtime environment (Python version, conda environment, etc.)
+
+Format as a simple bulleted list by category (agents already know how to use these standard tools).
+
+EXAMPLE FORMAT (adapt based on actual Dockerfile content):
+
+```markdown
+## Additional tools and libraries
+
+**Python Packages:**
+- [list all Python packages discovered from conda/mamba/pip install commands, comma-separated]
+
+**System Tools:**
+- [list all CLI tools and system utilities discovered from apt-get/yum/apk or manual installations, comma-separated]
+
+**Runtime:**
+- [describe the Python runtime environment, e.g., Python version, conda environment]
+```
+
+Important:
+- Be EXHAUSTIVE - include every package discovered in the Dockerfile
+- Keep format compact - agents know how to use standard libraries
+- Do NOT include version numbers or usage examples - unnecessary verbosity
+- Do NOT include instructions to build or run containers
+- Replace the bracketed placeholders with ACTUAL packages found in the Dockerfile
+
+**Comprehensive Scripts API Documentation:**
+{scripts_info}
+
+**Tool Integration Requirements:**
+- Must reference the tool's capabilities and parameters from the provided API documentation
+- Include proper toolPath references for container environments based on Dockerfile
+- Specify input/output file handling conventions from comprehensive scripts API documentation
+- Integrate with the tool's command-line interface as documented in scripts analysis
+- Incorporate container environment setup and dependencies from Dockerfile
+- Use the structured API guide from scripts documentation to create accurate workflows
+
+**Domain-Specific Instruction Elements:**
+Based on domain "{domain}" and the provided technical context, include these elements:
+- Step-by-step workflow with at least 3 major phases reflecting the tool's capabilities from scripts API documentation
+- Technical parameters and configuration options from API documentation and scripts analysis
+- File format specifications and path conventions from comprehensive scripts API guide
+- Error handling and validation procedures based on implementation patterns from scripts documentation
+- Best practices and optimization tips relevant to the container environment and script workflows
+- Resource allocation and performance considerations from Dockerfile analysis
+- Integration patterns showing how different scripts work together (from scripts API documentation)
+- MANDATORY "## API Reference" markdown section documenting all available APIs, functions, and parameters
+- MANDATORY "## Usage Examples" markdown section with practical code examples and workflows
+- EXCLUDE any "Environment Setup" or "Installation" sections (environment is pre-configured)
+
+SECTION 3 - Representative Sample (Reference Template):
+
+```yaml
+{sample_content}
+```
+
+**AGENT GENERATION REQUIREMENTS:**
+
+1. **Complete YAML Structure**: Generate the EXACT structure from the sample, including:
+   - `agent:` section with name, description, model, instructions, top_p, temperature, response_format
+   - `extension:` section with events, inputs, outputs, system_prompts (MANDATORY)
+2. **Name & Description**: Use {agent_name} and {agent_description} exactly
+3. **Model Configuration**: Use {model_endpoint} with temperature: 0, top_p: 0
+4. **Comprehensive Instructions**: Create 1000+ character instructions with:
+   - The instructions must always contain the following:
+
+'
+    ## CRITICAL SUCCESS REQUIREMENTS (TOP PRIORITY):
+    1. **FINAL RESULTS STORAGE**: Generated scripts MUST ALWAYS store the *final* results in `final_results.json`
+    2. **VISUALIZATION FILE HANDLING**: When visualization(s) are created, they MUST be stored as file(s) (PNG, SVG, PDF, etc.) that external apps can open, and linked in intermediate JSON or final_results.json
+    3. **NO PLACEHOLDER FUNCTIONS**: NEVER create placeholder functions or invent/hallucinate functions that don't exist in the documented API. ONLY use functions that are explicitly documented and available in the modules or open source packages in the container. If you cannot fulfill user instructions/goals, create a script that can perform the user objective up to the point where it is possible, and explain why the remaining functionality cannot be implemented with the available modules.
+    4. **SINGLE SCRIPT REQUIREMENT**: You MUST create ONE comprehensive script that handles ALL steps of the entire workflow. NEVER create multiple separate scripts - consolidate all operations into a single, complete script file.
+    5. **USE OPEN-SOURCE PACKAGES WHEN NEEDED**: If available, use open source packages present in the container to their full extent to achieve the most accurate results.
+
+    ## Implementation Priority Hierarchy (Follow in Order):
+    1. **Pre-built Functions First**: Use the pre-defined functions listed in the API reference whenever possible to achieve the user's goal
+    2. **Combine Pre-built Functions**: Use multiple pre-defined functions in sequence if needed to complete complex workflows. Ensure output formats from one function are compatible with input requirements of the next function
+    3. **Open-Source Packages Second**: If pre-built functions cannot accomplish the task, actively use the available open-source packages (rdkit, openbabel, pandas, matplotlib, etc.) to complete the workflow
+    4. **Custom Implementation Last**: Write custom scripts ONLY when neither pre-built functions nor open-source packages can achieve the desired outcome
+    5. **Stop and Explain**: ONLY if none of the above approaches can solve the problem, then stop and explain limitations
+
+    ## General Workflow Requirements:
+    - **ANALYZE THE BEST APPROACH**: Before writing any code, analyze the user's request and determine the best approach following the priority hierarchy above
+    - **NO INVENTED FUNCTIONS**: ONLY import and use functions that are explicitly documented in the API reference below OR available in the listed open-source packages
+    - **Scientific Approximation Policy**: Implement scientifically approximate functions using open-source packages when exact solutions are not available through pre-built functions, but clearly document the approximation method and limitations
+    - **Single Script Implementation**: Create ONE comprehensive script that handles ALL steps of the entire workflow by composing available functions and packages within the single script file
+    - **Leverage Function Chaining**: Use the JSON outputs and generated files from one function as input for subsequent functions. Ensure output-to-input compatibility when chaining multiple functions
+    - **User-Provided Input Files**: Let users provide their own input files when available; only generate initial input files if not provided
+    - **DEFAULT FILE ITERATION BEHAVIOR**: Unless the user explicitly specifies working with a single file or specific files, scripts MUST iterate through ALL relevant files in the `/input/` directory
+    - Process each file individually and combine results appropriately
+    - If only one file is found, process it normally; if multiple files are found, process all of them
+    - Once the script is executed, provide a summary of the steps taken in the script and your observations along with any data assets produced as output
+    - **Data Asset Structure Handling**: Always inspect data assets first to understand their structure before processing. Use methods like pandas.read_csv().head(), json.load() with error handling, or file content preview to understand data format before writing processing logic
+'
+
+   - File handling conventions (TOOL_INPUT="/input", TOOL_OUTPUT="/output", TOOL_WORKDIR="/workdir")
+   - Specific command-line parameters and flags
+   - Error handling and logging recommendations
+   - Template variables: {{agentTeam}}, {{workflowContext}}, {{nodePoolContext}}, {{dataHandlingContext}}
+   - MANDATORY: "## API Reference" section in markdown format with available APIs and functions
+   - MANDATORY: "## Usage Examples" section in markdown format with practical examples
+   - EXCLUDE: Environment Setup information (environment is pre-configured)
+
+5. **Extension Block**: Preserve complete extension structure (CRITICAL):
+   ```yaml
+   extension:
+     events: []
+     inputs:
+       - name: agentTeam
+         type: llm
+         description: The team of agents that will be involved in the workflow.
+       - name: workflowContext
+         type: llm
+         description: The context of the computational workflow.
+     outputs: []
+     system_prompts: {}
+   ```
+
+6. **Domain Specialization**: Tailor instructions for {domain} and {tool_focus}
+
+**CRITICAL**: The output MUST include BOTH the `agent:` section AND the `extension:` section. Do not omit the extension block.
+
+**Output Format:**
+Return ONLY the final YAML document (no commentary or code fences). Must be complete, valid YAML ready for production use.

@@ -1,0 +1,10 @@
+Phonon calculation for silicon at Gamma point
+&INPUTPH
+    prefix = 'silicon'
+    outdir = './tmp'
+    fildyn = 'silicon.dyn'
+    tr2_ph = 1.0d-14
+    ldisp = .false.
+/
+
+0.0 0.0 0.0

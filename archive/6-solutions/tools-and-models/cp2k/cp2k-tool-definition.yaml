@@ -1,0 +1,65 @@
+name: cp2k
+description: >
+  CP2K atomistic simulation tool for DFT (GPW/GAPW), ab initio molecular dynamics,
+  geometry optimization, vibrational analysis, band structure, NEB, and semi-empirical
+  methods. Supports periodic and non-periodic systems with Gaussian/plane-wave approach.
+  Features OT minimizer for 2-5x faster SCF, robust D4 dispersion support,
+  MPI+OpenMP hybrid parallelization, input validation via cp2k-input-tools,
+  automatic error recovery, structured provenance capture, and AIMD trajectory
+  analysis via MDAnalysis.
+version: 2.6.0
+category: "Quantum Mechanical Simulations"
+license: GPL-2.0
+
+infra:
+  - name: worker
+    infra_type: container
+    image:
+      acr: "{name}.azurecr.io/cp2k:v21"
+    compute:
+      min_resources:
+        cpu: 2
+        ram: "8Gi"
+        gpu: 0
+        storage: "0Gi"
+      max_resources:
+        cpu: 96
+        ram: "1832Gi"
+        gpu: 0
+        storage: "0Gi"
+      infiniband: false
+      recommended_sku:
+        - Standard_D8s_v6
+        - Standard_D32s_v6
+        - Standard_D96s_v6
+        - Standard_E64ds_v5
+        - Standard_FX96mds_v2
+      pool_type: static
+      pool_size: 1
+
+code_environments:
+  - language: python3
+    command: 'python3 -u "/{{scriptName}}" > {{output_directory}}/logs.out 2>&1; _EXIT=$?; cp -r /app/workdir/* {{output_directory}}/ 2>/dev/null || true; tail -n 100 {{output_directory}}/logs.out; exit $_EXIT'
+    description: |
+      Python code environment with CP2K for atomistic simulations.
+      Use this for DFT calculations, geometry optimization, molecular dynamics,
+      vibrational analysis, band structure, and NEB calculations.
+
+      Key capabilities:
+        - DFT: PBE, BLYP, BP86, PADE via GPW/GAPW methods
+        - OT minimizer for 2-5x faster SCF on gapped systems
+        - D4 dispersion support for modern GGA workflows
+        - Geometry optimization (BFGS, CG, L-BFGS)
+        - Ab initio molecular dynamics (NVT, NPT, NVE)
+        - Vibrational analysis (finite differences)
+        - Band structure and DOS/PDOS
+        - Nudged elastic band (NEB) for transition states
+        - Semi-empirical methods (DFTB, xTB, NDDO)
+        - Periodic and non-periodic systems
+        - MPI+OpenMP hybrid parallelization
+
+      Executables: cp2k.psmp (MPI+OMP), cp2k.ssmp (OMP-only fallback)
+      Data files: GTH pseudopotentials + basis sets at $CP2K_DATA_DIR
+
+      Python libraries: numpy, scipy, matplotlib, pandas, ase, pymatgen, cp2k-input-tools, MDAnalysis
+    infra_node: worker

@@ -1,0 +1,92 @@
+/* HTML Viewer Extension Styles */
+
+.html-viewer-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 12px;
+    background: #f8f9fa;
+    border-radius: 4px;
+    font-size: 12px;
+    color: #495057;
+    user-select: none;
+}
+
+.html-viewer-header button {
+    padding: 4px 8px;
+    border: 1px solid #ced4da;
+    border-radius: 4px;
+    background: white;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-size: 14px;
+}
+
+.html-viewer-header button:hover {
+    background: #e9ecef;
+    border-color: #adb5bd;
+}
+
+.html-viewer-header button:active {
+    background: #dee2e6;
+    transform: scale(0.95);
+}
+
+.html-viewer-iframe-container {
+    flex: 1;
+    border: 1px solid #dee2e6;
+    border-radius: 4px;
+    overflow: hidden;
+    background: white;
+    position: relative;
+}
+
+.html-viewer-error {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    color: #dc3545;
+    text-align: center;
+}
+
+.html-viewer-error-icon {
+    font-size: 48px;
+    margin-bottom: 10px;
+}
+
+.html-viewer-error-title {
+    font-weight: 500;
+    margin-bottom: 5px;
+}
+
+.html-viewer-error-message {
+    font-size: 12px;
+    color: #6c757d;
+}
+
+/* Loading state */
+.html-viewer-loading {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    text-align: center;
+    color: #6c757d;
+}
+
+.html-viewer-loading::after {
+    content: '';
+    display: inline-block;
+    width: 20px;
+    height: 20px;
+    margin-left: 8px;
+    border: 2px solid #dee2e6;
+    border-top-color: #007bff;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}

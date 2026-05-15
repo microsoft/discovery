@@ -1,0 +1,93 @@
+{
+  "name": "PlannerHitlWf",
+  "states": [
+    {
+      "name": "ProjectPlanning",
+      "actors": [
+        {
+          "agent": "PlannerHitl",
+          "inputs": {
+            "userGoal": "userGoal",
+            "dataHandlingContext": "dataHandlingContext",
+            "messageId": "messageId",
+            "nodePoolContext": "nodePoolContext",
+            "agentTeam": "agentTeam",
+            "workflowContext": "workflowContext"
+          },
+          "thread": "MainThread",
+          "humanInLoopMode": "never",
+          "streamOutput": true
+        }
+      ],
+      "isFinal": false
+    },
+    {
+      "name": "Summarize",
+      "actors": [
+        {
+          "agent": "SummaryAgent",
+          "inputs": {
+            "userGoal": "userGoal",
+            "dataHandlingContext": "dataHandlingContext",
+            "messageId": "messageId",
+            "nodePoolContext": "nodePoolContext"
+          },
+          "thread": "MainThread",
+          "humanInLoopMode": "never",
+          "streamOutput": true
+        }
+      ],
+      "isFinal": false
+    },
+    {
+      "name": "End",
+      "actors": [],
+      "isFinal": true
+    }
+  ],
+  "transitions": [
+    {
+      "from": "ProjectPlanning",
+      "to": "Summarize"
+    },
+    {
+      "from": "Summarize",
+      "to": "End"
+    }
+  ],
+  "variables": [
+    {
+      "Type": "userDefined",
+      "name": "userGoal",
+      "description": "The user's project requirements and objectives for the planning workflow."
+    },
+    {
+      "Type": "userDefined",
+      "name": "workflowContext",
+      "value": "You are part of a specialized planning workflow for design and development projects. Your role is to analyze user requirements and create comprehensive project plans that will be executed by a team of 5 specialized AI agents. Create detailed, actionable plans that can be followed by the agent team to achieve the user's project goals. Consider the full capabilities of each agent when creating plans, ensuring proper sequencing and coordination of design, development, and verification tasks."
+    },
+    {
+      "Type": "thread",
+      "name": "MainThread"
+    },
+    {
+      "Type": "userDefined",
+      "name": "nodePoolContext"
+    },
+    {
+      "Type": "userDefined",
+      "name": "messageId"
+    },
+    {
+      "Type": "userDefined",
+      "name": "dataHandlingContext",
+      "value": " GUIDELINES:\n**Definitions** - **Virtual path**: System-assigned absolute namespace for passing data between steps (e.g., `/step0/app/outputs`). Not the container's real filesystem path. - **Container path**: Absolute path inside the tool container (e.g., `/app/outputs`). Used only in `outputMounts` and `inputMountPath`. - **Mapping**: Tool reads/writes container (mount) path \u00e2\u2020\u2019 system maps to virtual path. Pass **virtual path** downstream, not container path. - **Implicit extension**: If `/step0/app/outputs` exists, `/step0/app/outputs/reports` is valid (assuming 'reports' exists in the data pointed to by `/step0/app/outputs`.  Make extension explicit by giving the implicit path a description. -**No shortening virtual paths**: Implied 'shortening' is disallowed (So if you had `/step0/app/outputs/reports` as the only item in the context, shortening it to just `/step0/app/outputs` would not be valid). ---\n**Global Rules** 1. ALL paths must be ABSOLUTE. Never use relative paths. 2. Retrieve current data context before any action. 3. Preview data before updating descriptions. 4. Update virtualPath description **before** promoting to data asset (or description won't propagate). 5. Promote only final outputs for end user; intermediate results don't need promotion.\n---\n**Tool Mount Rules** - `outputMounts` = absolute container path where tool stores outputs.  Only directories are permitted. - `inputMounts` = array of `{ virtualPath: <virtual path>, inputMountPath: <absolute container path> }`. Files or directories are permitted. The mount path will be of the type (file/directory) that is keyed by the virtual path given.\n---\n**Example Flow** 1. Tool writes `report.txt` to `/app/outputs` (container path). 2. System maps to virtual path `/step0/app/outputs`. 3. Update description for `/step0/app/outputs`. 4. Next tool mounts `/step0/app/outputs` as `virtualPath`; `inputMountPath = /app/inputs`. ```json inputMounts: [ { virtualPath: /step0/app/outputs, inputMountPath: /app/inputs } ] ``` 5. Tool produces `step1/app/outputs` 6. Update description of `step1/app/outputs` 7. Promote `step1/app/outputs`"
+    },
+    {
+      "Type": "userDefined",
+      "name": "agentTeam",
+      "value": "Here are the 5 specialized agents available for project execution:\n1. **Planner** - Master coordinator and strategic planner Role: Analyzes requirements and creates comprehensive project plans Capabilities: - Breaks down complex user goals into manageable tasks - Creates step-by-step execution plans with proper sequencing - Coordinates overall project strategy and resource allocation - Identifies dependencies and potential risks\n2. **Designer** - Creative design and architecture specialist Role: Creates designs, architectures, and visual solutions Capabilities: - Transforms requirements into concrete design solutions - Creates system architectures and technical specifications - Develops user interfaces and experience designs - Produces design documentation and blueprints\n3. **Developer** - Implementation and coding expert Role: Builds, codes, and implements the actual solutions Capabilities: - Writes high-quality, efficient code in multiple languages - Implements designs according to specifications - Integrates different system components - Optimizes performance and handles technical complexity\n4. **QualityChecker** - Validation and review specialist Role: Ensures quality, correctness, and compliance Capabilities: - Reviews all work products for accuracy and completeness - Identifies errors, inconsistencies, and improvement opportunities - Validates that solutions meet original requirements - Performs quality assurance and compliance checks\n5. **TestReporter** - Verification and communication expert Role: Tests solutions and provides comprehensive reporting Capabilities: - Creates and executes comprehensive test plans - Validates functionality under various scenarios - Documents results and generates final reports - Communicates outcomes and recommendations to stakeholders\nThis streamlined team demonstrates sophisticated AI planning by showing how a Planner can coordinate multiple specialized roles, create detailed execution strategies, and ensure comprehensive coverage of all project phases from conception to completion."
+    }
+  ],
+  "startstate": "ProjectPlanning"
+}

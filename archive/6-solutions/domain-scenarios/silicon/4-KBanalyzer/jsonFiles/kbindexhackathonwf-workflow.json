@@ -1,0 +1,58 @@
+{
+  "startstate": "KbIndexHackathonWfEntryState",
+  "states": [
+    {
+      "isFinal": false,
+      "actors": [
+        {
+          "agent": "KbIndexHackathon",
+          "streamOutput": true,
+          "thread": "MainThread",
+          "inputs": {
+            "dataHandlingContext": "dataHandlingContext",
+            "nodePoolContext": "nodePoolContext",
+            "userGoal": "userGoal",
+            "messageId": "messageId"
+          },
+          "humanInLoopMode": "never"
+        }
+      ],
+      "name": "KbIndexHackathonWfEntryState"
+    },
+    {
+      "isFinal": true,
+      "actors": [],
+      "name": "End"
+    }
+  ],
+  "name": "KbIndexHackathonWf",
+  "variables": [
+    {
+      "Type": "thread",
+      "name": "MainThread"
+    },
+    {
+      "Type": "userDefined",
+      "name": "userGoal"
+    },
+    {
+      "Type": "userDefined",
+      "name": "nodePoolContext"
+    },
+    {
+      "Type": "userDefined",
+      "name": "messageId"
+    },
+    {
+      "name": "dataHandlingContext",
+      "Type": "userDefined",
+      "value": " GUIDELINES:\n**Definitions** - **Virtual path**: System-assigned absolute namespace for passing data between steps (e.g., `/step0/app/outputs`). Not the container's real filesystem path. - **Container path**: Absolute path inside the tool container (e.g., `/app/outputs`). Used only in `outputMounts` and `inputMountPath`. - **Mapping**: Tool reads/writes container (mount) path → system maps to virtual path. Pass **virtual path** downstream, not container path. - **Implicit extension**: If `/step0/app/outputs` exists, `/step0/app/outputs/reports` is valid (assuming 'reports' exists in the data pointed to by `/step0/app/outputs`.  Make extension explicit by giving the implicit path a description. -**No shortening virtual paths**: Implied 'shortening' is disallowed (So if you had `/step0/app/outputs/reports` as the only item in the context, shortening it to just `/step0/app/outputs` would not be valid). ---\n**Global Rules** 1. ALL paths must be ABSOLUTE. Never use relative paths. 2. Retrieve current data context before any action. 3. Preview data before updating descriptions. 4. Update virtualPath description **before** promoting to data asset (or description won't propagate). 5. Promote only final outputs for end user; intermediate results don't need promotion.\n---\n**Tool Mount Rules** - `outputMounts` = absolute container path where tool stores outputs.  Only directories are permitted. - `inputMounts` = array of `{ virtualPath: <virtual path>, inputMountPath: <absolute container path> }`. Files or directories are permitted. The mount path will be of the type (file/directory) that is keyed by the virtual path given.\n---\n**Example Flow** 1. Tool writes `report.txt` to `/app/outputs` (container path). 2. System maps to virtual path `/step0/app/outputs`. 3. Update description for `/step0/app/outputs`. 4. Next tool mounts `/step0/app/outputs` as `virtualPath`; `inputMountPath = /app/inputs`. ```json inputMounts: [ { virtualPath: /step0/app/outputs, inputMountPath: /app/inputs } ] ``` 5. Tool produces `step1/app/outputs` 6. Update description of `step1/app/outputs` 7. Promote `step1/app/outputs`"
+    }
+  ],
+  "transitions": [
+    {
+      "to": "End",
+      "from": "KbIndexHackathonWfEntryState"
+    }
+  ]
+}

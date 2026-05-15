@@ -1,0 +1,39 @@
+# BindingDB Agent with Pre-built SQLite Database
+#
+# This Dockerfile uses a pre-built SQLite database for fast image builds.
+# The database must be built separately before building the Docker image.
+#
+# Prerequisites:
+# 1. Download the latest database: python get_latest_bindingdb.py
+# 2. Build the database: python3 tsv_to_sqlite.py --output bindingdb.db
+# 3. Verify bindingdb.db exists in this directory
+
+FROM mcr.microsoft.com/azurelinux/base/python:3.12
+
+WORKDIR /app
+
+# Install runtime dependencies
+RUN pip3 install --no-cache-dir \
+    pandas \
+    requests
+
+# Create symlink for python command (some images expect `python`)
+RUN ln -s /usr/bin/python3 /usr/bin/python || true
+
+# Create working directories
+RUN mkdir -p /input /output /workdir
+
+# Copy pre-built SQLite database (must exist before building)
+COPY bindingdb.db /app/bindingdb.db
+
+# Copy agent code
+COPY bindingdb_utils.py /app/
+
+# Set working directory for runtime/execution
+WORKDIR /workdir
+
+# Environment variables
+ENV PYTHONPATH="/app"
+ENV BINDINGDB_DATABASE="/app/bindingdb.db"
+
+CMD ["/bin/bash"]

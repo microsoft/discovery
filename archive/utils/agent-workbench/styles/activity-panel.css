@@ -1,0 +1,566 @@
+/**
+ * Activity Panel Styles
+ * 
+ * Real-time server event streaming UI
+ */
+
+/* ==============================================
+   Activity Flyout (Right-side slide-in panel)
+   ============================================== */
+
+.activity-flyout {
+    position: fixed;
+    top: 0;
+    right: 0;
+    width: 480px;
+    height: 100vh;
+    background: rgba(30, 30, 30, 0.92);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    box-shadow: -4px 0 24px rgba(0, 0, 0, 0.4);
+    z-index: 1000;
+    transform: translateX(100%);
+    transition: transform 0.25s ease-out;
+    display: flex;
+    flex-direction: column;
+    border-left: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.activity-flyout.open {
+    transform: translateX(0);
+}
+
+.activity-flyout[aria-hidden="true"] {
+    visibility: hidden;
+}
+
+.activity-flyout[aria-hidden="false"],
+.activity-flyout.open {
+    visibility: visible;
+}
+
+.activity-flyout-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    height: 35px;
+    padding: 0 8px;
+    background: var(--ms-header-bg);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    flex-shrink: 0;
+}
+
+.activity-flyout-title {
+    font-size: 14px;
+    font-weight: 600;
+    color: #ffffff;
+}
+
+.activity-flyout-close {
+    background: transparent;
+    border: none;
+    color: #ffffff;
+    font-size: 24px;
+    cursor: pointer;
+    padding: 0 4px;
+    line-height: 1;
+    transition: color 0.15s ease;
+}
+
+.activity-flyout-close:hover {
+    color: #fff;
+}
+
+.activity-flyout .activity-panel-container {
+    flex: 1;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+}
+
+/* Semi-transparent backdrop */
+.activity-flyout-backdrop {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: rgba(0, 0, 0, 0.3);
+    z-index: 999;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.25s ease-out, visibility 0.25s ease-out;
+}
+
+.activity-flyout-backdrop.visible {
+    opacity: 1;
+    visibility: visible;
+}
+
+/* Activity Bell Button (in header) */
+.activity-bell-btn {
+    background: transparent;
+    border: none;
+    padding: 4px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 4px;
+    transition: background 0.15s ease;
+    position: relative;
+}
+
+.activity-bell-btn:hover {
+    background: rgba(255, 255, 255, 0.1);
+}
+
+.activity-bell-btn svg {
+    width: 16px;
+    height: 16px;
+}
+
+/* Subtle pulse animation when there's recent activity */
+.activity-bell-btn.has-activity::after {
+    content: '';
+    position: absolute;
+    top: 2px;
+    right: 2px;
+    width: 6px;
+    height: 6px;
+    background: #0078d4;
+    border-radius: 50%;
+    animation: pulse-dot 2s ease-in-out infinite;
+}
+
+@keyframes pulse-dot {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.6; transform: scale(1.2); }
+}
+
+/* Flyout always uses light background */
+.activity-flyout {
+    background: rgba(255, 255, 255, 0.95) !important;
+    border-left: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+.activity-flyout-header {
+    background: var(--ms-header-bg);
+    border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+.activity-flyout-title {
+    color: #ffffff;
+}
+
+.activity-flyout-close {
+    color: #ffffff;
+}
+
+.activity-flyout-close:hover {
+    color: rgba(255, 255, 255, 0.8);
+}
+
+/* Flyout-specific panel adjustments for translucent background */
+.activity-flyout .activity-panel {
+    background: transparent;
+}
+
+.activity-flyout .activity-toolbar {
+    background: transparent;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+.activity-flyout .activity-entries {
+    background: transparent;
+}
+
+.activity-flyout .activity-entry:hover {
+    background: rgba(0, 0, 0, 0.05);
+}
+
+/* Consistent dark text colors for light flyout background
+   Using !important to override inline styles set by JavaScript */
+.activity-flyout .entry-message {
+    color: #323130 !important;
+}
+
+.activity-flyout .entry-time {
+    color: #605e5c !important;
+}
+
+.activity-flyout .activity-entry.level-debug .entry-message {
+    color: #8a8886 !important;
+}
+
+.activity-flyout .activity-entry.level-info .entry-message {
+    color: #323130 !important;
+}
+
+.activity-flyout .activity-entry.level-success .entry-message {
+    color: #107c10 !important;
+}
+
+.activity-flyout .activity-entry.level-warning .entry-message {
+    color: #ff8c00 !important;
+}
+
+.activity-flyout .activity-entry.level-warning {
+    background: rgba(255, 140, 0, 0.1);
+}
+
+.activity-flyout .activity-entry.level-error .entry-message {
+    color: #d13438 !important;
+}
+
+.activity-flyout .activity-entry.level-error {
+    background: rgba(209, 52, 56, 0.1);
+}
+
+.activity-flyout .activity-entry.level-progress .entry-message {
+    color: #0078d4 !important;
+}
+
+.activity-flyout .entry-channel {
+    color: #0078d4 !important;
+}
+
+.activity-flyout .entry-details {
+    background: #f8f9fa;
+    border-left-color: #0078d4;
+}
+
+.activity-flyout .entry-details pre {
+    color: #323130 !important;
+}
+
+.activity-flyout .expand-toggle {
+    color: #605e5c !important;
+}
+
+.activity-flyout .activity-entry.expanded .expand-toggle {
+    color: #0078d4 !important;
+}
+
+/* ==============================================
+   Original Activity Panel Styles
+   ============================================== */
+
+/* Main panel container */
+.activity-panel {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    background: var(--background-color, #ffffff);
+    font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif;
+    font-size: 12px;
+}
+
+/* Toolbar */
+.activity-toolbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 6px 10px;
+    background: transparent;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+    gap: 8px;
+    flex-shrink: 0;
+}
+
+.activity-filters {
+    display: flex;
+    gap: 4px;
+    align-items: center;
+    flex-wrap: nowrap;
+    flex: 1;
+    min-width: 0;
+}
+
+.activity-channel-filter,
+.activity-level-filter {
+    padding: 4px 8px;
+    border: 1px solid var(--border-color, #d0d0d0);
+    border-radius: 4px;
+    background: var(--input-bg, #ffffff);
+    color: var(--text-color, #323130);
+    font-size: 12px;
+    cursor: pointer;
+}
+
+.activity-channel-filter:hover,
+.activity-level-filter:hover {
+    border-color: var(--accent-color, #0078d4);
+}
+
+.activity-search {
+    padding: 4px 8px;
+    border: 1px solid var(--border-color, #d0d0d0);
+    border-radius: 4px;
+    background: var(--input-bg, #ffffff);
+    color: var(--text-color, #323130);
+    font-size: 12px;
+    width: 120px;
+    min-width: 80px;
+}
+
+.activity-search:focus {
+    outline: none;
+    border-color: var(--accent-color, #0078d4);
+    box-shadow: 0 0 0 1px var(--accent-color, #0078d4);
+}
+
+.activity-actions {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    flex-shrink: 0;
+    white-space: nowrap;
+}
+
+.activity-autoscroll {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    cursor: pointer;
+    color: var(--text-secondary, #605e5c);
+    font-size: 11px;
+    white-space: nowrap;
+}
+
+.activity-autoscroll input {
+    cursor: pointer;
+}
+
+.activity-clear-btn {
+    padding: 4px 10px;
+    border: 1px solid var(--border-color, #d0d0d0);
+    border-radius: 4px;
+    background: var(--input-bg, #ffffff);
+    color: var(--text-color, #323130);
+    font-size: 11px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.activity-clear-btn:hover {
+    background: var(--hover-bg, #f0f0f0);
+    border-color: var(--accent-color, #0078d4);
+}
+
+/* Entries container */
+.activity-entries {
+    flex: 1;
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding: 4px 0;
+    background: var(--entries-bg, #fafafa);
+}
+
+/* Individual entry */
+.activity-entry {
+    display: flex;
+    flex-direction: column;
+    padding: 4px 12px;
+    border-bottom: 1px solid var(--entry-border, #f0f0f0);
+    transition: background 0.1s ease;
+}
+
+/* Entry header row */
+.entry-header {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+}
+
+.activity-entry:hover {
+    background: var(--entry-hover-bg, #f5f5f5);
+}
+
+.activity-entry.hidden {
+    display: none;
+}
+
+/* Expandable entry styles */
+.activity-entry.expandable .entry-header {
+    cursor: pointer;
+}
+
+.activity-entry.expandable:hover {
+    background: var(--expandable-hover-bg, #f0f8ff);
+}
+
+.expand-toggle,
+.expand-toggle-placeholder {
+    flex-shrink: 0;
+    width: 14px;
+    font-size: 10px;
+    color: var(--toggle-color, #666);
+    transition: transform 0.2s ease;
+    user-select: none;
+    display: inline-block;
+}
+
+.expand-toggle-placeholder {
+    visibility: hidden;
+}
+
+.activity-entry.expanded .expand-toggle {
+    color: var(--accent-color, #0078d4);
+}
+
+/* Entry details (collapsed by default) */
+.entry-details {
+    display: none;
+    margin-top: 8px;
+    margin-left: 22px;
+    padding: 8px 12px;
+    background: var(--details-bg, #f8f8f8);
+    border-left: 3px solid var(--accent-color, #0078d4);
+    border-radius: 0 4px 4px 0;
+    overflow-x: auto;
+    max-height: 300px;
+    overflow-y: auto;
+}
+
+.activity-entry.expanded .entry-details {
+    display: block;
+}
+
+.entry-details pre {
+    margin: 0;
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+    font-size: 11px;
+    line-height: 1.4;
+    color: var(--details-color, #333);
+    white-space: pre-wrap;
+    word-break: break-word;
+}
+
+/* Entry time */
+.entry-time {
+    flex-shrink: 0;
+    font-family: 'Consolas', 'Monaco', monospace;
+    font-size: 11px;
+    color: var(--time-color, #8a8886);
+    min-width: 65px;
+}
+
+/* Entry channel icon */
+.entry-channel {
+    flex-shrink: 0;
+    font-size: 12px;
+    width: 18px;
+    text-align: center;
+}
+
+/* Entry message */
+.entry-message {
+    flex: 1;
+    word-break: break-word;
+    line-height: 1.4;
+}
+
+/* Context badges */
+.context-badge {
+    flex-shrink: 0;
+    padding: 1px 6px;
+    border-radius: 10px;
+    font-size: 10px;
+    font-weight: 500;
+    margin-left: 4px;
+}
+
+.job-badge {
+    background: var(--job-badge-bg, #e6f2ff);
+    color: var(--job-badge-color, #0062cc);
+}
+
+.agent-badge {
+    background: var(--agent-badge-bg, #e8f5e9);
+    color: var(--agent-badge-color, #1b5e20);
+}
+
+.session-badge {
+    background: var(--session-badge-bg, #fff3e0);
+    color: var(--session-badge-color, #e65100);
+}
+
+/* Level-specific styles */
+.activity-entry.level-debug .entry-message {
+    color: var(--level-debug, #8a8886);
+    font-style: italic;
+}
+
+.activity-entry.level-info .entry-message {
+    color: var(--level-info, #323130);
+}
+
+.activity-entry.level-success .entry-message {
+    color: var(--level-success, #107c10);
+}
+
+.activity-entry.level-warning .entry-message {
+    color: var(--level-warning, #ca5010);
+}
+
+.activity-entry.level-warning {
+    background: var(--warning-bg, #fff8e6);
+}
+
+.activity-entry.level-error .entry-message {
+    color: var(--level-error, #d13438);
+    font-weight: 500;
+}
+
+.activity-entry.level-error {
+    background: var(--error-bg, #fde7e9);
+}
+
+.activity-entry.level-progress .entry-message {
+    color: var(--level-progress, #0078d4);
+}
+
+/* Progress bar */
+.progress-bar {
+    flex-shrink: 0;
+    width: 80px;
+    height: 6px;
+    background: var(--progress-track, #e0e0e0);
+    border-radius: 3px;
+    overflow: hidden;
+    margin-left: 8px;
+    align-self: center;
+}
+
+.progress-fill {
+    height: 100%;
+    background: var(--accent-color, #0078d4);
+    border-radius: 3px;
+    transition: width 0.3s ease;
+}
+
+/* Compact mode for smaller panels */
+.activity-panel.compact .activity-entry {
+    padding: 2px 8px;
+    font-size: 11px;
+}
+
+.activity-panel.compact .entry-time {
+    font-size: 10px;
+    min-width: 55px;
+}
+
+.activity-panel.compact .activity-toolbar {
+    padding: 4px 8px;
+}
+
+/* Empty state */
+.activity-entries:empty::after {
+    content: 'No events yet. Server activity will appear here...';
+    display: block;
+    padding: 40px 20px;
+    text-align: center;
+    color: var(--text-secondary, #605e5c);
+    font-style: italic;
+}

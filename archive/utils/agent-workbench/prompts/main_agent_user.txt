@@ -1,0 +1,79 @@
+Please generate comprehensive routing instructions for a new Entry Agent with the following specifications:
+
+🚨 **CRITICAL WORKFLOW RULE**: ONLY the router agent can transition to Summary. Specialized agents MUST ALWAYS return to the router first. Never create direct specialized-agent-to-summary transitions.
+
+**Agent Details:**
+- Agent Name: {agent_name}
+- User-Provided Description: {description}
+- Primary Domain: {description_lower}
+- Role: Router/Coordinator for the specified domain and agents
+
+**User's Vision for this Entry Agent:**
+The user has described this Entry Agent as: "{description}"
+Your instructions should reflect this specific purpose and ensure the agent fulfills the user's intended role as a router/coordinator in this domain.
+
+**Available Specialized Agents to Coordinate:**
+{agent_details}
+
+**CRITICAL: Your instructions MUST include these required sections exactly as shown:**
+
+1. **JSON Output Format Section** (REQUIRED):
+```
+Ensure you only output one response at a time in below json format
+- If you are unable to make a decision, choose {agent_name}SummarizerAgent to summarize the final response for the user.
+{{
+      "NextAgent": "<name of the next agent>", 
+      "Response": "<your comments as reason to choice made. What to perform next>"
+}}
+```
+
+2. **Template Variables Section** (REQUIRED):
+```
+Node pool context: 
+{{nodePoolContext}}
+
+Data handling context: 
+{{dataHandlingContext}}
+```
+
+**CRITICAL WORKFLOW COORDINATION RULES:**
+
+❌ **FORBIDDEN**: Specialized Agent → Summary (NEVER ALLOW THIS)
+✅ **REQUIRED**: Specialized Agent → Router → Summary (ALWAYS ENFORCE THIS)
+
+The router agent you're creating is the ONLY agent that should have the authority to transition to Summary. Specialized agents must return control to the router.
+
+**Reference Template (ScienceRouterAgent):**
+```yaml
+{template_content}
+```
+
+**Detailed Agent Descriptions:**
+Based on the available agent definitions, here are the detailed capabilities of each agent you should reference:
+
+{detailed_agent_descriptions}
+
+**Requirements:**
+1. **Follow the exact ScienceRouterAgent pattern** - study the reference template carefully
+2. **Include ALL required sections** - JSON format, template variables, routing guidelines
+3. **Align with user's description**: The user described this agent as "{description}" - ensure your instructions reflect this specific purpose and role
+4. **Create domain-specific routing logic** tailored to: {description_lower}
+5. **Describe when to use each available agent** based on their detailed capabilities shown above
+6. **Include clear routing decision guidelines** specific to the selected agents and the user's intended purpose
+7. **Maintain professional, actionable language** suitable for production use
+8. **DO NOT include YAML formatting** - generate only the instruction text content
+9. **Include the exact JSON output format** as shown in the required sections above
+10. **Include the template variables section** exactly as specified above
+11. **🚨 ENFORCE ROUTER AUTHORITY**: Make it crystal clear that specialized agents return to router, and ONLY the router transitions to Summary. This is non-negotiable.
+12. **🚨 EMPHASIZE IN INSTRUCTIONS**: Tell the router it has exclusive authority over Summary transitions and must coordinate all workflow completion decisions.
+
+**Output Format:**
+Generate only the instruction text that would go in the agent's YAML configuration under the 'instructions' field. The instructions should follow this structure:
+- Introduction explaining the agent's routing role based on the user's description: "{description}"
+- Guidelines for making routing decisions in the context of {description_lower}
+- Specific routing rules for each available agent that support the user's intended purpose
+- Agent capabilities descriptions (use the detailed descriptions provided above)
+- The required JSON output format section (exactly as specified)
+- The required template variables section (exactly as specified)
+
+Make the instructions specific to the user's description "{description}" and the available agents: {selected_agents_joined}.

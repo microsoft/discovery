@@ -1,0 +1,423 @@
+/* Extension System Styles */
+
+/* Base extension container styles */
+.extension-container {
+    width: 100%;
+    height: 100%;
+    position: relative;
+    overflow: hidden;
+    display: block;
+}
+
+/* Ensure extension containers fill modal content completely */
+.extension-modal .modal-content .extension-container {
+    width: 100% !important;
+    height: 100% !important;
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    box-sizing: border-box;
+}
+
+/* Extension loading state */
+.extension-loading {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 200px;
+    color: #666;
+}
+
+.loading-spinner {
+    width: 32px;
+    height: 32px;
+    border: 3px solid #f3f3f3;
+    border-top: 3px solid #0078d4;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin-bottom: 12px;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+.loading-message {
+    font-size: 14px;
+    font-weight: 500;
+}
+
+/* Extension error state */
+.extension-error {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 200px;
+    padding: 20px;
+    text-align: center;
+    background-color: #fff4f4;
+    border: 1px solid #ffdddd;
+    border-radius: 4px;
+    color: #d73a49;
+}
+
+.error-icon {
+    font-size: 24px;
+    margin-bottom: 8px;
+}
+
+.error-message {
+    font-weight: 600;
+    margin-bottom: 4px;
+}
+
+.error-details {
+    font-size: 12px;
+    color: #666;
+    margin-bottom: 4px;
+}
+
+.error-extension {
+    font-size: 11px;
+    color: #999;
+}
+
+/* Fallback text display */
+.fallback-text {
+    background-color: #f8f9fa;
+    border: 1px solid #e1e4e8;
+    border-radius: 6px;
+    padding: 16px;
+    font-family: 'Courier New', Courier, monospace;
+    font-size: 12px;
+    line-height: 1.45;
+    overflow: auto;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+    margin: 0;
+}
+
+/* Text content styling for JSON, CSV, and other formatted content */
+.text-content {
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+    background-color: #f8f9fa;
+    border: 1px solid #e1e4e8;
+    border-radius: 6px;
+    padding: 16px;
+    font-family: 'Courier New', Courier, monospace;
+    font-size: 12px;
+    line-height: 1.45;
+    overflow: auto;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+    margin: 0;
+}
+
+.text-content code {
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+    display: block;
+    background: transparent;
+    border: none;
+    padding: 0;
+    margin: 0;
+    font: inherit;
+    white-space: inherit;
+    word-wrap: inherit;
+    overflow-wrap: inherit;
+}
+
+/* Full view modal */
+.extension-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 1050; /* Higher than other modals */
+    display: none;
+}
+
+.extension-modal .modal-overlay {
+    position: absolute; /* Back to absolute since parent is the modal */
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+    -webkit-backdrop-filter: blur(4px);
+    backdrop-filter: blur(4px);
+    z-index: 1; /* Lower z-index within the modal */
+}
+
+.extension-modal .modal-container {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%); /* Center the modal */
+    width: 95%;
+    height: 85%;
+    max-width: 1400px; /* Increased from 1200px for wider tables */
+    max-height: 900px; /* Increased for better content visibility */
+    background-color: white;
+    border-radius: 8px;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    z-index: 2; /* Higher z-index within the modal */
+}
+
+.modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 20px;
+    border-bottom: 1px solid #e1e4e8;
+    background-color: #f6f8fa;
+    flex-shrink: 0;
+}
+
+.modal-title {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.modal-filename {
+    font-weight: 600;
+    font-size: 16px;
+    color: #24292e;
+}
+
+.modal-extension-info {
+    font-size: 12px;
+    color: #586069;
+}
+
+.modal-controls {
+    display: flex;
+    gap: 8px;
+}
+
+.modal-btn {
+    background: none;
+    border: none;
+    padding: 8px;
+    border-radius: 4px;
+    cursor: pointer;
+    color: #586069;
+    transition: all 0.2s ease;
+}
+
+.modal-btn:hover {
+    background-color: #e1e4e8;
+    color: #24292e;
+}
+
+/* Extension modal content - full screen behavior */
+.extension-modal .modal-content {
+    flex: 1;
+    overflow: auto;
+    padding: 0;
+    position: relative;
+    width: 100% !important;
+    height: 100% !important;
+    max-width: none !important; /* Allow content to use full modal width */
+    max-height: none !important; /* Allow content to use full modal height */
+    box-sizing: border-box;
+}
+
+/* File name with icon layout */
+.file-name {
+    display: flex !important;
+    align-items: center !important;
+    gap: 4px !important;
+}
+
+/* Extension icon in file header */
+.file-extension-icon {
+    width: 16px;
+    height: 16px;
+    margin-right: 2px;
+    vertical-align: middle;
+    opacity: 0.8;
+    display: inline-block;
+    flex-shrink: 0;
+}
+
+.file-extension-icon:hover {
+    opacity: 1;
+}
+
+/* Fallback for missing icons */
+.file-extension-icon[src="extensions/icon.svg"] {
+    opacity: 0.6;
+}
+
+/* Expand overlay for preview */
+.expand-overlay {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    z-index: 10;
+}
+
+.expand-btn {
+    background: rgba(0, 120, 212, 0.9);
+    color: white;
+    border: none;
+    padding: 8px;
+    border-radius: 4px;
+    cursor: pointer;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.expand-btn:hover {
+    background: rgba(16, 110, 190, 0.95);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+/* File preview container positioning */
+.file-preview {
+    position: relative;
+    min-height: 200px;
+}
+
+.file-preview.collapsed {
+    max-height: 0 !important;
+    min-height: 0 !important;
+    overflow: hidden !important;
+    padding: 0 !important;
+}
+
+.file-preview:not(.collapsed) {
+    padding: 0;
+    background: transparent;
+}
+
+/* Dynamic canvas container */
+.extension-container {
+    width: 100%;
+    height: 100%;
+    position: relative;
+    overflow: hidden;
+    min-height: 200px;
+}
+
+.extension-container canvas {
+    width: 100% !important;
+    height: 100% !important;
+    display: block;
+}
+
+/* Enhanced file actions */
+.file-actions .file-btn.extension-view {
+    background-color: #0078d4;
+    color: white;
+}
+
+.file-actions .file-btn.extension-view:hover {
+    background-color: #106ebe;
+}
+
+/* Extension info tooltip */
+.extension-tooltip {
+    position: absolute;
+    background-color: #2c3e50;
+    color: white;
+    padding: 8px 12px;
+    border-radius: 4px;
+    font-size: 12px;
+    z-index: 100;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+}
+
+.extension-tooltip.show {
+    opacity: 1;
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+    .modal-container {
+        width: 95%;
+        height: 90%;
+    }
+    
+    .modal-header {
+        padding: 12px 16px;
+    }
+    
+    .modal-filename {
+        font-size: 14px;
+    }
+    
+    .file-extension-icon {
+        width: 14px;
+        height: 14px;
+        margin-right: 4px;
+    }
+    
+    .expand-btn {
+        padding: 6px;
+    }
+    
+    .expand-overlay {
+        top: 6px;
+        right: 6px;
+    }
+}
+
+/* Dark theme support */
+@media (prefers-color-scheme: dark) {
+    .extension-error {
+        background-color: #2d1b1b;
+        border-color: #5a1f1f;
+        color: #ff6b6b;
+    }
+    
+    .fallback-text {
+        background-color: #2d3748;
+        border-color: #4a5568;
+        color: #e2e8f0;
+    }
+    
+    .modal-container {
+        background-color: #2d3748;
+        color: #e2e8f0;
+    }
+    
+    .modal-header {
+        background-color: #1a202c;
+        border-color: #4a5568;
+    }
+    
+    .modal-filename {
+        color: #e2e8f0;
+    }
+    
+    .modal-btn {
+        color: #a0aec0;
+    }
+    
+    .modal-btn:hover {
+        background-color: #4a5568;
+        color: #e2e8f0;
+    }
+}

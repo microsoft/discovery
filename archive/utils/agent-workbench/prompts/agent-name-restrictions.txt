@@ -1,0 +1,32 @@
+All resource types in the Microsoft Discovery Platform must adhere to these foundational principles: 
+  - Uniqueness: Resource names must be unique within their scope (subscription, or resource group for control plane and parent control plane resource for data plane). 
+  - Predictability: Naming patterns should be consistent, facilitating automation and integration. 
+  - Character Set: Names must only use alphanumerical characters and shouldn’t start with a number. 
+  - Case Sensitivity: Unless otherwise stated, resource names are case-insensitive but must be entered and stored in lower case for consistency. 
+  - Length Constraints: Each resource type defines its own minimum and maximum length; exceeding those constraints should show a proper error message when the validation fails. For some discovery resources where we create corresponding resources in the backend in a different RP, we add a unique GUID as suffix so that length must also be taken into consideration while defining the limits. 
+  - No Spaces or Special Characters: Resource names cannot include whitespaces and special characters except `-` (hyphen) unless stated otherwise. 
+  - No Consecutive Separators: Multiple dashes, underscores, or other separators must not appear consecutively. 
+
+* Agent 
+  - Permitted Characters: Uppercase or Lowercase letters, digits, and dashes. 
+  - Length Requirements: 3 to 24 characters. 
+  - Pattern: Must start and end with a letter; dashes can separate words. 
+  - Examples: search-agent, crawler-agent 
+
+* Workflow 
+  - Permitted Characters: Uppercase or Lowercase letters (a-z), digits (0-9), dashes (-). 
+  - Length Requirements: 3 to 24 characters. 
+  - Pattern: Must begin with a letter, can include digits, dashes, and end with a letter or digit. 
+  - Examples: chemistry-workflow, etlWorkflow
+
+* Project 
+  - Permitted Characters: Lowercase letters, digits, and hyphens. 
+  - Length Requirements: 3 to 12 characters. 
+  - Pattern: Must start with a letter; dashes can be applied as word separators. 
+  - Examples: ai-project, adhesives01
+
+* Knowledge Base
+  - Permitted Characters: Lowercase letters, digits, and hyphens.
+  - Length Requirements: 3 to 12 characters.
+  - Pattern: Must start with a letter; dashes can be applied as word separators.
+  - Examples: ai-project, adhesives01

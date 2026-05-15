@@ -1,0 +1,822 @@
+# =============================================================================
+# SPEC TO RTL (S2R) DESIGN AND VERIFICATION WORKFLOW
+# =============================================================================
+# Version: 2.0 | 12 Specialized AI Agents | Complete RTL-to-Verification Pipeline
+# 
+# Comprehensive silicon workflow orchestrating RTL design creation, validation,
+# and complete verification environment generation with advanced AI agents for
+# SystemVerilog testbench development, assertions, and PPA analysis.
+#
+# Core Capabilities:
+# - Intelligent multi-agent orchestration with RouterOSS coordination
+# - Verilog RTL generation, syntax validation (w/ iVerilog), and automated error correction
+# - Complete testbench pipeline: specs, scenarios, behavioral models, assertions
+# - SystemVerilog stimulus generation and golden reference model creation
+# - Final testbench assembly with comprehensive verification integration
+# - TSMC N3P process PPA (Power, Performance, Area) analysis
+# - Comprehensive workflow summarization and deliverable generation
+#
+# Workflow Pipeline (15 States):
+# Planning → Routing → RTL Creation → Syntax Validation → Error Correction →
+# Testbench Specs → Test Scenarios → Behavioral Models → Assertions →
+# Stimulus Generation → Golden DUT → Final Testbench → PPA Analysis → Summary → End
+#
+# Agent Ecosystem: Planner, RouterOSS, VerilogCreateNoTool, ChkSyntaxDesign,
+# FixSyntaxDesign, GenSpecs, GenScenarios, GenBehavior, GenAssertions,
+# GenStimulus, GenGoldenDUT, GenFinalTB, SNPS-PPA-TSMC-N3P, SiliconSummarizer
+# =============================================================================
+
+name: S2R
+# =============================================================================
+# WORKFLOW STATES DEFINITION
+# =============================================================================
+# The workflow is organized as a state machine with conditional transitions
+# between states based on agent decisions and event triggers.
+# =============================================================================
+
+
+states:
+# ---------------------------------------------------------------------------
+# DESIGN PLANNING STATE
+# ---------------------------------------------------------------------------
+# Initial state where requirements are analyzed and a comprehensive design
+# plan is created by the Planner agent
+# ---------------------------------------------------------------------------
+- name: DesignPlanning
+  actors:
+    - agent: Planner
+      inputs:
+        userGoal: userGoal                    # User's design requirements and objectives
+        agentTeam: agentTeam                 # Available agent descriptions and capabilities
+        workflowContext: workflowContext     # Workflow execution context and history
+        messageId: messageId                  # Unique message identifier for tracking
+        nodePoolContext: nodePoolContext     # Compute resource context
+        dataHandlingContext: dataHandlingContext  # Data lifecycle management guidelines
+      thread: MainThread
+      humanInLoopMode: onNoMessage               # Fully automated execution
+      streamOutput: true                  # No real-time output streaming        
+  isFinal: false
+
+# ---------------------------------------------------------------------------
+# DESIGN ROUTING STATE
+# ---------------------------------------------------------------------------
+# Central routing hub that analyzes the plan and current progress to determine
+# which specialized agent should handle the next task in the workflow
+# ---------------------------------------------------------------------------
+- name: DesignRouting
+  actors:
+    - agent: RouterOSS
+      inputs:
+        agentTeam: agentTeam
+        workflowContext: workflowContext
+        messageId: messageId
+        nodePoolContext: nodePoolContext
+        dataHandlingContext: dataHandlingContext
+      thread: MainThread
+      humanInLoopMode: never
+      streamOutput: true
+  isFinal: false
+
+# ---------------------------------------------------------------------------
+# DESIGN CREATION STATE
+# ---------------------------------------------------------------------------
+# Verilog RTL code generation state where the VerilogCreateNoTool agent creates
+# high-quality, synthesizable Verilog modules based on specifications
+# ---------------------------------------------------------------------------
+- name: DesignCreate
+  actors:
+    - agent: VerilogCreateNoTool
+      inputs:
+        userGoal: userGoal
+        workflowContext: workflowContext
+        messageId: messageId
+        nodePoolContext: nodePoolContext
+        dataHandlingContext: dataHandlingContext
+      outputs:
+        code: code
+      thread: MainThread
+      humanInLoopMode: never
+      streamOutput: true                  # No streaming for code generation
+  isFinal: false
+
+# ---------------------------------------------------------------------------
+# SYNTAX CHECKING STATE
+# ---------------------------------------------------------------------------
+# Validates generated Verilog code for syntax and lint errors, coding standards,
+# and structural issues using automated checking tools
+# ---------------------------------------------------------------------------
+- name: CheckSyntax
+  actors:
+    - agent: ChkSyntaxDesign
+      inputs:
+        code: code
+        workflowContext: workflowContext
+        messageId: messageId
+        nodePoolContext: nodePoolContext
+        dataHandlingContext: dataHandlingContext
+      outputs:
+        errorInfo: errorInfo
+      thread: MainThread
+      humanInLoopMode: never
+      streamOutput: true
+  isFinal: false
+
+# ---------------------------------------------------------------------------
+# SYNTAX FIXING STATE
+# ---------------------------------------------------------------------------
+# Automatically corrects identified syntax and lint errors and violations while
+# maintaining design functionality and intent
+# ---------------------------------------------------------------------------
+- name: FixSyntax
+  actors:
+    - agent: FixSyntaxDesign
+      inputs:
+        code: code
+        errorInfo: errorInfo
+        workflowContext: workflowContext
+        messageId: messageId
+        nodePoolContext: nodePoolContext
+        dataHandlingContext: dataHandlingContext
+      outputs:
+        fixedCode: fixedCode
+      thread: MainThread
+      humanInLoopMode: never
+      streamOutput: true       
+  isFinal: false
+
+# ---------------------------------------------------------------------------
+# SPECIFICATION GENERATION STATE
+# ---------------------------------------------------------------------------
+# Generates detailed testbench specifications and verification requirements
+# Outputs testbench specs for use by downstream verification agents
+# ---------------------------------------------------------------------------
+- name: GenSpecs
+  actors:
+    - agent: GenSpecs
+      inputs:
+        workflowContext: workflowContext
+        userGoal: userGoal
+        messageId: messageId
+        nodePoolContext: nodePoolContext
+        dataHandlingContext: dataHandlingContext
+      outputs:
+        tbspecs: tbSpecs                     # Testbench specifications output
+      thread: MainThread
+      humanInLoopMode: never
+      streamOutput: true
+  isFinal: false
+
+# ---------------------------------------------------------------------------
+# SCENARIO GENERATION STATE
+# ---------------------------------------------------------------------------
+# Creates comprehensive test scenarios and verification patterns based on
+# the testbench specifications from GenSpecs agent
+# ---------------------------------------------------------------------------
+- name: GenScenarios
+  actors:
+    - agent: GenScenarios
+      inputs:
+        tbSpecs: tbSpecs                     # Input from GenSpecs agent
+        messageId: messageId
+        nodePoolContext: nodePoolContext
+        dataHandlingContext: dataHandlingContext
+      outputs:
+        tbScenarios: tbScenarios             # Test scenarios output
+      thread: MainThread
+      humanInLoopMode: never
+      streamOutput: true
+  isFinal: false
+
+# ---------------------------------------------------------------------------
+# BEHAVIORAL MODEL GENERATION STATE
+# ---------------------------------------------------------------------------
+# Generates behavioral models and reference implementations for verification
+# Creates golden reference models for comparison with RTL implementation
+# ---------------------------------------------------------------------------
+- name: GenBehavior
+  actors:
+    - agent: GenBehavior
+      inputs:
+        tbSpecs: tbSpecs                     # Input from GenSpecs agent
+        tbScenarios: tbScenarios             # Input from GenScenarios agent
+        messageId: messageId
+        nodePoolContext: nodePoolContext
+        dataHandlingContext: dataHandlingContext
+      outputs:
+        tbBehavioral: tbBehavioral           # Ideal behavior modeled in Verilog
+      thread: MainThread
+      humanInLoopMode: never
+      streamOutput: true
+  isFinal: false
+
+# ---------------------------------------------------------------------------
+# ASSERTION GENERATION STATE
+# ---------------------------------------------------------------------------
+# Creates SystemVerilog assertions (SVA) for formal verification and
+# simulation-based checking of design properties and constraints
+# ---------------------------------------------------------------------------
+- name: GenAssertions
+  actors:
+    - agent: GenAssertions
+      inputs:
+        tbBehavioral: tbBehavioral
+        code: code
+        messageId: messageId
+        nodePoolContext: nodePoolContext
+        dataHandlingContext: dataHandlingContext
+      outputs:
+        assertions: assertions
+      thread: MainThread
+      humanInLoopMode: never
+      streamOutput: true
+  isFinal: false
+
+- name: GenStimulus
+  actors:
+    - agent: GenStimulus
+      inputs:
+        tbBehavioral: tbBehavioral
+        code: code
+        tbSpec: tbSpecs
+        tbScenarios: tbScenarios
+        messageId: messageId
+        nodePoolContext: nodePoolContext
+        dataHandlingContext: dataHandlingContext
+      outputs:
+        stimulus: stimulus
+      thread: MainThread
+      humanInLoopMode: never
+      streamOutput: true
+  isFinal: false
+
+- name: GenGoldenDUT
+  actors:
+    - agent: GenGoldenDUT
+      inputs:
+        tbBehavioral: tbBehavioral
+        code: code
+        tbSpec: tbSpecs
+        tbScenarios: tbScenarios
+        stimulus: stimulus
+        messageId: messageId
+        nodePoolContext: nodePoolContext
+        dataHandlingContext: dataHandlingContext
+      outputs:
+        goldenDUT: goldenDUT
+      thread: MainThread
+      humanInLoopMode: never
+      streamOutput: true
+  isFinal: false
+
+- name: GenFinalTB
+  actors:
+    - agent: GenFinalTB
+      inputs:
+        tbBehavioral: tbBehavioral
+        code: code
+        stimulus: stimulus
+        goldenDUT: goldenDUT
+        assertions: assertions
+        messageId: messageId
+        nodePoolContext: nodePoolContext
+        dataHandlingContext: dataHandlingContext
+      outputs:
+        finalTB: finalTB
+      thread: MainThread
+      humanInLoopMode: never
+      streamOutput: true
+  isFinal: false
+
+- name: EstimatePPA
+  actors:
+    - agent: SNPS-PPA-TSMC-N3P
+      inputs:
+        code: code
+        messageId: messageId
+        nodePoolContext: nodePoolContext
+        dataHandlingContext: dataHandlingContext
+      outputs:
+        ppaReport: ppaReport
+      thread: MainThread
+      humanInLoopMode: never
+      streamOutput: true
+  isFinal: false
+
+# ---------------------------------------------------------------------------
+# SUMMARY STATE
+# ---------------------------------------------------------------------------
+# Compiles comprehensive results, analysis, and deliverables from the entire
+# silicon design and verification workflow execution
+# ---------------------------------------------------------------------------
+- name: Summary
+  actors:
+    - agent: SiliconSummarizer
+      inputs:
+        fixedCode: fixedCode
+        assertions: assertions
+        finalTB: finalTB
+        userGoal: userGoal
+        messageId: messageId
+        nodePoolContext: nodePoolContext
+        dataHandlingContext: dataHandlingContext
+      thread: MainThread
+      humanInLoopMode: never
+      streamOutput: true                   # Enable streaming for final results
+  isFinal: false
+
+# ---------------------------------------------------------------------------
+# END STATE
+# ---------------------------------------------------------------------------
+# Terminal state indicating successful completion of the workflow
+# ---------------------------------------------------------------------------
+- name: End
+  actors: []
+  isFinal: true
+# ===========================================================================
+# WORKFLOW TRANSITION LOGIC
+# ===========================================================================
+# State transitions are controlled by conditional logic based on agent
+# decisions, results, and workflow progression. Each transition includes
+# conditions that determine the next state in the workflow execution.
+# ===========================================================================
+
+transitions:
+# ---------------------------------------------------------------------------
+# FROM DESIGN PLANNING TO DESIGN ROUTING
+# ---------------------------------------------------------------------------
+# Always transition from planning to routing after design plan is created
+# ---------------------------------------------------------------------------
+- from: DesignPlanning
+  to: DesignRouting
+
+# ---------------------------------------------------------------------------
+# FROM DESIGN ROUTING TO DESIGN AGENTS
+# ---------------------------------------------------------------------------
+# Router decides which design agent to invoke based on current workflow state
+# ---------------------------------------------------------------------------
+- from: DesignRouting
+  to: DesignCreate
+  event: RunVerilogCreate                 # Create new Verilog design
+- from: DesignRouting
+  to: CheckSyntax
+  event: RunLintCheck              # Check existing design syntax
+- from: DesignRouting
+  to: FixSyntax
+  event: RunLintFix              # Fix identified syntax issues
+- from: DesignRouting
+  to: GenSpecs
+  event: RunGenSpecs                     # Generate testbench specifications
+- from: DesignRouting
+  to: GenScenarios
+  event: RunGenScenarios                 # Generate test scenarios
+- from: DesignRouting
+  to: GenBehavior
+  event: RunGenBehavior                  # Generate behavioral models
+- from: DesignRouting
+  to: GenAssertions
+  event: RunGenAssertions                # Generate verification assertions
+- from: DesignRouting
+  to: GenStimulus
+  event: RunGenStimulus                  # Generate stimulus and testbench
+- from: DesignRouting
+  to: GenGoldenDUT
+  event: RunGenGoldenDUT                  # Generate golden DUT for verification
+- from: DesignRouting
+  to: GenFinalTB
+  event: RunGenFinalTB                     # Generate final testbench
+- from: DesignRouting
+  to: Summary
+  event: GenerateSummary                 # Complete workflow with summary
+- from: DesignRouting
+  to: EstimatePPA
+  event: RunPPA                           # Estimate power, performance, and area
+# ---------------------------------------------------------------------------
+# FROM DESIGN AGENTS BACK TO ROUTING
+# ---------------------------------------------------------------------------
+# All design agents return to router for next decision
+# ---------------------------------------------------------------------------
+- from: DesignCreate
+  to: DesignRouting
+- from: CheckSyntax
+  to: DesignRouting
+- from: FixSyntax
+  to: DesignRouting
+- from: GenSpecs
+  to: DesignRouting
+- from: GenScenarios
+  to: DesignRouting
+- from: GenBehavior
+  to: DesignRouting
+- from: GenAssertions
+  to: DesignRouting
+- from: GenStimulus
+  to: DesignRouting
+- from: GenGoldenDUT
+  to: DesignRouting
+- from: EstimatePPA
+  to: DesignRouting
+- from: GenFinalTB
+  to: DesignRouting
+# ---------------------------------------------------------------------------
+# FROM SUMMARY TO END
+# ---------------------------------------------------------------------------
+# Final transition to terminate the workflow
+# ---------------------------------------------------------------------------
+- from: Summary
+  to: End
+
+# =============================================================================
+# WORKFLOW VARIABLES DEFINITION
+# =============================================================================
+# Variables provide context, configuration, and data flow between workflow
+# states and agents. These include user inputs, workflow context, and
+# intermediate data products.
+# =============================================================================
+
+variables:
+  # ---------------------------------------------------------------------------
+  # USER GOAL VARIABLE
+  # ---------------------------------------------------------------------------
+  # Stores the user's design requirements and objectives that guide the entire
+  # silicon design and verification workflow execution
+  # ---------------------------------------------------------------------------
+  - Type: userDefined
+    name: userGoal
+    description: "The user's design requirements and objectives for the silicon workflow."
+
+  # ---------------------------------------------------------------------------
+  # TESTBENCH SPECIFICATIONS VARIABLE
+  # ---------------------------------------------------------------------------
+  # Stores testbench specifications generated by GenSpecs agent for use by
+  # downstream verification agents like GenScenarios
+  # ---------------------------------------------------------------------------
+  - Type: userDefined
+    name: tbSpecs
+    description: "Testbench specifications generated by the GenSpecs agent."
+  - Type: userDefined
+    name: tbScenarios
+    description: "Test scenarios generated by the GenScenarios agent."
+  - Type: userDefined
+    name: tbBehavioral
+    description: "Ideal behavior modeled in Verilog by the GenBehavior agent."
+  - Type: userDefined
+    name: assertions
+    description: "Assertions generated by the GenAssertions agent for verification."
+  - Type: userDefined
+    name: code
+    description: "The generated Verilog code."
+  - Type: userDefined
+    name: errorInfo
+    description: "Detailed information about syntax errors found."
+  - Type: userDefined
+    name: fixedCode
+    description: "The fixed Verilog code after applying syntax corrections."
+  - Type: userDefined
+    name: ppaReport
+    description: "Power, Performance, and Area report generated by SNPS-PPA-TSMC-N3P agent."
+  - Type: userDefined
+    name: stimulus
+    description: "Testbench stimulus generated by the GenStimulus agent."
+  - Type: userDefined
+    name: goldenDUT
+    description: "Golden DUT module generated by the GenGoldenDUT agent."
+  - Type: userDefined
+    name: finalTB
+    description: "Final testbench module generated by the GenFinalTB agent."
+
+  # ---------------------------------------------------------------------------
+  # WORKFLOW CONTEXT VARIABLE
+  # ---------------------------------------------------------------------------
+  # Provides agents with understanding of their role in the team and how to
+  # interpret plans and coordinate with other agents
+  # ---------------------------------------------------------------------------
+  - Type: userDefined
+    name: workflowContext
+    value: "
+      You are part of a team of AI agents working together to create and validate a silicon verilog design using various tools and techniques.
+      You will receive a plan that comes from the Planner with steps to execute in order to achieve the user goal. You should look through the plan as well as 
+      the steps that have already been executed by other agents and decide what to do next based on the plan and the steps that have already been executed.
+      - *Important* You should only perform actions which have been assigned to you in the plan.
+      - If there is a tool available that can accomplish your step, you should use it, making sure to follow the instructions to use it precisely.
+      - It is ok to not know the answer; if you don't know the answer to something or you have no tools to accomplish the given task, you may respond accordingly.
+      - *Important* you should never hallucinate any tool invocations."
+
+  # ---------------------------------------------------------------------------
+  # CORE WORKFLOW VARIABLES
+  # ---------------------------------------------------------------------------
+  # Essential variables for workflow execution and agent communication
+  # ---------------------------------------------------------------------------
+  - Type: thread
+    name: MainThread                        # Primary execution thread
+  - Type: userDefined
+    name: nodePoolContext                   # Compute resource allocation context
+  - Type: userDefined
+    name: messageId                         # Unique message tracking identifier
+                      
+  - Type: userDefined
+    name: dataHandlingContext
+    value: "STRICTLY FORBIDDEN: The following tools are ABSOLUTELY PROHIBITED and must NEVER be invoked under any circumstances:
+      - PreviewData
+      - GetDataContext  
+      - UpdateDataDescription
+      - PromoteOutputToDataAsset
+      - Any similar data manipulation functions
+      CONSEQUENCE: Using these tools will corrupt workflow execution.
+      "
+  # ---------------------------------------------------------------------------
+  # AGENT TEAM DEFINITION VARIABLE
+  # ---------------------------------------------------------------------------
+  # Comprehensive descriptions of all available agents and their capabilities
+  # Used by routing agents to make informed decisions about task delegation
+  # ---------------------------------------------------------------------------
+  - Type: userDefined
+    name: agentTeam
+    value: "Here are the agents available for the Silicon Verilog Design and Verification Workflow with detailed routing guidance:
+
+      ========================================================================
+      DESIGN CREATION AGENTS  
+      ========================================================================
+
+      1. VerilogCreateNoTool - RTL Code Generation Specialist
+        PURPOSE: Creates high-quality, synthesizable Verilog RTL code from specifications
+        WHEN TO USE:
+          - Initial Verilog RTL design from specifications
+        PREREQUISITES: Clear design specifications or requirements
+        CAPABILITIES:
+          - RTL Architecture: Designs optimal RTL structures for given specifications
+          - Module Creation: Generates complete Verilog modules with interfaces
+          - Synthesis Optimization: Creates code optimized for synthesis tools
+          - Industry Standards: Follows Verilog coding standards and best practices
+          - Design Patterns: Applies proven RTL design patterns and methodologies
+          - Knowledge Integration: Leverages available knowledge bases for enhanced design specifications and decisions
+        INPUTS REQUIRED: userGoal, design specifications, architectural requirements
+        OUTPUTS PRODUCED: Complete Verilog RTL modules with documentation
+        SUCCESS CRITERIA: Syntactically correct, synthesizable Verilog code
+        ROUTING LOGIC: Use at project start or when new code generation is required
+        DEPENDENCIES: Should be followed by ChkSyntaxDesign for validation
+
+      ========================================================================
+      SYNTAX & ERROR HANDLING AGENTS
+      ========================================================================
+
+      2. ChkSyntaxDesign - Verilog Syntax and Lint Validator
+        PURPOSE: Comprehensive syntax checking and coding standard validation
+        WHEN TO USE:
+          - Immediately after VerilogCreateNoTool generates code
+          - Immediately after FixSyntaxDesign corrects code
+          - Before proceeding to verification stages
+          - When syntax or lint errors are suspected
+        PREREQUISITES: Verilog code from agents
+        CAPABILITIES:
+          - Syntax Analysis: Deep parsing for language compliance and errors
+          - Coding Standards: Validation against industry coding standards
+          - Tool Compatibility: Checks compatibility with synthesis/simulation tools
+        INPUTS REQUIRED: Generated Verilog code, coding standards requirements
+        OUTPUTS PRODUCED: Detailed syntax and lint report with error locations and severity
+        SUCCESS CRITERIA: Clean syntax and lint validation or comprehensive error identification
+        ROUTING LOGIC: Use after code generation, route to FixSyntaxDesign if errors found
+        DEPENDENCIES: Requires code from VerilogCreateNoTool or FixSyntaxDesign
+
+      3. FixSyntaxDesign - Intelligent Code Corrector
+        PURPOSE: Automatically corrects syntax and lint errors while preserving design intent
+        WHEN TO USE:
+          - When ChkSyntaxDesign identifies syntax or lint errors
+          - For automated error correction before verification
+        PREREQUISITES: Error report from ChkSyntaxDesign
+        CAPABILITIES:
+          - Error Correction: Fixes syntax errors while maintaining functionality
+          - Code Optimization: Improves code structure during correction process
+          - Intent Preservation: Maintains original design intent and logic
+          - Standard Compliance: Ensures fixes follow coding standards
+          - Regression Prevention: Avoids introducing new errors during correction
+        INPUTS REQUIRED: Error report, original Verilog code, design intent
+        OUTPUTS PRODUCED: Corrected Verilog code with change documentation
+        SUCCESS CRITERIA: All identified syntax and lint errors corrected, functionality preserved
+        ROUTING LOGIC: Use only when syntax or lint errors exist, follow with ChkSyntaxDesign recheck
+        DEPENDENCIES: Requires error report from ChkSyntaxDesign
+
+      ========================================================================
+      VERIFICATION AGENTS
+      ========================================================================
+
+      4. GenSpecs - Verification Specification Architect
+        PURPOSE: Creates comprehensive testbench specifications and verification requirements
+        WHEN TO USE:
+          - After RTL design is syntactically correct
+          - When starting verification planning phase
+          - For complex designs requiring formal verification strategy
+        PREREQUISITES: Clean RTL code, design documentation
+        CAPABILITIES:
+          - Specification Analysis: Derives testbench requirements from RTL design
+          - Coverage Planning: Defines functional and code coverage requirements
+          - Verification Strategy: Creates comprehensive verification methodology
+          - Interface Analysis: Defines stimulus and response requirements for all interfaces
+          - Constraint Definition: Specifies design constraints and boundary conditions
+        INPUTS REQUIRED: Validated RTL code, design requirements, coverage goals
+        OUTPUTS PRODUCED: Detailed testbench specifications (tbSpecs variable)
+        SUCCESS CRITERIA: Complete verification specifications covering all design aspects
+        ROUTING LOGIC: Use when RTL is ready for verification planning
+        DEPENDENCIES: Enables GenScenarios, GenBehavior, and GenAssertions agents
+
+      5. GenScenarios - Test Scenario Designer
+        PURPOSE: Creates comprehensive test scenarios and verification patterns
+        WHEN TO USE:
+          - After GenSpecs completes testbench specifications
+          - When specific test scenarios are needed for corner cases
+          - For stimulus generation planning
+        PREREQUISITES: Testbench specifications from GenSpecs
+        CAPABILITIES:
+          - Scenario Planning: Creates diverse test scenarios covering normal and edge cases
+          - Stimulus Design: Defines input patterns and sequences for thorough testing  
+          - Corner Case Analysis: Identifies and creates tests for boundary conditions
+          - Coverage Mapping: Maps scenarios to coverage requirements
+          - Test Prioritization: Ranks scenarios by importance and risk
+        INPUTS REQUIRED: tbSpecs from GenSpecs, design constraints
+        OUTPUTS PRODUCED: Comprehensive test scenarios (tbScenarios variable)
+        SUCCESS CRITERIA: Complete scenario coverage addressing all specification requirements
+        ROUTING LOGIC: Use after GenSpecs, can run in parallel with GenBehavior
+        DEPENDENCIES: Requires tbSpecs from GenSpecs, enables GenAssertions
+
+      6. GenBehavior - Reference Model Creator
+        PURPOSE: Generates behavioral models and golden reference implementations
+        WHEN TO USE:
+          - After GenSpecs defines verification requirements
+          - When reference models are needed for comparison
+          - For creating expected behavior documentation
+        PREREQUISITES: Testbench specifications and test scenarios
+        CAPABILITIES:
+          - Behavioral Modeling: Creates high-level behavioral representations
+          - Reference Implementation: Develops golden reference models
+          - Expected Response: Defines expected outputs for given inputs
+          - Algorithmic Modeling: Implements design algorithms at behavioral level
+        INPUTS REQUIRED: tbSpecs from GenSpecs, tbScenarios from GenScenarios
+        OUTPUTS PRODUCED: Behavioral reference models (tbBehavioral variable)
+        SUCCESS CRITERIA: Accurate behavioral models matching design intent
+        ROUTING LOGIC: Use after GenSpecs and GenScenarios
+        DEPENDENCIES: Requires outputs from GenSpecs and GenScenarios
+
+      7. GenAssertions - Formal Verification Specialist
+        PURPOSE: Creates SystemVerilog assertions for formal and dynamic verification
+        WHEN TO USE:
+          - After behavioral models are created
+          - When formal properties need to be defined
+          - For assertion-based verification implementation
+        PREREQUISITES: Behavioral models and design specifications
+        CAPABILITIES:
+          - Property Definition: Creates formal properties from behavioral specifications
+          - SVA Development: Develops SystemVerilog Assertions for verification
+          - Temporal Logic: Implements complex temporal relationships and constraints
+          - Protocol Checking: Creates assertions for interface and protocol compliance
+        INPUTS REQUIRED: tbBehavioral from GenBehavior, design properties
+        OUTPUTS PRODUCED: SystemVerilog assertions (assertions variable)
+        SUCCESS CRITERIA: Complete assertion suite covering all critical design properties
+        ROUTING LOGIC: Use after GenBehavior completes, typically near end of verification setup
+        DEPENDENCIES: Requires tbBehavioral from GenBehavior
+
+      8. GenStimulus - Testbench Stimulus Generator
+        PURPOSE: Generates comprehensive testbench stimulus and input patterns
+        WHEN TO USE:
+          - After test scenarios are defined
+          - When detailed stimulus is needed for simulation
+          - For automated stimulus generation based on scenarios
+        PREREQUISITES: Test scenarios from GenScenarios
+        CAPABILITIES:
+          - Stimulus Creation: Generates input patterns based on test scenarios
+          - Randomization: Implements constrained random stimulus generation
+          - Sequence Generation: Creates complex input sequences for thorough testing
+          - Coverage-Driven Stimulus: Aligns stimulus generation with coverage goals
+          - Interface Handling: Manages multi-interface stimulus generation
+        INPUTS REQUIRED: tbScenarios, tbSpec, code, tbBehavioral, design interface definitions
+        OUTPUTS PRODUCED: Testbench stimulus
+        SUCCESS CRITERIA: Comprehensive stimulus covering all test scenarios
+        ROUTING LOGIC: Use after GenScenarios and GenBehavior
+        DEPENDENCIES: Requires tbScenarios from GenScenarios, tbSpecs from GenSpecs, code from VerilogCreateNoTool, tbBehavioral from GenBehavior
+
+      9. GenGoldenDUT - Golden DUT Module Generator
+        PURPOSE: Creates a golden DUT module for verification comparison
+        WHEN TO USE:
+          - After behavioral models and stimulus are ready
+          - When a golden reference DUT is needed for verification
+          - For finalizing verification environment setup
+        PREREQUISITES: Behavioral models, stimulus, and design specifications
+        CAPABILITIES:
+          - Golden Model Creation: Develops a golden DUT module based on behavioral models
+          - Interface Integration: Ensures golden DUT matches design interfaces
+          - Stimulus Compatibility: Aligns golden DUT with generated stimulus
+          - Verification Readiness: Prepares golden DUT for integration into testbench
+          - Documentation: Provides detailed documentation of golden DUT functionality
+        INPUTS REQUIRED: tbBehavioral, stimulus, code, tbSpecs, tbScenarios
+        OUTPUTS PRODUCED: Golden DUT module (goldenDUT variable)
+        SUCCESS CRITERIA: Fully functional golden DUT matching design intent
+        ROUTING LOGIC: Use after GenBehavior and GenStimulus
+        DEPENDENCIES: Requires tbBehavioral from GenBehavior, stimulus from GenStimulus, code from VerilogCreateNoTool, tbSpecs from GenSpecs, tbScenarios from GenScenarios
+
+      10. GenFinalTB - Final Testbench Integrator
+        PURPOSE: Integrates all components into a final testbench module
+        WHEN TO USE:
+          - After all verification components are ready
+          - When final testbench assembly is needed
+          - For preparing the testbench for simulation and verification
+        PREREQUISITES: All verification components (DUT, stimulus, golden DUT, assertions)
+        CAPABILITIES:
+          - Testbench Assembly: Integrates DUT, stimulus, assertions into a cohesive testbench
+          - Interface Management: Ensures all interfaces are correctly connected
+          - Simulation Readiness: Prepares testbench for simulation execution
+          - Coverage Integration: Aligns testbench with coverage goals and requirements
+          - Documentation: Provides comprehensive documentation of the final testbench
+        INPUTS REQUIRED: code, stimulus, goldenDUT, assertions, tbBehavioral
+        OUTPUTS PRODUCED: Final testbench module (finalTB variable)
+        SUCCESS CRITERIA: Fully functional testbench ready for simulation and verification
+        ROUTING LOGIC: Use after all other design and verification agents have completed
+        DEPENDENCIES: Requires code from VerilogCreateNoTool, stimulus from GenStimulus, goldenDUT from GenGoldenDUT, assertions from GenAssertions, tbBehavioral from GenBehavior
+      ========================================================================
+      SUPPORT AGENTS
+      ========================================================================
+
+      11. SNPS-PPA-TSMC-N3P - TSMC N3P Process PPA Estimation Specialist
+        PURPOSE: Estimates power, performance, and area for Verilog designs in TSMC N3P process
+        WHEN TO USE:
+          - After Verilog design is validated and syntactically correct
+          - When PPA optimization is required for silicon implementation
+          - For technology-specific analysis and recommendations
+        PREREQUISITES: Clean, validated Verilog RTL code
+        CAPABILITIES:
+          - Power Analysis: Estimates dynamic and static power consumption
+          - Performance Analysis: Calculates timing paths, frequency targets, critical path delays
+          - Area Analysis: Estimates logic area, memory requirements, routing overhead
+          - Process Optimization: Provides TSMC N3P-specific recommendations for PPA optimization
+          - Technology Mapping: Applies advanced FinFET technology characteristics
+        INPUTS REQUIRED: Validated Verilog code, design specifications
+        OUTPUTS PRODUCED: Comprehensive PPA analysis reports with optimization recommendations
+        SUCCESS CRITERIA: Accurate PPA estimates with actionable optimization guidance
+        ROUTING LOGIC: Use after Verilog code is validated or just before SiliconSummarizer
+        DEPENDENCIES: Requires clean Verilog code from design and validation agents
+
+      12. SiliconSummarizer - Results Integration Specialist
+        PURPOSE: Compiles comprehensive results and deliverables from entire workflow
+        WHEN TO USE:
+          - At workflow completion for final reporting
+          - When comprehensive status update is needed
+          - For project milestone documentation
+        PREREQUISITES: Completed workflow execution with all artifacts
+        CAPABILITIES:
+          - Results Compilation: Aggregates outputs from all workflow agents
+          - Quality Assessment: Evaluates overall workflow success and completeness
+          - Documentation Generation: Creates comprehensive project documentation
+          - Deliverable Organization: Structures final deliverables for end users
+          - Workflow Analysis: Provides insights on workflow execution and performance
+        INPUTS REQUIRED: Conversation history  
+        OUTPUTS PRODUCED: Comprehensive summary
+        SUCCESS CRITERIA: Complete, well-organized final deliverable package
+        ROUTING LOGIC: Use only at workflow completion when all other tasks are done
+        DEPENDENCIES: Requires completion of all other agents in the workflow
+
+      ========================================================================
+      ROUTING DECISION MATRIX
+      ========================================================================
+      
+      TYPICAL EXECUTION SEQUENCES:
+      
+      DESIGN SEQUENCE (RTL Creation & Validation):
+      1. Planner → Create comprehensive execution plan
+      2. Router → Evaluate plan and route to VerilogCreateNoTool
+      3. VerilogCreateNoTool → Generate initial RTL code
+      4. Router → Route to ChkSyntaxDesign for validation
+      5. ChkSyntaxDesign → Validate syntax (route to FixSyntaxDesign if errors)
+      6. FixSyntaxDesign → Correct errors (if needed), return to ChkSyntaxDesign
+      7. SNPS-PPA-TSMC-N3P → Estimate power, performance, and area (PPA)
+      8. Router → Continue to verification phase when code is clean
+
+      VERIFICATION SEQUENCE (Test & Assertion Generation):
+      9. Router → Route to GenSpecs to start verification planning
+      10. GenSpecs → Create comprehensive testbench specifications
+      11. Router → Route to GenScenarios and/or GenBehavior (can be parallel)
+      12. GenScenarios → Create test scenarios and verification patterns
+      13. Router → Route to GenBehavior if behavioral models needed
+      14. GenBehavior → Create behavioral models and reference implementations
+      15. Router → Route to GenAssertions after behavioral models ready
+      16. GenAssertions → Create formal verification assertions
+      17. Router → Route to GenStimulus for testbench stimulus generation
+      18. GenStimulus → Generate testbench stimulus
+      19. Router → Route to GenGoldenDUT for golden DUT generation
+      20. GenGoldenDUT → Create golden DUT module
+      21. Router → Route to GenFinalTB for final testbench generation
+      22. GenFinalTB → Generate final testbench module
+      23. Router → Route to SiliconSummarizer for final compilation
+      24. SiliconSummarizer → Generate final deliverables and complete workflow
+
+      CONDITIONAL ROUTING RULES:
+      - Always use ChkSyntaxDesign after VerilogCreateNoTool
+      - Use FixSyntaxDesign only when syntax errors are detected
+      - GenSpecs must complete before GenScenarios or GenBehavior
+      - GenAssertions requires GenBehavior completion
+      - SiliconSummarizer should be last agent in execution sequence
+      - Return to Router after each agent unless workflow is complete"
+
+# =============================================================================
+# WORKFLOW START STATE
+# =============================================================================
+# Defines the initial state where workflow execution begins
+# =============================================================================
+
+startstate: DesignPlanning

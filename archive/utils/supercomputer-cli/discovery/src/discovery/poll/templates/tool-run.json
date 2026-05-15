@@ -1,0 +1,18 @@
+{
+    "toolId": "",
+    "command": "",
+    "inlineFiles": [],
+    "inputData": [],
+    "outputData": [],
+    "nodePoolIds": [],
+    "storageId": "",
+    "infraOverrides": {
+        "resources": {
+            "cpu": 24,
+            "ram": "220Gi",
+            "gpu": 1
+        },
+        "pool_size": 1,
+        "image": "gromacs:latest"
+    }
+}

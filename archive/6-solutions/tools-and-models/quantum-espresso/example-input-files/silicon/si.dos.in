@@ -1,0 +1,8 @@
+&DOS
+    prefix = 'silicon'
+    outdir = './tmp'
+    fildos = 'silicon.dos'
+    emin = -10.0
+    emax = 20.0
+    deltae = 0.1
+/

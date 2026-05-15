@@ -1,0 +1,73 @@
+Analyze this script and extract comprehensive API documentation with complete function specifications:
+
+**Script: {script_path}**
+**Folder Context: {folder_context}**
+
+**IMPORTANT**: If this file is named `entrypoint.sh`, skip analysis - it's a Docker setup file that will confuse AI agents.
+
+**CRITICAL IMPORT PATH REQUIREMENT**: When writing ALL code examples, import statements, and function calls, examine the Dockerfile's WORKDIR setting to determine correct import paths:
+- If Dockerfile contains `WORKDIR /app` and copies Python files directly to the working directory, use direct imports WITHOUT package prefixes
+- Example: Use `from io_utils import setup_session_logger` NOT `from app.io_utils import setup_session_logger`
+- This applies to ALL generated examples, code snippets, and function calls in your documentation
+
+Dockerfile (if provided):
+```
+{dockerfile_content}
+```
+
+```
+{script_content}
+```
+
+For each function, class, or API endpoint, provide DETAILED documentation including:
+
+## 1. **Complete Function Signatures**
+- Full function signature with parameter names, types, and default values
+- Return type specifications
+- Example: `def process_molecule(smiles: str, validate: bool = True, timeout: int = 30) -> Dict[str, Any]:`
+
+## 2. **Parameter Specifications**
+- Each parameter's name, type, purpose, and constraints
+- Default values and valid ranges
+- Example input values
+- Required vs optional parameters
+
+## 3. **Return Value Details**
+- Return type and structure
+- All possible return values or data structures
+- Example return values
+- Error conditions and exception types
+
+## 4. **Dependencies and Libraries**
+From the Dockerfile and script imports, identify:
+- **Built-in Libraries**: Standard Python libraries used (os, sys, json, etc.)
+- **Docker Environment Libraries**: Libraries installed via conda, pip, or system packages
+- **System Tools**: Command-line tools available in the container
+
+## 5. **Usage Examples and Integration Patterns**
+- Complete working code examples with real parameters
+- Integration with other scripts in the project
+- How to use available libraries in combination with this script
+- Error handling and validation patterns
+
+## 6. **Environment and Configuration**
+- Environment variables and their purposes
+- Configuration file formats and locations
+- Available system paths and mounted volumes
+
+Extract all technical details needed for an AI agent to understand not just how to call the functions, but also what libraries and tools are available for integration and extension.
+- Example return values with actual data
+- Error return patterns
+
+When writing example imports and usage examples, **ALWAYS** use import paths that reflect the runtime layout derived from the Dockerfile WORKDIR. If WORKDIR is `/app` and files are copied directly to the working directory, omit package prefixes in ALL import statements and code examples.
+
+**Remember**: Every import statement, function call example, and code snippet must use the correct runtime import paths based on the Dockerfile's WORKDIR setting. 
+
+Provide documentation detailed enough that an AI agent could:
+- Make actual function calls with correct parameters
+- Handle return values appropriately  
+- Integrate with other components
+- Handle errors gracefully
+- Use command-line interfaces effectively
+
+Format as structured documentation with clear sections for each API component.

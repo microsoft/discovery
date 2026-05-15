@@ -1,0 +1,255 @@
+/* Tab navigation */
+.tabs-container {
+	background: var(--ms-gray-bg);
+	border-bottom: 1px solid var(--ms-chat-border);
+}
+
+.tabs {
+	display: flex;
+	gap: 0;
+}
+
+.tab {
+	background: transparent;
+	color: var(--ms-gray-medium);
+	border: none;
+	padding: 16px 24px; /* base */
+	font-size: 14px;
+	font-weight: 600;
+	cursor: pointer;
+	border-bottom: 3px solid transparent;
+	transition: all 0.2s ease;
+}
+
+/* Workflow Agent mode: slightly tighter horizontal padding to free space for action icons */
+#workflowAgentMode .tabs .tab { padding: 14px 18px; }
+@media (max-width: 1400px) { #workflowAgentMode .tabs .tab { padding: 12px 16px; } }
+@media (max-width: 1200px) { #workflowAgentMode .tabs .tab { padding: 10px 14px; font-size: 13px; } }
+@media (max-width: 1000px) { #workflowAgentMode .tabs .tab { padding: 8px 10px; font-size: 12.5px; } }
+@media (max-width: 860px) { #workflowAgentMode .tabs .tab { padding: 8px 8px; font-size: 12px; } }
+@media (max-width: 760px) { #workflowAgentMode .tabs .tab { padding: 6px 6px; font-size: 11.5px; } }
+
+.tab:hover {
+	background: var(--ms-white);
+	color: var(--ms-gray-dark);
+}
+
+.tab.active {
+	color: var(--ms-blue-primary);
+	border-bottom-color: var(--ms-blue-primary);
+	background: var(--ms-white);
+}
+
+/* Attention indicator for tabs that need user action */
+.tab.needs-attention {
+	position: relative;
+}
+
+.tab.needs-attention::after {
+	content: '';
+	position: absolute;
+	top: 8px;
+	right: 8px;
+	width: 8px;
+	height: 8px;
+	background: #f59e0b;
+	border-radius: 50%;
+	animation: tab-attention-pulse 2s ease-in-out infinite;
+}
+
+@keyframes tab-attention-pulse {
+	0%, 100% { opacity: 1; transform: scale(1); }
+	50% { opacity: 0.6; transform: scale(0.85); }
+}
+
+.tab-content {
+	/* Moderate horizontal padding (12px) + reduced top (8) and bottom (20) for balance */
+	padding: 8px 12px 20px;
+	flex: 1;
+	overflow: hidden;
+	display: flex;
+	flex-direction: column;
+}
+
+.tab-panel {
+	display: none;
+	flex: 1;
+	overflow: hidden;
+	flex-direction: column;
+}
+
+.tab-panel.active {
+	display: flex;
+}
+
+/* API Documentation specific styles */
+.api-docs-container {
+	height: 400px;
+	border: 1px solid var(--ms-chat-border);
+	border-radius: 8px;
+	overflow: hidden;
+	display: flex;
+	flex-direction: column;
+}
+
+.api-docs-content {
+	flex: 1;
+	padding: 12px 12px 10px;
+	overflow-y: auto;
+	background: var(--ms-white);
+	font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+	/* tighter line-height for more compact paragraphs */
+	line-height: 1.45;
+	display: none;
+}
+
+.api-docs-content.visible {
+	display: block;
+}
+
+.api-docs-content h1, .api-docs-content h2, .api-docs-content h3, .api-docs-content h4 {
+	color: var(--ms-blue-primary);
+	/* reduce top spacing so titles appear closer to previous content */
+	margin-top: 0.6em;
+	margin-bottom: 0.35em;
+}
+
+.api-docs-content h1 {
+	font-size: 1.45em;
+	border-bottom: 2px solid var(--ms-chat-border);
+	padding-bottom: 0.25em;
+	/* ensure h1 doesn't add excessive space at the top */
+	margin-top: 0.4em;
+}
+
+.api-docs-content h2 {
+	font-size: 1.2em;
+}
+
+.api-docs-content h3 {
+	font-size: 1.05em;
+	color: var(--ms-gray-dark);
+}
+
+.api-docs-content code {
+	background: var(--ms-gray-bg);
+	padding: 2px 6px;
+	border-radius: 4px;
+	font-family: 'Courier New', monospace;
+	font-size: 0.9em;
+}
+
+.api-docs-content pre {
+	background: var(--ms-gray-bg);
+	padding: 12px;
+	border-radius: 6px;
+	overflow-x: auto;
+	border-left: 4px solid var(--ms-blue-primary);
+}
+
+.api-docs-content ul, .api-docs-content ol {
+	margin: 0.5em 0;
+	padding-left: 1.5em;
+}
+
+.api-docs-content li {
+	margin: 0.3em 0;
+}
+
+.placeholder-text {
+	flex: 1;
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	text-align: center;
+	color: var(--ms-gray-medium);
+	padding: 32px;
+}
+
+.placeholder-text ul {
+	text-align: left;
+	margin-top: 16px;
+	color: var(--ms-gray-dark);
+}
+
+.placeholder-text li {
+	margin: 8px 0;
+}
+
+/* Scripts preview styling */
+.scripts-preview {
+	padding: 16px;
+	background: var(--ms-white);
+	border-radius: 8px;
+	border: 1px solid var(--ms-chat-border);
+}
+
+.scripts-preview h3 {
+	margin: 0 0 16px 0;
+	color: var(--ms-gray-dark);
+	font-size: 18px;
+	font-weight: 600;
+}
+
+.scripts-preview h4 {
+	margin: 16px 0 8px 0;
+	color: var(--ms-gray-dark);
+	font-size: 14px;
+	font-weight: 600;
+}
+
+.scripts-preview .file-list {
+	margin: 8px 0;
+	padding-left: 0;
+}
+
+.scripts-preview .file-list > li {
+	list-style: none;
+	margin: 8px 0;
+	padding: 8px 0;
+	border-bottom: 1px solid var(--ms-gray-bg);
+}
+
+.scripts-preview .file-list ul {
+	margin: 4px 0 0 20px;
+	padding-left: 0;
+}
+
+.scripts-preview .file-list ul li {
+	list-style: none;
+	margin: 4px 0;
+	padding: 4px 8px;
+	background: var(--ms-gray-bg);
+	border-radius: 4px;
+	font-family: 'Courier New', monospace;
+	font-size: 13px;
+}
+
+.scripts-preview-error {
+	padding: 16px;
+	background: #fff5f5;
+	border: 1px solid #fecaca;
+	border-radius: 8px;
+	color: #dc2626;
+}
+
+.scripts-preview-error h3 {
+	margin: 0 0 12px 0;
+	color: #dc2626;
+	font-size: 16px;
+	font-weight: 600;
+}
+
+.scripts-preview-error ul {
+	margin: 8px 0;
+	padding-left: 20px;
+}
+
+.scripts-preview-error code {
+	background: #fee2e2;
+	padding: 2px 4px;
+	border-radius: 3px;
+	font-family: 'Courier New', monospace;
+	font-size: 12px;
+}

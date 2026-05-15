@@ -1,0 +1,9 @@
+*.md
+README.md
+.git
+.gitignore
+*.pyc
+__pycache__
+.pytest_cache
+.vscode
+.idea

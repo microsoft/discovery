@@ -1,0 +1,81 @@
+###############################################################################
+#
+#  Green-Kubo Thermal Conductivity - QUICK TEST VERSION
+#
+#  This is a reduced-time version for testing (10x faster than full simulation).
+#  Use the full version (../in.lj.gk) for production runs.
+#
+###############################################################################
+
+log             log.lj_gk.log
+
+# simulation parameters
+variable        T_target equal 1.0              # target temperature (LJ units)
+variable        dt       equal 0.005            # timestep
+variable        rc       equal 3.0              # LJ cutoff radius
+
+# QUICK TEST: reduced times (10x faster)
+variable        t_equil  equal 50               # equilibration time (was 500)
+variable        N_equil  equal floor(${t_equil}/${dt})
+
+variable        t_prod   equal 500              # production time (was 5000)
+variable        N_prod   equal floor(${t_prod}/${dt})
+
+# correlation function parameters
+variable        Nsamp    equal 5                # sample interval
+variable        Nrepeat  equal 100              # correlation values (reduced)
+variable        Nevery   equal ${Nsamp}*${Nrepeat}
+
+# read equilibrated configuration
+read_data       "data.lj"
+
+# LJ shifted force pair style
+pair_style      lj/sf ${rc}
+pair_coeff      1 1 1.0 1.0 ${rc}
+
+# neighbor list settings
+neighbor        0.8 bin
+neigh_modify    every 1 delay 0 check yes
+
+timestep        ${dt}
+
+# ============= EQUILIBRATION (NVT) =============
+fix             fNVT all nvt temp ${T_target} ${T_target} $(100*dt)
+
+thermo          1000
+thermo_style    custom step temp pe ke etotal press
+
+print "=== [QUICK TEST] Equilibrating at T = ${T_target} ==="
+run             ${N_equil}
+
+unfix           fNVT
+
+# ============= PRODUCTION (NVE with heat flux sampling) =============
+fix             fNVE all nve
+
+# Compute per-atom quantities for heat flux
+compute         ke_atom all ke/atom
+compute         pe_atom all pe/atom
+compute         stress_atom all stress/atom NULL virial
+
+# Compute heat flux vector
+compute         flux all heat/flux ke_atom pe_atom stress_atom
+
+# Variables for output
+variable        V equal vol
+variable        Jx equal c_flux[1]/vol
+variable        Jy equal c_flux[2]/vol
+variable        Jz equal c_flux[3]/vol
+
+# Heat flux autocorrelation function
+fix             fHFACF all ave/correlate ${Nsamp} ${Nrepeat} ${Nevery} &
+                c_flux[1] c_flux[2] c_flux[3] type auto &
+                file out.Jlj_gk ave running
+
+thermo          1000
+thermo_style    custom step temp etotal press v_Jx v_Jy v_Jz
+
+print "=== [QUICK TEST] Production run ==="
+run             ${N_prod}
+
+print "=== [QUICK TEST] Complete - HFACF in out.Jlj_gk ==="

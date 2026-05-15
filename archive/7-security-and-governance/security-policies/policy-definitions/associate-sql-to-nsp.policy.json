@@ -1,0 +1,219 @@
+{
+    "displayName": "Associate NSP to Azure SQL Servers",
+    "policyType": "Custom",
+    "mode": "All",
+    "description": "Automatically associate newly created Azure SQL servers with a specified Network Security Perimeter (NSP) and profile.",
+    "version": "1.0.0",
+    "parameters": {
+      "effect": {
+        "type": "String",
+        "metadata": {
+          "description": "Policy effect mode.",
+          "displayName": "Effect"
+        },
+        "allowedValues": [
+          "Audit",
+          "AuditIfNotExists",
+          "DeployIfNotExists",
+          "Disabled"
+        ],
+        "defaultValue": "DeployIfNotExists"
+      },
+      "skipTagName": {
+        "type": "String",
+        "metadata": {
+          "description": null,
+          "displayName": "Skip Tag Name"
+        },
+        "defaultValue": "SkipAssociateStorageAccountsToNsp"
+      },
+      "nspName": {
+        "type": "String",
+        "metadata": {
+          "description": null,
+          "displayName": "NSP Name"
+        },
+        "defaultValue": "discovery-nsp"
+      },
+      "nspProfile": {
+        "type": "String",
+        "metadata": {
+          "description": null,
+          "displayName": "NSP Profile name"
+        },
+        "defaultValue": "discovery-nsp-profile"
+      },
+      "nspResourceGroupName": {
+        "type": "String",
+        "metadata": {
+          "description": null,
+          "displayName": "NSP Resource Group name"
+        },
+        "defaultValue": "discovery-nsp-rg"
+      },
+      "centralizedNspProfileId": {
+        "type": "String",
+        "metadata": {
+          "description": "Use this option if the NSP is in another subscription",
+          "displayName": "Centralized NSP Profile Id"
+        }
+      },
+      "accessMode": {
+        "type": "String",
+        "metadata": {
+          "description": "The list of access modes for the NSP",
+          "displayName": "NSP Access Mode"
+        },
+        "allowedValues": [
+          "Learning",
+          "Enforced"
+        ],
+        "defaultValue": "Learning"
+      }
+    },
+    "policyRule": {
+      "if": {
+        "allOf": [
+          {
+            "field": "type",
+            "in": [
+              "Microsoft.Sql/servers"
+            ]
+          },
+          {
+            "field": "[concat('tags[', parameters('skipTagName'), ']')]",
+            "exists": false
+          },
+          {
+            "value": "[contains(resourceGroup().tags, parameters('skipTagName'))]",
+            "equals": false
+          },
+          {
+            "value": "[contains(subscription().tags, parameters('skipTagName'))]",
+            "equals": false
+          }
+        ]
+      },
+      "then": {
+        "effect": "[parameters('effect')]",
+        "details": {
+          "type": "Microsoft.Sql/servers/networkSecurityPerimeterConfigurations",
+          "existenceCondition": {
+            "field": "Microsoft.Sql/servers/networkSecurityPerimeterConfigurations/networkSecurityPerimeter.id",
+            "exists": false
+          },
+          "roleDefinitionIds": [
+            "/providers/Microsoft.Authorization/roleDefinitions/b24988ac-6180-42a0-ab88-20f7382dd24c"
+          ],
+          "deployment": {
+            "properties": {
+              "mode": "incremental",
+              "parameters": {
+                "paasResourceType": {
+                  "value": "[field('type')]"
+                },
+                "paasResourceName": {
+                  "value": "[field('name')]"
+                },
+                "nspName": {
+                  "value": "[parameters('nspName')]"
+                },
+                "nspProfile": {
+                  "value": "[parameters('nspProfile')]"
+                },
+                "nspResourceGroupName": {
+                  "value": "[parameters('nspResourceGroupName')]"
+                },
+                "centralizedNspProfileId": {
+                  "value": "[parameters('centralizedNspProfileId')]"
+                },
+                "accessMode": {
+                  "value": "[parameters('accessMode')]"
+                },
+                "location": {
+                  "value": "[resourceGroup().location]"
+                }
+              },
+              "template": {
+                "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+                "contentVersion": "1.0.0.0",
+                "parameters": {
+                  "paasResourceType": {
+                    "type": "string"
+                  },
+                  "paasResourceName": {
+                    "type": "string"
+                  },
+                  "nspName": {
+                    "type": "string"
+                  },
+                  "nspProfile": {
+                    "type": "string"
+                  },
+                  "nspResourceGroupName": {
+                    "type": "string"
+                  },
+                  "centralizedNspProfileId": {
+                    "type": "string"
+                  },
+                  "accessMode": {
+                    "type": "string",
+                    "allowedValues": [
+                      "Learning",
+                      "Enforced"
+                    ]
+                  },
+                  "uniqueId": {
+                    "type": "string",
+                    "defaultValue": "[uniqueString(deployment().name)]"
+                  },
+                  "location": {
+                    "type": "string",
+                    "defaultValue": "[resourceGroup().location]"
+                  }
+                },
+                "variables": {},
+                "resources": [
+                  {
+                    "type": "Microsoft.Resources/deployments",
+                    "apiVersion": "2018-05-01",
+                    "name": "[concat('Associate-NSP-to-',split(parameters('paasResourceType'), '/')[1] ,'-', parameters('uniqueId'))]",
+                    "subscriptionId": "[if(equals(parameters('centralizedNspProfileId'), ''), subscription().subscriptionId, split(parameters('centralizedNspProfileId'), '/')[2])]",
+                    "resourceGroup": "[if(equals(parameters('centralizedNspProfileId'), ''), parameters('nspResourceGroupName'), split(parameters('centralizedNspProfileId'), '/')[4])]",
+                    "properties": {
+                      "mode": "Incremental",
+                      "template": {
+                        "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+                        "contentVersion": "1.0.0.0",
+                        "parameters": {},
+                        "variables": {},
+                        "resources": [
+                          {
+                            "apiVersion": "2023-08-01-preview",
+                            "type": "Microsoft.Network/networkSecurityPerimeters/resourceAssociations",
+                            "name": "[concat(if(equals(parameters('centralizedNspProfileId'), ''), parameters('nspName'), split(parameters('centralizedNspProfileId'), '/')[8]),'/resource-association-', substring(uniqueString(resourceGroup().Id, deployment().name), 0, 4))]",
+                            "location": "[parameters('location')]",
+                            "properties": {
+                              "privateLinkResource": {
+                                "id": "[concat(resourceGroup().id,'/providers/',parameters('paasResourceType'),'/',parameters('paasResourceName'))]"
+                              },
+                              "profile": {
+                                "id": "[if(equals(parameters('centralizedNspProfileId'), ''), concat(subscription().id,'/resourceGroups/', parameters('nspResourceGroupName'), '/providers/Microsoft.Network/networkSecurityPerimeters/', parameters('nspName'), '/profiles/', parameters('nspProfile')), parameters('centralizedNspProfileId'))]"
+                              },
+                              "accessMode": "[parameters('accessMode')]"
+                            }
+                          }
+                        ]
+                      },
+                      "parameters": {}
+                    }
+                  }
+                ]
+              }
+            }
+          },
+          "evaluationDelay": "AfterProvisioningSuccess"
+        }
+      }
+    }
+}

@@ -1,0 +1,138 @@
+/* XYZ Molecular Viewer Styles */
+
+.xyz-controls {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    background: rgba(255, 255, 255, 0.9);
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    padding: 12px;
+    min-width: 180px;
+    font-size: 12px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    z-index: 10;
+}
+
+.control-group {
+    margin-bottom: 8px;
+}
+
+.control-group:last-child {
+    margin-bottom: 0;
+}
+
+.control-group label {
+    display: block;
+    margin-bottom: 4px;
+    font-weight: 600;
+    color: #333;
+}
+
+.control-group select {
+    width: 100%;
+    padding: 4px 6px;
+    border: 1px solid #ccc;
+    border-radius: 3px;
+    font-size: 11px;
+}
+
+.control-group button {
+    background: #0078d4;
+    color: white;
+    border: none;
+    padding: 6px 10px;
+    margin-right: 6px;
+    border-radius: 3px;
+    font-size: 11px;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.control-group button:hover {
+    background: #106ebe;
+}
+
+.control-group button:last-child {
+    margin-right: 0;
+}
+
+/* Molecular viewer canvas container */
+.extension-container canvas {
+    border-radius: 4px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    width: 100% !important;
+    height: 100% !important;
+    max-width: none !important;
+    max-height: none !important;
+    display: block !important;
+    object-fit: contain;
+}
+
+/* Ensure canvas fills the container in modal view */
+.modal-content .extension-container canvas {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    width: 100% !important;
+    height: 100% !important;
+}
+
+/* Text preview styles for fallback */
+.text-preview {
+    background-color: #f8f9fa;
+    border: 1px solid #e1e4e8;
+    border-radius: 6px;
+    padding: 16px;
+    font-family: 'Courier New', Courier, monospace;
+    font-size: 12px;
+    line-height: 1.45;
+    overflow: auto;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+    margin: 0;
+    max-height: 300px;
+}
+
+.text-fullview {
+    background-color: #f8f9fa;
+    border: 1px solid #e1e4e8;
+    border-radius: 6px;
+    padding: 16px;
+    font-family: 'Courier New', Courier, monospace;
+    font-size: 12px;
+    line-height: 1.45;
+    overflow: auto;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+    margin: 0;
+    height: calc(100% - 32px);
+}
+
+/* Dark theme support */
+@media (prefers-color-scheme: dark) {
+    .xyz-controls {
+        background: rgba(45, 55, 72, 0.95);
+        border-color: #4a5568;
+        color: #e2e8f0;
+    }
+    
+    .control-group label {
+        color: #e2e8f0;
+    }
+    
+    .control-group select {
+        background: #2d3748;
+        border-color: #4a5568;
+        color: #e2e8f0;
+    }
+    
+    .text-preview,
+    .text-fullview {
+        background-color: #2d3748;
+        border-color: #4a5568;
+        color: #e2e8f0;
+    }
+}

@@ -1,0 +1,30 @@
+agent:
+  name: execSSHAgent
+  description: An agent that runs a python script to execute ssh command on a remote VM.
+  model: azureml://registries/azure-openai/models/gpt-4o/versions/2024-11-20
+  instructions: |-
+    You are an agent that runs a series of commands on a remote machine
+
+    The user goal is: {{userGoal}}
+
+    You have a the ability to use the tools you have access to execute a c-shell script on a remote machine using SSH in a python script, write and report the output. The operating system is Linux.
+
+    Your primary role is to run the tool to execute the job on the remote machine
+    
+    Node pool context:
+    {{nodePoolContext}}
+
+  top_p: 0
+  temperature: 0
+  response_format: auto
+extension:
+  events: []
+  inputs:
+    - name: userGoal
+      type: llm
+      description: The user's command that this agent will execute in Linux.
+    - name: workflowContext
+      type: llm
+      description: The context of the workflow.
+  outputs: []
+  system_prompts: {}

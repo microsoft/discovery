@@ -1,0 +1,7 @@
+README.md
+MPI-job.json
+.git
+.gitignore
+*.txt
+src/*.o
+src/master_worker

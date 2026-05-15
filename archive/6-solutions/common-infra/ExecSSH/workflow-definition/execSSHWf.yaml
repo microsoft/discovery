@@ -1,0 +1,50 @@
+name: execSSHWf
+states:
+  - name: execssh
+    actors:
+      - agent: execSSHAgent
+        inputs:
+          userGoal: userGoal
+          dataHandlingContext: dataHandlingContext
+          messageId: messageId
+          nodePoolContext: nodePoolContext
+          workflowContext: workflowContext
+        thread: MainThread
+        humanInLoopMode: onNoMessage
+        streamOutput: true
+        maxTurn: 50
+        maxTransientErrorRetries: 3
+        maxRateLimitRetries: 3
+    isFinal: false
+  - name: End
+    actors: []
+    isFinal: true
+
+transitions:
+  - from: execssh
+    to: End
+
+variables:
+  - Type: thread
+    name: MainThread
+  - Type: userDefined
+    name: userGoal
+  - Type: userDefined
+    name: nodePoolContext
+  - Type: userDefined
+    name: messageId
+  - Type: userDefined
+    name: workflowContext
+    value: "
+      # Workflow Context:
+      You are an team of agents that works to say Hello World.
+
+      ## Workflow specific rules and guidlines
+      - *Important* You should only perform actions which have been assigned to you in the plan.
+      - If there is a tool available that can accomplish your step, you should use it, making sure to follow the instructions to use it precisely.
+      - It is ok to not know the answer, if you don't know the answer to something or you have no tools to accomplish the given task, you may respond accordingly.
+      - *Important* you should never hallucinate any tool invocations.
+      "
+  - Type: userDefined
+    name: dataHandlingContext
+startstate: execssh

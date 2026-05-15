@@ -1,0 +1,1837 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">    <title>Microsoft Discovery</title>
+    <!-- Add marked.js for markdown rendering -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>    <!-- Add Prism.js for syntax highlighting -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism.min.css" rel="stylesheet" />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-core.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/plugins/autoloader/prism-autoloader.min.js"></script>    <!-- External CSS -->
+    <link rel="stylesheet" href="styles/styles.css">
+    <link rel="stylesheet" href="extensions/extension-styles.css">
+    <link rel="stylesheet" href="extensions/default-text/default-text-styles.css">
+    <link rel="stylesheet" href="extensions/xyz-viewer/xyz-styles.css">
+    <link rel="stylesheet" href="extensions/3dmol-viewer/3dmol-styles.css">
+    <link rel="stylesheet" href="extensions/image-viewer/image-styles.css">
+    <link rel="stylesheet" href="extensions/ngl-viewer/ngl-styles.css">
+    <link rel="stylesheet" href="extensions/md-trajectory-viewer/md-trajectory-styles.css">
+    
+    <!-- Extension System Scripts -->
+    <script src="extensions/base-extension.js"></script>
+    <script src="extensions/extension-registry.js"></script>
+    <script src="extensions/extension-manager.js"></script>
+    
+    <!-- Extension Implementations -->
+    <script src="extensions/default-text-extension.js"></script>
+    <script src="extensions/xyz-viewer/xyz-extension.js"></script>
+    <script src="extensions/3dmol-viewer/3dmol-extension.js"></script>
+    <script src="extensions/image-viewer/image-extension.js"></script>
+    <script src="extensions/ngl-viewer/ngl-extension.js"></script>
+    <script src="extensions/html-viewer/html-extension.js"></script>
+    
+    <!-- MD Trajectory Viewer Extension -->
+    <script src="extensions/md-trajectory-viewer/trajectory-parsers.js"></script>
+    <script src="extensions/md-trajectory-viewer/analysis-tools.js"></script>
+    <script src="extensions/md-trajectory-viewer/playback-controls.js"></script>
+    <script src="extensions/md-trajectory-viewer/webgpu-renderer.js"></script>
+    <script src="extensions/md-trajectory-viewer/md-trajectory-extension.js"></script>
+      <!-- Extension Styles -->
+    <link rel="stylesheet" href="extensions/extension-styles.css">
+    <link rel="stylesheet" href="extensions/xyz-viewer/xyz-styles.css">
+    <link rel="stylesheet" href="extensions/3dmol-viewer/3dmol-styles.css">
+    <link rel="stylesheet" href="extensions/image-viewer/image-styles.css">
+    <link rel="stylesheet" href="extensions/ngl-viewer/ngl-styles.css">
+    <link rel="stylesheet" href="extensions/html-viewer/html-styles.css">
+    
+    
+    <!-- Discovery Publishing Client -->
+    <script src="discovery_client.js" defer></script>
+    
+    <!-- Workflow Agent Diagram (Mermaid) Renderer -->
+    <script src="diagram.js" defer></script>
+    
+    <!-- Utility Scripts -->
+    <script src="js/fileUtils.js" defer></script>
+    <script src="js/clipboardUtils.js" defer></script>
+    <script src="js/chatUIManager.js" defer></script>
+    <script src="js/profile-manager.js" defer></script>
+    
+    <!-- SSE Client for real-time server events -->
+    <script src="js/sse-client.js" defer></script>
+    
+    <!-- Main Application Script -->
+    <script src="agent.js" defer></script>
+    <script src="tool-agent-upload-ui.js" defer></script>
+    
+    <!-- CodeMirror for YAML editing -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.20/codemirror.min.css" />
+    <!-- CodeMirror fold gutter CSS -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.20/addon/fold/foldgutter.css" />
+    <!-- Extracted editors/styles from inline <style> -->
+    <link rel="stylesheet" href="styles/editors.css">
+    <!-- Activity Panel (real-time SSE events) -->
+    <link rel="stylesheet" href="styles/activity-panel.css">
+    <link rel="stylesheet" href="styles/session-selector.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.20/codemirror.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.20/mode/yaml/yaml.min.js"></script>
+    <!-- Simple mode addon required by some modes (dockerfile depends on defineSimpleMode) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.20/addon/mode/simple.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.20/mode/dockerfile/dockerfile.min.js"></script>
+    
+    <!-- CodeMirror folding addons -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.20/addon/fold/foldcode.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.20/addon/fold/foldgutter.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.20/addon/fold/indent-fold.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.20/addon/fold/comment-fold.js"></script>
+    
+    <!-- js-yaml for YAML parsing -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/js-yaml/4.1.0/js-yaml.min.js"></script>
+
+    <!-- Dropzone for polished drag & drop uploads -->
+    <link rel="stylesheet" href="https://unpkg.com/dropzone@5/dist/min/dropzone.min.css" />
+    <script src="https://unpkg.com/dropzone@5/dist/min/dropzone.min.js"></script>
+    <!-- EasyMDE for notepad (Markdown editor) -->
+    <link rel="stylesheet" href="https://unpkg.com/easymde@2.13.0/dist/easymde.min.css">
+    <script src="https://unpkg.com/easymde@2.13.0/dist/easymde.min.js"></script>
+        <style>
+            /* Hide regenerate and edit buttons in the generated definitions step */
+            .regenerate-component-btn, .edit-component-btn { display: none !important; }
+        </style>
+    
+    <!-- CodeMirror passive event listener fix -->
+    <script>
+        // Fix for CodeMirror passive event listener warnings
+        (function() {
+            // Store original addEventListener
+            const originalAddEventListener = EventTarget.prototype.addEventListener;
+            
+            // Override addEventListener to add passive option for scroll-blocking events
+            EventTarget.prototype.addEventListener = function(type, listener, options) {
+                // Touch events that should be passive for better performance
+                const passiveEvents = ['touchstart', 'touchmove', 'touchend', 'wheel', 'mousewheel'];
+                
+                if (passiveEvents.includes(type) && typeof options !== 'object') {
+                    // Convert options to object and add passive: true
+                    options = { passive: true, capture: Boolean(options) };
+                } else if (passiveEvents.includes(type) && typeof options === 'object' && options.passive === undefined) {
+                    // Add passive: true if not explicitly set
+                    options = { ...options, passive: true };
+                }
+                
+                return originalAddEventListener.call(this, type, listener, options);
+            };
+            
+            // Also suppress the console warnings for development
+            const originalWarn = console.warn;
+            console.warn = function(...args) {
+                const message = args.join(' ');
+                if (message.includes('Added non-passive event listener') && message.includes('CodeMirror')) {
+                    // Suppress CodeMirror passive event warnings
+                    return;
+                }
+                return originalWarn.apply(console, args);
+            };
+        })();
+    </script>
+    
+</head>
+<body>    <div id="header">
+        <div id="title">
+            Agent workbench for Microsoft Discovery (Preview)
+        </div>
+        <div id="experimentalWarning" style="position: absolute; left: 50%; transform: translateX(-50%); color: white; font-size: 12px; white-space: nowrap; cursor: pointer;" onclick="showExperimentalWarningDialog()">
+            Experimental environment. Use at your own risk. Read Disclaimer.
+        </div>
+        <div id="conversationInfo" class="conversation-info-header">
+            <!-- Conversation stats will be populated here by JavaScript -->
+        </div>
+    </div>
+    
+    <!-- Activity Flyout Panel (slides in from right) -->
+    <div id="activityFlyout" class="activity-flyout" aria-hidden="true">
+        <div class="activity-flyout-header">
+            <span class="activity-flyout-title">Activity</span>
+            <button class="activity-flyout-close" onclick="toggleActivityFlyout()" title="Close">&times;</button>
+        </div>
+        <div id="activityPanelContainer" class="activity-panel-container">
+            <!-- Activity panel will be initialized by JS -->
+        </div>
+    </div>
+    <div id="activityFlyoutBackdrop" class="activity-flyout-backdrop" onclick="toggleActivityFlyout()"></div>
+    <style>
+        /* Notepad layout: header + editor siblings, editor fills available space */
+        /* Make the page use column flex so header remains fixed and container fills remaining height.
+           Hide the page-level scrollbar and let panels manage internal scrolling. */
+        html, body { height: 100%; margin: 0; overflow: hidden; }
+        body { display: flex; flex-direction: column; }
+        .container { display: flex; flex: 1 1 auto; overflow: hidden; }
+        .left-panel { overflow: auto; }
+        .right-panel { position: relative; display: flex; flex-direction: column; flex: 1 1 auto; overflow: hidden; }
+
+                /* Notepad panel: use flex column so header stays on top and editor expands.
+                            Hide outer scroll; let the CodeMirror/EasyMDE editor manage scrolling internally. */
+                    /* Default: a flex container so header (fixed) + editor (flex) behave correctly.
+                         Use the .hidden class to hide the panel instead of toggling display block, which
+                         breaks the flex layout and causes extra container scrollbars. */
+                    .notepad-panel { box-sizing: border-box; padding: 8px 12px; height: 100%; width: 100%; display: flex; flex-direction: column; min-height: 0; }
+          .notepad-panel .notepad-header { display:flex; align-items:center; justify-content:space-between; gap:12px; padding-bottom:8px; flex: 0 0 auto; }
+          .notepad-panel .notepad-title { font-weight:600; }
+          .notepad-panel .notepad-editor { flex: 1 1 auto; overflow: hidden; display: flex; flex-direction: column; min-height: 0; }
+          /* Target EasyMDE/CodeMirror wrappers so toolbar shows and the editor fills the area */
+          .notepad-editor .EasyMDEContainer, .notepad-editor .easyMDEContainer { display: flex; flex-direction: column; height: 100%; }
+          .notepad-editor .editor-toolbar { flex: 0 0 auto; }
+          .notepad-editor .CodeMirror { flex: 1 1 auto; height: auto !important; min-height: 0; }
+        /* Center controls inside notepad header */
+          .notepad-panel .notepad-controls { display:flex; align-items:center; gap:8px; }
+          .notepad-panel .notepad-controls .autosave-toggle { display:flex; align-items:center; gap:6px; cursor:pointer; }
+          .notepad-panel .notepad-controls .autosave-label { font-size:13px; color:inherit; line-height:1; margin-left:-2px; }
+          /* Make checkbox visually smaller (about half previous size) */
+          .notepad-panel .notepad-controls input[type=checkbox] { width:10px; height:10px; margin:0; padding:0; }
+    /* Ensure CodeMirror shows its own scrollbar and the container doesn't add another */
+    .notepad-editor .CodeMirror-scroll { overflow: auto !important; }
+        .notepad-panel { overflow: hidden; }
+                    /* Fallback: if EasyMDE not initialized, make textarea take space without its own outer scrollbar */
+          #discoveryNotepadTextarea { box-sizing: border-box; width: 100%; height: 100%; resize: none; padding: 8px; font-family: monospace; font-size: 13px; border: 1px solid #ddd; }
+                /* Use .hidden to hide the panel; when visible it remains a flex container so children layout correctly */
+                .notepad-panel.hidden { display: none; }
+        /* Ensure the tab-content doesn't overlap when notepad shown; hide via JS by toggling .hidden on siblings */
+    </style>
+      <div class="container">        <!-- Left Panel - Copilot Chat Experience -->
+        <div class="left-panel">
+            <!-- Copilot Header -->
+            <div class="copilot-header">
+                <!-- Agent Selector -->
+                <div class="agent-selector">
+                    <button id="agentSelectorBtn" class="agent-selector-btn" title="Select agent">
+                        <div class="agent-selector-content">
+                            <div class="agent-info">
+                                <div class="agent-name-row">
+                                    <img id="agentTypeIcon" class="agent-type-icon" src="images/agent-type-discovery-assistant.svg" alt="Discovery Assistant" />
+                                    <span class="agent-name" id="currentAgentName">Microsoft Discovery</span>
+                                </div>
+                            </div>
+                            <svg class="dropdown-arrow" width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+                                <path d="M4.427 6.573a.5.5 0 0 1 .707 0L8 9.439l2.866-2.866a.5.5 0 1 1 .707.707l-3.22 3.22a.5.5 0 0 1-.706 0l-3.22-3.22a.5.5 0 0 1 0-.707z"/>
+                            </svg>
+                        </div>
+                    </button>
+                    
+                    <!-- Dropdown Menu -->
+                    <div class="agent-dropdown-menu" id="agentDropdownMenu">
+                        <!-- Agents will be loaded dynamically by JavaScript -->
+                        <div class="agent-dropdown-item">
+                            <div class="agent-item-content">
+                                <span class="agent-item-name">Loading agents...</span>
+                                <span class="agent-item-description">Please wait</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Session Controls (Clear Chat + Session Selector) -->
+                <div class="session-controls">
+                    <!-- Session Selector Dropdown -->
+                    <div class="session-selector">
+                    <button id="sessionSelectorBtn" class="session-selector-btn" title="Manage sessions">
+                        <svg class="session-icon" fill="currentColor" aria-hidden="true" width="18" height="18" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M17.85 2.85a.5.5 0 0 0-.7-.7l-8 8L9 11l.85-.15 8-8ZM5.5 3A2.5 2.5 0 0 0 3 5.5v9A2.5 2.5 0 0 0 5.5 17h9a2.5 2.5 0 0 0 2.5-2.5v-6a.5.5 0 0 0-1 0v6c0 .83-.67 1.5-1.5 1.5h-9A1.5 1.5 0 0 1 4 14.5v-9C4 4.67 4.67 4 5.5 4h6a.5.5 0 0 0 0-1h-6Z" fill="currentColor"></path>
+                        </svg>
+                        <span class="session-selector-label">Sessions</span>
+                        <svg class="dropdown-chevron" width="12" height="12" viewBox="0 0 16 16" fill="currentColor">
+                            <path d="M4.427 6.573a.5.5 0 0 1 .707 0L8 9.439l2.866-2.866a.5.5 0 1 1 .707.707l-3.22 3.22a.5.5 0 0 1-.706 0l-3.22-3.22a.5.5 0 0 1 0-.707z"/>
+                        </svg>
+                    </button>
+                    <div class="session-dropdown-menu" id="sessionDropdownMenu">
+                        <div class="session-dropdown-header">
+                            <span>Sessions</span>
+                            <button class="clear-sessions-btn" id="clearSessionsBtn" title="Clear all sessions">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6h14"/>
+                                </svg>
+                            </button>
+                        </div>
+                        <div class="session-dropdown-action" id="newSessionBtn">
+                            <svg width="16" height="16" viewBox="0 0 20 20" fill="currentColor">
+                                <path d="M10 2.75c.41 0 .75.34.75.75v6H17a.75.75 0 0 1 0 1.5h-6.25v6a.75.75 0 0 1-1.5 0v-6H3a.75.75 0 0 1 0-1.5h6.25v-6c0-.41.34-.75.75-.75Z"/>
+                            </svg>
+                            <span>New Session</span>
+                        </div>
+                        <div class="session-dropdown-divider"></div>
+                        <div class="session-list" id="sessionList">
+                            <!-- Sessions populated dynamically by JavaScript -->
+                            <div class="session-loading">Loading sessions...</div>
+                        </div>
+                    </div>
+                    </div>
+
+                    <!-- Clear Chat Button -->
+                    <button id="clearChatBtn" class="clear-chat-btn" title="Clear conversation history (keeps files)">
+                        <img src="images/sparkles.svg" alt="Clear chat" class="clear-chat-icon">
+                    </button>
+                </div>
+            </div>            <!-- Chat Messages Area -->
+            <div class="chat-area welcome-state" id="chatArea">                <!-- Microsoft Discovery Logo - appears only in welcome state -->
+                <div class="microsoft-discovery-logo" id="microsoftDiscoveryLogo">
+                    <img src="images/copilot.svg" alt="Copilot" class="discovery-logo-icon">
+                    <span class="discovery-logo-text">Microsoft Discovery</span>
+                </div>
+                <div class="testing-environment-text">Agent workbench</div>
+                
+                <div class="welcome-centered" id="welcomeCentered">
+                    <h1 class="welcome-greeting" id="welcomeGreeting">Hi there, try asking, 'what can you do?'</h1>
+                      <!-- Input Container -->
+                    <div class="input-container" id="inputContainer">
+                        <!-- Text Input -->
+                        <textarea 
+                            id="promptInput" 
+                            class="chat-input" 
+                            placeholder="Message Microsoft Discovery..."
+                            rows="1"></textarea>
+                        
+                        <!-- Actions Row -->
+                        <div class="input-actions">
+                            <!-- Left Actions -->
+                            <div class="input-actions-left">
+                                <button class="plus-btn" title="Add content" aria-label="Add content">
+                                    <svg fill="currentColor" aria-hidden="true" width="20" height="20" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
+                                        <path d="M10 2.75c.41 0 .75.34.75.75v6H17a.75.75 0 0 1 0 1.5h-6.25v6a.75.75 0 0 1-1.5 0v-6H3a.75.75 0 0 1 0-1.5h6.25v-6c0-.41.34-.75.75-.75Z" fill="currentColor"></path>
+                                    </svg>
+                                </button>
+                                
+                                <!-- Plus Button Dropdown Menu -->
+                                <div class="plus-dropdown-menu hidden" id="plusDropdownMenu">
+                                    <div class="plus-dropdown-item" onclick="discoveryAgent.fileInput.click()">
+                                        <div class="plus-item-icon">
+                                            <svg fill="currentColor" width="16" height="16" viewBox="0 0 20 20">
+                                                <path d="m4.83 10.48 5.65-5.65a3 3 0 0 1 4.25 4.24L8 15.8a1.5 1.5 0 0 1-2.12-2.12l6-6.01a.5.5 0 1 0-.7-.71l-6 6.01a2.5 2.5 0 0 0 3.53 3.54l6.71-6.72a4 4 0 1 0-5.65-5.66L4.12 9.78a.5.5 0 0 0 .7.7Z" fill="currentColor"></path>
+                                            </svg>
+                                        </div>
+                                        <div class="plus-item-content">
+                                            <span class="plus-item-title">Attach Files</span>
+                                            <span class="plus-item-description">Add files to your message</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <button class="attachment-btn" title="Attached files" aria-label="Attached files">
+                                    <svg fill="currentColor" aria-hidden="true" width="18" height="18" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
+                                        <path d="m4.83 10.48 5.65-5.65a3 3 0 0 1 4.25 4.24L8 15.8a1.5 1.5 0 0 1-2.12-2.12l6-6.01a.5.5 0 1 0-.7-.71l-6 6.01a2.5 2.5 0 0 0 3.53 3.54l6.71-6.72a4 4 0 1 0-5.65-5.66L4.12 9.78a.5.5 0 0 0 .7.7Z" fill="currentColor"></path>
+                                    </svg>
+                                    <span class="attachment-count">0</span>
+                                </button>
+                            </div>
+                            
+                            <!-- Right Actions -->
+                            <div class="input-actions-right">                            <button class="enhance-btn" title="Enhance your prompt" aria-label="Enhance your prompt">
+                                    <span class="enhance-icon">
+                                        <!-- Pencil base icon -->
+                                        <svg class="pencil-icon" fill="currentColor" aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                            <path d="M13.94 5L19 10.06 9.062 20a2.25 2.25 0 0 1-.999.58l-5.116 1.395a.75.75 0 0 1-.92-.921L3.421 15.94c.142-.38.333-.734.577-.999L13.938 5Zm7.09-2.03a3.578 3.578 0 0 1 0 5.06l-.97.97L15 3.94l.97-.97a3.578 3.578 0 0 1 5.06 0Z" fill="currentColor"></path>
+                                        </svg>
+                                        <!-- Star/sparkle overlay icon -->
+                                        <svg class="sparkle-icon" fill="currentColor" aria-hidden="true" width="12" height="12" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                            <path d="M4.09 6.41a2.84 2.84 0 0 0-1.35-.95L1.36 5a.54.54 0 0 1 0-1.03l1.38-.44A2.84 2.84 0 0 0 4.5 1.77l.01-.03.45-1.38a.54.54 0 0 1 1.03 0l.44 1.38a2.84 2.84 0 0 0 1.8 1.8l1.38.44.03.01a.54.54 0 0 1 0 1.03l-1.38.44a2.84 2.84 0 0 0-1.8 1.8l-.45 1.38A.55.55 0 0 1 5.5 9a.54.54 0 0 1-.51-.36l-.45-1.38c-.1-.3-.25-.6-.45-.85Z" fill="currentColor"></path>
+                                        </svg>
+                                    </span>
+                                </button>
+                                
+                                <button class="mic-btn" title="Start dictation" aria-label="Start dictation">
+                                    <svg fill="currentColor" aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                        <path d="M18.25 11c.38 0 .7.28.74.65l.01.1v.5a6.75 6.75 0 0 1-6.25 6.73v2.27a.75.75 0 0 1-1.5.1v-2.37A6.75 6.75 0 0 1 5 12.48v-.73a.75.75 0 0 1 1.5-.1v.6a5.25 5.25 0 0 0 5.03 5.25h.72a5.25 5.25 0 0 0 5.25-5.03v-.72c0-.41.34-.75.75-.75ZM12 2a4 4 0 0 1 4 4v6a4 4 0 0 1-8 0V6a4 4 0 0 1 4-4Z" fill="currentColor"></path>
+                                    </svg>
+                                </button>
+                                
+                                <button id="submitBtn" class="send-btn fui-Button" type="submit" aria-label="Send" title="Send message">
+                                    <span class="send-icon">
+                                        <svg class="fui-Icon-filled" fill="currentColor" aria-hidden="true" width="24" height="24" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                            <path d="M13.7 4.28a1 1 0 1 0-1.4 1.43L17.67 11H4a1 1 0 1 0 0 2h13.66l-5.36 5.28a1 1 0 0 0 1.4 1.43l6.93-6.82c.5-.5.5-1.3 0-1.78L13.7 4.28Z" fill="currentColor"></path>
+                                        </svg>
+                                        <svg class="fui-Icon-regular" fill="currentColor" aria-hidden="true" width="24" height="24" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                            <path d="M13.7 4.28a1 1 0 1 0-1.4 1.43L17.67 11H4a1 1 0 1 0 0 2h13.66l-5.36 5.28a1 1 0 0 0 1.4 1.43l6.93-6.82c.5-.5.5-1.3 0-1.78L13.7 4.28Z" fill="currentColor"></path>
+                                        </svg>
+                                    </span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- Workflow Agent Disabled Note - shown when workflow/workflow agent is selected -->
+                    <div class="workflow-disabled-note hidden" id="workflowDisabledNote">
+                        Chat is disabled for workflow agents. The workbench helps with creation and publishing of workflows, but does not simulate their execution.
+                    </div>
+                </div>            </div>
+
+            <!-- AI Disclaimer - Always visible at bottom of left panel -->
+            <div class="ai-disclaimer">
+                Answers are generated by an AI, and may make mistakes. This is an experimental environment.
+            </div>
+        </div>
+        <!-- Resize Handle -->
+        <div class="resize-handle" id="resizeHandle"></div>
+        
+        <!-- Right Panel -->
+        <div class="right-panel">
+            <div class="tabs-container">
+                <div class="tabs">
+                    <button class="tab active" data-tab="logging">
+                        Logs
+                        <span class="file-count" id="logFileCount"></span>
+                    </button>
+                    <button class="tab" data-tab="results">
+                        Results
+                        <span class="file-count" id="fileCount"></span>
+                    </button>
+                    <button class="tab" data-tab="inputs">
+                        Inputs
+                        <span class="file-count" id="inputFileCount"></span>
+                    </button>
+                    <button class="tab" data-tab="assets">Assets</button>
+                    <button class="tab" data-tab="stdout">stdout</button>
+                    <button class="tab" data-tab="yaml">Agent editor</button>
+                    <button class="tab" data-tab="kb-knowledge-bases" style="display: none;">📚 Knowledge Bases</button>
+                    <button class="tab" data-tab="kb-publish" style="display: none;">🚀 Publish</button>
+                    <button class="tab" data-tab="tool">Tool</button>
+                </div>
+            </div>
+            <!-- Discovery Notepad (hidden by default). This is a direct child of .right-panel -->
+            <div id="discoveryNotepad" class="notepad-panel hidden" aria-hidden="true">
+                <div class="notepad-header">
+                    <div class="notepad-title">Notepad</div>
+                    <div class="notepad-controls">
+                        <!-- Auto-save toggle (no visual indicator while saving) -->
+                        <label class="autosave-toggle" title="AutoSave">
+                            <input type="checkbox" id="notepadAutoSaveToggle" />
+                            <span class="autosave-track"><span class="autosave-thumb"></span></span>
+                            <span class="autosave-label">AutoSave</span>
+                        </label>
+                        <!-- Save button mirrors Dockerfile save button styling and behavior -->
+                        <button id="notepadSaveBtn" class="fui-Button primary" title="Save Notepad" disabled>Save</button>
+                    </div>
+                </div>
+                <div class="notepad-editor">
+                    <textarea id="discoveryNotepadTextarea" placeholder="Notes for the Discovery assistant..."></textarea>
+                </div>
+            </div>
+
+            <div class="tab-content">
+                <!-- Logging Tab -->
+                <div class="tab-panel active" id="logging-panel">
+                    <div class="output-section">
+                        <div class="output-header">Session Log Files
+                            <button class="refresh-btn" id="refreshLogsBtn" title="Refresh log files">
+                                <img src="images/refresh.svg" alt="Refresh" width="16" height="16">
+                            </button>
+                        </div>
+                        <div class="output-content" id="loggingContent">
+                        </div>
+                    </div>
+                </div>
+                  <!-- Results Tab -->
+                <div class="tab-panel" id="results-panel">
+                    <div class="results-section">
+                            <div class="results-header">Generated Files
+                                <button class="refresh-btn" id="refreshResultsBtn" title="Refresh results">
+                                    <img src="images/refresh.svg" alt="Refresh" width="16" height="16">
+                                </button>
+                            </div>
+                        <div class="results-content" id="resultsContent">
+                            <div class="results-placeholder">Generated files will appear here after code execution...</div>
+                        </div>
+                    </div>
+                </div>
+                  <!-- Inputs Tab -->
+                <div class="tab-panel" id="inputs-panel">
+                    <div class="inputs-section">
+                        <div class="inputs-header">
+                            <span class="inputs-header-title">Input Files</span>
+                            <div class="assets-header-controls">
+                                <button class="refresh-btn" id="deleteAllInputsBtn" title="Delete all input files">
+                                    <img src="images/trash.svg" alt="Delete all" width="16" height="16">
+                                </button>
+                                <button class="refresh-btn" id="refreshInputsBtn" title="Refresh input files list">
+                                    <img src="images/refresh.svg" alt="Refresh" width="16" height="16">
+                                </button>
+                            </div>
+                        </div>
+                        <div class="inputs-content" id="inputsContent">
+                            <div class="drag-drop-zone" id="dragDropZone">
+                                <div class="drag-drop-message">
+                                    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                                        <polyline points="14,2 14,8 20,8"></polyline>
+                                        <line x1="16" y1="13" x2="8" y2="13"></line>
+                                        <line x1="16" y1="17" x2="8" y2="17"></line>
+                                        <polyline points="10,9 9,9 8,9"></polyline>
+                                    </svg>
+                                    <p>Drag & drop files here or <button type="button" class="browse-btn" id="browseBtn">browse</button></p>
+                                    <p class="drag-drop-hint">Supported formats: All file types</p>
+                                </div>
+                            </div>                            <div class="inputs-file-list" id="inputsFileList">
+                                <div class="inputs-placeholder">Loading input files...</div>
+                            </div>
+                            <input type="file" id="fileInput" multiple class="hidden-file-input" aria-label="File upload input" />
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Assets Tab -->
+                <div class="tab-panel" id="assets-panel">
+                    <div class="assets-section">
+                        <div class="assets-header">
+                            <span id="assetsHeaderText">Data Assets</span>
+                            <div class="assets-header-controls">
+                                <label class="assets-filter-toggle" title="Hide output assets">
+                                    <input type="checkbox" id="assetsFilterOutput" checked />
+                                    <span class="filter-label">Hide 'output' assets</span>
+                                </label>
+                                <button class="refresh-btn" id="refreshAssetsBtn" title="Refresh data assets list">
+                                    <img src="images/refresh.svg" alt="Refresh" width="16" height="16">
+                                </button>
+                            </div>
+                        </div>
+                        <input type="file" id="assetFileUpload" style="display: none;" multiple />
+                        <div class="assets-content" id="assetsContent">
+                            <div class="assets-placeholder">Loading data assets...</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- stdout Tab -->
+                <div class="tab-panel" id="stdout-panel">
+                    <div class="output-section">
+                        <div class="output-header" style="display: flex; justify-content: space-between; align-items: center;">
+                            <span>Code Execution Output</span>
+                            <div style="display: flex; align-items: center; gap: 12px;">
+                                <!-- Interactive Mode Toggle -->
+                                <label class="interactive-mode-toggle" title="Enable interactive debugging mode with VS Code tunnel">
+                                    <input type="checkbox" id="interactiveModeToggle" onchange="discoveryAgent.toggleInteractiveMode(this.checked)"/>
+                                    <span class="toggle-track"><span class="toggle-thumb"></span></span>
+                                    <span class="toggle-label">Interactive</span>
+                                </label>
+                                <button type="button" id="copy-execution-output" role="button" aria-label="Copy execution output" class="copy-btn copy-btn-output" onclick="discoveryAgent.copyExecutionOutput()" title="Copy all execution output">
+                                    <img src="images/clipboard_code.svg" alt="Copy" width="16" height="16" class="copy-btn-icon">
+                                </button>
+                            </div>
+                        </div>
+                        <div class="output-content" id="outputContent">
+                            <div class="output-placeholder">Code execution results will appear here...</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Agent Editor Tab -->
+                <div class="tab-panel" id="yaml-panel">
+                    <div class="yaml-editor-wrapper full-height">
+                        <div class="yaml-editors-vertical" id="yamlEditorsVertical">
+                            <div class="yaml-editor-section flex-item">
+                                <!-- Emoji Warning Banner -->
+                                <div id="agentEmojiWarning" class="emoji-warning-banner">
+                                    <span class="warning-icon">⚠️</span>
+                                    <div class="warning-content">
+                                        <div class="warning-title">Emoji characters detected</div>
+                                        <div class="warning-details">
+                                            Emojis may cause issues with agent deployment. Consider replacing them with ASCII equivalents.
+                                        </div>
+                                        <div class="emoji-list" id="agentEmojiList"></div>
+                                        <div class="warning-actions">
+                                            <button class="btn-warning-action" onclick="discoveryAgent.autoFixEmojis('agent')">Auto-fix</button>
+                                            <button class="btn-warning-dismiss" onclick="discoveryAgent.dismissEmojiWarning('agent')">Dismiss</button>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="output-header">
+                                    <span>Agent definition</span>
+                                    <button type="button" id="copy-agent-config" role="button" aria-label="Copy content" class="copy-btn copy-btn-output" onclick="discoveryAgent.copyElementContent('#agentConfigEditor', 'copy-agent-config')">
+                                        <img src="images/clipboard_code.svg" alt="Copy" width="16" height="16" class="copy-btn-icon">
+                                    </button>
+                                </div>
+                                <textarea id="agentConfigEditor" class="yaml-textarea" spellcheck="false" placeholder="Loading agent definition YAML..."></textarea>
+                            </div>
+                        </div>
+                        <div class="yaml-actions-floating">
+                            <button id="publishToDiscoveryBtn" class="fui-Button secondary" title="Publish agent to Microsoft Discovery">
+                                <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+                                    <path d="M3.5 2A1.5 1.5 0 0 0 2 3.5v9A1.5 1.5 0 0 0 3.5 14h9a1.5 1.5 0 0 0 1.5-1.5V10a.5.5 0 0 0-1 0v2.5a.5.5 0 0 1-.5.5h-9a.5.5 0 0 1-.5-.5v-9a.5.5 0 0 1 .5-.5H6a.5.5 0 0 0 0-1H3.5zM10.5 1a.5.5 0 0 0 0 1h1.793l-4.646 4.646a.5.5 0 0 0 .708.708L12 2.707V4.5a.5.5 0 0 0 1 0v-3a.5.5 0 0 0-.5-.5h-3z"/>
+                                </svg>
+                                Publish to Discovery
+                            </button>
+                            <button id="saveYamlBtn" class="fui-Button primary" title="Save agent configuration and reload agent" disabled>Save and reload agent</button>
+                        </div>
+                    </div>
+                </div>
+                <!-- Tool Editor Tab -->
+                <div class="tab-panel" id="tool-panel">
+                    <div class="yaml-editor-wrapper full-height">
+                        <div class="yaml-editors-vertical tool-inner-tabs">
+                            <div class="inner-tab-bar" role="tablist" aria-label="Tool inner tabs">
+                                <button class="inner-tab active" role="tab" aria-selected="true" data-inner="tool-dockerfile">Dockerfile</button>
+                                <button class="inner-tab" role="tab" aria-selected="false" data-inner="tool-envvars">Env Vars</button>
+                                <button class="inner-tab" role="tab" aria-selected="false" data-inner="tool-definition">Tool Definition</button>
+                            </div>
+                            <div class="tool-subpanels">
+                                <!-- Dockerfile Subpanel -->
+                                <div class="tool-subpanel active" id="tool-dockerfile-panel" data-inner-panel="tool-dockerfile" role="tabpanel" aria-labelledby="tool-dockerfile">
+                                    <div class="yaml-editor-wrapper full-height">
+                                        <div class="yaml-editors-vertical" id="dockerEditorVertical">
+                                            <div class="yaml-editor-section flex-item">
+                                                <div class="output-header">
+                                                    <span>Dockerfile</span>
+                                                    <button type="button" id="copy-dockerfile" role="button" aria-label="Copy content" class="copy-btn copy-btn-output" onclick="discoveryAgent.copyElementContent('#dockerfileEditor', 'copy-dockerfile')">
+                                                        <img src="images/clipboard_code.svg" alt="Copy" width="16" height="16" class="copy-btn-icon">
+                                                    </button>
+                                                </div>
+                                                <textarea id="dockerfileEditor" class="yaml-textarea" spellcheck="false" placeholder="Loading Dockerfile..."></textarea>
+                                            <div class="docker-actions-row">
+                                                <button id="saveDockerfileBtn" class="fui-Button primary" title="Save Dockerfile" disabled>Save</button>
+                                                <button id="buildDockerBtn" class="fui-Button primary" title="Build and start image">Build & Start</button>
+                                                <div class="cloud-build-toggle-wrapper" id="cloudBuildToggleWrapper">
+                                                    <label class="toggle-switch" title="Build image in Azure Container Registry instead of locally (resilient to network drops)">
+                                                        <input type="checkbox" id="cloudBuildToggle" disabled>
+                                                        <span class="toggle-slider"></span>
+                                                    </label>
+                                                    <span class="toggle-label" id="cloudBuildLabel">Build in Azure</span>
+                                                </div>
+                                                <button id="deployDockerBtn" class="fui-Button primary" title="Deploy to Azure Container Registry">Deploy to ACR</button>
+                                                <button id="pullFromAcrBtn" class="fui-Button" title="Pull image from Azure Container Registry" style="display: none;">Pull from ACR</button>
+                                                <button id="cancelBuildBtn" class="fui-Button primary hidden" title="Cancel ongoing operation">Cancel</button>
+                                                <button id="toggleBuildLayoutBtn" class="fui-Button primary ml-auto hidden" title="Toggle build output panel">Expand Output</button>
+                                            </div>
+                                            <!-- Cloud build hint shown below actions row when feature is unavailable -->
+                                            <div id="cloudBuildHint" class="cloud-build-hint hidden"></div>
+                                        </div>
+                                        <div class="yaml-editor-section flex-item docker-build-section collapsed" id="dockerBuildSection">
+                                            <div class="yaml-file-header">Build output</div>
+                                            <pre id="dockerBuildOutput" class="process-output hidden">No build started yet.</pre>
+                                            <!-- Pull image prompt shown after successful cloud build -->
+                                            <div id="pullImagePrompt" class="pull-image-prompt hidden">
+                                                <span class="pull-prompt-text">Image built in ACR. Pull to local Docker for testing?</span>
+                                                <button id="pullImageBtn" class="fui-Button primary">Pull Image</button>
+                                                <button id="dismissPullBtn" class="fui-Button">Dismiss</button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    </div>
+                                </div>
+                                
+                                <!-- Environment Variables Subpanel -->
+                                <div class="tool-subpanel" id="tool-envvars-panel" data-inner-panel="tool-envvars" role="tabpanel" aria-labelledby="tool-envvars">
+                                    <div class="yaml-editor-wrapper full-height">
+                                        <div class="yaml-editors-vertical">
+                                            <div class="yaml-editor-section flex-item">
+                                                <div class="output-header">
+                                                    <span>Environment Variables</span>
+                                                    <button type="button" id="copy-envvars" role="button" aria-label="Copy content" class="copy-btn copy-btn-output" onclick="discoveryAgent.copyElementContent('#envVarsEditor', 'copy-envvars')">
+                                                        <img src="images/clipboard_code.svg" alt="Copy" width="16" height="16" class="copy-btn-icon">
+                                                    </button>
+                                                </div>
+                                                <textarea id="envVarsEditor" class="yaml-textarea" spellcheck="false" placeholder="Loading environment variables..."></textarea>
+                                                <div class="instructions-actions">
+                                                    <button id="saveEnvVarsBtn" class="fui-Button primary" title="Save Environment Variables" disabled>Save</button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <!-- Tool Definition Subpanel -->
+                                <div class="tool-subpanel" id="tool-definition-panel" data-inner-panel="tool-definition" role="tabpanel" aria-labelledby="tool-definition">
+                                    <div class="yaml-editor-wrapper full-height">
+                                        <div class="yaml-editors-vertical">
+                                            <div class="yaml-editor-section flex-item">
+                                                <div class="output-header">
+                                                    <span>Tool Definition</span>
+                                                    <button type="button" id="copy-tool-definition" role="button" aria-label="Copy content" class="copy-btn copy-btn-output" onclick="discoveryAgent.copyElementContent('#toolDefinitionEditor', 'copy-tool-definition')">
+                                                        <img src="images/clipboard_code.svg" alt="Copy" width="16" height="16" class="copy-btn-icon">
+                                                    </button>
+                                                </div>
+                                                <textarea id="toolDefinitionEditor" class="yaml-textarea" spellcheck="false" placeholder="Loading tool definition..."></textarea>
+                                                <div class="instructions-actions">
+                                                    <button id="saveToolDefinitionBtn" class="fui-Button primary" title="Save Tool Definition" disabled>Save</button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- KB Knowledge Bases Panel -->
+                <div class="tab-panel" id="kb-knowledge-bases-panel" style="display: none;">
+                    <div class="kb-section">
+                        <div class="results-header">Knowledge Bases
+                            <button class="refresh-btn" id="refreshKnowledgeBasesBtn" title="Refresh knowledge bases from Azure">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <polyline points="23 4 23 10 17 10"></polyline>
+                                    <polyline points="1 20 1 14 7 14"></polyline>
+                                    <path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10m22 4l-4.64 4.36A9 9 0 0 1 3.51 15"></path>
+                                </svg>
+                            </button>
+                        </div>
+                        <div class="kb-content">
+                            <div id="knowledgeBaseList" class="knowledge-base-list">
+                                <div class="loading-message" style="text-align: center; padding: 20px; color: #666;">
+                                    <div class="spinner" style="display: inline-block; width: 20px; height: 20px; border: 3px solid #f3f3f3; border-top: 3px solid #0078d4; border-radius: 50%; animation: spin 1s linear infinite;"></div>
+                                    <span style="margin-left: 8px;">Loading knowledge bases...</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- KB Publish Panel -->
+                <div class="tab-panel" id="kb-publish-panel" style="display: none;">
+                    <div class="kb-header" style="margin-bottom: 8px; padding: 8px 15px;">
+                        <h3 style="margin: 0 0 4px 0; color: #333;">Publish Agent</h3>
+                        <p class="kb-description" style="margin: 0; color: #666; font-size: 14px;">Review and publish your knowledge base agent</p>
+                    </div>
+                    
+                    <div class="publish-content" style="padding: 0 15px;">
+                        <div class="publish-summary" style="background: #f8f9fa; border: 1px solid #e9ecef; border-radius: 8px; padding: 20px; margin-bottom: 20px;">
+                            <h4 style="margin: 0 0 15px 0; color: #333;">Publishing Summary</h4>
+                            <div id="publishSummaryContent" class="summary-content">
+                                <p>Loading publishing information...</p>
+                            </div>
+                        </div>
+                        
+                        <div class="publish-actions" style="text-align: center; display: flex; gap: 12px; justify-content: center;">
+                            <button id="kbValidateBtn" class="fui-Button secondary" style="min-width: 150px; padding: 12px 24px; font-size: 16px;">
+                                <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" style="margin-right: 4px;">
+                                    <path d="M10.97 4.97a.75.75 0 0 1 1.07 1.05l-3.99 4.99a.75.75 0 0 1-1.08.02L4.324 8.384a.75.75 0 1 1 1.06-1.06l2.094 2.093 3.473-4.425a.267.267 0 0 1 .02-.022z"/>
+                                </svg>
+                                Validate
+                            </button>
+                            <button id="kbPublishBtn" class="btn-primary kb-publish-btn" style="min-width: 200px; padding: 12px 24px; font-size: 16px;">
+                                🚀 Publish Agent
+                            </button>
+                        </div>
+                        
+                        <div id="kbPublishOutput" class="publish-output" style="margin-top: 20px; padding: 15px; background: #f8f9fa; border-radius: 8px; font-family: monospace; font-size: 12px; display: none; max-height: 300px; overflow-y: auto;">
+                            <!-- Publish output will appear here -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Workflow Agent Editing Mode -->
+            <div class="workflow-agent-mode hidden" id="workflowAgentMode">
+                <div class="tabs-container">
+                    <div class="tabs">
+                        <button class="tab active" data-tab="entry-workflow">⚡ Workflow</button>
+                        <button class="tab" data-tab="entry-planner">📋 Planner</button>
+                        <button class="tab" data-tab="entry-router">🔀 Router</button>
+                        <button class="tab" data-tab="entry-summarizer">📄 Summarizer</button>
+                        <button class="tab" data-tab="entry-publish">🚀 Publish</button>
+                    </div>
+                </div>
+
+                <div class="tab-content">
+                    <!-- Workflow Tab -->
+                    <div class="tab-panel active" id="entry-workflow-panel">
+                        <div class="yaml-editor-wrapper full-height">
+                            <div class="yaml-editors-vertical workflow-inner-tabs">
+                                <div class="inner-tab-bar" role="tablist" aria-label="Workflow inner tabs">
+                                    <div class="inner-tab-buttons">
+                                        <button class="inner-tab active" role="tab" aria-selected="true" data-inner="workflow-def">Definition</button>
+                                        <button class="inner-tab" role="tab" aria-selected="false" data-inner="workflow-diagram">Diagram</button>
+                                    </div>
+                                    <!-- Diagram toolbar moved here so it remains visible and right-justified -->
+                                    <div class="inner-tab-toolbar">
+                                        <div class="diagram-toolbar" role="toolbar" aria-label="Diagram actions">
+                                            <button id="diagramRefreshBtn" class="fui-Button secondary" title="Generate diagram">Generate</button>
+                                            <button id="diagramCopyBtn" class="fui-Button secondary" title="Copy Mermaid source">Copy Mermaid</button>
+                                            <button id="diagramExportSvgBtn" class="fui-Button secondary" title="Export as SVG">Export SVG</button>
+                                            <button id="diagramExpandBtn" class="expand-btn" title="Expand to full view">Expand</button>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="workflow-subpanels">
+                                    <!-- Definition Subpanel -->
+                                    <div class="workflow-subpanel active" id="workflow-def-panel" data-inner-panel="workflow-def" role="tabpanel" aria-labelledby="workflow-def">
+                                        <div class="yaml-editor-section">
+                                            <div class="tab-info">
+                                                <h4>Workflow Agent</h4>
+                                                <p>Orchestrates the workflow between Planner, Router, and Summarizer</p>
+                                            </div>
+                                            <div class="output-header" style="display:flex;align-items:center;gap:12px;">
+                                                <div style="flex:0 0 auto;">
+                                                    <span>Workflow Definition</span>
+                                                </div>
+                                                <div class="output-actions" style="margin-left:auto; display:flex; gap:8px; align-items:center;">
+                                                    <button type="button" id="copy-workflow-definition" role="button" aria-label="Copy content" class="copy-btn copy-btn-output" onclick="discoveryAgent.copyElementContent('#entryWorkflowEditor', 'copy-workflow-definition')">
+                                                        <img src="images/clipboard_code.svg" alt="Copy" width="16" height="16" class="copy-btn-icon">
+                                                    </button>
+                                                    <button type="button" id="download-workflow-json" role="button" aria-label="Download JSON" class="copy-btn copy-btn-output" title="Download JSON of this workflow">
+                                                        <img src="images/download.svg" alt="Download" width="16" height="16" class="copy-btn-icon">
+                                                    </button>
+                                                </div>
+                                            </div>
+                                            <textarea id="entryWorkflowEditor" class="yaml-textarea" spellcheck="false" placeholder="Loading workflow definition..."></textarea>
+                                            <div class="instructions-actions">
+                                                <button type="button" class="regenerate-component-btn fui-Button secondary" data-component="workflow">Regenerate</button>
+                                                <button type="button" class="save-component-btn fui-Button primary" data-component="workflow" disabled>Save</button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <!-- Diagram Subpanel -->
+                                    <div class="workflow-subpanel" id="workflow-diagram-panel" data-inner-panel="workflow-diagram" role="tabpanel" aria-labelledby="workflow-diagram">
+                                        <div class="diagram-wrapper">
+                                                <div id="diagramMessages" class="diagram-messages">No diagram rendered yet.</div>
+                                                <div id="diagramContainer" class="diagram-container" aria-label="Workflow Diagram"></div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Planner Tab -->
+                    <div class="tab-panel" id="entry-planner-panel">
+                        <div class="yaml-editor-wrapper full-height">
+                            <div class="yaml-editors-vertical">
+                                <div class="yaml-editor-section">
+                                    <div class="tab-info">
+                                        <h4>Planning Agent</h4>
+                                        <p>Creates execution plans based on user requests and available agents</p>
+                                    </div>
+                                    <div class="output-header">
+                                        <span>Planner Definition</span>
+                                        <button type="button" id="copy-planner-definition" role="button" aria-label="Copy content" class="copy-btn copy-btn-output" onclick="discoveryAgent.copyElementContent('#entryPlannerEditor', 'copy-planner-definition')">
+                                            <img src="images/clipboard_code.svg" alt="Copy" width="16" height="16" class="copy-btn-icon">
+                                        </button>
+                                    </div>
+                                    <textarea id="entryPlannerEditor" class="yaml-textarea" spellcheck="false" placeholder="Loading planner definition..."></textarea>
+                                    <div class="instructions-actions">
+                                        <button type="button" class="regenerate-component-btn fui-Button secondary" data-component="planner">Regenerate</button>
+                                        <button type="button" class="save-component-btn fui-Button primary" data-component="planner" disabled>Save</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Router Tab -->
+                    <div class="tab-panel" id="entry-router-panel">
+                        <div class="yaml-editor-wrapper full-height">
+                            <div class="yaml-editors-vertical">
+                                <div class="yaml-editor-section">
+                                    <div class="tab-info">
+                                        <h4>Routing Agent</h4>
+                                        <p>Routes requests to appropriate specialized agents based on the plan</p>
+                                    </div>
+                                    <div class="output-header">
+                                        <span>Router Definition</span>
+                                        <button type="button" id="copy-router-definition" role="button" aria-label="Copy content" class="copy-btn copy-btn-output" onclick="discoveryAgent.copyElementContent('#entryRouterEditor', 'copy-router-definition')">
+                                            <img src="images/clipboard_code.svg" alt="Copy" width="16" height="16" class="copy-btn-icon">
+                                        </button>
+                                    </div>
+                                    <textarea id="entryRouterEditor" class="yaml-textarea" spellcheck="false" placeholder="Loading router definition..."></textarea>
+                                    <div class="instructions-actions">
+                                        <button type="button" class="regenerate-component-btn fui-Button secondary" data-component="router">Regenerate</button>
+                                        <button type="button" class="save-component-btn fui-Button primary" data-component="router" disabled>Save</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Summarizer Tab -->
+                    <div class="tab-panel" id="entry-summarizer-panel">
+                        <div class="yaml-editor-wrapper full-height">
+                            <div class="yaml-editors-vertical">
+                                <div class="yaml-editor-section">
+                                    <div class="tab-info">
+                                        <h4>Summarizer Agent</h4>
+                                        <p>Summarizes results and provides final responses to users</p>
+                                    </div>
+                                    <div class="output-header">
+                                        <span>Summarizer Definition</span>
+                                        <button type="button" id="copy-summarizer-definition" role="button" aria-label="Copy content" class="copy-btn copy-btn-output" onclick="discoveryAgent.copyElementContent('#entrySummarizerEditor', 'copy-summarizer-definition')">
+                                            <img src="images/clipboard_code.svg" alt="Copy" width="16" height="16" class="copy-btn-icon">
+                                        </button>
+                                    </div>
+                                    <textarea id="entrySummarizerEditor" class="yaml-textarea" spellcheck="false" placeholder="Loading summarizer definition..."></textarea>
+                                    <div class="instructions-actions">
+                                        <button type="button" class="regenerate-component-btn fui-Button secondary" data-component="summarizer">Regenerate</button>
+                                        <button type="button" class="save-component-btn fui-Button primary" data-component="summarizer" disabled>Save</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Publish Tab -->
+                    <div class="tab-panel" id="entry-publish-panel">
+                        <div class="yaml-editor-wrapper full-height">
+                            <div class="yaml-editors-vertical">
+                                <div class="yaml-editor-section">
+                                    
+                                    <!-- 1. Action Buttons -->
+                                    <div class="form-section">
+                                        <div class="form-row actions-row">
+                                            <button id="validateBtn" class="fui-Button secondary">
+                                                <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+                                                    <path d="M10.97 4.97a.75.75 0 0 1 1.07 1.05l-3.99 4.99a.75.75 0 0 1-1.08.02L4.324 8.384a.75.75 0 1 1 1.06-1.06l2.094 2.093 3.473-4.425a.267.267 0 0 1 .02-.022z"/>
+                                                </svg>
+                                                Validate
+                                            </button>
+                                            <button id="validateAndPublishBtn" class="fui-Button primary">
+                                                <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+                                                    <path d="M3.5 2A1.5 1.5 0 0 0 2 3.5v9A1.5 1.5 0 0 0 3.5 14h9a1.5 1.5 0 0 0 1.5-1.5V10a.5.5 0 0 0-1 0v2.5a.5.5 0 0 1-.5.5h-9a.5.5 0 0 1-.5-.5v-9a.5.5 0 0 1 .5-.5H6a.5.5 0 0 0 0-1H3.5zM10.5 1a.5.5 0 0 0 0 1h1.793l-4.646 4.646a.5.5 0 0 0 .708.708L12 2.707V4.5a.5.5 0 0 0 1 0v-3a.5.5 0 0 0-.5-.5h-3z"/>
+                                                </svg>
+                                                Validate and Publish
+                                            </button>
+                                        </div>
+                                    </div>
+
+                                    <!-- 4. Output Section -->
+                                    <div class="form-section publish-output-section">
+                                        <div class="stdout-container publish-stdout-container">
+                                            <div class="output-header">
+                                                <span>Process Output</span>
+                                                <button type="button" id="copy-publish-output" role="button" aria-label="Copy content" class="copy-btn copy-btn-output" onclick="discoveryAgent.copyElementContent('#publishOutput', 'copy-publish-output')">
+                                                    <img src="images/clipboard_code.svg" alt="Copy" width="16" height="16" class="copy-btn-icon">
+                                                </button>
+                                            </div>
+                                            <pre id="publishOutput" class="process-output">No process started yet.</pre>
+                                        </div>
+                                    </div>
+
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Experimental Warning Dialog -->
+    <div id="experimentalWarningDialog" class="modal-overlay hidden">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Usage Notice</h3>
+                <button id="closeExperimentalWarningDialog" class="close-btn">&times;</button>
+            </div>
+            <div class="modal-body">
+                <p><strong>IMPORTANT NOTE:</strong> <br>The Microsoft Discovery Agent Workbench (the “Workbench”) and associated resources are provided as part of the Microsoft Discovery Preview. The Workbench is provided “as is” to support your use of Microsoft Discovery, including your development and testing of agents for specific scenarios. </p><br>
+                
+                <p>You are responsible for carefully testing agent behavior in the context of your Microsoft Discovery use case(s).</p>
+            </div>
+            <div class="modal-footer">
+                <button id="okExperimentalWarningBtn" class="fui-Button primary">OK</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Interactive Mode Prompt Dialog -->
+    <div id="interactiveModePromptDialog" class="modal-overlay hidden">
+        <div class="modal-content" style="max-width: 900px;">
+            <div class="modal-header">
+                <h3>Start Interactive Debugging Session?</h3>
+                <button id="closeInteractiveModePromptDialog" class="close-btn">&times;</button>
+            </div>
+            <div class="modal-body">
+                <p style="margin-bottom: 16px;">Would you like to start an <strong>interactive debugging session</strong> with VS Code?</p>
+                
+                <div style="background: var(--ms-gray-lightest); padding: 12px; border-radius: 6px; margin-bottom: 16px;">
+                    <p style="margin: 0 0 8px 0;"><strong>Interactive Mode:</strong></p>
+                    <ul style="margin: 0; padding-left: 20px; line-height: 1.6;">
+                        <li>Access a full VS Code environment in your browser or desktop</li>
+                        <li>Set breakpoints and step through code</li>
+                        <li>Inspect variables and debug in real-time</li>
+                        <li>Edit and run code directly in the environment</li>
+                    </ul>
+                </div>
+                
+                <div style="background: var(--ms-blue-lighter); padding: 12px; border-radius: 6px; margin-bottom: 16px;">
+                    <p style="margin: 0;">You can enable/disable interactive mode using the toggle at the top of stdout tab.</p>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button id="normalRunBtn" class="fui-Button">Run Normally</button>
+                <button id="interactiveRunBtn" class="fui-Button primary">Start Interactive Session</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Discovery Publishing Confirmation Dialog -->
+    <div id="discoveryConfirmationDialog" class="modal-overlay hidden">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>⚠️ Existing Resources Found</h3>
+                <button id="closeDiscoveryConfirmationDialog" class="close-btn">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div id="discoveryConfirmationMessage"></div>
+                <br>
+                <p><strong>💡 If you want to create new resources instead, click 'Cancel' and rename your tool/agent in the YAML files.</strong></p>
+            </div>
+            <div class="modal-footer">
+                <button id="cancelDiscoveryConfirmationBtn" class="fui-Button">Cancel</button>
+                <button id="proceedDiscoveryConfirmationBtn" class="fui-Button primary">Proceed with Update</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ACR Deployment Dialog -->
+    <div id="deployDialog" class="deployment-dialog hidden">
+        <div class="deployment-content">
+            <div class="modal-header">
+                <h3>Deploy to Azure Container Registry</h3>
+                <button id="closeDeployDialog" class="close-btn">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label for="acr-name">Container Registry Name:</label>
+                    <!-- canonical id 'acr-name' used by client; preserve legacy 'acrName' attribute for older scripts -->
+                    <input type="text" id="acr-name" data-legacy-id="acrName" placeholder="" readonly />
+                    <small class="form-hint">ACR name (from tool definition and settings)</small>
+                </div>
+                <div class="form-group">
+                    <label for="imageName">Image Name:</label>
+                    <input type="text" id="imageName" placeholder="" readonly />
+                    <small class="form-hint">Container image name (from tool definition)</small>
+                </div>
+                <div class="form-group">
+                    <label for="imageTag">Image Tag:</label>
+                    <input type="text" id="imageTag" placeholder="latest" readonly />
+                    <small class="form-hint">Image version tag (from tool definition)</small>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button id="cancelDeployBtn" class="fui-Button secondary">Cancel</button>
+                <button id="confirmDeployBtn" class="fui-Button primary">Deploy</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Microsoft Discovery Publishing Dialog -->
+    <div id="discoveryPublishDialog" class="modal-overlay hidden">
+        <div class="modal-content discovery-modal">
+            <div class="modal-header">
+                <h3>Publish to Microsoft Discovery</h3>
+                <button id="closeDiscoveryDialog" class="close-btn">&times;</button>
+            </div>
+            <div class="modal-body discovery-modal-body">
+                
+                <!-- Agent Definition Section -->
+                <div class="form-section">
+                    <h4 class="section-title">Agent Definition</h4>
+                    <div class="form-row">
+                        <div class="form-group full-width">
+                            <label for="discoveryAgentName">Agent Name:</label>
+                            <input type="text" id="discoveryAgentName" readonly />
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Tool Configuration Section -->
+                <div class="form-section">
+                    <h4 class="section-title">Tool Configuration</h4>
+                    <div class="form-row">
+                        <div class="form-group half-width">
+                            <label for="discoveryToolName">Tool Name:</label>
+                            <input type="text" id="discoveryToolName" readonly />
+                        </div>
+                        <div class="form-group half-width">
+                            <label for="discoveryAcrImage">ACR Image:</label>
+                            <input type="text" id="discoveryAcrImage" readonly />
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Deployment options are now automatic: tools are created or updated based on existence -->
+
+                <!-- Status Section -->
+                <div id="discoveryStatusSection" class="form-section hidden">
+                    <h4 class="section-title">Deployment Status</h4>
+                    <div id="discoveryStatusInfo" class="status-info"></div>
+                </div>
+
+            </div>
+            <div class="modal-footer">
+                <button id="cancelDiscoveryBtn" class="fui-Button secondary">Cancel</button>
+                <button id="checkDiscoveryBtn" class="fui-Button secondary">Check existence</button>
+                <button id="confirmDiscoveryBtn" class="fui-Button primary">Publish</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Workflow Agent Creation Modal -->
+    <div id="createAgentModal" class="create-agent-modal hidden">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="modalTitle">Create Workflow Agent</h2>
+                <button class="modal-close" id="modalCloseBtn">&times;</button>
+            </div>
+            
+            <div class="modal-body">
+                <!-- Step 1: Agent Details -->
+                <div id="step1" class="modal-step active">
+                    <div class="step-header">
+                        <h3>Agent Definition</h3>
+                        <p>Define your Workflow Agent that will coordinate other specialized agents</p>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="agentName">Agent Display Name *</label>
+                        <input type="text" id="agentName" placeholder="e.g., MolecularWorkflowAgent" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Select agents to coordinate *</label>
+                        <div class="agent-selection-container">
+                            <div id="agentCheckboxList" class="agent-checkbox-list">
+                                <!-- Will be populated dynamically -->
+                                <div class="loading-agents">Loading available agents...</div>
+                            </div>
+                        </div>
+                        <small class="form-hint">Choose which specialized agents this Workflow Agent should coordinate</small>
+                    </div>
+                </div>
+                
+                <!-- Step 2: Multi-Agent System Generation -->
+                <div id="step2" class="modal-step">
+                    <div class="step-header">
+                        <h3>Workflow Agent System - AI-Generated Instructions</h3>
+                        <div class="ai-generated-notice">
+                            <span>Complete Workflow Agent system with Planner, Router, Summarizer, and Workflow components</span>
+                        </div>
+                    </div>
+                    
+                    
+
+                    <!-- Agent Component Tabs -->
+                    <div class="agent-tabs">
+                        <div class="tab-header">
+                            <button class="tab-btn active" data-tab="workflow">⚡ Workflow</button>
+                            <button class="tab-btn" data-tab="planner">📋 Planner</button>
+                            <button class="tab-btn" data-tab="router">🔀 Router</button>
+                            <button class="tab-btn" data-tab="summarizer">📄 Summarizer</button>
+                            <button class="tab-btn" data-tab="validate">✅ Validation</button>
+                        </div>
+                        
+                        <!-- Workflow Tab -->
+                        <div id="tab-workflow" class="tab-content active">
+                            <div class="tab-info">
+                                <h4>Workflow Agent (Main Workflow Agent)</h4>
+                                <p>Orchestrates the complete workflow between Planner, Router, and Summarizer</p>
+                            </div>
+                            <div class="form-group">
+                                <label for="workflowInstructions">Workflow Definition</label>
+                                <textarea id="workflowInstructions" class="instructions-textarea"></textarea>
+                                <div class="instructions-actions">
+                                    <button type="button" class="regenerate-component-btn btn-secondary" data-component="workflow">Regenerate</button>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Planner Tab -->
+                        <div id="tab-planner" class="tab-content">
+                            <div class="tab-info">
+                                <h4>Planning Agent</h4>
+                                <p>Creates execution plans based on user requests and available agents</p>
+                            </div>
+                            <div class="form-group">
+                                <label for="plannerInstructions">Planner YAML</label>
+                                <textarea id="plannerInstructions" class="instructions-textarea"></textarea>
+                                <div class="instructions-actions">
+                                    <button type="button" class="regenerate-component-btn btn-secondary" data-component="planner">Regenerate</button>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Router Tab -->
+                        <div id="tab-router" class="tab-content">
+                            <div class="tab-info">
+                                <h4>Routing Agent</h4>
+                                <p>Routes requests to appropriate specialized agents based on the plan</p>
+                            </div>
+                            <div class="form-group">
+                                <label for="routerInstructions">Router YAML</label>
+                                <textarea id="routerInstructions" class="instructions-textarea"></textarea>
+                                <div class="instructions-actions">
+                                    <button type="button" class="regenerate-component-btn btn-secondary" data-component="router">Regenerate</button>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Summarizer Tab -->
+                        <div id="tab-summarizer" class="tab-content">
+                            <div class="tab-info">
+                                <h4>Summarizer Agent</h4>
+                                <p>Summarizes results and provides final responses to users</p>
+                            </div>
+                            <div class="form-group">
+                                <label for="summarizerInstructions">Summarizer YAML</label>
+                                <textarea id="summarizerInstructions" class="instructions-textarea"></textarea>
+                                <div class="instructions-actions">
+                                    <button type="button" class="regenerate-component-btn btn-secondary" data-component="summarizer">Regenerate</button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Validate Tab -->
+                        <div id="tab-validate" class="tab-content">
+                            <div class="tab-info">
+                                <h4>Validation Output</h4>
+                                <p>Results from dependency validation will appear here.</p>
+                            </div>
+                            <div class="form-group">
+                                <label for="modalValidationOutput">Validation Output</label>
+                                <pre id="modalValidationOutput" class="process-output modal-validation-output">No validation run yet.</pre>
+                            </div>
+                        </div>
+                    </div>
+
+
+                </div>
+            </div>
+            
+            <div class="modal-footer">
+                <div class="step-progress">
+                    <span class="step-indicator active" data-step="1">1</span>
+                    <span class="step-connector"></span>
+                    <span class="step-indicator" data-step="2">2</span>
+                </div>
+                
+                <div class="modal-actions">
+                    <button type="button" id="modalCancelBtn" class="btn-secondary">Cancel</button>
+                    <button type="button" id="modalBackBtn" class="btn-secondary hidden">Back</button>
+                    <button type="button" id="modalNextBtn" class="btn-primary">Generate Instructions</button>
+                    <button type="button" id="modalValidateBtn" class="btn-secondary hidden">Validate</button>
+                    <button type="button" id="modalCreateBtn" class="btn-primary hidden">Create Agent</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tool Agent Creation Modal -->
+    <div id="createToolAgentModal" class="create-agent-modal hidden">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="toolModalTitle">Create Tool Agent</h2>
+                <button class="modal-close" id="toolModalCloseBtn">&times;</button>
+            </div>
+
+            <div class="modal-body">
+                <!-- Step 1: Basic Details -->
+                <div id="toolStep1" class="modal-step active">
+                    <div class="form-group">
+                        <label for="toolAgentName">Name *</label>
+                        <input type="text" id="toolAgentName" placeholder="e.g., MoltoolkitAgent" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="toolAgentRecommendedSkus">Recommended SKUs</label>
+                        <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
+                            <input type="text" id="toolAgentSkuFilter" placeholder="Filter SKUs (e.g., D2, F4, memory optimized)" style="flex: 1; padding: 6px; border: 1px solid #ddd; border-radius: 4px;">
+                            <button id="toolAgentRefreshSkus" type="button" style="padding: 6px 12px; background: #0078d4; color: white; border: none; border-radius: 4px; cursor: pointer; white-space: nowrap;" title="Refresh SKUs from Azure">
+                                🔄 Refresh
+                            </button>
+                        </div>
+                        
+                        <!-- Side-by-side layout for SKU selection and resources -->
+                        <div style="display: flex; gap: 16px; align-items: flex-start;">
+                            <!-- SKU Selection (left side) -->
+                            <div style="flex: 1; min-width: 300px;">
+                                <select id="toolAgentRecommendedSkus" multiple style="width: 100%; height: 180px; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+                                    <option disabled>Loading SKUs...</option>
+                                </select>
+                            </div>
+                            
+                            <!-- SKU Resources (right side) -->
+                            <div style="flex: 1; min-width: 250px;">
+                                <div id="toolAgentSkuResources" style="padding: 8px; background: #f8f9fa; border-radius: 4px; border: 1px solid #e1e5e9; font-size: 13px; line-height: 1.4; height: 180px; box-sizing: border-box;">
+                                    <strong style="font-size: 14px;">Selected SKU Resources:</strong>
+                                    <div id="toolAgentSkuResourcesContent" style="margin-top: 6px;">
+                                        <div style="color: #666; font-style: italic;">Select SKUs to see resource specifications</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="form-group" style="margin-bottom: 8px;">
+                        <label style="margin-bottom: 4px; display: block;">Upload project files</label>
+                        <form id="toolDropzone" class="dropzone" action="/api/tool-agent/upload" enctype="multipart/form-data" style="margin-top: 0;">
+                            <div class="dz-message needsclick" style="padding: 8px 20px; margin: 0;">
+                                <h4 style="margin: 0 0 8px 0;">Drag & drop files or folders here</h4>
+                                <p style="margin: 0 0 6px 0; font-size: 14px;">Provide as much data as possible about your Tool. Copilot will scan source code, documentation and Dockerfile to create your Tool and Agent definitions.</p>
+                                <p style="margin: 0; font-size: 13px;">Required: Dockerfile. Plus at least one API docs file (.yaml/.json/.md) or scripts (.py/.js/.ts/.go/.java/...)</p>
+                            </div>
+                            <!-- Browse button outside dz-message so it stays visible -->
+                            <div class="dropzone-browse-section" style="padding: 8px; border-top: 1px solid #e1e5e9; background: #f8f9fa;">
+                                <button type="button" class="btn-secondary dz-browse-btn">Browse</button>
+                                <span style="margin-left: 8px; color: #666; font-size: 14px;">Add more files or folders</span>
+                            </div>
+                            <!-- Dropzone will append previews here -->
+                        </form>
+                        <!-- Hidden folder input for browsers that allow selecting directories -->
+                        <input type="file" id="toolUploadFolderInput" webkitdirectory directory multiple class="hidden-file-input" />
+                        <div id="toolUploadValidation" class="upload-validation" style="margin-top:8px;"></div>
+                    </div>
+                </div>
+
+                <!-- Step 2: Generated YAML -->
+                <div id="toolStep2" class="modal-step">
+                    <div class="step-header">
+                        <h3>AI-Generated Definitions</h3>
+                        <p>Review, regenerate, and edit the YAML before creating the Tool Agent.</p>
+                    </div>
+
+                    <div class="agent-tabs">
+                        <div class="tab-header">
+                            <button class="tab-btn active" data-tab="tooldef">🧰 Tool definition</button>
+                            <button class="tab-btn" data-tab="agentdef">🤖 Agent definition</button>
+                            <button class="tab-btn" data-tab="apidocs">📚 API Docs (AI Generated)</button>
+                        </div>
+
+                        <div id="tab-tooldef" class="tab-content active">
+                            <div class="form-group">
+                                <div class="output-header">
+                                    <span>Tool Definition</span>
+                                    <button type="button" id="copy-tool-def" role="button" aria-label="Copy content" class="copy-btn copy-btn-output" onclick="discoveryAgent.copyElementContent('#toolDefinitionYaml', 'copy-tool-def')">
+                                        <img src="images/clipboard_code.svg" alt="Copy" width="16" height="16" class="copy-btn-icon">
+                                    </button>
+                                </div>
+                                <textarea id="toolDefinitionYaml" class="yaml-textarea" spellcheck="false"></textarea>
+                                <div class="instructions-actions">
+                                    <button type="button" class="regenerate-component-btn btn-secondary" data-component="tooldef">Regenerate</button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div id="tab-agentdef" class="tab-content">
+                            <div class="form-group">
+                                <div class="output-header">
+                                    <span>Agent Definition</span>
+                                    <button type="button" id="copy-agent-def" role="button" aria-label="Copy content" class="copy-btn copy-btn-output" onclick="discoveryAgent.copyElementContent('#toolAgentDefinitionYaml', 'copy-agent-def')">
+                                        <img src="images/clipboard_code.svg" alt="Copy" width="16" height="16" class="copy-btn-icon">
+                                    </button>
+                                </div>
+                                <textarea id="toolAgentDefinitionYaml" class="yaml-textarea" spellcheck="false"></textarea>
+                                <div class="instructions-actions">
+                                    <button type="button" class="regenerate-component-btn btn-secondary" data-component="agentdef">Regenerate</button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div id="tab-apidocs" class="tab-content">
+                            <div class="form-group">
+                                <div id="apiDocsContainer" class="api-docs-container">
+                                    <div class="output-header">
+                                        <span>API Documentation</span>
+                                        <button type="button" id="copy-api-docs" role="button" aria-label="Copy content" class="copy-btn copy-btn-output" onclick="discoveryAgent.copyElementContent('#apiDocsContent', 'copy-api-docs')">
+                                            <img src="images/clipboard_code.svg" alt="Copy" width="16" height="16" class="copy-btn-icon">
+                                        </button>
+                                    </div>
+                                    <div id="apiDocsContent" class="api-docs-content"></div>
+                                    <div id="apiDocsPlaceholder" class="placeholder-text">
+                                        📚 AI-generated API documentation will appear here after analyzing your scripts folder.
+                                        <br><br>
+                                        This comprehensive documentation includes:
+                                        <ul>
+                                            <li>🏗️ Project architecture overview</li>
+                                            <li>📋 Individual script APIs and functions</li>
+                                            <li>🔄 Cross-folder workflows and relationships</li>
+                                            <li>🎯 Integration guidelines for AI agents</li>
+                                        </ul>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="modal-footer">
+                <div class="step-progress">
+                    <span class="step-indicator active" data-step="1">1</span>
+                    <span class="step-connector"></span>
+                    <span class="step-indicator" data-step="2">2</span>
+                </div>
+                <div class="modal-actions">
+                    <button type="button" id="toolModalCancelBtn" class="btn-secondary">Cancel</button>
+                    <button type="button" id="toolModalBackBtn" class="btn-secondary hidden">Back</button>
+                    <button type="button" id="toolModalNextBtn" class="btn-primary">Generate Definitions</button>
+                    <button type="button" id="toolModalCreateBtn" class="btn-primary hidden">Create Tool Agent</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+        <!-- Generic App Dialog -->
+        <div id="appDialog" class="modal-overlay hidden">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3 id="appDialogTitle">Confirm</h3>
+                    <button id="appDialogClose" class="close-btn" title="Close">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <div id="appDialogMessage" class="dialog-message"></div>
+                </div>
+                <div class="modal-footer">
+                    <button id="appDialogOk" class="btn-primary">OK</button>
+                    <button id="appDialogAlt" class="btn-secondary hidden">Alt</button>
+                    <button id="appDialogCancel" class="btn-secondary">Cancel</button>
+                </div>
+            </div>
+        </div>
+
+    <!-- Select / Load Agent Dialog -->
+    <div id="selectAgentDialog" class="modal-overlay hidden">
+        <div class="modal-content load-agent-modal">
+            <div class="modal-header">
+                <h2 id="selectAgentModalTitle">Load Agent</h2>
+                <button class="modal-close" id="selectAgentModalCloseBtn">&times;</button>
+            </div>
+            
+            <div class="modal-body">
+                <!-- Step 1: Agent Type Selection -->
+                <div id="selectAgentStep1" class="modal-step active">
+                    <div class="step-header">
+                        <h3>Select Agent Type</h3>
+                        <p>Choose the type of agent you want to load</p>
+                    </div>
+                    
+                    <div class="form-group">
+                        <div class="load-agent-radio-group">
+                            <div class="radio-option" data-type="tool">
+                                <input type="radio" id="agentTypeTool" name="agentType" value="tool" checked>
+                                <label for="agentTypeTool">
+                                    <div class="label-header">
+                                        <div class="card-icon">🔧</div>
+                                        <strong>Tool Agent</strong>
+                                    </div>
+                                    <span class="radio-description">Wraps and executes specific tools & models</span>
+                                </label>
+                            </div>
+                            <div class="radio-option" data-type="entry">
+                                <input type="radio" id="agentTypeEntry" name="agentType" value="entry">
+                                <label for="agentTypeEntry">
+                                    <div class="label-header">
+                                        <div class="card-icon">🎯</div>
+                                        <strong>Workflow Agent</strong>
+                                    </div>
+                                    <span class="radio-description">Orchestrates multiple agents with planner, router, and summarizer</span>
+                                </label>
+                            </div>
+                            <div class="radio-option" data-type="kb">
+                                <input type="radio" id="agentTypeKB" name="agentType" value="kb">
+                                <label for="agentTypeKB">
+                                    <div class="label-header">
+                                        <div class="card-icon">📚</div>
+                                        <strong>LLM-only Agents (include KB)</strong>
+                                    </div>
+                                    <span class="radio-description">LLM only agents that can query KBs</span>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Step 2: File Configuration -->
+                <div id="selectAgentStep2" class="modal-step">
+                    <div class="step-header">
+                        <h3 id="selectAgentStep2Title">Configure Agent Files</h3>
+                        <p id="selectAgentStep2Description">Provide the relative paths to the required files</p>
+                    </div>
+                    
+                    <!-- Tool Agent Fields -->
+                    <div id="toolAgentFields" class="agent-fields hidden">
+                        <div class="form-group">
+                            <label for="loadToolAgentConfig">Agent Config File *</label>
+                                <div class="input-with-browse">
+                                <input type="text" id="loadToolAgentConfig" placeholder="e.g., ../../Agents/ToolAgents/HLGap/HLGapAgent.yaml" required>
+                                <button type="button" class="browse-btn" onclick="discoveryAgent.selectAgentDialog.browseForFile('loadToolAgentConfig')" title="Browse for file">
+                                    <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+                                        <path d="M1.5 0A1.5 1.5 0 0 0 0 1.5v2A1.5 1.5 0 0 0 1.5 5h2A1.5 1.5 0 0 0 5 3.5v-2A1.5 1.5 0 0 0 3.5 0h-2ZM1 1.5a.5.5 0 0 1 .5-.5h2a.5.5 0 0 1 .5.5v2a.5.5 0 0 1-.5.5h-2a.5.5 0 0 1-.5-.5v-2Zm5.5-1A1.5 1.5 0 0 0 5 1.5v2A1.5 1.5 0 0 0 6.5 5h2A1.5 1.5 0 0 0 10 3.5v-2A1.5 1.5 0 0 0 8.5 0h-2ZM6 1.5a.5.5 0 0 1 .5-.5h2a.5.5 0 0 1 .5.5v2a.5.5 0 0 1-.5.5h-2a.5.5 0 0 1-.5-.5v-2ZM1.5 6A1.5 1.5 0 0 0 0 7.5v2A1.5 1.5 0 0 0 1.5 11h2A1.5 1.5 0 0 0 5 9.5v-2A1.5 1.5 0 0 0 3.5 6h-2ZM1 7.5a.5.5 0 0 1 .5-.5h2a.5.5 0 0 1 .5.5v2a.5.5 0 0 1-.5.5h-2a.5.5 0 0 1-.5-.5v-2Zm5.5-1A1.5 1.5 0 0 0 5 7.5v2A1.5 1.5 0 0 0 6.5 11h2A1.5 1.5 0 0 0 10 9.5v-2A1.5 1.5 0 0 0 8.5 6h-2ZM6 7.5a.5.5 0 0 1 .5-.5h2a.5.5 0 0 1 .5.5v2a.5.5 0 0 1-.5.5h-2a.5.5 0 0 1-.5-.5v-2ZM11 1a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v12a1 1 0 0 1-1 1h-2a1 1 0 0 1-1-1V1Zm1 0v12h2V1h-2Z"/>
+                                    </svg>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label for="loadToolDefinition">Tools Definition File *</label>
+                                <div class="input-with-browse">
+                                <input type="text" id="loadToolDefinition" placeholder="e.g., ../../Agents/ToolAgents/HLGap/hlgap-tool-definition.yaml" required>
+                                <button type="button" class="browse-btn" onclick="discoveryAgent.selectAgentDialog.browseForFile('loadToolDefinition')" title="Browse for file">
+                                    <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+                                        <path d="M1.5 0A1.5 1.5 0 0 0 0 1.5v2A1.5 1.5 0 0 0 1.5 5h2A1.5 1.5 0 0 0 5 3.5v-2A1.5 1.5 0 0 0 3.5 0h-2ZM1 1.5a.5.5 0 0 1 .5-.5h2a.5.5 0 0 1 .5.5v2a.5.5 0 0 1-.5.5h-2a.5.5 0 0 1-.5-.5v-2Zm5.5-1A1.5 1.5 0 0 0 5 1.5v2A1.5 1.5 0 0 0 6.5 5h2A1.5 1.5 0 0 0 10 3.5v-2A1.5 1.5 0 0 0 8.5 0h-2ZM6 1.5a.5.5 0 0 1 .5-.5h2a.5.5 0 0 1 .5.5v2a.5.5 0 0 1-.5.5h-2a.5.5 0 0 1-.5-.5v-2ZM1.5 6A1.5 1.5 0 0 0 0 7.5v2A1.5 1.5 0 0 0 1.5 11h2A1.5 1.5 0 0 0 5 9.5v-2A1.5 1.5 0 0 0 3.5 6h-2ZM1 7.5a.5.5 0 0 1 .5-.5h2a.5.5 0 0 1 .5.5v2a.5.5 0 0 1-.5.5h-2a.5.5 0 0 1-.5-.5v-2Zm5.5-1A1.5 1.5 0 0 0 5 7.5v2A1.5 1.5 0 0 0 6.5 11h2A1.5 1.5 0 0 0 10 9.5v-2A1.5 1.5 0 0 0 8.5 6h-2ZM6 7.5a.5.5 0 0 1 .5-.5h2a.5.5 0 0 1 .5.5v2a.5.5 0 0 1-.5.5h-2a.5.5 0 0 1-.5-.5v-2ZM11 1a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v12a1 1 0 0 1-1 1h-2a1 1 0 0 1-1-1V1Zm1 0v12h2V1h-2Z"/>
+                                    </svg>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label for="loadToolDockerfile">Dockerfile *</label>
+                                <div class="input-with-browse">
+                                <input type="text" id="loadToolDockerfile" placeholder="e.g., ../../Agents/ToolAgents/HLGap/Dockerfile" required>
+                                <button type="button" class="browse-btn" onclick="discoveryAgent.selectAgentDialog.browseForFile('loadToolDockerfile')" title="Browse for file">
+                                    <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+                                        <path d="M1.5 0A1.5 1.5 0 0 0 0 1.5v2A1.5 1.5 0 0 0 1.5 5h2A1.5 1.5 0 0 0 5 3.5v-2A1.5 1.5 0 0 0 3.5 0h-2ZM1 1.5a.5.5 0 0 1 .5-.5h2a.5.5 0 0 1 .5.5v2a.5.5 0 0 1-.5.5h-2a.5.5 0 0 1-.5-.5v-2Zm5.5-1A1.5 1.5 0 0 0 5 1.5v2A1.5 1.5 0 0 0 6.5 5h2A1.5 1.5 0 0 0 10 3.5v-2A1.5 1.5 0 0 0 8.5 0h-2ZM6 1.5a.5.5 0 0 1 .5-.5h2a.5.5 0 0 1 .5.5v2a.5.5 0 0 1-.5.5h-2a.5.5 0 0 1-.5-.5v-2ZM1.5 6A1.5 1.5 0 0 0 0 7.5v2A1.5 1.5 0 0 0 1.5 11h2A1.5 1.5 0 0 0 5 9.5v-2A1.5 1.5 0 0 0 3.5 6h-2ZM1 7.5a.5.5 0 0 1 .5-.5h2a.5.5 0 0 1 .5.5v2a.5.5 0 0 1-.5.5h-2a.5.5 0 0 1-.5-.5v-2Zm5.5-1A1.5 1.5 0 0 0 5 7.5v2A1.5 1.5 0 0 0 6.5 11h2A1.5 1.5 0 0 0 10 9.5v-2A1.5 1.5 0 0 0 8.5 6h-2ZM6 7.5a.5.5 0 0 1 .5-.5h2a.5.5 0 0 1 .5.5v2a.5.5 0 0 1-.5.5h-2a.5.5 0 0 1-.5-.5v-2ZM11 1a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v12a1 1 0 0 1-1 1h-2a1 1 0 0 1-1-1V1Zm1 0v12h2V1h-2Z"/>
+                                    </svg>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label for="loadToolEnvVars">Environment Variables (optional)</label>
+                                <div class="input-with-browse">
+                                <input type="text" id="loadToolEnvVars" placeholder="e.g., ../../Agents/ToolAgents/HLGap/envVars.json">
+                                <button type="button" class="browse-btn" onclick="discoveryAgent.selectAgentDialog.browseForFile('loadToolEnvVars')" title="Browse for file">
+                                    <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+                                        <path d="M1.5 0A1.5 1.5 0 0 0 0 1.5v2A1.5 1.5 0 0 0 1.5 5h2A1.5 1.5 0 0 0 5 3.5v-2A1.5 1.5 0 0 0 3.5 0h-2ZM1 1.5a.5.5 0 0 1 .5-.5h2a.5.5 0 0 1 .5.5v2a.5.5 0 0 1-.5.5h-2a.5.5 0 0 1-.5-.5v-2Zm5.5-1A1.5 1.5 0 0 0 5 1.5v2A1.5 1.5 0 0 0 6.5 5h2A1.5 1.5 0 0 0 10 3.5v-2A1.5 1.5 0 0 0 8.5 0h-2ZM6 1.5a.5.5 0 0 1 .5-.5h2a.5.5 0 0 1 .5.5v2a.5.5 0 0 1-.5.5h-2a.5.5 0 0 1-.5-.5v-2ZM1.5 6A1.5 1.5 0 0 0 0 7.5v2A1.5 1.5 0 0 0 1.5 11h2A1.5 1.5 0 0 0 5 9.5v-2A1.5 1.5 0 0 0 3.5 6h-2ZM1 7.5a.5.5 0 0 1 .5-.5h2a.5.5 0 0 1 .5.5v2a.5.5 0 0 1-.5.5h-2a.5.5 0 0 1-.5-.5v-2Zm5.5-1A1.5 1.5 0 0 0 5 7.5v2A1.5 1.5 0 0 0 6.5 11h2A1.5 1.5 0 0 0 10 9.5v-2A1.5 1.5 0 0 0 8.5 6h-2ZM6 7.5a.5.5 0 0 1 .5-.5h2a.5.5 0 0 1 .5.5v2a.5.5 0 0 1-.5.5h-2a.5.5 0 0 1-.5-.5v-2ZM11 1a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v12a1 1 0 0 1-1 1h-2a1 1 0 0 1-1-1V1Zm1 0v12h2V1h-2Z"/>
+                                    </svg>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Workflow Agent Fields -->
+                    <div id="workflowAgentFields" class="agent-fields hidden">
+                        <div class="form-group">
+                            <label for="loadWorkflowAgentConfig">Agent Config File *</label>
+                                <div class="input-with-browse">
+                                <input type="text" id="loadWorkflowAgentConfig" placeholder="e.g., ../../Workflow-Agents/MolToolkit/agent.yaml" required>
+                                <button type="button" class="browse-btn" onclick="discoveryAgent.selectAgentDialog.browseForFile('loadWorkflowAgentConfig')" title="Browse for file">
+                                    <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+                                        <path d="M1.5 0A1.5 1.5 0 0 0 0 1.5v2A1.5 1.5 0 0 0 1.5 5h2A1.5 1.5 0 0 0 5 3.5v-2A1.5 1.5 0 0 0 3.5 0h-2ZM1 1.5a.5.5 0 0 1 .5-.5h2a.5.5 0 0 1 .5.5v2a.5.5 0 0 1-.5.5h-2a.5.5 0 0 1-.5-.5v-2Zm5.5-1A1.5 1.5 0 0 0 5 1.5v2A1.5 1.5 0 0 0 6.5 5h2A1.5 1.5 0 0 0 10 3.5v-2A1.5 1.5 0 0 0 8.5 0h-2ZM6 1.5a.5.5 0 0 1 .5-.5h2a.5.5 0 0 1 .5.5v2a.5.5 0 0 1-.5.5h-2a.5.5 0 0 1-.5-.5v-2ZM1.5 6A1.5 1.5 0 0 0 0 7.5v2A1.5 1.5 0 0 0 1.5 11h2A1.5 1.5 0 0 0 5 9.5v-2A1.5 1.5 0 0 0 3.5 6h-2ZM1 7.5a.5.5 0 0 1 .5-.5h2a.5.5 0 0 1 .5.5v2a.5.5 0 0 1-.5.5h-2a.5.5 0 0 1-.5-.5v-2Zm5.5-1A1.5 1.5 0 0 0 5 7.5v2A1.5 1.5 0 0 0 6.5 11h2A1.5 1.5 0 0 0 10 9.5v-2A1.5 1.5 0 0 0 8.5 6h-2ZM6 7.5a.5.5 0 0 1 .5-.5h2a.5.5 0 0 1 .5.5v2a.5.5 0 0 1-.5.5h-2a.5.5 0 0 1-.5-.5v-2ZM11 1a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v12a1 1 0 0 1-1 1h-2a1 1 0 0 1-1-1V1Zm1 0v12h2V1h-2Z"/>
+                                    </svg>
+                                </button>
+                            </div>
+                            <small class="form-hint">The system will try to auto-load planner, router, and summarizer configs</small>
+                        </div>
+                    </div>
+                    
+                    <!-- KB Agent Fields -->
+                    <div id="kbAgentFields" class="agent-fields hidden">
+                        <div class="form-group">
+                            <label for="loadKbAgentConfig">Agent Config File *</label>
+                                <div class="input-with-browse">
+                                <input type="text" id="loadKbAgentConfig" placeholder="e.g., ../../Agents/KBAgents/YourAgent/agent.yaml" required>
+                                <button type="button" class="browse-btn" onclick="discoveryAgent.selectAgentDialog.browseForFile('loadKbAgentConfig')" title="Browse for file">
+                                    <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+                                        <path d="M1.5 0A1.5 1.5 0 0 0 0 1.5v2A1.5 1.5 0 0 0 1.5 5h2A1.5 1.5 0 0 0 5 3.5v-2A1.5 1.5 0 0 0 3.5 0h-2ZM1 1.5a.5.5 0 0 1 .5-.5h2a.5.5 0 0 1 .5.5v2a.5.5 0 0 1-.5.5h-2a.5.5 0 0 1-.5-.5v-2Zm5.5-1A1.5 1.5 0 0 0 5 1.5v2A1.5 1.5 0 0 0 6.5 5h2A1.5 1.5 0 0 0 10 3.5v-2A1.5 1.5 0 0 0 8.5 0h-2ZM6 1.5a.5.5 0 0 1 .5-.5h2a.5.5 0 0 1 .5.5v2a.5.5 0 0 1-.5.5h-2a.5.5 0 0 1-.5-.5v-2ZM1.5 6A1.5 1.5 0 0 0 0 7.5v2A1.5 1.5 0 0 0 1.5 11h2A1.5 1.5 0 0 0 5 9.5v-2A1.5 1.5 0 0 0 3.5 6h-2ZM1 7.5a.5.5 0 0 1 .5-.5h2a.5.5 0 0 1 .5.5v2a.5.5 0 0 1-.5.5h-2a.5.5 0 0 1-.5-.5v-2Zm5.5-1A1.5 1.5 0 0 0 5 7.5v2A1.5 1.5 0 0 0 6.5 11h2A1.5 1.5 0 0 0 10 9.5v-2A1.5 1.5 0 0 0 8.5 6h-2ZM6 7.5a.5.5 0 0 1 .5-.5h2a.5.5 0 0 1 .5.5v2a.5.5 0 0 1-.5.5h-2a.5.5 0 0 1-.5-.5v-2ZM11 1a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v12a1 1 0 0 1-1 1h-2a1 1 0 0 1-1-1V1Zm1 0v12h2V1h-2Z"/>
+                                    </svg>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+                    <div class="modal-footer">
+                <div class="step-progress">
+                    <span class="step-indicator active" data-step="1">1</span>
+                    <span class="step-connector"></span>
+                    <span class="step-indicator" data-step="2">2</span>
+                </div>
+                
+                <div class="modal-actions">
+                    <button type="button" id="selectAgentCancelBtn" class="btn-secondary">Cancel</button>
+                    <button type="button" id="selectAgentBackBtn" class="btn-secondary hidden">Back</button>
+                    <button type="button" id="selectAgentNextBtn" class="btn-primary">Next</button>
+                    <button type="button" id="selectAgentLoadBtn" class="btn-primary hidden">Load</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Agent Context Menu -->
+    <div id="agentContextMenu" class="context-menu hidden">
+        <div class="context-menu-item" id="renameAgentItem">
+            <svg class="context-menu-icon" width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+                <path d="M12.146 1.146a.5.5 0 0 1 .708 0l2 2a.5.5 0 0 1 0 .708l-8.5 8.5a.5.5 0 0 1-.353.146H3a.5.5 0 0 1-.5-.5v-3a.5.5 0 0 1 .146-.354l8.5-8.5zM4 10v2h2l8-8-2-2-8 8z"/>
+            </svg>
+            <span>Rename</span>
+        </div>
+        <div class="context-menu-item" id="deleteAgentItem">
+            <svg class="context-menu-icon" width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+                <path d="M5.5 5.5A.5.5 0 0 1 6 6v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm2.5 0a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm3 .5a.5.5 0 0 0-1 0v6a.5.5 0 0 0 1 0V6z"/>
+                <path fill-rule="evenodd" d="M14.5 3a1 1 0 0 1-1 1H13v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4h-.5a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1H6a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1h3.5a1 1 0 0 1 1 1v1zM4.118 4 4 4.059V13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V4.059L11.882 4H4.118zM2.5 3V2h11v1h-11z"/>
+            </svg>
+            <span>Delete</span>
+        </div>
+    </div>
+
+    <!-- Rename Agent Modal -->
+    <div id="renameAgentModal" class="modal-overlay hidden">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Rename Workflow Agent</h3>
+                <button id="renameModalClose" class="close-btn" title="Close">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label for="renameAgentName">New Agent Name:</label>
+                    <input type="text" id="renameAgentName" class="form-input" placeholder="Enter new agent name">
+                    <div class="form-help">Name can only contain letters, numbers, underscores, and hyphens.</div>
+                </div>
+                <div id="renameError" class="error-message hidden"></div>
+            </div>
+            <div class="modal-footer">
+                <button id="renameConfirmBtn" class="btn-primary">Rename</button>
+                <button id="renameCancelBtn" class="btn-secondary">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    </body>
+<script>
+// Activity Flyout Toggle
+function toggleActivityFlyout() {
+    const flyout = document.getElementById('activityFlyout');
+    const backdrop = document.getElementById('activityFlyoutBackdrop');
+    const isOpen = flyout.classList.contains('open');
+    
+    if (isOpen) {
+        flyout.classList.remove('open');
+        flyout.setAttribute('aria-hidden', 'true');
+        backdrop.classList.remove('visible');
+    } else {
+        flyout.classList.add('open');
+        flyout.setAttribute('aria-hidden', 'false');
+        backdrop.classList.add('visible');
+    }
+}
+
+// Close flyout on Escape key
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+        const flyout = document.getElementById('activityFlyout');
+        if (flyout && flyout.classList.contains('open')) {
+            toggleActivityFlyout();
+        }
+    }
+});
+
+// Experimental Warning Dialog Functions
+function showExperimentalWarningDialog() {
+    const dialog = document.getElementById('experimentalWarningDialog');
+    if (dialog) {
+        dialog.classList.remove('hidden');
+    }
+}
+
+function closeExperimentalWarningDialog() {
+    const dialog = document.getElementById('experimentalWarningDialog');
+    if (dialog) {
+        dialog.classList.add('hidden');
+    }
+}
+
+// Initialize experimental warning dialog event listeners
+document.addEventListener('DOMContentLoaded', function() {
+    const closeBtn = document.getElementById('closeExperimentalWarningDialog');
+    const okBtn = document.getElementById('okExperimentalWarningBtn');
+    
+    if (closeBtn) {
+        closeBtn.addEventListener('click', closeExperimentalWarningDialog);
+    }
+    
+    if (okBtn) {
+        okBtn.addEventListener('click', closeExperimentalWarningDialog);
+    }
+    
+    // Close dialog when clicking outside of it
+    const dialog = document.getElementById('experimentalWarningDialog');
+    if (dialog) {
+        dialog.addEventListener('click', function(e) {
+            if (e.target === dialog) {
+                closeExperimentalWarningDialog();
+            }
+        });
+    }
+});
+
+// Inner Workflow Tabs Initialization
+(function(){
+    function initWorkflowInnerTabs(){
+        const panel = document.getElementById('entry-workflow-panel');
+        if(!panel) return;
+        const tabBar = panel.querySelector('.inner-tab-bar');
+        if(!tabBar || tabBar.dataset.bound) return;
+        tabBar.dataset.bound = '1';
+        const tabs = Array.from(tabBar.querySelectorAll('.inner-tab'));
+        const panels = Array.from(panel.querySelectorAll('.workflow-subpanel'));
+        function activate(name){
+            tabs.forEach(t=>{ const active = t.dataset.inner===name; t.classList.toggle('active', active); t.setAttribute('aria-selected', active?'true':'false'); });
+            panels.forEach(p=> {
+                const isActive = p.dataset.innerPanel===name;
+                p.classList.toggle('active', isActive);
+                if(isActive && name==='workflow-diagram'){
+                    setTimeout(()=>{ try{ p.scrollTop = 0; }catch(e){} }, 50);
+                }
+            });
+            // show/hide the diagram toolbar in the inner tab bar
+            const innerToolbar = panel.querySelector('.inner-tab-toolbar');
+            if(innerToolbar){
+                if(name==='workflow-diagram') innerToolbar.classList.add('visible'); else innerToolbar.classList.remove('visible');
+            }
+            if(name==='workflow-diagram' && window.entryDiagram){ window.entryDiagram.onTabShown('entry-workflow'); }
+        }
+        tabBar.addEventListener('click', e=>{
+            const btn = e.target.closest('.inner-tab');
+            if(!btn) return;
+            activate(btn.dataset.inner);
+        });
+    }
+    document.addEventListener('DOMContentLoaded', initWorkflowInnerTabs);
+})();
+
+// Panel Resize Initialization - run after all scripts have loaded
+(function() {
+    function initializePanelResize() {
+        const leftPanel = document.querySelector('.left-panel');
+        const rightPanel = document.querySelector('.right-panel');
+        const resizeHandle = document.getElementById('resizeHandle');
+        const container = document.querySelector('.container');
+        
+        if (!leftPanel || !rightPanel || !resizeHandle || !container) {
+            return false;
+        }
+        
+        let isResizing = false;
+        let startX = 0;
+        let startLeftWidth = 0;
+        let startRightWidth = 0;
+        let resizeTimeout = null;
+        
+        resizeHandle.addEventListener('mousedown', (e) => {
+            // Only respond to left mouse button
+            if (e.button !== 0) return;
+            
+            isResizing = true;
+            startX = e.clientX;
+            
+            // Clear any existing timeout
+            if (resizeTimeout) {
+                clearTimeout(resizeTimeout);
+            }
+            
+            // Set a safety timeout to auto-release resize after 30 seconds
+            resizeTimeout = setTimeout(() => {
+                if (isResizing) {
+                    handleMouseUp();
+                }
+            }, 30000);
+            
+            // Get current widths
+            const leftRect = leftPanel.getBoundingClientRect();
+            const rightRect = rightPanel.getBoundingClientRect();
+            startLeftWidth = leftRect.width;
+            startRightWidth = rightRect.width;
+            
+            // Add resizing state
+            container.classList.add('resizing');
+            leftPanel.classList.add('resizing');
+            rightPanel.classList.add('resizing');
+            resizeHandle.classList.add('resizing');
+            
+            // Prevent text selection during resize
+            document.body.style.userSelect = 'none';
+            document.body.style.cursor = 'col-resize';
+            
+            e.preventDefault();
+            e.stopPropagation(); // Prevent event bubbling
+        });
+        document.addEventListener('mousemove', (e) => {
+            if (!isResizing) return;
+            
+            // Handle case where clientX is undefined (can happen on some browsers)
+            const currentX = e.clientX || e.pageX || startX;
+            const deltaX = currentX - startX;
+            const containerWidth = container.getBoundingClientRect().width;
+            
+            // Calculate new widths
+            const newLeftWidth = startLeftWidth + deltaX;
+            const newRightWidth = startRightWidth - deltaX;
+            
+            // Apply constraints (minimum 300px, maximum leaving 320px for other panel)
+            const minWidth = 300;
+            const maxLeftWidth = containerWidth - 320;
+            const maxRightWidth = containerWidth - 320;
+            
+            if (newLeftWidth >= minWidth && newLeftWidth <= maxLeftWidth && 
+                newRightWidth >= minWidth && newRightWidth <= maxRightWidth) {
+                
+                const leftPercent = (newLeftWidth / containerWidth) * 100;
+                const rightPercent = (newRightWidth / containerWidth) * 100;
+                
+                // Apply new widths (simplified since CSS now uses flex: 0 0 auto)
+                leftPanel.style.width = `${leftPercent}%`;
+                rightPanel.style.width = `${rightPercent}%`;
+            }
+        });
+        
+        document.addEventListener('mouseup', handleMouseUp);
+        document.addEventListener('mouseleave', handleMouseUp); // Fallback for when mouse leaves window
+        window.addEventListener('blur', handleMouseUp); // Fallback for when window loses focus
+        
+        function handleMouseUp() {
+            if (!isResizing) return;
+            
+            isResizing = false;
+            
+            // Clear the safety timeout
+            if (resizeTimeout) {
+                clearTimeout(resizeTimeout);
+                resizeTimeout = null;
+            }
+            
+            // Remove resizing state
+            container.classList.remove('resizing');
+            leftPanel.classList.remove('resizing');
+            rightPanel.classList.remove('resizing');
+            resizeHandle.classList.remove('resizing');
+            
+            // Restore normal cursor and text selection
+            document.body.style.userSelect = '';
+            document.body.style.cursor = '';
+        }
+        
+        // Add escape key as emergency exit from resize mode
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && isResizing) {
+                handleMouseUp();
+            }
+        });
+        
+        // Handle window resize to maintain proportions
+        window.addEventListener('resize', () => {
+            const currentContainerWidth = container.getBoundingClientRect().width;
+            const leftWidth = leftPanel.getBoundingClientRect().width;
+            const rightWidth = rightPanel.getBoundingClientRect().width;
+            
+            const leftPercent = (leftWidth / currentContainerWidth) * 100;
+            const rightPercent = (rightWidth / currentContainerWidth) * 100;
+            
+            // Apply proportions (simplified since CSS now uses flex: 0 0 auto)
+            leftPanel.style.width = `${leftPercent}%`;
+            rightPanel.style.width = `${rightPercent}%`;
+        });
+        
+        return true;
+    }
+    
+    // Wait for all scripts to load, then initialize
+    function tryInitialization() {
+        if (initializePanelResize()) {
+            // Initialization successful
+        } else {
+            // Elements not ready, retry in 500ms
+            setTimeout(tryInitialization, 500);
+        }
+    }
+    
+    // Start initialization when page is fully loaded
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', tryInitialization);
+    } else {
+        // Page already loaded
+        setTimeout(tryInitialization, 100);
+    }
+})();
+</script>
+</html>

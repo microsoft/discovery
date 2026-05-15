@@ -1,0 +1,136 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "required": ["name", "states", "transitions", "variables", "startstate"],
+  "properties": {
+    "name": { 
+      "type": "string",
+      "description": "Name of the workflow"
+    },
+    "states": {
+      "type": "array",
+      "description": "Workflow states",
+      "items": {
+        "type": "object",
+        "required": ["name", "actors", "isFinal"],
+        "properties": {
+          "name": { 
+            "type": "string",
+            "description": "State name"
+          },
+          "actors": {
+            "type": "array",
+            "description": "Agents in this state",
+            "items": {
+              "type": "object",
+              "required": ["agent", "inputs", "thread", "humanInLoopMode"],
+              "properties": {
+                "agent": { 
+                  "type": "string",
+                  "description": "Reference to agent definition"
+                },
+                "inputs": { 
+                  "type": "object",
+                  "description": "Input mappings for the agent"
+                },
+                "thread": { 
+                  "type": "string",
+                  "description": "Thread to use"
+                },
+                "humanInLoopMode": { 
+                  "type": "string",
+                  "description": "Human intervention mode (never, always, etc.)"
+                },
+                "streamOutput": { 
+                  "type": "boolean",
+                  "description": "Whether to stream output"
+                },
+                "maxTurn": { 
+                  "type": "number",
+                  "description": "Maximum turns for this actor (optional)"
+                },
+                "maxTransientErrorRetries": { 
+                  "type": "number",
+                  "description": "Maximum retries for transient errors (optional)"
+                },
+                "maxRateLimitRetries": { 
+                  "type": "number",
+                  "description": "Maximum retries for rate limit errors (optional)"
+                }
+              },
+              "additionalProperties": false
+            }
+          },
+          "isFinal": { 
+            "type": "boolean",
+            "description": "Whether this is a final state"
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    "transitions": {
+      "type": "array",
+      "description": "State transitions",
+      "items": {
+        "type": "object",
+        "required": ["from", "to"],
+        "properties": {
+          "from": { 
+            "type": "string",
+            "description": "Source state"
+          },
+          "to": { 
+            "type": "string",
+            "description": "Target state"
+          },
+          "event": { 
+            "type": "string",
+            "description": "Event that triggers transition (optional)"
+          },
+          "condition": { 
+            "type": "string",
+            "description": "Optional condition for transition"
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    "variables": {
+      "type": "array",
+      "description": "Workflow variables",
+      "items": {
+        "type": "object",
+        "required": ["Type", "name"],
+        "properties": {
+          "Type": { 
+            "type": "string",
+            "description": "Variable type (thread, userDefined, etc.)"
+          },
+          "name": { 
+            "type": "string",
+            "description": "Variable name"
+          },
+          "value": { 
+            "type": "string",
+            "description": "Optional default value"
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+
+    "#notes": {
+      "variables_uniqueness": "JSON Schema Draft-07 cannot enforce uniqueness of a property inside objects within an array. The server enforces that variable 'name' values are unique (no duplicates allowed). If you see 'An item with the same key has already been added' during publish, check for duplicate entries under 'variables'."
+    },
+    "startstate": { 
+      "type": "string",
+      "description": "Initial state of the workflow"
+    },
+    "id": { 
+      "type": "string",
+      "description": "Optional workflow identifier"
+    }
+  },
+  "additionalProperties": false
+}

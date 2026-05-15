@@ -1,0 +1,185 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "location": {
+      "type": "string",
+      "defaultValue": "uksouth",
+      "metadata": {
+        "description": "Location for the Discovery resources"
+      }
+    },
+    "toolName": {
+      "type": "string",
+      "defaultValue": "mpi-example",
+      "metadata": {
+        "description": "Name of the Discovery tool resource"
+      }
+    },
+    "agentName": {
+      "type": "string",
+      "defaultValue": "mpi-example-agent",
+      "metadata": {
+        "description": "Name of the Discovery agent resource"
+      }
+    }
+  },
+  "variables": {},
+  "resources": [
+    {
+      "type": "Microsoft.Discovery/tools",
+      "apiVersion": "2025-07-01-preview",
+      "name": "[parameters('toolName')]",
+      "location": "[parameters('location')]",
+      "tags": {
+        "source": "tool-image-builder",
+        "toolName": "mpi-example"
+      },
+      "properties": {
+        "version": "1.0.0",
+        "environmentVariables": {},
+        "definitionContent": {
+          "name": "mpi-example",
+          "description": "A generic MPI master-worker pattern demonstrating dynamic load balancing and task distribution. The master node discovers input files from a mounted directory, distributes them to worker nodes for parallel processing, collects results, and generates a summary report. Ideal for embarrassingly parallel workloads such as batch file processing, data transformation, and independent task execution.",
+          "version": "1.0.0",
+          "category": "High-Performance Computing",
+          "license": "MIT",
+          "infra": [
+            {
+              "name": "worker",
+              "infra_type": "container",
+              "image": {
+                "acr": "mduatestacr.azurecr.io/mpi-example:latest"
+              },
+              "internal_ports": [
+                {
+                  "destination": 22,
+                  "protocol": "tcp"
+                }
+              ],
+              "mpi": {
+                "follower_command": "/opt/Microsoft.Discovery/mpid"
+              },
+              "compute": {
+                "min_resources": {
+                  "cpu": "500m",
+                  "ram": "1Gi",
+                  "gpu": "0",
+                  "storage": "0"
+                },
+                "max_resources": {
+                  "cpu": "1",
+                  "ram": "2Gi",
+                  "storage": "0"
+                },
+                "infiniband": false,
+                "recommended_sku": [
+                  "Standard_D2s_v6",
+                  "Standard_D4s_v6"
+                ],
+                "pool_type": "static",
+                "pool_size": 5
+              }
+            }
+          ],
+          "actions": [
+            {
+              "name": "process_files",
+              "description": "Processes input files in parallel using MPI master-worker pattern. Master node discovers all files in input directory /app/inputs/*, distributes them to worker nodes for processing, and collects results. Each worker reads file content, parses numbers, computes statistics, and returns results. Final output is written to /app/outputs/results.txt with detailed processing summary.",
+              "infra_node": "worker",
+              "input_schema": {
+                "type": "object",
+                "properties": {
+                  "num_processes": {
+                    "type": "integer",
+                    "description": "Total number of MPI processes (1 master + N-1 workers). Must be at least 2. Should not exceed pool_size."
+                  }
+                },
+                "required": [
+                  "num_processes"
+                ]
+              },
+              "command": "bash -c 'source /etc/profile.d/modules.sh && module load mpi/openmpi-x86_64 && mpirun --allow-run-as-root --hostfile /var/run/Microsoft.Discovery/mpi-hosts -np {{num_processes}} /root/master_worker'"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "type": "Microsoft.Discovery/agents",
+      "apiVersion": "2025-07-01-preview",
+      "name": "[parameters('agentName')]",
+      "location": "[parameters('location')]",
+      "dependsOn": [
+        "[resourceId('Microsoft.Discovery/tools', parameters('toolName'))]"
+      ],
+      "tags": {
+        "source": "tool-image-builder",
+        "agentName": "mpi-example"
+      },
+      "properties": {
+        "modelName": "azureml://registries/azure-openai/models/gpt-4o/versions/2024-11-20",
+        "version": "1.0.0",
+        "agents": [],
+        "tools": [
+          {
+            "toolId": "/subscriptions/a5e50c1d-7c71-482e-a43d-6cf0788e419a/resourceGroups/mdua-rg/providers/Microsoft.Discovery/tools/mpi-example",
+            "name": "mpi-example"
+          }
+        ],
+        "knowledgeBases": [],
+        "definitionContent": {
+          "agent": {
+            "name": "mpi-example-agent",
+            "description": "An agent specialized in high-performance parallel processing using MPI master-worker pattern for embarrassingly parallel workloads",
+            "model": "azureml://registries/azure-openai/models/gpt-4o/versions/2024-11-20",
+            "instructions": "You are an expert in high-performance parallel computing with deep knowledge of MPI (Message Passing Interface) patterns and distributed workload processing. You assist users with executing embarrassingly parallel tasks, batch file processing, and data transformation using the MPI master-worker pattern. Your expertise covers parallel computing strategies, load balancing, and efficient resource utilization.\n\nThe user goal is: {{userGoal}}\n\nALWAYS come up with high level plans to achieve the user goal, and then break down the plan into steps that can be executed by you or other agents in the team. \n\nYou SHOULD only perform actions which have been assigned to you in the plan. Before tool execution, always preview the data assets and ensure you understand the data before proceeding with any analysis.\n\n## TOOL OVERVIEW\n\nThe agent makes use of tool that exposes a single action `process_files` which processes input files in parallel using MPI master-worker pattern.\n\nThe MPI Example Tool provides a scalable parallel processing framework using a master-worker architecture:\n\n- **Master Node (Rank 0)**: Discovers input files, distributes tasks dynamically to workers, collects results, and generates summary reports\n- **Worker Nodes (Rank 1+)**: Process assigned tasks independently and return results to the master\n- **Dynamic Load Balancing**: Workers that complete tasks faster automatically receive more work\n\n### DIRECTORY STRUCTURE\n\nWhen working with the tool, be aware of the container directory structure:\n\n- `/app/inputs/`: Input files mount point (read-only)\n- `/app/outputs/`: Output results mount point (read-write)\n- `/root/master_worker`: The compiled MPI executable\n\n### VERY IMPORTANT\n\nFor each successful run, ensure you promote the output (`/app/outputs/results.txt`) to the data assets so the next step in the workflow can access it.\n\nAgent team:\n{{agentTeam}}\n\nNode pool context: \n{{nodePoolContext}}\n\nData handling context: \n{{dataHandlingContext}}\n",
+            "top_p": 0,
+            "temperature": 0,
+            "response_format": "auto"
+          },
+          "extension": {
+            "events": [],
+            "inputs": [
+              {
+                "name": "userGoal",
+                "type": "llm",
+                "description": "The user request for parallel processing tasks."
+              },
+              {
+                "name": "workflowContext",
+                "type": "llm",
+                "description": "The context of the parallel processing workflow."
+              },
+              {
+                "name": "agentTeam",
+                "type": "llm",
+                "description": "The team of agents that will be involved in the workflow."
+              }
+            ],
+            "outputs": [],
+            "system_prompts": {}
+          }
+        }
+      }
+    }
+  ],
+  "outputs": {
+    "toolId": {
+      "type": "string",
+      "value": "[resourceId('Microsoft.Discovery/tools', parameters('toolName'))]"
+    },
+    "toolName": {
+      "type": "string",
+      "value": "[parameters('toolName')]"
+    },
+    "agentId": {
+      "type": "string",
+      "value": "[resourceId('Microsoft.Discovery/agents', parameters('agentName'))]"
+    },
+    "agentName": {
+      "type": "string",
+      "value": "[parameters('agentName')]"
+    }
+  }
+}

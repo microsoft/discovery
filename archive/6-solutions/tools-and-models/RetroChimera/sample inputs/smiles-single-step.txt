@@ -1,0 +1,5 @@
+CC(C)Sc1ncccc1F
+Oc1ccc(OCc2ccccc2)c(Br)c1
+CC(=O)OC1=CC=CC=C1C(=O)O
+CN1C=NC2=C1C(=O)N(C(=O)N2C)C
+OC[C@H]1OC(O)[C@@H](O)[C@H](O)[C@H]1O

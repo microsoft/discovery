@@ -1,0 +1,63 @@
+name: VerilogCoderWorkflow
+states:
+  - name: StartState
+    actors:
+      - agent: iverilog-agent
+        inputs:
+          userGoal: userGoal
+          dataHandlingContext: dataHandlingContext
+          messageId: messageId
+          nodePoolContext: nodePoolContext
+          workflowContext: workflowContext
+        outputs:
+          code: code
+          file_name: file_name
+          syntax_report: syntax_report
+        thread: MainThread
+        humanInLoopMode: never
+        streamOutput: true
+    isFinal: false
+
+  - name: EndState
+    actors: []
+    isFinal: true
+
+transitions:
+  - from: StartState
+    to: EndState
+
+variables:
+  - Type: userDefined
+    name: code
+  - Type: userDefined
+    name: file_name
+  - Type: userDefined
+    name: syntax_report
+  - Type: thread
+    name: MainThread
+  - Type: userDefined
+    name: userGoal
+  - Type: userDefined
+    name: nodePoolContext
+  - Type: userDefined
+    name: messageId
+  - Type: userDefined
+    name: dataHandlingContext
+    value: |
+      ## GUIDELINES
+
+      When saving a file, ANY path that begins with `/mount` is NOT for use
+      with a system or virual path.  It is a path for the container only. Never attempt
+      to use it as a system or virtual path.
+
+      Always define the full absolute path for any files. If you use relative paths, they
+      must all be changed to absolute paths that beging with `/mount/ysiproject`.
+      All files MUST begin with `/mount/ysiproject`
+
+  - Type: userDefined
+    name: workflowContext
+    value: |
+      You are part of a Verilog design and verification workflow. Your role is to generate high-quality
+      Verilog code based on user requirements and ensure its correctness through syntax checking.
+
+startstate: StartState

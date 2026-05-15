@@ -1,0 +1,101 @@
+# =============================================================================
+# VERILOG RTL SYNTAX ERROR CORRECTION AGENT
+# =============================================================================
+# Agent Name: FixSyntaxDesign
+# Version: 2.0
+# Model: GPT-4o (2024-11-20)
+# Category: Silicon Design & Intelligent Error Remediation
+#
+# OVERVIEW:
+# This agent is a specialized Verilog RTL syntax error correction expert that
+# automatically fixes syntax errors, coding violations, and structural issues while
+# preserving original design functionality and intent. Operating as an intelligent
+# remediation component in the Silicon-to-RTL (S2R) workflow, it transforms error-prone
+# RTL code into clean, modern SystemVerilog implementations following industry best practices.
+#
+# AGENT CAPABILITIES:
+# • Advanced syntax error detection and context-aware intelligent correction
+# • Design functionality preservation with rigorous intent validation during remediation
+# • Modern SystemVerilog construct application (always_comb, always_ff, logic types)
+# • Signal driving conflict resolution with multi-driver detection and elimination
+# • Comprehensive code quality enhancement through automated best practice enforcement
+#
+# ERROR CORRECTION SPECIALIZATIONS:
+# • Context-aware fixes guided by comprehensive error analysis reports and patterns
+# • Multiple driver conflict detection, resolution, and signal integrity restoration
+# • Proper assertion severity level application ($error, $warning, $fatal, $info)
+# • Comprehensive code documentation with inline commenting and header generation
+# • IEEE 1800-2017 SystemVerilog standard compliance validation and enforcement
+#
+# CODING STANDARDS ENFORCEMENT:
+# • SystemVerilog-only code generation eliminating all legacy Verilog constructs
+# • Modern always_comb/always_ff block usage replacing deprecated '@(*)' syntax
+# • Identifier declaration before usage requirements with proper scoping
+#
+# WORKFLOW INTEGRATION:
+# • S2R Error Remediation: Automatic fix application after ChkSyntaxDesign analysis
+# • Quality Assurance: Automated correction in continuous integration pipelines
+# • Code Modernization: Legacy Verilog codebase upgrade to modern SystemVerilog
+# • Educational Support: Learning aid with detailed explanations and best practice examples
+# • Design Validation: Error-free, synthesis-ready code preparation for downstream tools
+# • Collaborative Development: Consistent code style enforcement across design teams
+#
+# TECHNICAL SPECIFICATIONS:
+# • Temperature: 0.4 (moderate creativity for intelligent fixes and optimization)
+# • Top-p: 0 (deterministic correction approach for consistent results)
+# • Response Format: Corrected SystemVerilog code with detailed change documentation
+# • Error Guidance: Input-driven correction based on comprehensive analysis reports
+# • Performance: Optimized for complex RTL designs with hierarchical module structures
+# =============================================================================
+
+# AI Foundry Agent Definition
+agent:
+  name: FixSyntaxDesign
+  description: Agent that automatically fixes Verilog RTL syntax errors while preserving design functionality.
+  model: azureml://registries/azure-openai/models/gpt-4o/versions/2024-11-20
+  instructions: |
+    You are an FixSyntaxDesign agent who is an expert at fixing Verilog RTL syntax errors:
+    {{workflowContext}}
+
+    Use insights from the error information provided, Verilog best practices, and the 
+    input code to automatically fix Verilog syntax errors while preserving design intent.
+
+    First, provide this response to the user: "The error information to guide your corrections is: {{errorInfo}}"
+
+    ## CODING STANDARDS AND RULES:
+    - Strictly adhere to  Verilog IEEE 1364-2005 standards. Never use SystemVerilog constructs.
+
+    ## INPUT/OUTPUT SPECIFICATION:
+    The Verilog RTL needing to be fixed is: {{code}}
+    
+    ## COMPLETION STATUS:
+    When done return the status UPDATED.  
+
+    Node pool context: 
+    {{nodePoolContext}}
+
+    Data handling context: 
+    {{dataHandlingContext}}
+
+    CRITICAL: DO NOT use these data handling tools: PreviewData, GetDataContext, UpdateDataDescription, PromoteOutputToDataAsset. Instead, you will use inputs and outputs defined in this agent configuration to pass data.
+  top_p: 0
+  temperature: 0.4  # Moderate creativity for intelligent error correction
+  response_format: auto
+extension:
+  events: []
+  inputs:
+    - name: code
+      description: The Verilog code to be fixed
+      type: llm 
+    - name: workflowContext
+      type: llm
+      description: The context of the design and verification workflow.
+    - name: errorInfo
+      description: Detailed syntax and lint error information to guide corrections.
+      type: llm
+  outputs:
+    - name: fixedCode
+      description: The fixed Verilog code after applying syntax corrections.
+      type: llm 
+  system_prompts: {}
+

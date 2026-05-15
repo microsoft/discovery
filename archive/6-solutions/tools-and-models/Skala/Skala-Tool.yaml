@@ -1,0 +1,53 @@
+name: Skala-Tool
+description: Performs quantum chemistry DFT calculations using Microsoft Skala service. Converts SMILES molecular strings to 3D structures and computes molecular properties including total energy, orbital information, and electronic structure.
+version: 1.0.0
+category: Chemistry
+license: MIT
+infra:
+  - name: worker
+    infra_type: container
+    image:
+      acr: <youracr>  #For example acr.azurecr.io/skala-client:new
+    compute:
+      min_resources:
+        cpu: "1"
+        ram: "2Gi"
+        storage: "32"
+        gpu: "0"
+      max_resources:
+        cpu: "2"
+        ram: "4Gi"
+        storage: "64"
+        gpu: "0"
+      recommended_sku:
+        - Standard_D4s_v6
+      infiniband: false
+      pool_type: static
+      pool_size: 1
+actions:
+  - name: skala
+    description: This action executes the Skala model to perform quantum chemistry DFT calculations given the smiles string. The smiles string(s) may be provided directly as input or read from input files. Note, if provided as input files, input mount path where the SMILES data will be stored for the computation is /app/inputs. Multiple smiles can be processed within the same run as long as they are mounted to the same input path or provided as a list in the input directly. Set the `output_directory` to `/app/outputs` to store the results.
+    infra_node: worker
+    input_schema:
+      type: object
+      properties:
+        smiles:
+          type: string
+          description: SMILES string(s) to process. Can be a single SMILES string or multiple SMILES strings separated by commas.
+        basis:
+          type: string
+          description: Quantum chemistry basis set for the calculation. Allowed values are def2-svp, def2-tzvp, def2-tzvpd, def2-qzvp, cc-pvdz, cc-pvtz. Set the default to def2-tzvp.
+        grid-level:
+          type: string
+          description: DFT integration grid level (higher = more accurate but slower). Allowed values are coarse, medium, fine, superfine, ultrafine. Set the default to superfine.
+        max-scf-steps:
+          type: number
+          description: Maximum number of self-consistent field (SCF) iterations. Set the default to 500.
+      required:
+        - smiles
+    command: python skala_client.py --smiles "{{ smiles }}"
+      {{#if basis}} --basis {{ basis }}{{/if}}
+      {{#if grid-level}} --grid-level {{ grid-level }}{{/if}}
+      {{#if max-scf-steps}} --max-scf-steps {{ max-scf-steps }}{{/if}}
+      {{#if charge}} --charge {{ charge }}{{/if}}
+      {{#if multiplicity}} --multiplicity {{ multiplicity }}{{/if}}

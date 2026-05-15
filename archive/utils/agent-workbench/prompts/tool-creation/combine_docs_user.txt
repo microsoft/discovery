@@ -1,0 +1,37 @@
+Combine these detailed script documentations into comprehensive API documentation that preserves all technical specifications:
+
+{combined_content}
+
+**CRITICAL IMPORT PATH REQUIREMENT**: When writing ALL code examples and import statements throughout this documentation, examine the project's Docker configuration to determine correct runtime import paths. If the project uses `WORKDIR /app` and copies Python files directly to the working directory, use direct imports WITHOUT package prefixes:
+- ✅ CORRECT: `from io_utils import setup_session_logger`  
+- ❌ WRONG: `from app.io_utils import setup_session_logger`
+
+This applies to ALL code examples, function calls, and import statements in every section below.
+
+Create a unified API documentation with the following sections:
+
+## 1. **Project Overview**
+- What this complete project/tool provides
+- Main capabilities and use cases
+
+## 2. **Docker Environment and Available Libraries**
+Extract and organize from all scripts and Dockerfile:
+- **Base Image**: Docker base image and its included packages
+- **Installed Libraries**: All conda/pip packages and system tools installed
+- **System Tools**: Command-line utilities and binaries available
+- **Environment Setup**: Required environment variables and configurations
+
+## 3. **API Reference**
+Organize all functions by module/folder with COMPLETE specifications:
+
+### For Each Function Include:
+- **Complete Function Signature**: `function_name(param1: type, param2: type = default) -> ReturnType`
+- **Parameter Details**: Name, type, purpose, constraints, examples for each parameter
+- **Return Value Specification**: Type, structure, example values, possible variations
+- **Error Handling**: Exception types, validation rules, error recovery patterns
+- DO NOT Provide a sample use for each function. You will provide a few examples in the final section on the document.
+
+## 4. **Usage Examples and Library Combinations**
+- Complete workflows showing project + library integration
+
+Make it comprehensive and immediately actionable for AI agents that need to understand both the project APIs AND what additional capabilities are available through the Docker environment.

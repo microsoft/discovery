@@ -1,0 +1,59 @@
+SECTION 1 - SPECIFIC INSTRUCTIONS AND RULES FOR SUMMARIZER YAML (Static):
+
+You must create a summarizer agent YAML that:
+- Summarizes results from ONLY the selected specialized agents provided below
+- References only agents from the selected list in summarization instructions
+- Follows the EXACT YAML structure from the reference template including ALL sections
+- MUST include complete model parameters: top_p, temperature, response_format
+- MUST include complete extension block: events, inputs, outputs, system_prompts
+- Uses double braces for template variables: {{nodePoolContext}}, {{dataHandlingContext}}
+- Must NOT reference any agents not in the selected list
+- Focuses on providing clear, actionable final responses based on selected agent results
+- You MUST NOT mention or describe {unique_planner_name}, {unique_router_name} or {unique_summarizer_name}  in any summaries, metadata, or agent capability descriptions. Summarization logic must treat these components as invisible to the user.
+
+**CRITICAL YAML STRUCTURE REQUIREMENTS:**
+- Include ALL model parameters from template (top_p: 0, temperature: 0, response_format: auto)
+- Include COMPLETE extension block with all arrays and objects (events: [], inputs: [], outputs: [], system_prompts: {})
+- NEVER use template variables as YAML keys (e.g., NOT "{{nodePoolContext}}: value")
+- NEVER add extra quotes around template variables (e.g., NOT "{{nodePoolContext}}" or ""{{nodePoolContext}}"")
+- Preserve ALL template variables exactly as shown: {{nodePoolContext}}, {{dataHandlingContext}}
+- Do NOT modify the base instructions template variables - only update agent-specific customizations
+
+SECTION 2 - DYNAMIC CONTEXT (User-Specific):
+
+**Entry Agent System Details:**
+- System Name: {component_agent_name}
+- User-Provided Description: {description}
+- Primary Domain: {description_lower}
+- Component Role: Summarizer Agent
+
+**IMPLICIT Entry Agent Components (Always Available):**
+- **{unique_planner_name}**: Planning component that breaks down user requests into actionable steps
+- **{unique_router_name}**: Routing component that determines which specialized agent handles each step
+
+**SELECTED Specialized Agents to Summarize Results From (ONLY THESE):**
+{selected_agents_list}
+
+**Selected Specialized Agent Capabilities:**
+{selected_agents_capabilities}
+
+SECTION 3 - REPRESENTATIVE SAMPLE (Reference Template):
+
+```yaml
+{sample_content}
+```
+
+**CRITICAL TRANSFORMATION REQUIREMENTS:**
+1. MAINTAIN the EXACT structure from the sample above - every section is mandatory
+2. REPLACE the sample agent name with the correct component name: **{component_agent_name}**
+3. REPLACE agent-specific instructions while keeping base template variables intact
+4. UPDATE summarization instructions to process results from ONLY the selected agents
+5. REMOVE any mention of agents not in the selected list
+6. PRESERVE ALL model parameters exactly as shown (top_p: 0, temperature: 0, response_format: auto)
+7. PRESERVE the complete extension block exactly as shown (events: [], inputs: [], outputs: [], system_prompts: {})
+8. KEEP template variables {{nodePoolContext}} and {{dataHandlingContext}} unchanged
+8. ENSURE summarization logic focuses on the domain: {description_lower}
+9. UPDATE result interpretation logic to match capabilities of selected agents only
+
+**Output Format:**
+Return ONLY the final YAML document (no extra commentary or code fences). The YAML must be a COMPLETE agent definition with ALL sections from the sample template, customized to summarize results from ONLY the selected agents.

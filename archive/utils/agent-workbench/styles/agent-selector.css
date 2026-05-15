@@ -1,0 +1,316 @@
+/* Copilot header and agent selector styles - extracted from app.css */
+.copilot-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between; /* Changed back to space-between to accommodate agent selector */
+    padding: 0;
+    margin-bottom: 5px; /* Added small margin at the bottom */
+    border-bottom: none !important; /* Explicitly remove any border with !important */
+    border: none !important; /* Ensure no borders at all */
+    box-shadow: none !important; /* Remove any box shadows that might create lines */
+}
+
+/* Section body to group items and provide consistent indentation */
+.agent-dropdown-section-body {
+    padding-left: 12px; /* visual hierarchy under header */
+}
+
+/* Agent Selector */
+.agent-selector {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.agent-selector-btn {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    background: transparent;
+    border: 1px solid transparent; /* Transparent border when not expanded */
+    border-radius: 8px;
+    font-family: inherit;
+    font-size: 14px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+/* Entry agents share the same style as regular items (no override needed) */
+}
+
+.agent-selector-btn:hover {
+    background: var(--ms-gray-bg);
+    border-color: var(--ms-gray-light);
+}
+
+.agent-selector-btn:focus {
+    outline: 2px solid var(--ms-blue-primary);
+    outline-offset: 2px;
+}
+
+.agent-selector-btn.open {
+    border-color: var(--ms-gray-light); /* Show border only when expanded */
+}
+
+.agent-selector-content {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    gap: 4px; /* Reduced gap to bring arrow closer to text */
+}
+
+.agent-info {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    flex: 0 1 auto; /* Allow shrinking but don't force full width */
+    min-width: 0;
+}
+
+.agent-name-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    min-width: 0;
+}
+
+.agent-type-icon {
+    width: 16px;
+    height: 16px;
+    flex: 0 0 auto;
+    display: block; /* avoid inline-image baseline offset */
+}
+
+.agent-name {
+    font-weight: 600;
+    color: var(--ms-gray-dark);
+    font-size: 14px;
+    line-height: 16px; /* align with 16px icon */
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.dropdown-arrow {
+    flex-shrink: 0;
+    color: var(--ms-gray-medium);
+    transition: transform 0.2s ease;
+}
+
+.agent-selector-btn.open .dropdown-arrow {
+    transform: rotate(180deg);
+}
+
+/* Agent Dropdown Menu */
+.agent-dropdown-menu {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    width: 200px; /* Match the button width */
+    background: var(--ms-white);
+    border: 1px solid var(--ms-gray-lighter);
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    z-index: 1000;
+    max-height: 50vh; /* Up to half the window height */
+    overflow-y: auto;
+    display: none;
+    margin-top: 4px;
+}
+
+.agent-dropdown-menu.show {
+    display: block;
+}
+
+.agent-dropdown-item {
+    padding: 8px 12px; /* Reduced padding since no description */
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+    border-bottom: 1px solid var(--ms-gray-lightest);
+}
+
+.agent-dropdown-item:last-child {
+    border-bottom: none;
+}
+
+.agent-dropdown-item:hover {
+    background: var(--ms-gray-bg);
+}
+
+.agent-dropdown-item.active {
+    background: var(--ms-blue-tint);
+    color: var(--ms-blue-primary);
+}
+
+.agent-dropdown-item.active .agent-item-name {
+    color: var(--ms-blue-primary);
+    font-weight: 600;
+}
+
+.agent-item-content {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+}
+
+.agent-item-name {
+    font-weight: 500;
+    color: var(--ms-gray-dark);
+    font-size: 12px; /* Reduced from 14px */
+    flex: 1;
+}
+
+.agent-check-mark {
+    flex-shrink: 0;
+    color: var(--ms-blue-primary);
+    margin-left: 8px;
+}
+
+/* Discovery publish action styles */
+.agent-dropdown-divider {
+    height: 1px;
+    background: var(--ms-gray-lighter);
+    margin: 4px 0;
+}
+
+.agent-dropdown-action {
+    padding: 8px 12px;
+    cursor: pointer;
+    border-radius: 4px;
+    transition: background-color 0.15s ease;
+}
+
+.agent-dropdown-action:hover {
+    background: var(--ms-gray-bg);
+}
+
+.agent-action-content {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.agent-action-icon {
+    flex-shrink: 0;
+    color: var(--ms-gray-medium);
+}
+
+.agent-action-text {
+    font-size: 14px;
+    color: var(--ms-gray-dark);
+    font-weight: 500;
+}
+
+/* Create icon alignment and neutral color */
+.create-icon {
+    display: inline-flex;
+    color: #9aa0a6;
+    margin-right: 8px; /* more space between + icon and text */
+}
+
+.copilot-branding {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.copilot-icon {
+    color: var(--ms-blue-primary);
+    flex-shrink: 0;
+}
+
+.copilot-text {
+    flex: 1;
+}
+
+.copilot-name {
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--ms-gray-dark);
+    line-height: 1.2;
+}
+
+.copilot-context {
+    font-size: 13px;
+    color: var(--ms-gray-medium);
+    line-height: 1.2;
+}
+
+/* Context Menu for Agent Management */
+.context-menu {
+    position: fixed;
+    background: var(--ms-surface-primary);
+    border: 1px solid var(--ms-gray-light);
+    border-radius: 8px;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+    z-index: 10000;
+    min-width: 150px;
+    padding: 4px 0;
+    font-size: 14px;
+}
+
+.context-menu-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+}
+
+.context-menu-item:hover {
+    background: var(--ms-gray-bg);
+}
+
+.context-menu-icon {
+    color: var(--ms-gray-medium);
+    flex-shrink: 0;
+}
+
+.context-menu-item:hover .context-menu-icon {
+    color: var(--ms-gray-dark);
+}
+
+.context-menu.hidden {
+    display: none;
+}
+
+/* Rename Modal Specific Styles */
+#renameAgentModal .form-group {
+    margin-bottom: 16px;
+}
+
+#renameAgentModal .form-input {
+    width: 100%;
+    padding: 8px 12px;
+    border: 1px solid var(--ms-gray-light);
+    border-radius: 4px;
+    font-size: 14px;
+    font-family: inherit;
+}
+
+#renameAgentModal .form-input:focus {
+    outline: none;
+    border-color: var(--ms-blue-primary);
+    box-shadow: 0 0 0 2px rgba(0, 103, 192, 0.2);
+}
+
+#renameAgentModal .form-help {
+    font-size: 12px;
+    color: var(--ms-gray-medium);
+    margin-top: 4px;
+}
+
+#renameAgentModal .error-message {
+    background: var(--ms-red-bg);
+    color: var(--ms-red-dark);
+    padding: 8px 12px;
+    border-radius: 4px;
+    margin-top: 8px;
+    font-size: 14px;
+}
+
+#renameAgentModal .error-message.hidden {
+    display: none;
+}

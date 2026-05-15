@@ -1,0 +1,61 @@
+name: autodock
+description: AutoDock Vina molecular docking tool for protein-ligand binding affinity prediction, virtual screening, and drug discovery workflows
+version: 1.0.0
+category: "Physics-Based Simulations"
+license: Apache-2.0
+
+infra:
+  - name: worker
+    infra_type: container
+    image:
+      acr: "{name}.azurecr.io/autodock:latest"
+    compute:
+      min_resources:
+        cpu: 2
+        ram: "4Gi"
+        gpu: 0
+        storage: "0Gi"
+      max_resources:
+        cpu: 32
+        ram: "64Gi"
+        gpu: 0
+        storage: "0Gi"
+      infiniband: false
+      recommended_sku:
+        - Standard_D4s_v6           # 4 vCPUs, 16 GB RAM - small docking jobs
+        - Standard_D8s_v6           # 8 vCPUs, 32 GB RAM - medium docking jobs
+        - Standard_D16s_v6          # 16 vCPUs, 64 GB RAM - batch docking
+        - Standard_D32s_v6          # 32 vCPUs, 128 GB RAM - large virtual screening
+      pool_type: static
+      pool_size: 1
+
+code_environments:
+  - language: python3
+    command: "python3 -u \"/{{scriptName}}\" > {{output_directory}}/logs.out 2>&1; cp -r /app/workdir/* {{output_directory}}/ 2>/dev/null || true; tail -n 100 {{output_directory}}/logs.out"
+    description: |
+      Python code environment with AutoDock Vina for molecular docking simulations.
+
+      Key executables:
+      - vina: AutoDock Vina docking engine (v1.2.5)
+      - obabel: Open Babel for molecular file format conversions
+
+      Pre-installed Python packages:
+      - autodock_utils: Custom utilities for docking workflows
+      - rdkit: Cheminformatics and molecular analysis
+      - biopython: Biological computation utilities
+      - mdanalysis: Molecular dynamics trajectory analysis
+      - meeko: Advanced PDBQT preparation
+      - numpy, scipy, pandas, matplotlib: Scientific computing stack
+
+      Supported workflows:
+      - Single ligand docking to protein receptor
+      - Batch docking (virtual screening)
+      - Binding site analysis and grid box calculation
+      - Docking pose analysis and visualization
+      - Binding affinity ranking and scoring
+      - Protein-ligand interaction analysis
+
+      Input file formats: PDB, PDBQT, SDF, MOL2, SMILES
+      Output file formats: PDBQT (docked poses), PDB, SDF, CSV, JSON
+
+    infra_node: worker

@@ -1,0 +1,49 @@
+# BindingDB Agent - Git Ignore Rules
+# Exclude large downloaded files and generated databases from version control
+
+# SQLite Database (12-14 GB) - Generated locally
+bindingdb.db
+bindingdb.db-journal
+bindingdb.db-wal
+bindingdb.db-shm
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+
+# Downloaded BindingDB TSV files (1.5 GB compressed, 4 GB uncompressed)
+BindingDB_All*.zip
+BindingDB_All*.tsv
+BindingDB_All*.tar.gz
+
+# Python cache and compiled files
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+
+# Virtual environments
+venv/
+env/
+ENV/
+.venv
+
+# IDE and editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Test outputs and logs
+test_results.txt
+*.log
+output/
+
+# Temporary files
+*.tmp
+*.bak
+*.old
+.cache/

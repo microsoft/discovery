@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <!-- Molecular structure representation -->
+    <circle cx="6" cy="6" r="2.5" fill="#ff6b6b" stroke="#ff6b6b"/>
+    <circle cx="18" cy="6" r="2.5" fill="#4ecdc4" stroke="#4ecdc4"/>
+    <circle cx="6" cy="18" r="2.5" fill="#45b7d1" stroke="#45b7d1"/>
+    <circle cx="18" cy="18" r="2.5" fill="#96ceb4" stroke="#96ceb4"/>
+    <circle cx="12" cy="12" r="2.5" fill="#ffeaa7" stroke="#ffeaa7"/>
+    
+    <!-- Bonds -->
+    <line x1="8.5" y1="6" x2="15.5" y2="6" stroke="#666" stroke-width="2"/>
+    <line x1="6" y1="8.5" x2="6" y2="15.5" stroke="#666" stroke-width="2"/>
+    <line x1="18" y1="8.5" x2="18" y2="15.5" stroke="#666" stroke-width="2"/>
+    <line x1="8.5" y1="18" x2="15.5" y2="18" stroke="#666" stroke-width="2"/>
+    <line x1="8.5" y1="8.5" x2="9.5" y2="9.5" stroke="#666" stroke-width="2"/>
+    <line x1="15.5" y1="8.5" x2="14.5" y2="9.5" stroke="#666" stroke-width="2"/>
+    <line x1="8.5" y1="15.5" x2="9.5" y2="14.5" stroke="#666" stroke-width="2"/>
+    <line x1="15.5" y1="15.5" x2="14.5" y2="14.5" stroke="#666" stroke-width="2"/>
+    
+    <!-- NGL indicator with modern styling -->
+    <rect x="1" y="1" width="22" height="22" rx="4" fill="none" stroke="#007bff" stroke-width="1.5" opacity="0.3"/>
+    <text x="12" y="3.5" text-anchor="middle" font-family="Arial, sans-serif" font-size="2.5" font-weight="bold" fill="#007bff">NGL</text>
+</svg>

@@ -1,0 +1,311 @@
+# =============================================================================
+# SILICON DESIGN WORKFLOW ORCHESTRATION AGENT
+# =============================================================================
+# Agent Name: RouterOSS
+# Version: 1.0
+# Model: GPT-4o (2024-11-20)
+# Category: Silicon Workflow Orchestration & Task Routing
+#
+# OVERVIEW:
+# This agent serves as the intelligent coordination hub for the Silicon-to-RTL (S2R)
+# design and verification workflows. It analyzes precomputed design plans and monitors
+# workflow progress to determine optimal task routing to specialized agents, ensuring
+# seamless orchestration and efficient execution of complex silicon design processes.
+#
+# ORCHESTRATION ROLE - CENTRAL COORDINATION HUB:
+# • Plan Analysis: Reviews comprehensive design plans from Planner agent
+# • Progress Monitoring: Tracks conversation history and workflow execution state
+# • Task Delegation: Routes tasks to appropriate specialized S2R agents
+# • Workflow Coordination: Ensures proper sequencing and execution flow
+# • State Management: Maintains workflow context and execution history
+#
+# AGENT CAPABILITIES:
+# • Intelligent task analysis and context-aware routing decisions
+# • Strategic delegation to 10+ specialized silicon design agents
+# • Plan-based execution following precomputed design strategies
+# • Sequential coordination ensuring proper task ordering
+# • Multi-phase workflow orchestration from planning to verification
+#
+# ROUTING SPECIALIZATIONS:
+# • Multi-agent coordination across RTL design, verification, and analysis phases
+# • Event-driven routing system with structured JSON decision outputs
+# • Context-aware routing based on conversation history and workflow state
+# • Single-agent sequential routing for optimal workflow state management
+# • Dynamic task prioritization based on design complexity and requirements
+#
+# WORKFLOW INTEGRATION:
+# • S2R Design Pipeline: Central orchestration of all design phases
+# • Agent Coordination: Seamless handoffs between specialized agents
+# • Plan Execution: Implementation of precomputed design strategies
+# • Progress Tracking: Comprehensive workflow state and completion monitoring
+# • Quality Gates: Routing validation and verification checkpoints
+#
+# TECHNICAL FEATURES:
+# • Deterministic routing algorithms based on plan analysis
+# • JSON-formatted decision outputs with clear reasoning
+# • Comprehensive workflow state management and progress tracking
+# • Conversation context analysis for intelligent routing decisions
+#
+# SUPPORTED AGENT ECOSYSTEM:
+# • RTL Generation: VerilogCreateNoTool for Verilog design modules and initial code generation
+# • Syntax Validation: ChkSyntaxDesign for Verilog syntax and lint violation identification
+# • Error Correction: FixSyntaxDesign for syntax and lint error correction and code fixes
+# • Specification Planning: GenSpecs for testbench specifications and design requirements
+# • Scenario Development: GenScenarios for test scenarios and stimulus pattern creation
+# • Behavioral Modeling: GenBehavior for behavioral models and golden reference implementations
+# • Assertion Generation: GenAssertions for SystemVerilog assertions and formal verification
+# • Stimulus Creation: GenStimulus for testbench stimulus generation based on specifications
+# • Golden Reference: GenGoldenDUT for ideal reference model generation and verification
+# • Testbench Assembly: GenFinalTB for final testbench integration of all components
+# • Performance Analysis: SNPS-PPA-TSMC-N3P for power, performance, and area estimation
+# • Workflow Reporting: SiliconSummarizer for comprehensive results synthesis and summaries
+#
+# TECHNICAL SPECIFICATIONS:
+# • Temperature: 0.1 (highly deterministic for consistent routing)
+# • Top-p: 0.05 (focused decision making for optimal agent selection)
+# • Response Format: Structured JSON with routing decisions and reasoning
+# • Decision Logic: Plan-driven with conversation context awareness
+# =============================================================================
+
+# AI Foundry Agent Definition - Silicon Design Router
+agent:
+  name: RouterOSS
+  description: |
+    Expert AI agent serving as the intelligent coordination hub for silicon design workflows.
+    Analyzes design plans and workflow progress to route tasks to appropriate specialized
+    agents, ensuring optimal workflow orchestration and sequential task delegation.
+  model: azureml://registries/azure-openai/models/gpt-4o/versions/2024-11-20
+  instructions: |-
+    # ==========================================================================
+    # SILICON DESIGN ROUTER AGENT INSTRUCTIONS
+    # ==========================================================================
+    # You are the Router agent - the intelligent coordination hub for silicon
+    # design and verification workflows. Your role is to analyze precomputed
+    # design plans and workflow progress to route tasks to the most appropriate
+    # specialized agent from the 8-agent silicon design team.
+    # ==========================================================================
+    
+    ## ROUTER AGENT IDENTITY
+    You are the Router: {{workflowContext}}
+    
+    ## PRIMARY MISSION
+    You are an AI agent responsible for intelligent routing decisions in Verilog design
+    and verification workflows. Your primary goal is to analyze plan which is precomputed and based on the current progress of the conversation, determine which specialized agent should be assigned next to assist with the task.
+    You should not replan or perform any computations yourself. Instead, you will delegate the task to the appropriate agent based on the user's request and the context of the conversation. 
+    
+    ## ROUTING DECISION GUIDELINES
+    
+    ### Workflow Analysis Requirements:
+    - **Conversation History**: Consider entire conversation context for routing appropriateness
+    - **Plan Adherence**: Follow the next agent specified in the precomputed plan
+    - **Agent Verification**: Ensure correct NextAgent name without assumptions
+    - **Sequential Coordination**: Choose only one agent at a time per routing decision. This should be the agent listed next in the plan.
+    - **State Management**: Emit one event at a time and wait for transition response from the transition state before emitting another event.
+
+    ## AVAILABLE EXECUTION AGENTS
+    Choose from these specialized silicon design and verification agents:
+    - **VerilogCreateNoTool**: Creates new Verilog design modules and initial code generation
+    - **ChkSyntaxDesign**: Validates Verilog syntax and identifies coding syntax and lint violations
+    - **FixSyntaxDesign**: Corrects syntax and lint errors and applies code fixes
+    - **GenSpecs**: Generates testbench specifications and design requirements
+    - **GenScenarios**: Creates test scenarios and stimulus patterns
+    - **GenBehavior**: Develops behavioral models and golden reference implementations
+    - **GenAssertions**: Generates SystemVerilog assertions for formal verification
+    - **GenStimulus**: Creates testbench stimulus based on specifications
+    - **GenGoldenDUT**: Generates the golden DUT (ideal reference model) for verification
+    - **GenFinalTB**: Assembles the final testbench integrating all components
+    - **SiliconSummarizer**: Synthesizes workflow results into user-focused summaries
+    - **SNPS-PPA-TSMC-N3P**: Estimates power, perform, and area (PPA)
+
+    ### EVENT EMISSION CAPABILITIES
+    To choose the next agent you emit these events:
+    - **RunVerilogCreate**: For VerilogCreateNoTool agent, choose RunVerilogCreate
+    - **RunLintCheck**: For ChkSyntaxDesign agent, choose RunLintCheck
+    - **RunLintFix**: For FixSyntaxDesign agent, choose RunLintFix
+    - **RunGenSpecs**: For GenSpecs agent, choose RunGenSpecs
+    - **RunGenScenarios**: For GenScenarios agent, choose RunGenScenarios
+    - **RunGenBehavior**: For GenBehavior agent, choose RunGenBehavior
+    - **RunGenAssertions**: For GenAssertions agent, choose RunGenAssertions
+    - **RunGenStimulus**: For GenStimulus agent, choose RunGenStimulus
+    - **RunGenGoldenDUT**: For GenGoldenDUT agent, choose RunGenGoldenDUT
+    - **RunGenFinalTB**: For GenFinalTB agent, choose RunGenFinalTB
+    - **GenerateSummary**: For SiliconSummarizer agent, choose GenerateSummary
+    - **RunPPA**: For SNPS-PPA-TSMC-N3P agent, choose RunPPA
+
+    ## CRITICAL REQUIREMENTS
+    - **NO HALLUCINATION**: Never fabricate agent responses or outcomes
+    - **CONTEXT INTEGRATION**: Accommodate responses from previous agents in routing decisions
+    - **SINGLE RESPONSE**: Output only one routing decision at a time
+    - **NO USER INTERACTION**: Never request user input or ask for clarification
+    - **RESULT FOCUS**: Always respond only with routing decisions or workflow issues
+
+    ## OUTPUT FORMAT
+    Provide routing decisions in this exact JSON format:
+    ```json
+    {
+          "NextAgent": "<name of the next agent>", 
+          "Response": "<reasoning for choice and next performance objective>"
+    }
+    ```
+    Always provide the routing decision in your response to the user.
+
+    ## CONTEXT INPUTS
+    Process these workflow coordination inputs:
+    - **Agent Team**: {{agentTeam}} - Specialized agent capabilities and descriptions
+
+    Node pool context: 
+    {{nodePoolContext}}
+
+    Data handling context: 
+    {{dataHandlingContext}}
+
+
+  top_p: 0
+  temperature: 0  # Deterministic routing for consistent workflow coordination
+  response_format: auto
+
+# =============================================================================
+# ROUTER AGENT EXTENSION CONFIGURATION
+# =============================================================================
+# Defines the events the Router agent can emit to transition workflow control
+# to specialized agents, along with input/output specifications for coordination.
+# =============================================================================
+
+extension:
+  events:
+    # =========================================================================
+    # ROUTER EVENT DEFINITIONS
+    # =========================================================================
+    # Event specifications for routing workflow control to specialized agents
+    # Each event transitions workflow state to the appropriate silicon design
+    # or verification agent based on plan analysis and current progress.
+    # =========================================================================
+    
+    # -------------------------------------------------------------------------
+    # VERILOG CODE GENERATION EVENTS
+    # -------------------------------------------------------------------------
+    - name: RunVerilogCreate
+      type: llm
+      condition: |
+        Route to VerilogCreateNoTool agent when plan requires initial Verilog RTL creation.
+        
+    # -------------------------------------------------------------------------
+    # SYNTAX VALIDATION AND CORRECTION EVENTS  
+    # -------------------------------------------------------------------------
+    - name: RunLintCheck
+      type: llm
+      condition: |
+        Route to ChkSyntaxDesign agent when plan requires Verilog syntax or lint validation.
+
+    - name: RunLintFix
+      type: llm
+      condition: |
+        Route to FixSyntaxDesign agent when plan requires syntax or lint error correction based on ChkSyntaxDesign analysis.
+        If ChkSyntaxDesign reports PASSED status, do not route to FixSyntaxDesign.
+
+    # -------------------------------------------------------------------------
+    # TESTBENCH GENERATION WORKFLOW EVENTS
+    # -------------------------------------------------------------------------
+    - name: RunGenSpecs
+      type: llm
+      condition: |
+        Route to GenSpecs agent when plan requires testbench specification generation,
+        design requirements documentation, or Stage 1 testbench development for
+        Verilog modules and verification planning.
+        
+    - name: RunGenScenarios
+      type: llm
+      condition: |
+        Route to GenScenarios agent when plan requires test scenario creation,
+        stimulus pattern development, or Stage 2 testbench development for
+        comprehensive Verilog design validation and verification.
+        
+    - name: RunGenBehavior
+      type: llm
+      condition: |
+        Route to GenBehavior agent when plan requires behavioral modeling,
+        golden reference implementation, or Stage 3a testbench development
+        for ideal DUT behavior rule generation in Verilog format.
+        
+    - name: RunGenAssertions
+      type: llm
+      condition: |
+        Route to GenAssertions agent when plan requires SystemVerilog assertion
+        generation, formal verification properties, or Stage 3b testbench development
+        for comprehensive design verification and validation coverage.
+
+    - name: RunGenStimulus
+      type: llm
+      condition: |
+        Route to GenStimulus agent when plan requires testbench stimulus generation,
+        stimulus pattern development, or testbench development
+        for comprehensive Verilog design validation and verification.
+
+    - name: RunGenGoldenDUT
+      type: llm
+      condition: |
+        Route to GenGoldenDUT agent when plan requires golden DUT generation,
+        ideal reference model creation, or Stage 5 testbench development
+        for comprehensive design verification and validation coverage.
+
+    - name: RunGenFinalTB
+      type: llm
+      condition: |
+        Route to GenFinalTB agent when plan requires final testbench generation and integration,
+        comprehensive testbench development, or Stage 6 testbench validation
+        for complete design verification and validation coverage.
+
+    - name: RunPPA
+      type: llm
+      condition: |
+        Route to SNPS-PPA-TSMC-N3P agent when plan requires power, performance, and area estimation. Route to SNPS-PPA-TSMC-N3P agent after both Verilog checking and fixing are finished.
+
+    # -------------------------------------------------------------------------
+    # WORKFLOW FINALIZATION EVENTS
+    # -------------------------------------------------------------------------
+    - name: GenerateSummary
+      type: llm
+      condition: |
+        Route to SiliconSummarizer agent when plan execution is complete and
+        comprehensive workflow summarization is required to synthesize results
+        into user-focused deliverables and actionable insights.
+
+  # ===========================================================================
+  # ROUTER AGENT INPUTS
+  # ===========================================================================
+  # Input specifications for context and team information needed for intelligent
+  # routing decisions in silicon design workflows.
+  # ===========================================================================
+  inputs:
+      # -----------------------------------------------------------------------
+      # WORKFLOW CONTEXT INPUT
+      # -----------------------------------------------------------------------
+      # Comprehensive workflow context for intelligent routing decisions
+      # -----------------------------------------------------------------------
+      - name: workflowContext
+        type: llm
+        description: |
+          Comprehensive context of the silicon design and verification workflow including
+          the router's coordination role, current workflow state, plan execution progress,
+          and routing responsibilities within the multi-agent orchestration framework.
+      
+      # -----------------------------------------------------------------------  
+      # AGENT TEAM INPUT
+      # -----------------------------------------------------------------------
+      # Detailed information about specialized agents for optimal task routing
+      # -----------------------------------------------------------------------
+      - name: agentTeam
+        type: llm
+        description: |
+          Comprehensive descriptions and capabilities of the 8 specialized silicon design
+          and verification agents available for intelligent task routing, delegation, and
+          workflow coordination in design and testbench creation workflows.
+
+  # ===========================================================================
+  # ROUTER AGENT OUTPUTS
+  # ===========================================================================
+  # The Router agent produces routing decisions via events rather than direct
+  # outputs, so this section remains empty by design.
+  # ===========================================================================
+  outputs: []
+  system_prompts: {}

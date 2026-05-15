@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+  <!-- Browser window frame -->
+  <rect x="2" y="3" width="20" height="18" rx="2" ry="2" stroke="#e95420" fill="#fff"/>
+  
+  <!-- Browser top bar -->
+  <line x1="2" y1="7" x2="22" y2="7" stroke="#e95420"/>
+  
+  <!-- Browser dots -->
+  <circle cx="5" cy="5" r="0.5" fill="#e95420"/>
+  <circle cx="7" cy="5" r="0.5" fill="#e95420"/>
+  <circle cx="9" cy="5" r="0.5" fill="#e95420"/>
+  
+  <!-- HTML brackets -->
+  <path d="M 7 11 L 5 14 L 7 17" stroke="#e95420" stroke-width="1.5" fill="none"/>
+  <path d="M 17 11 L 19 14 L 17 17" stroke="#e95420" stroke-width="1.5" fill="none"/>
+  
+  <!-- Slash in the middle -->
+  <line x1="13" y1="11" x2="11" y2="17" stroke="#e95420" stroke-width="1.5"/>
+</svg>

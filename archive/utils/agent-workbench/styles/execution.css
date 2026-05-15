@@ -1,0 +1,322 @@
+/* Real-time execution styles */
+
+.stdout-content {
+	background: #1e1e1e;
+	color: #f8f8f2;
+	font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+	font-size: 11px;
+	line-height: 1.3;
+	padding: 12px;
+	border-radius: 4px;
+	white-space: pre-wrap;
+	word-wrap: break-word;
+	overflow-wrap: break-word; /* Ensure long words break */
+	height: 100%; /* Use full height of parent */
+	min-height: unset; /* Remove min-height constraint */
+	max-height: unset; /* Remove max-height constraint */
+	overflow-y: auto;
+	overflow-x: auto; /* Handle horizontal overflow */
+	border: 1px solid var(--ms-gray-lighter);
+	margin: 0; /* Remove any default margins */
+	box-sizing: border-box; /* Include padding in width calculation */
+	scroll-behavior: smooth;
+}
+
+.stderr-content {
+	background: #2d1b1b;
+	color: #ffa8a8;
+	font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+	font-size: 13px;
+	line-height: 1.4;
+	padding: 12px;
+	border-radius: 4px;
+	white-space: pre-wrap;
+	word-wrap: break-word;
+	max-height: 200px;
+	overflow-y: auto;
+	border: 1px solid var(--ms-error);
+}
+
+.execution-output {
+	background: var(--ms-white);
+	border: 1px solid var(--ms-success);
+	border-radius: 8px;
+	padding: 16px;
+	margin: 0; /* Remove margin to use full space */
+	overflow: hidden; /* Prevent content from bleeding outside */
+	word-wrap: break-word; /* Break long words */
+	overflow-wrap: break-word; /* Modern property for word breaking */
+	height: 100%; /* Use full height available */
+	display: flex;
+	flex-direction: column;
+}
+
+.execution-output h4 {
+	color: var(--ms-success);
+	margin-bottom: 12px;
+	font-size: 14px;
+	font-weight: 600;
+	flex-shrink: 0; /* Don't shrink the header */
+}
+
+.execution-output pre {
+	flex: 1; /* Take remaining space */
+	overflow: auto; /* Add scrollbars if needed */
+	margin: 0; /* Remove default margins */
+	background: #1e1e1e;
+	color: #f8f8f2;
+	font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+	font-size: 11px;
+	line-height: 1.3;
+	padding: 12px;
+	border-radius: 4px;
+	white-space: pre-wrap;
+	word-wrap: break-word;
+	overflow-wrap: break-word;
+}
+
+.execution-error {
+	background: #fef7f7;
+	border: 1px solid var(--ms-error);
+	border-radius: 8px;
+	padding: 16px;
+	margin: 16px 0;
+}
+
+.execution-error h4 {
+	color: var(--ms-error);
+	margin-bottom: 12px;
+	font-size: 14px;
+	font-weight: 600;
+}
+
+.execution-warnings {
+	background: #fffbf0;
+	border: 1px solid var(--ms-warning);
+	border-radius: 8px;
+	padding: 16px;
+	margin: 16px 0;
+}
+
+.execution-warnings h4 {
+	color: var(--ms-warning);
+	margin-bottom: 12px;
+	font-size: 14px;
+	font-weight: 600;
+}
+
+.execution-details {
+	display: flex;
+	gap: 16px;
+	margin-bottom: 12px;
+	font-size: 11px;
+	color: var(--ms-gray-medium);
+}
+
+.execution-details small {
+	background: var(--ms-gray-lightest);
+	padding: 4px 8px;
+	border-radius: 4px;
+	font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+}
+
+.error-text {
+	background: #2d1b1b;
+	color: #ffa8a8;
+	font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+	font-size: 13px;
+	line-height: 1.4;
+	padding: 12px;
+	border-radius: 4px;
+	white-space: pre-wrap;
+	word-wrap: break-word;
+	margin: 0;
+}
+
+.error-message {
+	background: var(--ms-error);
+	color: white;
+	padding: 8px 12px;
+	border-radius: 4px;
+	font-size: 12px;
+	margin-top: 8px;
+}
+
+.loading-indicator {
+	background: var(--ms-gray-bg);
+	color: var(--ms-gray-text);
+	padding: 12px;
+	border-radius: 4px;
+	font-size: 13px;
+	text-align: center;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	gap: 8px;
+	min-height: 40px;
+}
+
+.loading-indicator::before {
+	content: '';
+	width: 16px;
+	height: 16px;
+	border: 2px solid var(--ms-gray-lighter);
+	border-top: 2px solid var(--ms-blue);
+	border-radius: 50%;
+	animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+	0% { transform: rotate(0deg); }
+	100% { transform: rotate(360deg); }
+}
+
+.output-files {
+	background: var(--ms-gray-bg);
+	border: 1px solid var(--ms-gray-lighter);
+	border-radius: 8px;
+	padding: 16px;
+	margin: 16px 0;
+}
+
+.output-files h4 {
+	color: var(--ms-gray-dark);
+	margin-bottom: 12px;
+	font-size: 14px;
+	font-weight: 600;
+}
+
+.output-files ul {
+	list-style: none;
+	margin: 0;
+	padding: 0;
+}
+
+.output-files li {
+	margin-bottom: 8px;
+}
+
+.output-files a {
+	color: var(--ms-blue-primary);
+	text-decoration: none;
+	font-size: 13px;
+	display: inline-flex;
+	align-items: center;
+	gap: 4px;
+	padding: 4px 8px;
+	border-radius: 4px;
+	transition: background-color 0.2s ease;
+}
+
+.output-files a:hover {
+	background: var(--ms-blue-tint);
+	text-decoration: none;
+}
+
+.execution-info {
+	margin-top: 12px;
+	padding-top: 12px;
+	border-top: 1px solid var(--ms-gray-lightest);
+}
+
+/* Stdout container and copy button styles */
+.stdout-container {
+	position: relative;
+}
+
+.output-header,
+.stderr-header,
+.error-output-header,
+.error-stderr-header {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	margin-bottom: 8px;
+	padding: 8px 12px;
+	border-bottom: 1px solid var(--ms-gray-lighter);
+}
+
+.output-header h4,
+.stderr-header h4,
+.error-output-header h4,
+.error-stderr-header h4 {
+	margin: 0;
+	font-size: 14px;
+	font-weight: 600;
+	color: var(--ms-gray-dark);
+}
+
+.output-header span {
+	font-size: 14px;
+	font-weight: 600;
+	color: var(--ms-gray-dark);
+}
+
+.copy-btn-output {
+	min-width: 28px;
+	height: 28px;
+	padding: 4px;
+	margin: 2px;
+	background: transparent;
+	border: 1px solid var(--ms-gray-lighter);
+	border-radius: 4px;
+	color: var(--ms-gray-medium);
+	cursor: pointer;
+	transition: all 0.2s ease;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+}
+
+.copy-btn-output:hover {
+	background: var(--ms-gray-bg);
+	border-color: var(--ms-gray-light);
+	color: var(--ms-gray-dark);
+}
+
+.copy-btn-output:active {
+	background: var(--ms-gray-lightest);
+	transform: scale(0.96);
+}
+
+.copy-btn-output.copied {
+	background: var(--ms-success);
+	border-color: var(--ms-success);
+	color: white;
+}
+
+.copy-btn-output.danger-btn {
+	border-color: #fecaca;
+	color: #dc2626;
+}
+
+.copy-btn-output.danger-btn img {
+	filter: invert(27%) sepia(51%) saturate(2878%) hue-rotate(346deg) brightness(104%) contrast(97%);
+}
+
+.copy-btn-output.danger-btn:hover {
+	background: #fef2f2;
+	border-color: #dc2626;
+	color: #b91c1c;
+}
+
+.copy-btn-output.danger-btn:hover img {
+	filter: invert(16%) sepia(88%) saturate(4828%) hue-rotate(354deg) brightness(92%) contrast(93%);
+}
+
+.copy-btn-output.danger-btn:active {
+	background: #fee2e2;
+}
+
+.copy-btn-output .copy-btn-icon {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	width: 16px;
+	height: 16px;
+}
+
+/* Smooth scrolling for auto-scroll */
+.stdout-content {
+	scroll-behavior: smooth;
+}

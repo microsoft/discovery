@@ -1,0 +1,881 @@
+/**
+ * MD Trajectory Viewer - State-of-the-Art Molecular Dynamics Visualization
+ * WebGPU + WebAssembly Engine Styles
+ */
+
+/* ========================================================================
+   MAIN CONTAINER STYLES
+   ======================================================================== */
+
+.md-trajectory-container {
+    width: 100%;
+    height: 100%;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+    border-radius: 8px;
+    overflow: hidden;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+.md-trajectory-container * {
+    box-sizing: border-box;
+}
+
+/* ========================================================================
+   CANVAS & RENDERING AREA
+   ======================================================================== */
+
+.md-viewport {
+    flex: 1;
+    position: relative;
+    min-height: 200px;
+    background: #000;
+    cursor: grab;
+}
+
+.md-viewport:active {
+    cursor: grabbing;
+}
+
+.md-viewport canvas {
+    width: 100% !important;
+    height: 100% !important;
+    display: block;
+    touch-action: none;
+}
+
+/* WebGPU canvas specific */
+.md-viewport canvas.webgpu-canvas {
+    image-rendering: optimizeSpeed;
+    image-rendering: -webkit-optimize-contrast;
+}
+
+/* Fallback WebGL canvas */
+.md-viewport canvas.webgl-canvas {
+    background: #0a0a0f;
+}
+
+/* ========================================================================
+   LOADING & STATUS OVERLAYS
+   ======================================================================== */
+
+.md-loading-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.85);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    z-index: 100;
+    backdrop-filter: blur(4px);
+}
+
+.md-loading-spinner {
+    width: 60px;
+    height: 60px;
+    position: relative;
+}
+
+.md-loading-spinner::before,
+.md-loading-spinner::after {
+    content: '';
+    position: absolute;
+    border-radius: 50%;
+}
+
+.md-loading-spinner::before {
+    width: 100%;
+    height: 100%;
+    border: 4px solid transparent;
+    border-top-color: #00d4ff;
+    border-right-color: #00d4ff;
+    animation: md-spin 1s linear infinite;
+}
+
+.md-loading-spinner::after {
+    top: 10px;
+    left: 10px;
+    width: calc(100% - 20px);
+    height: calc(100% - 20px);
+    border: 4px solid transparent;
+    border-bottom-color: #ff6b6b;
+    border-left-color: #ff6b6b;
+    animation: md-spin 0.8s linear infinite reverse;
+}
+
+@keyframes md-spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+.md-loading-text {
+    margin-top: 20px;
+    color: #a0aec0;
+    font-size: 14px;
+    font-weight: 500;
+}
+
+.md-loading-progress {
+    width: 200px;
+    height: 4px;
+    background: #2d3748;
+    border-radius: 2px;
+    margin-top: 12px;
+    overflow: hidden;
+}
+
+.md-loading-progress-bar {
+    height: 100%;
+    background: linear-gradient(90deg, #00d4ff, #0088ff);
+    border-radius: 2px;
+    transition: width 0.3s ease;
+    animation: md-progress-pulse 2s ease-in-out infinite;
+}
+
+@keyframes md-progress-pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.7; }
+}
+
+/* Status indicators */
+.md-status-badge {
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    padding: 4px 10px;
+    border-radius: 12px;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    z-index: 50;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.md-status-badge.webgpu {
+    background: linear-gradient(135deg, #00d4ff 0%, #0088ff 100%);
+    color: white;
+    box-shadow: 0 2px 10px rgba(0, 212, 255, 0.3);
+}
+
+.md-status-badge.webgl {
+    background: linear-gradient(135deg, #ffa726 0%, #ff7043 100%);
+    color: white;
+    box-shadow: 0 2px 10px rgba(255, 167, 38, 0.3);
+}
+
+.md-status-badge.streaming {
+    background: linear-gradient(135deg, #4caf50 0%, #2e7d32 100%);
+    color: white;
+}
+
+.md-status-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: currentColor;
+    animation: md-pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes md-pulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.5; transform: scale(0.8); }
+}
+
+/* ========================================================================
+   PLAYBACK CONTROLS (TIMELINE)
+   ======================================================================== */
+
+.md-playback-controls {
+    display: flex;
+    align-items: center;
+    padding: 12px 16px;
+    background: rgba(30, 30, 50, 0.95);
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+    gap: 12px;
+    flex-shrink: 0;
+}
+
+.md-playback-btn {
+    width: 36px;
+    height: 36px;
+    border: none;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.1);
+    color: white;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+}
+
+.md-playback-btn:hover {
+    background: rgba(0, 212, 255, 0.3);
+    transform: scale(1.05);
+}
+
+.md-playback-btn:active {
+    transform: scale(0.95);
+}
+
+.md-playback-btn.primary {
+    width: 44px;
+    height: 44px;
+    background: linear-gradient(135deg, #00d4ff 0%, #0088ff 100%);
+    box-shadow: 0 4px 15px rgba(0, 212, 255, 0.4);
+}
+
+.md-playback-btn.primary:hover {
+    box-shadow: 0 6px 20px rgba(0, 212, 255, 0.5);
+}
+
+.md-playback-btn svg {
+    width: 18px;
+    height: 18px;
+    fill: currentColor;
+}
+
+.md-playback-btn.primary svg {
+    width: 20px;
+    height: 20px;
+}
+
+/* Timeline slider */
+.md-timeline-container {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.md-timeline-slider {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 100%;
+    height: 6px;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 3px;
+    outline: none;
+    cursor: pointer;
+    position: relative;
+}
+
+.md-timeline-slider::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #00d4ff 0%, #0088ff 100%);
+    cursor: pointer;
+    box-shadow: 0 2px 8px rgba(0, 212, 255, 0.5);
+    transition: transform 0.2s ease;
+}
+
+.md-timeline-slider::-webkit-slider-thumb:hover {
+    transform: scale(1.2);
+}
+
+.md-timeline-slider::-moz-range-thumb {
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #00d4ff 0%, #0088ff 100%);
+    cursor: pointer;
+    border: none;
+    box-shadow: 0 2px 8px rgba(0, 212, 255, 0.5);
+}
+
+.md-timeline-info {
+    display: flex;
+    justify-content: space-between;
+    font-size: 11px;
+    color: #a0aec0;
+}
+
+.md-frame-counter {
+    font-family: 'SF Mono', Monaco, 'Cascadia Code', monospace;
+    font-variant-numeric: tabular-nums;
+}
+
+/* Speed control */
+.md-speed-control {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 10px;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 6px;
+}
+
+.md-speed-label {
+    font-size: 11px;
+    color: #718096;
+    white-space: nowrap;
+}
+
+.md-speed-select {
+    background: transparent;
+    border: none;
+    color: #00d4ff;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    outline: none;
+}
+
+.md-speed-select option {
+    background: #1a1a2e;
+    color: white;
+}
+
+/* ========================================================================
+   CONTROL PANEL (SIDE/TOP)
+   ======================================================================== */
+
+.md-control-panel {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    z-index: 50;
+}
+
+.md-control-btn {
+    width: 36px;
+    height: 36px;
+    border: none;
+    border-radius: 8px;
+    background: rgba(30, 30, 50, 0.9);
+    color: #a0aec0;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+    backdrop-filter: blur(8px);
+}
+
+.md-control-btn:hover {
+    background: rgba(0, 212, 255, 0.2);
+    color: #00d4ff;
+}
+
+.md-control-btn.active {
+    background: rgba(0, 212, 255, 0.3);
+    color: #00d4ff;
+    box-shadow: 0 0 15px rgba(0, 212, 255, 0.3);
+}
+
+.md-control-btn svg {
+    width: 18px;
+    height: 18px;
+}
+
+/* Control dropdown/popup */
+.md-control-popup {
+    position: absolute;
+    right: 44px;
+    top: 0;
+    min-width: 200px;
+    background: rgba(30, 30, 50, 0.95);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 10px;
+    padding: 12px;
+    backdrop-filter: blur(12px);
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+    opacity: 0;
+    visibility: hidden;
+    transform: translateX(10px);
+    transition: all 0.2s ease;
+}
+
+.md-control-popup.show {
+    opacity: 1;
+    visibility: visible;
+    transform: translateX(0);
+}
+
+.md-popup-title {
+    font-size: 11px;
+    font-weight: 600;
+    color: #718096;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 10px;
+}
+
+/* ========================================================================
+   REPRESENTATION STYLES
+   ======================================================================== */
+
+.md-representation-options {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.md-representation-option {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 10px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: background 0.2s ease;
+}
+
+.md-representation-option:hover {
+    background: rgba(255, 255, 255, 0.05);
+}
+
+.md-representation-option.selected {
+    background: rgba(0, 212, 255, 0.15);
+}
+
+.md-representation-radio {
+    width: 16px;
+    height: 16px;
+    border: 2px solid #4a5568;
+    border-radius: 50%;
+    position: relative;
+    transition: all 0.2s ease;
+}
+
+.md-representation-option.selected .md-representation-radio {
+    border-color: #00d4ff;
+}
+
+.md-representation-option.selected .md-representation-radio::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 8px;
+    height: 8px;
+    background: #00d4ff;
+    border-radius: 50%;
+}
+
+.md-representation-label {
+    color: #e2e8f0;
+    font-size: 13px;
+}
+
+/* ========================================================================
+   ANALYSIS PANEL
+   ======================================================================== */
+
+.md-analysis-panel {
+    position: absolute;
+    bottom: 70px;
+    left: 10px;
+    right: 10px;
+    max-height: 150px;
+    background: rgba(30, 30, 50, 0.95);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 10px;
+    padding: 12px;
+    backdrop-filter: blur(12px);
+    overflow-y: auto;
+    display: none;
+    z-index: 40;
+}
+
+.md-analysis-panel.show {
+    display: block;
+}
+
+.md-analysis-title {
+    font-size: 12px;
+    font-weight: 600;
+    color: #00d4ff;
+    margin-bottom: 10px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.md-analysis-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 10px;
+}
+
+.md-analysis-item {
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 8px;
+    padding: 10px;
+}
+
+.md-analysis-label {
+    font-size: 10px;
+    color: #718096;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 4px;
+}
+
+.md-analysis-value {
+    font-size: 16px;
+    font-weight: 600;
+    color: #e2e8f0;
+    font-family: 'SF Mono', Monaco, monospace;
+}
+
+.md-analysis-unit {
+    font-size: 11px;
+    color: #718096;
+    margin-left: 4px;
+}
+
+/* ========================================================================
+   ATOM INFO TOOLTIP
+   ======================================================================== */
+
+.md-atom-tooltip {
+    position: absolute;
+    padding: 10px 14px;
+    background: rgba(20, 20, 35, 0.95);
+    border: 1px solid rgba(0, 212, 255, 0.3);
+    border-radius: 8px;
+    backdrop-filter: blur(12px);
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.4);
+    pointer-events: none;
+    opacity: 0;
+    transform: translateY(5px);
+    transition: all 0.15s ease;
+    z-index: 200;
+    max-width: 220px;
+}
+
+.md-atom-tooltip.show {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+.md-atom-symbol {
+    font-size: 18px;
+    font-weight: 700;
+    color: #00d4ff;
+    margin-bottom: 4px;
+}
+
+.md-atom-details {
+    font-size: 11px;
+    color: #a0aec0;
+    line-height: 1.5;
+}
+
+.md-atom-coords {
+    margin-top: 6px;
+    padding-top: 6px;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+    font-family: 'SF Mono', Monaco, monospace;
+    font-size: 10px;
+    color: #718096;
+}
+
+/* ========================================================================
+   MEASUREMENT TOOLS
+   ======================================================================== */
+
+.md-measurement-line {
+    position: absolute;
+    pointer-events: none;
+    z-index: 100;
+}
+
+.md-measurement-label {
+    position: absolute;
+    background: rgba(255, 193, 7, 0.9);
+    color: #000;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: 600;
+    font-family: 'SF Mono', Monaco, monospace;
+    white-space: nowrap;
+    pointer-events: none;
+    z-index: 101;
+}
+
+/* ========================================================================
+   FORMAT INFO BADGE
+   ======================================================================== */
+
+.md-format-info {
+    position: absolute;
+    bottom: 10px;
+    left: 10px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 12px;
+    background: rgba(30, 30, 50, 0.9);
+    border-radius: 6px;
+    backdrop-filter: blur(8px);
+    z-index: 50;
+}
+
+.md-format-badge {
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.md-format-badge.xyz { background: #4caf50; color: white; }
+.md-format-badge.lammps { background: #ff9800; color: white; }
+.md-format-badge.gsd { background: #9c27b0; color: white; }
+.md-format-badge.h5md { background: #2196f3; color: white; }
+.md-format-badge.xtc { background: #e91e63; color: white; }
+.md-format-badge.trr { background: #795548; color: white; }
+.md-format-badge.pdb { background: #607d8b; color: white; }
+
+.md-atom-count {
+    font-size: 11px;
+    color: #a0aec0;
+}
+
+.md-frame-count {
+    font-size: 11px;
+    color: #718096;
+}
+
+.md-sim-time {
+    font-size: 11px;
+    color: #81e6d9; /* Cyan/teal for time */
+    font-weight: 500;
+}
+
+.md-timestep {
+    font-size: 10px;
+    color: #b794f4; /* Purple for timestep */
+    font-style: italic;
+}
+
+/* ========================================================================
+   PREVIEW MODE (COMPACT)
+   ======================================================================== */
+
+.md-trajectory-container.preview-mode {
+    min-height: 200px;
+}
+
+.md-trajectory-container.preview-mode .md-playback-controls {
+    padding: 8px 12px;
+}
+
+.md-trajectory-container.preview-mode .md-playback-btn {
+    width: 28px;
+    height: 28px;
+}
+
+.md-trajectory-container.preview-mode .md-playback-btn.primary {
+    width: 34px;
+    height: 34px;
+}
+
+.md-trajectory-container.preview-mode .md-control-panel {
+    top: 6px;
+    right: 6px;
+}
+
+.md-trajectory-container.preview-mode .md-control-btn {
+    width: 28px;
+    height: 28px;
+}
+
+.md-trajectory-container.preview-mode .md-format-info {
+    bottom: 6px;
+    left: 6px;
+    padding: 4px 8px;
+}
+
+.md-trajectory-container.preview-mode .md-status-badge {
+    font-size: 9px;
+    padding: 2px 6px;
+}
+
+/* ========================================================================
+   FULLVIEW MODE (EXPANDED)
+   ======================================================================== */
+
+.md-trajectory-container.fullview-mode {
+    min-height: 500px;
+}
+
+.md-trajectory-container.fullview-mode .md-viewport {
+    min-height: 400px;
+}
+
+/* ========================================================================
+   ERROR STATE
+   ======================================================================== */
+
+.md-error-container {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 40px;
+    text-align: center;
+    background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+}
+
+.md-error-icon {
+    width: 64px;
+    height: 64px;
+    margin-bottom: 20px;
+    opacity: 0.5;
+}
+
+.md-error-title {
+    font-size: 18px;
+    font-weight: 600;
+    color: #ff6b6b;
+    margin-bottom: 10px;
+}
+
+.md-error-message {
+    font-size: 14px;
+    color: #a0aec0;
+    max-width: 400px;
+    line-height: 1.6;
+    margin-bottom: 20px;
+}
+
+.md-error-suggestions {
+    text-align: left;
+    font-size: 12px;
+    color: #718096;
+}
+
+.md-error-suggestions ul {
+    margin: 8px 0 0 0;
+    padding-left: 20px;
+}
+
+.md-error-suggestions li {
+    margin: 4px 0;
+}
+
+/* ========================================================================
+   WEBGPU NOT SUPPORTED FALLBACK
+   ======================================================================== */
+
+.md-webgpu-fallback-notice {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: rgba(255, 152, 0, 0.9);
+    color: #000;
+    padding: 10px 16px;
+    border-radius: 8px;
+    font-size: 12px;
+    font-weight: 500;
+    text-align: center;
+    z-index: 60;
+    max-width: 280px;
+}
+
+/* ========================================================================
+   RESPONSIVE ADJUSTMENTS
+   ======================================================================== */
+
+@media (max-width: 768px) {
+    .md-playback-controls {
+        padding: 8px 12px;
+        gap: 8px;
+    }
+    
+    .md-control-panel {
+        top: 6px;
+        right: 6px;
+    }
+    
+    .md-control-popup {
+        right: auto;
+        left: 6px;
+        top: 44px;
+        min-width: 160px;
+    }
+    
+    .md-analysis-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+    
+    .md-speed-control {
+        display: none;
+    }
+}
+
+/* ========================================================================
+   DARK THEME ENHANCEMENTS (already dark, but for completeness)
+   ======================================================================== */
+
+@media (prefers-color-scheme: dark) {
+    .md-trajectory-container {
+        /* Already dark themed */
+    }
+}
+
+/* ========================================================================
+   ACCESSIBILITY
+   ======================================================================== */
+
+.md-playback-btn:focus,
+.md-control-btn:focus,
+.md-timeline-slider:focus {
+    outline: 2px solid #00d4ff;
+    outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .md-loading-spinner::before,
+    .md-loading-spinner::after {
+        animation: none;
+    }
+    
+    .md-loading-progress-bar {
+        animation: none;
+    }
+    
+    .md-status-dot {
+        animation: none;
+    }
+}
+
+/* ========================================================================
+   PRINT STYLES
+   ======================================================================== */
+
+@media print {
+    .md-trajectory-container {
+        background: white;
+    }
+    
+    .md-playback-controls,
+    .md-control-panel,
+    .md-loading-overlay {
+        display: none !important;
+    }
+}

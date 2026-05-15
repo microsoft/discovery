@@ -1,0 +1,22 @@
+# BoltzGen Design Specification — Protein Binder
+# Designs a protein binder (60-100 residues) against chain A of a target structure.
+#
+# Usage:
+#   1. Download the target structure: curl -o 1g13.cif https://files.rcsb.org/download/1g13.cif
+#   2. Place 1g13.cif in the same directory as this YAML file
+#   3. Run: boltzgen run protein_binder_design.yaml --output ./output --protocol protein-anything --num_designs 20 --budget 3
+#
+# The designed protein (chain B) will have a random length between 60 and 100 residues.
+
+entities:
+  # Designed protein binder — random length between 60 and 100 residues
+  - protein:
+      id: B
+      sequence: 60..100
+
+  # Target structure from file
+  - file:
+      path: 1g13.cif
+      include:
+        - chain:
+            id: A

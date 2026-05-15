@@ -1,0 +1,227 @@
+/* 3DMol Molecular Viewer Styles */
+
+.threeDmol-controls {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    background: rgba(255, 255, 255, 0.95);
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    padding: 12px;
+    min-width: 180px;
+    font-size: 12px;    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.15);
+    z-index: 10;
+    -webkit-backdrop-filter: blur(4px);
+    backdrop-filter: blur(4px);
+}
+
+.control-group {
+    margin-bottom: 10px;
+}
+
+.control-group:last-child {
+    margin-bottom: 0;
+}
+
+.control-group label {
+    display: block;
+    margin-bottom: 6px;
+    font-weight: 600;
+    color: #333;
+    font-size: 11px;
+}
+
+.control-group select {
+    width: 100%;
+    padding: 6px 8px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    font-size: 11px;
+    background: white;
+    cursor: pointer;
+}
+
+.control-group select:focus {
+    outline: none;
+    border-color: #0078d4;
+    box-shadow: 0 0 0 2px rgba(0, 120, 212, 0.2);
+}
+
+.control-group button {
+    background: #0078d4;
+    color: white;
+    border: none;
+    padding: 8px 12px;
+    margin-right: 8px;
+    border-radius: 4px;
+    font-size: 11px;
+    cursor: pointer;
+    transition: background-color 0.2s;
+    font-weight: 500;
+}
+
+.control-group button:hover {
+    background: #106ebe;
+}
+
+.control-group button:last-child {
+    margin-right: 0;
+}
+
+.control-group button:active {
+    background: #005a9e;
+}
+
+/* 3DMol viewer container styling */
+.extension-container .threeDmol-controls {
+    z-index: 100;
+}
+
+/* Ensure 3DMol canvas fills container */
+.extension-container canvas {
+    width: 100% !important;
+    height: 100% !important;
+    display: block !important;
+}
+
+/* Modal specific styling */
+.modal-content .extension-container canvas {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+}
+
+/* Dark theme support */
+@media (prefers-color-scheme: dark) {
+    .threeDmol-controls {
+        background: rgba(45, 55, 72, 0.95);
+        border-color: #4a5568;
+        color: #e2e8f0;
+    }
+    
+    .control-group label {
+        color: #e2e8f0;
+    }
+    
+    .control-group select {
+        background: #2d3748;
+        border-color: #4a5568;
+        color: #e2e8f0;
+    }
+    
+    .control-group select:focus {
+        border-color: #63b3ed;
+        box-shadow: 0 0 0 2px rgba(99, 179, 237, 0.2);
+    }
+}
+
+/* Loading state for 3DMol */
+.threeDmol-loading {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    background: #f8f9fa;
+    color: #666;
+    font-size: 14px;
+}
+
+.threeDmol-loading::before {
+    content: "🧬";
+    margin-right: 8px;
+    animation: spin 2s linear infinite;
+}
+
+/* Error display improvements */
+.extension-error .error-suggestion {
+    margin-top: 12px;
+    padding: 12px;
+    background: #f8f9fa;
+    border-radius: 4px;
+    font-size: 12px;
+    line-height: 1.4;
+}
+
+.extension-error .error-suggestion ul {
+    margin: 8px 0 0 0;
+    padding-left: 16px;
+}
+
+.extension-error .error-suggestion li {
+    margin-bottom: 4px;
+}
+
+@keyframes spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+
+/* Preview Controls Styles */
+.threeDmol-preview-controls {
+    position: absolute;
+    bottom: 8px;
+    left: 8px;
+    background: rgba(255, 255, 255, 0.95);
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    padding: 6px 8px;
+    font-size: 11px;
+    box-shadow: 0 1px 6px rgba(0, 0, 0, 0.1);
+    z-index: 10;
+    -webkit-backdrop-filter: blur(4px);
+    backdrop-filter: blur(4px);
+}
+
+.preview-radio-group {
+    display: flex;
+    gap: 12px;
+}
+
+.preview-radio-label {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-weight: normal;
+    color: #555;
+    cursor: pointer;
+    margin: 0;
+}
+
+.preview-radio-label input[type="radio"] {
+    margin: 0;
+    width: 12px;
+    height: 12px;
+}
+
+.preview-radio-label span {
+    font-size: 10px;
+}
+
+/* Full View Radio Button Styles */
+.radio-group {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.radio-label {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-weight: normal;
+    color: #555;
+    cursor: pointer;
+    margin: 0;
+}
+
+.radio-label input[type="radio"] {
+    margin: 0;
+    width: 14px;
+    height: 14px;
+}
+
+.radio-label span {
+    font-size: 11px;
+}

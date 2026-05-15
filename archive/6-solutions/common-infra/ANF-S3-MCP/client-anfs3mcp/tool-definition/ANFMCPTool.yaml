@@ -1,0 +1,240 @@
+name: ANFMCPTool
+description: A Discovery-integrated MCP client tool for managing Azure NetApp Files S3 buckets and objects via FastMCP server.
+version: "12.0.0"
+category: Discovery tools
+license: GPL-2.0
+infra:
+  - name: worker
+    infra_type: container
+    image:
+      acr: siphyeast2acr.azurecr.io/anfmcp:latest
+    compute:
+      min_resources:
+        cpu: 2
+        ram: 8Gi
+        storage: 110Gi
+        gpu: 0
+        infiniband: false
+      max_resources:
+        cpu: 4
+        ram: 16Gi
+        storage: 220Gi
+        gpu: 0
+        infiniband: false
+      recommended_sku:
+        - Standard_E4s_v6
+      pool_type: static
+      pool_size: 1
+actions:
+  - name: list_buckets
+    description: Lists all buckets in the configured Azure NetApp Files S3 environment.
+    infra_node: worker
+    command: |
+      /app/start.sh --action list_buckets
+    environment_variables:
+      - name: MCP_SERVER_URL
+        value: "<MCP server IP address - typically http:IP address:port>/mcp"
+    input_schema:
+      type: object
+      properties: {}
+      required: []
+  - name: put_object
+    description: Uploads an object to a specified Azure NetApp Files S3 bucket.
+    infra_node: worker
+    command: |
+      /app/start.sh --action put_object --bucket {{bucket}} --key {{key}} --body \"{{body}}\"
+    input_schema:
+      type: object
+      properties:
+        bucket:
+          type: string
+          description: "Target S3 bucket name"
+        key:
+          type: string
+          description: "Object key (filename)"
+        body:
+          type: string
+          description: "Content of the object" 
+      required: 
+        - bucket
+        - key
+        - body
+    environment_variables:
+      - name: MCP_SERVER_URL
+        value: "<MCP server IP address - typically http:IP address:port>/mcp"
+  - name: get_object
+    description: Retrieves an object from a specified Azure NetApp Files S3 bucket.
+    infra_node: worker
+    command: |
+      /app/start.sh --action get_object --bucket {{bucket}} --key {{key}}
+    input_schema:
+      type: object
+      properties:
+        bucket:
+          type: string
+          description: "Target S3 bucket name"
+        key:
+          type: string
+          description: "Object key (filename)"
+      required: 
+        - bucket
+        - key
+    environment_variables:
+      - name: MCP_SERVER_URL
+        value: "<MCP server IP address - typically http:IP address:port>/mcp"
+  - name: delete_object
+    description: Deletes an object from a specified Azure NetApp Files S3 bucket.
+    infra_node: worker
+    command: |
+      /app/start.sh --action delete_object --bucket {{bucket}} --key {{key}}
+    input_schema:
+      type: object
+      properties:
+        bucket:
+          type: string
+          description: "Target S3 bucket name"
+        key:
+          type: string
+          description: "Object key (filename)"
+      required: 
+        - bucket
+        - key
+    environment_variables:
+      - name: MCP_SERVER_URL
+        value: "<MCP server IP address - typically http:IP address:port>/mcp"
+  - name: list_objects_v2
+    description: Lists all objects in a specified Azure NetApp Files S3 bucket.
+    infra_node: worker
+    command: |
+      /app/start.sh --action list_objects_v2 --bucket {{bucket}} --prefix {{prefix}}
+    input_schema:
+      type: object
+      properties:
+        bucket:
+          type: string
+          description: "Target S3 bucket name"
+        prefix:
+          type: string
+          description: "Prefix to filter objects"
+      required: 
+        - bucket
+    environment_variables:
+      - name: MCP_SERVER_URL
+        value: "<MCP server IP address - typically http:IP address:port>/mcp"
+  - name: head_object
+    description: Retrieves metadata of an object from a specified Azure NetApp Files S3 bucket.
+    infra_node: worker
+    command: |
+      /app/start.sh --action head_object --bucket {{bucket}} --key {{key}}
+    input_schema:
+      type: object
+      properties:
+        bucket:
+          type: string
+          description: "Target S3 bucket name"
+        key:
+          type: string
+          description: "Object key (filename)"
+      required: 
+        - bucket
+        - key
+    environment_variables:
+      - name: MCP_SERVER_URL
+        value: "<MCP server IP address - typically http:IP address:port>/mcp"
+  - name: upload_file
+    description: Uploads a file to a specified Azure NetApp Files S3 bucket.
+    infra_node: worker
+    command: |
+      /app/start.sh --action upload_file --filename {{filename}} --bucket {{bucket}} --key {{key}}
+    input_schema:
+      type: object
+      properties:
+        bucket:
+          type: string
+          description: "Target S3 bucket name"
+        key:
+          type: string
+          description: "Object key (filename)"
+        filename:
+          type: string
+          description: "File to upload"
+      required: 
+        - bucket
+        - key
+        - filename
+    environment_variables:
+      - name: MCP_SERVER_URL
+        value: "<MCP server IP address - typically http:IP address:port>/mcp"
+  - name: download_file
+    description: Downloads a file from a specified Azure NetApp Files S3 bucket.
+    infra_node: worker
+    command: |
+      /app/start.sh --action download_file --bucket {{bucket}} --key {{key}} --filename {{filename}}
+    input_schema:
+      type: object
+      properties:
+        bucket:
+          type: string
+          description: "Target S3 bucket name"
+        key:
+          type: string
+          description: "Object key (filename)"
+        filename:
+          type: string
+          description: "Name of downloaded file"
+      required: 
+        - bucket
+        - key
+        - filename
+    environment_variables:
+      - name: MCP_SERVER_URL
+        value: "<MCP server IP address - typically http:IP address:port>/mcp"
+  - name: copy_object
+    description: Copies an object from one Azure NetApp Files S3 bucket to another.
+    infra_node: worker
+    command: |
+      /app/start.sh --action copy_object --source_bucket {{source_bucket}} --source_key {{source_key}} --destination_bucket {{destination_bucket}} --destination_key {{destination_key}}
+    input_schema:
+      type: object
+      properties:
+        source_bucket:
+          type: string
+          description: "Source S3 bucket name"
+        source_key:
+          type: string
+          description: "Source object key (filename)"
+        destination_bucket:
+          type: string
+          description: "Destination S3 bucket name"
+        destination_key:
+          type: string
+          description: "Destination object key (filename)"
+      required: 
+        - source_bucket
+        - source_key
+        - destination_bucket
+        - destination_key
+    environment_variables:
+      - name: MCP_SERVER_URL
+        value: "<MCP server IP address - typically http:IP address:port>/mcp"
+  - name: delete_objects
+    description: Deletes multiple objects from a specified Azure NetApp Files S3 bucket.
+    infra_node: worker
+    command: |
+      /app/start.sh --action delete_objects --bucket {{bucket}} --keys '{{keys}}'
+    input_schema:
+      type: object
+      properties:
+        bucket:
+          type: string
+          description: "Target S3 bucket name"
+        keys:
+          type: string
+          description: "Comma-separated list of object keys (filenames) to delete"
+      required: 
+        - bucket
+        - keys
+    environment_variables:
+      - name: MCP_SERVER_URL
+        value: "<MCP server IP address - typically http:IP address:port>/mcp"
+  

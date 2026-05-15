@@ -1,0 +1,62 @@
+name: mcpClientTool
+description: mcpClientTool runs the mcpClient to interact with the MCP server for various tasks including submitting jobs and retrieving results.
+version: 1.0.0
+category: "MCP Client"
+license: MIT
+infra:
+  - name: worker
+    infra_type: container
+    image:
+      acr: siphyeast2acr.azurecr.io/mcp_client:latest
+    compute:
+      min_resources:
+        cpu: "1"
+        ram: "1Gi"
+        storage: "32Gi"
+        gpu: "0"
+      max_resources:
+        cpu: "2"
+        ram: "1Gi"
+        storage: "64Gi"
+        gpu: "0"
+      recommended_sku:
+        - Standard_D4s_v6
+      pool_type: static
+      pool_size: 1
+actions:
+  - name: mcp_client_list_tools
+    description: List all available tools on the MCP server.
+    input_schema:
+      type: object
+      properties:
+        server_url:
+          type: string
+          description: "The URL of the MCP server to interact with."
+      required:
+        [
+          "server_url"
+        ]
+    command: "python main.py --server '{{server_url}}' list-tools"
+    infra_node: "worker"
+  - name: mcp_client_call_tool
+    description: Call a specific tool on the MCP server with provided arguments.
+    input_schema:
+      type: object
+      properties:
+        server_url:
+          type: string
+          description: "The URL of the MCP server to interact with."
+        tool_name:
+          type: string
+          description: "The name of the tool to be called on the MCP server."
+        tool_args:
+          type: string
+          description: "A JSON string representing the arguments to be passed to the tool."
+      required:
+        [
+          "server_url",
+          "tool_name",
+          "tool_args"
+        ]
+    command: "python -c \"import html, json, sys, subprocess; raw=html.unescape(sys.argv[1]); json.loads(raw); subprocess.run(['python','main.py','--server',sys.argv[2],'call-tool',sys.argv[3],'--args',raw])\" '{{tool_args}}' '{{server_url}}' '{{tool_name}}'"
+    infra_node: "worker"

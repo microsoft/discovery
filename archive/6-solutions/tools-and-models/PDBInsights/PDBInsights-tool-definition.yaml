@@ -1,0 +1,31 @@
+name: pdbinsights
+description: PDBInsights is a tool to search, download, prepare, and evaluate PDB structures for protein targets using RCSB APIs, Biopython, and PDBFixer.
+version: 1.0.0
+category: "Scientific Computing"
+license: MIT
+infra:
+  - name: worker
+    infra_type: container
+    image:
+      acr: "{name}.azurecr.io/pdbinsights:latest"
+    compute:
+      min_resources:
+        cpu: 1
+        ram: 4Gi
+        storage: 8Gi
+        gpu: 0
+      max_resources:
+        cpu: 2
+        ram: 8Gi
+        storage: 32Gi
+        gpu: 0
+      infiniband: false
+      recommended_sku:
+        - Standard_D4s_v3
+      pool_type: static
+      pool_size: 1
+code_environments:
+  - language: python
+    command: "python \"/{{scriptName}}\""
+    description: "Python code environment on PDBInsights container image."
+    infra_node: worker

@@ -1,0 +1,20 @@
+/* Loading spinners */
+.loading-spinner {
+	width: 20px;
+	height: 20px;
+	border: 2px solid var(--ms-gray-lighter);
+	border-top: 2px solid var(--ms-blue-primary);
+	border-radius: 50%;
+	animation: spin 1s linear infinite;
+}
+
+.loading-spinner.small {
+	width: 14px;
+	height: 14px;
+	border-width: 1.5px;
+}
+
+@keyframes spin {
+	0% { transform: rotate(0deg); }
+	100% { transform: rotate(360deg); }
+}

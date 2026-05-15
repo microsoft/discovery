@@ -1,0 +1,10 @@
+&PROJWFC
+    prefix = 'silicon'
+    outdir = './tmp'
+    filpdos = 'silicon.pdos'
+    emin = -10.0
+    emax = 20.0
+    deltae = 0.1
+    ngauss = 0
+    degauss = 0.01
+/

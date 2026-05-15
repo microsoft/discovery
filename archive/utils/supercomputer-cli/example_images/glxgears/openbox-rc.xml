@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Openbox configuration for glxgears visualization container -->
+<openbox_config xmlns="http://openbox.org/3.4/rc" xmlns:xi="http://www.w3.org/2001/XInclude">
+  <resistance>
+    <strength>10</strength>
+    <screen_edge_strength>20</screen_edge_strength>
+  </resistance>
+  <focus>
+    <focusNew>yes</focusNew>
+    <followMouse>no</followMouse>
+    <focusLast>yes</focusLast>
+    <underMouse>no</underMouse>
+    <focusDelay>200</focusDelay>
+    <raiseOnFocus>no</raiseOnFocus>
+  </focus>
+  <placement>
+    <policy>Smart</policy>
+    <center>yes</center>
+    <monitor>Primary</monitor>
+    <primaryMonitor>1</primaryMonitor>
+  </placement>
+  <theme>
+    <name>Clearlooks</name>
+    <titleLayout>NLIMC</titleLayout>
+    <keepBorder>yes</keepBorder>
+    <animateIconify>yes</animateIconify>
+  </theme>
+  <desktops>
+    <number>1</number>
+    <firstdesk>1</firstdesk>
+    <names><name>main</name></names>
+    <popupTime>0</popupTime>
+  </desktops>
+  <resize>
+    <drawContents>no</drawContents>
+    <popupShow>Nonpixel</popupShow>
+    <popupPosition>Center</popupPosition>
+  </resize>
+  <dock>
+    <position>TopLeft</position>
+    <stacking>Above</stacking>
+    <direction>Vertical</direction>
+    <floatingX>0</floatingX>
+    <floatingY>0</floatingY>
+    <autoHide>no</autoHide>
+    <hideDelay>300</hideDelay>
+    <showDelay>200</showDelay>
+    <moveButton>Middle</moveButton>
+  </dock>
+  <keyboard>
+    <keybind key="Super-Return"><action name="Execute"><command>xterm</command></action></keybind>
+    <keybind key="Super-g"><action name="Execute"><command>glxgears</command></action></keybind>
+    <keybind key="Super-q"><action name="Close"/></keybind>
+    <keybind key="Super-r"><action name="Reconfigure"/></keybind>
+    <keybind key="Super-Tab"><action name="NextWindow"><finalactions><action name="Raise"/></finalactions></action></keybind>
+  </keyboard>
+  <mouse>
+    <dragThreshold>1</dragThreshold>
+    <doubleClickTime>200</doubleClickTime>
+    <screenEdgeWarpTime>400</screenEdgeWarpTime>
+  </mouse>
+  <menu>
+    <file>menu.xml</file>
+    <hideDelay>200</hideDelay>
+    <middle>no</middle>
+    <submenuShowDelay>100</submenuShowDelay>
+    <submenuHideDelay>400</submenuHideDelay>
+    <applicationIcons>yes</applicationIcons>
+    <manageDesktops>no</manageDesktops>
+  </menu>
+  <applications>
+    <application class="glxgears">
+      <decor>yes</decor>
+      <maximized>no</maximized>
+    </application>
+  </applications>
+</openbox_config>

@@ -1,0 +1,69 @@
+name: ANFMCPWf
+states:
+  - name: Planning  
+    actors:
+      - agent: ANFMCPAgent
+        inputs:
+          userGoal: userGoal
+          messageId: messageId
+	        dataHandlingContext: dataHandlingContext
+	        nodePoolContext: nodePoolContext
+          workflowContext: workflowContext
+        thread: MainThread
+        humanInLoopMode: onNoMessage
+        streamOutput: false
+        maxTurn: 10
+        maxTransientErrorRetries: 3
+        maxRateLimitRetries: 3
+    isFinal: false
+
+  - name: Summary
+    actors:
+      - agent: ANFMCPSumAgent
+        inputs:
+          userGoal: userGoal
+          messageId: messageId
+	        dataHandlingContext: dataHandlingContext
+          nodePoolContext: nodePoolContext
+        thread: MainThread
+        humanInLoopMode: never
+        streamOutput: true
+        maxTurn: 10
+        maxTransientErrorRetries: 3
+        maxRateLimitRetries: 3
+    isFinal: false
+
+  - name: End
+    actors: []
+    isFinal: true
+
+transitions:
+  - from: Planning
+    to: Summary
+  - from: Summary
+    to: End
+
+variables:
+  - Type: thread
+    name: MainThread
+  - Type: userDefined
+    name: userGoal
+  - Type: userDefined
+    name: nodePoolContext
+  - Type: userDefined
+    name: messageId
+  - Type: userDefined
+    name: dataHandlingContext
+  - Type: userDefined
+    name: workflowContext
+    value: "
+      # Workflow Context:
+      You are part of a team of AI agents working together to perform S3 bucket and object operations using the MCP client tool.
+
+      ## Workflow specific rules and guidlines
+      - *Important* You should only perform actions which have been assigned to you in the plan.
+      - If there is a tool available that can accomplish your step, you should use it, making sure to follow the instructions to use it precisely.
+      - It is ok to not know the answer, if you don't know the answer to something or you have no tools to accomplish the given task, you may respond accordingly.
+      - *Important* you should never hallucinate any tool invocations.
+      "
+startstate: Planning

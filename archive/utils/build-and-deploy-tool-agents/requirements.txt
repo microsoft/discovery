@@ -1,0 +1,27 @@
+# Microsoft Discovery Tool Image Builder Requirements
+# 
+# This script uses only Python standard library modules - no external packages needed!
+# However, the --deploy flag requires PyYAML for ARM template generation.
+# 
+# Prerequisites:
+# 1. Python 3.7 or higher
+# 2. Azure CLI installed (az command available in PATH)
+# 3. Authenticated with Azure (run: az login)
+#
+# Python standard library modules used:
+# - os (environment variables and .env file loading)
+# - sys (exit codes and stdin/stdout)
+# - subprocess (Azure CLI command execution)
+# - json (parsing Azure CLI JSON output)
+# - pathlib (file system operations)
+# - typing (type hints)
+# - argparse (command-line argument parsing)
+# - platform (OS detection)
+#
+# Optional dependency for ARM template generation (--deploy flag):
+pyyaml>=6.0
+#
+# Azure CLI installation:
+# - macOS: brew install azure-cli
+# - Windows: https://aka.ms/installazurecliwindows
+# - Linux: https://docs.microsoft.com/cli/azure/install-azure-cli

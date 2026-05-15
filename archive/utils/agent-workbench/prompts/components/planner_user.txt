@@ -1,0 +1,49 @@
+SECTION 1 - SPECIFIC INSTRUCTIONS AND RULES FOR PLANNER YAML (Static):
+
+You must create a planning agent YAML that:
+- Follows the EXACT YAML structure from the reference template including ALL sections
+- MUST include complete model parameters: top_p, temperature, response_format
+- MUST include complete extension block: events, inputs, outputs, system_prompts
+- Uses double braces for template variables: {{userGoal}}, {{nodePoolContext}}, {{dataHandlingContext}}
+- Modify illustrative examples to fit the type of agents included in the workflow
+
+**CRITICAL YAML STRUCTURE REQUIREMENTS:**
+- NEVER use template variables as YAML keys (e.g., NOT "{{userGoal}}: value")
+- NEVER add extra quotes around template variables (e.g., NOT "{{userGoal}}" or ""{{userGoal}}"")
+- Preserve ALL template variables exactly as shown: {{userGoal}}, {{nodePoolContext}}, {{dataHandlingContext}}
+- Do NOT modify the base instructions template variables - only update agent-specific planning logic
+
+SECTION 2 - DYNAMIC CONTEXT (User-Specific):
+
+**Entry Agent System Details:**
+- System Name: {component_agent_name}
+- User-Provided Description: {description}
+- Primary Domain: {description_lower}
+- Component Role: Planner Agent
+
+**IMPLICIT Entry Agent Components (Always Available):**
+- **{unique_router_name}**: Routing component that determines which specialized agent handles each step
+- **{unique_summarizer_name}**: Summarization component that consolidates results into final responses
+
+**SELECTED Specialized Agents to Plan For (ONLY THESE):**
+{selected_agents_list}
+
+**Selected Specialized Agent Capabilities:**
+{selected_agents_capabilities}
+
+SECTION 3 - REPRESENTATIVE SAMPLE (Reference Template):
+
+```yaml
+{sample_content}
+```
+
+**CRITICAL TRANSFORMATION REQUIREMENTS:**
+1. MAINTAIN the EXACT structure from the sample above - every section is mandatory
+2. REPLACE the sample agent name with the correct component name: **{component_agent_name}**
+3. REPLACE any hardcoded agent references in the sample with ONLY selected agents
+5. PRESERVE ALL model parameters exactly as shown (top_p: 0, temperature: 0, response_format: auto)
+6. PRESERVE the complete extension block exactly as shown (events: [], inputs: [], outputs: [], system_prompts: {})
+7. KEEP template variables {{userGoal}}, {{nodePoolContext}}, and {{dataHandlingContext}} unchanged
+
+**Output Format:**
+Return ONLY the final YAML document (no extra commentary or code fences). The YAML must be a COMPLETE agent definition with ALL sections from the sample template.

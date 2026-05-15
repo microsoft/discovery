@@ -1,0 +1,15 @@
+flask
+flask-cors
+flask_cors
+requests
+docker
+pyyaml
+ruamel.yaml
+tiktoken
+jsonschema
+watchdog
+aiohttp
+azure-identity
+azure-storage-blob
+MDAnalysis
+orjson

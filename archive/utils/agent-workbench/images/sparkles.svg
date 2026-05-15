@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+    <!-- Large sparkle (center) -->
+    <path d="M12 2 L13.5 8 L12 9.5 L10.5 8 Z" fill="currentColor"/>
+    <path d="M12 14.5 L13.5 16 L12 22 L10.5 16 Z" fill="currentColor"/>
+    <path d="M2 12 L8 10.5 L9.5 12 L8 13.5 Z" fill="currentColor"/>
+    <path d="M14.5 12 L16 13.5 L22 12 L16 10.5 Z" fill="currentColor"/>
+
+    <!-- Small sparkle (top right) -->
+    <path d="M18 4 L18.8 6.5 L18 7.2 L17.2 6.5 Z" fill="currentColor"/>
+    <path d="M20.5 6.5 L19.8 7.2 L17.2 6.5 L19.8 5.8 Z" fill="currentColor"/>
+
+    <!-- Small sparkle (bottom left) -->
+    <path d="M6 17 L6.8 19.5 L6 20.2 L5.2 19.5 Z" fill="currentColor"/>
+    <path d="M8.5 19.5 L7.8 20.2 L5.2 19.5 L7.8 18.8 Z" fill="currentColor"/>
+</svg>

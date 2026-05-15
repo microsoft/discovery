@@ -1,0 +1,143 @@
+/* Chat area and welcome state */
+/* Chat Area Styling - Microsoft Copilot Experience */
+.chat-area {
+	flex: 1;
+	overflow-y: auto;
+	padding: 8px 0 16px 0; /* Reduced top padding from 16px to 8px */
+	display: flex;
+	flex-direction: column;
+	gap: 16px;
+	max-height: calc(100vh - 200px);
+	border-top: none !important; /* Ensure no top border */
+}
+
+/* When NOT in welcome state - add bottom padding to prevent overlap with input */
+.chat-area:not(.welcome-state) {
+	padding-bottom: 60px; /* Reduced from 120px - space for bottom-positioned input container */
+}
+
+/* Welcome state - center everything */
+.chat-area.welcome-state {
+	justify-content: center;
+	align-items: center;
+	padding: 0;
+}
+
+.welcome-centered {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	gap: 48px; /* Doubled from 24px to 48px */
+	max-width: none;
+	width: 66%;
+	padding: 0 24px;
+}
+
+.welcome-greeting {
+	font-size: 24px;
+	font-weight: 600; /* Changed from 400 to 600 for bold */
+	color: var(--ms-gray-dark);
+	text-align: center;
+	margin: 0;
+	white-space: nowrap;
+	width: 100%;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+/* Microsoft Discovery Logo - appears only in welcome state */
+.microsoft-discovery-logo {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	gap: 16px;
+	padding: 20px;
+	position: absolute; /* Changed back to absolute to position relative to left panel */
+	top: 25%; /* Position much higher - about 1/4 from top */
+	left: 50%; /* Center horizontally within the left panel */
+	transform: translate(-50%, -50%); /* Center both horizontally and vertically */
+	opacity: 1;
+	transition: opacity 0.3s ease;
+	z-index: 10; /* Ensure it appears above other content */
+	pointer-events: none; /* Prevent interference with other interactions */
+	width: auto; /* Allow width to expand as needed */
+	min-width: 300px; /* Ensure minimum width for logo and text */
+}
+
+.discovery-logo-icon {
+	width: 48px; /* Increased from 40px */
+	height: 48px; /* Increased from 40px */
+	flex-shrink: 0;
+}
+
+.discovery-logo-text {
+	font-size: 32px; /* Increased from 24px but kept smaller than logo */
+	font-weight: 600;
+	color: var(--ms-gray-medium);
+	white-space: nowrap; /* Prevent text wrapping */
+}
+
+/* Testing environment text */
+.testing-environment-text {
+	position: absolute; /* Changed from fixed to absolute to position relative to left panel */
+	top: 30%; /* Moved closer to logo (was 33%) */
+	left: 50%; /* Center horizontally within the left panel */
+	transform: translate(-50%, -50%);
+	font-size: 14px;
+	font-weight: 400;
+	color: var(--ms-gray-medium);
+	opacity: 0.8;
+	pointer-events: none;
+	z-index: 10;
+}
+
+/* Hide the testing environment text when not in welcome state */
+.chat-area:not(.welcome-state) .testing-environment-text {
+	display: none;
+}
+
+/* Hide the logo when not in welcome state */
+.chat-area:not(.welcome-state) .microsoft-discovery-logo {
+	display: none;
+}
+
+.chat-area::-webkit-scrollbar {
+	width: 6px;
+}
+
+.chat-area::-webkit-scrollbar-track {
+	background: transparent;
+}
+
+.chat-area::-webkit-scrollbar-thumb {
+	background: var(--ms-gray-lighter);
+	border-radius: 3px;
+}
+
+.chat-area::-webkit-scrollbar-thumb:hover {
+	background: var(--ms-gray-light);
+}
+
+/* Welcome message */
+.welcome-message {
+	display: flex;
+	justify-content: center;
+	margin: 15px 0; /* Reduced from 40px to 15px */
+}
+
+.copilot-message {
+	max-width: 80%;
+	background: var(--ms-chat-assistant-bg);
+	border-radius: 16px;
+	padding: 20px;
+	border: 1px solid var(--ms-chat-border);
+	box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+}
+
+.copilot-message .message-content p {
+	margin: 0 0 12px 0;
+	line-height: 1.5;
+}
+
+.copilot-message .message-content p:last-child {
+	margin-bottom: 0;
+}

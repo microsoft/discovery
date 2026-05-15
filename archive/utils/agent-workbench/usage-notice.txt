@@ -1,0 +1,4 @@
+Disclaimer: 
+Agent Workbench is provided "as is," without warranties or guarantees of any kind. Use at your own discretion and risk. Microsoft assumes no liability for outcomes resulting from its use in testing or production environments.
+
+This environment includes experimental components not intended for production use.

@@ -1,0 +1,101 @@
+name: mpi-example-workflow
+states:
+- name: mpiProcessing
+  actors:
+    - agent: mpi-example-agent
+      inputs:
+        userGoal: userGoal
+        dataHandlingContext: dataHandlingContext
+        messageId: messageId
+        nodePoolContext: nodePoolContext
+        agentTeam: agentTeam
+        workflowContext: workflowContext
+      thread: MainThread
+      humanInLoopMode: onNoMessage
+      streamOutput: true
+      maxTurn: 50
+      maxTransientErrorRetries: 3
+      maxRateLimitRetries: 3
+  isFinal: false
+- name: End
+  actors: []
+  isFinal: true
+
+transitions:
+- from: mpiProcessing
+  to: End
+
+variables:
+- Type: thread
+  name: MainThread
+- Type: userDefined
+  name: userGoal
+- Type: userDefined
+  name: nodePoolContext
+- Type: userDefined
+  name: messageId
+- Type: userDefined
+  name: workflowContext
+  value: "
+    # Workflow Context:
+    You are apart of a team of AI agents working together to perform computations using various tools and techniques.
+    You are part of a high-performance computing workflow designed to process large datasets in parallel using MPI master-worker pattern.
+  
+    ## Workflow specific rules and guidelines
+    - *Important* You should only perform actions which have been assigned to you in the plan.
+    - If there is a tool available that can accomplish your step, you should use it, making sure to follow the instructions to use it precisely.
+    - It is ok to not know the answer, if you don't know the answer to something or you have no tools to accomplish the given task, you may respond accordingly.
+    - *Important* you should never hallucinate any tool invocations.
+    "
+- Type: userDefined
+  name: dataHandlingContext
+  value: "
+    GUIDELINES:
+    
+    **Definitions**
+    - **Virtual path**: System-assigned absolute namespace for passing data between steps (e.g., `/step0/app/outputs`). Not the container's real filesystem path.
+    - **Container path**: Absolute path inside the tool container (e.g., `/app/outputs`). Used only in `outputMounts` and `inputMountPath`.
+    - **Mapping**: Tool reads/writes container (mount) path -> system maps to virtual path. Pass **virtual path** downstream, not container path.
+    - **Implicit extension**: If `/step0/app/outputs` exists, `/step0/app/outputs/reports` is valid (assuming 'reports' exists in the data pointed to by `/step0/app/outputs`.  Make extension explicit by giving the implicit path a description.
+    -**No shortening virtual paths**: Implied 'shortening' is disallowed (So if you had `/step0/app/outputs/reports` as the only item in the context, shortening it to just `/step0/app/outputs` would not be valid).
+    ---
+    
+    **Global Rules**
+    1. ALL paths must be ABSOLUTE. Never use relative paths.
+    2. Retrieve current data context before any action.
+    3. Preview data before updating descriptions.
+    4. Update virtualPath description **before** promoting to data asset (or description won't propagate).
+    5. Remember to promote data asset after updating description.
+    
+    ---
+    
+    **Tool Mount Rules**
+    - `outputMounts` = absolute container path where tool stores outputs.  Only directories are permitted.
+    - `inputMounts` = array of `{ virtualPath: <virtual path>, inputMountPath: <absolute container path> }`. Files or directories are permitted. The mount path will be of the type (file/directory) that is keyed by the virtual path given.
+    
+      ---
+      
+      **Example Flow**
+      1. Tool writes `molecule.txt` to `/app/outputs` (container path).
+      2. System maps to virtual path `/step0/app/outputs`.
+      3. Update description for `/step0/app/outputs`.
+      4. Next tool mounts `/step0/app/outputs` as `virtualPath`; `inputMountPath = /app/inputs`.
+      ```json
+      inputMounts: [ { virtualPath: /step0/app/outputs, inputMountPath: /app/inputs } ]
+      ```
+      5. Tool produces `step1/app/outputs`
+      6. Update description of `step1/app/outputs`
+      7. Promote `step1/app/outputs` as data asset"
+- Type: userDefined
+  name: agentTeam
+  value: |-
+    Agent team composition:
+    1. mpi-example-agent - Executes high-performance parallel processing using MPI master-worker pattern
+       Capabilities: 
+       - Process large batches of files in parallel across distributed worker nodes
+       - Dynamic load balancing for optimal resource utilization
+       - Handles embarrassingly parallel workloads (batch processing, data transformation, parameter sweeps)
+       - Scalable from 2 to 100+ MPI processes depending on workload
+       - Processes text files with numeric data (template can be customized for other formats)
+       - Returns detailed results with per-file statistics and MPI rank information
+startstate: mpiProcessing

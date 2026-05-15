@@ -1,0 +1,45 @@
+name: mpi-example
+description: A generic MPI master-worker pattern demonstrating dynamic load balancing and task distribution. The master node discovers input files from a mounted directory, distributes them to worker nodes for parallel processing, collects results, and generates a summary report. Ideal for embarrassingly parallel workloads such as batch file processing, data transformation, and independent task execution.
+version: 1.0.0
+category: "High-Performance Computing"
+license: MIT
+infra:
+  - name: worker
+    infra_type: container
+    image:
+      acr: "{name}.azurecr.io/mpi-example:latest"
+    internal_ports:
+      - destination: 22
+        protocol: "tcp"
+    mpi:
+      follower_command: "/opt/Microsoft.Discovery/mpid"
+    compute:
+      min_resources:
+        cpu: "500m"
+        ram: "1Gi"
+        gpu: "0"
+        storage: "0"
+      max_resources:
+        cpu: "1"
+        ram: "2Gi"
+        storage: "0"
+      infiniband: false
+      recommended_sku:
+        - Standard_D2s_v6
+        - Standard_D4s_v6
+      pool_type: static
+      pool_size: 5
+actions:
+  - name: process_files
+    description: Processes input files in parallel using MPI master-worker pattern. Master node discovers all files in input directory /app/inputs/*, distributes them to worker nodes for processing, and collects results. Each worker reads file content, parses numbers, computes statistics, and returns results. Final output is written to /app/outputs/results.txt with detailed processing summary.
+    infra_node: worker
+    input_schema:
+      type: object
+      properties:
+        num_processes:
+          type: integer
+          description: "Total number of MPI processes (1 master + N-1 workers). Must be at least 2."
+      required:
+        - num_processes
+    command: "bash -c 'source /etc/profile.d/modules.sh && module load mpi/openmpi-x86_64 && mpirun --allow-run-as-root --hostfile /var/run/Microsoft.Discovery/mpi-hosts -np {{num_processes}} /root/master_worker'"
+    

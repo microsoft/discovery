@@ -1,0 +1,20 @@
+# AutoDock Vina Configuration File
+# HIV-1 Protease (1HSG) + Indinavir Docking
+
+receptor = 1hsg_receptor.pdbqt
+ligand = indinavir.pdbqt
+out = indinavir_docked.pdbqt
+
+# Grid box centered on the active site
+center_x = 16.0
+center_y = 25.0
+center_z = 4.0
+
+size_x = 20.0
+size_y = 20.0
+size_z = 20.0
+
+# Docking parameters
+exhaustiveness = 32
+num_modes = 9
+energy_range = 3.0

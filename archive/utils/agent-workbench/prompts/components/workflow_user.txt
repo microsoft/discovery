@@ -1,0 +1,94 @@
+# SECTION 1 - SPECIFIC INSTRUCTIONS FOR WORKFLOW YAML GENERATION
+
+🚨 **CRITICAL TRANSITION RULE**: Specialized agents MUST NEVER transition directly to Summary. ONLY the Router can transition to Summary. Pattern: SpecializedAgent → Router → Summary.
+
+🚨 **CRITICAL EVENT NAMING — USE EXACT PRE-COMPUTED NAMES**:
+The event names for workflow transitions and router actions have been pre-computed. You MUST use these exact names — do NOT invent, abbreviate, or modify them in any way:
+
+{event_name_mapping}
+
+These names are case-sensitive. Use them exactly as shown in:
+- Workflow `transitions[].event` fields
+- Workflow `extension.events[].name` fields
+- State names should be derived from the agent name (not the event name)
+
+Generate a complete workflow YAML that orchestrates coordination between Planner, Router, and Summarizer agents for the specified domain. The workflow must:
+
+1. Define states for each phase: planning, routing/execution, summarization and each specialized agent: {selected_agents_joined}
+3. Include proper actors with agent names that match the selected agents
+4. Include proper event definitions in extension.events section
+5. Set humanInLoopMode to "never" for all states
+6. Include streamOutput: true where appropriate
+7. Use proper state transitions with conditions in TOP-LEVEL transitions section
+8. 🚨 **ENFORCE ROUTER COORDINATION**: ALL specialized agents return to Router, NEVER directly to Summary
+9. Include template variables like {{userGoal}}, {{nodePoolContext}}, {{dataHandlingContext}}
+10. **IMPORTANT**: For custom agents (specialized agents selected by the user), set maxTurn to 100 to allow sufficient interaction cycles
+11. **CRITICAL**: Ensure the agentTeam variable includes comprehensive descriptions of ALL agents in the team - both custom agents selected by the user AND implicit agents (Summarizer, Planner, Router) - with detailed capability summaries for each
+
+**REQUIRED WORKFLOW STRUCTURE:**
+- Use DIRECT top-level keys: `name:`, `states:`, `transitions:`, `variables:`, `startstate:`
+- The structure MUST be:
+  ```yaml
+  name: WorkflowName
+  states: [...]
+  transitions:
+    - from: StateA
+      to: StateB
+  variables: [...]
+  startstate: StateName
+  ```
+
+**YAML SYNTAX REQUIREMENTS:**
+- ONLY use approved template variables: {{userGoal}}, {{nodePoolContext}}, {{dataHandlingContext}}, {{agentTeam}}, {{workflowContext}}
+- NEVER use template variables as YAML keys (e.g., NOT "{{userGoal}}: value")
+- NEVER add extra quotes around template variables (e.g., NOT "{{userGoal}}" or ""{{userGoal}}"")
+
+**CRITICAL INPUTS AND VARIABLES REQUIREMENTS:**
+- 🚨 **MANDATORY**: Every state's actor MUST include `messageId: messageId` in its inputs section
+- 🚨 **MANDATORY**: The workflow variables section MUST include a `messageId` variable definition:
+  ```yaml
+  - Type: userDefined
+    name: messageId
+  ```
+- **Standard input pattern for ALL states** (Planner, Router, Summarizer, and Specialized agents):
+  - `messageId: messageId` (REQUIRED)
+  - `nodePoolContext: nodePoolContext`
+  - `dataHandlingContext: dataHandlingContext`
+  - `agentTeam: agentTeam`
+  - `workflowContext: workflowContext`
+  - `userGoal: userGoal`
+
+- 🚨 **IMPORTANT**: All six inputs should be included for every agent state to ensure compatibility with published agent definitions. Most agents accept all these inputs even if they don't use all of them.
+
+- Failure to include `messageId` in inputs and variables will cause deployment errors  
+
+Workflow Agent Name: {component_agent_name}
+Domain Description: {description}
+Selected Specialized Agents: {selected_agents_joined}
+
+## IMPLICIT WORKFLOW AGENT COMPONENTS (Always Available):
+**{unique_planner_name}**: Planning component that breaks down user requests into actionable steps for the selected specialized agents
+**{unique_router_name}**: Routing component that determines which specialized agent should handle each step based on agent capabilities
+**{unique_summarizer_name}**: Summarization component that consolidates results from specialized agents into final user responses
+
+## Selected Specialized Agent Capabilities:
+{selected_agents_capabilities}
+
+# Agent Team (MANDATORY FORMAT)
+The `agentTeam` variable must include entries for every selected specialized agent and the implicit components ({unique_planner_name}, {unique_router_name}, {unique_summarizer_name}). Each entry MUST be numbered and use the exact two-line format below and nothing else:
+
+1. {AgentName}: One sentence description.
+  Capabilities: One paragraph (up to 200 words) describing typical inputs, typical outputs, main behaviors, error handling, and key dependencies (libraries/runtime). Do NOT include an "Actions:" section, lists, or extra headings.
+
+Number agents sequentially (1., 2., 3., ...) and separate each agent's entry with a single blank line. Be factual and avoid inventing capabilities when information is missing.
+
+NAME CONSISTENCY RULE:
+- When numbering agents, the first line must start with the exact agent key (case-sensitive) as provided in the selected agents list. Do not add alternate names or aliases after the agent key. Example (valid): `1. moltoolkitAgent: ...` Example (invalid): `1. moltoolkitAgent: CheminformaticsAgent:`
+
+# dataHandlingContext VARIABLE (AUTO-INJECTED — DO NOT INCLUDE)
+The `dataHandlingContext` variable will be automatically appended to the `variables:` section after generation.
+Do NOT include a `dataHandlingContext` variable definition in your YAML output. It will be injected programmatically.
+
+# SECTION 3 - REPRESENTATIVE SAMPLE
+
+{sample_content}

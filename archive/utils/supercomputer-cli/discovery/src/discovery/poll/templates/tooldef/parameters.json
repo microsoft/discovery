@@ -1,0 +1,24 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentParameters.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "outLocation": {
+            "value": "TOOL_LOCATION_PLACEHOLDER"
+        },
+        "outTagsByResource": {
+            "value": {}
+        },
+        "outToolName": {
+            "value": "NAME_PLACEHOLDER"
+        },
+        "outDefinitionContent": {
+            "value": "TOOL_JSON_PLACEHOLDER"
+        },
+        "outToolVersion": {
+            "value": "1.0"
+        },
+        "OutEnvironmentVariables": {
+            "value": ""
+        }
+    }
+}

@@ -1,0 +1,15 @@
+name: retrochimera
+description: >
+  RetroChimera is a model that takes as input a product molecule that one wants to synthesize, encoded as a sequence of characters, and produces several potential chemical reactions which could be used to produce that input molecule. Each reaction is represented as a group of ingredients (reactant molecules), and those molecules are again represented each by a string of characters. It can be used to predict chemical reactions that could be used to synthesize a given drug-like small molecule.
+version: "1.0.0"
+category: Machine Learning model
+license: MIT
+infra:
+  - name: worker
+    infra_type: maap
+    image:
+      model_id: azureml://registries/azureml-msr/models/RetroChimera/versions/2
+    compute:
+      vm_skus: Standard_NC40ads_H100_v5
+      pool_type: static
+      pool_size: 1

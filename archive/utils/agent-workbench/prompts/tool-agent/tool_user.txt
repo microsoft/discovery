@@ -1,0 +1,99 @@
+SECTION 1 - SPECIFIC INSTRUCTIONS FOR TOOL YAML GENERATION (Static):
+
+You must create a tool definition YAML that:
+- Follows the EXACT YAML structure from the reference sample below
+- MUST include all required sections: name, description, version, category, license, infra, code_environments
+- Uses realistic infrastructure specifications appropriate for the tool type
+- **CRITICAL: Uses ONLY the specific SKU recommendations and resource constraints provided below**
+- Uses appropriate container image naming (ACR patterns)
+- Includes relevant category classification
+- Must NOT reference any coordination or agent management logic (this is a standalone tool)
+
+**CRITICAL YAML STRUCTURE REQUIREMENTS:**
+- Include ALL sections from the sample (name, description, version, category, license, infra, code_environments)
+- Include COMPLETE infra block with worker, image, compute specifications
+- **MANDATORY: Use exact min_resources, max_resources, and recommended_sku values as specified in constraints**
+- **MANDATORY: Container image ACR path MUST be in format: `<registry>.azurecr.io/<image>:<tag>`**
+  - Example: `contoso.azurecr.io/myapp:latest` (CORRECT)
+  - Example: `mdqlabsuksouth.azurecr.io/evodiff-image:v1.0` (CORRECT)
+  - Counter-example: `mdqlabsuksouth/evodiff-image:latest` (WRONG - missing .azurecr.io)
+- Ensure all YAML syntax is valid and properly indented
+
+SECTION 2 - DYNAMIC CONTEXT (Tool-Specific):
+
+**Tool Details:**
+- Tool Name: {tool_name}
+- Tool Description: {tool_description}
+- Technology Domain: {domain}
+- Container Image: {docker_image}
+
+{sku_resource_info}
+
+**Dockerfile Content:**
+{dockerfile_content}
+
+**API Documentation & Specifications:**
+{api_documentation}
+
+**Scripts & Implementation Details:**
+{scripts_info}
+
+**Tool Purpose:**
+{tool_description}
+
+**Infrastructure Context:**
+- Docker Image: {docker_image}
+- Expected Resource Requirements: {resource_hints}
+
+**IMPORTANT**: If specific SKU constraints are provided above, they take absolute precedence over the general resource requirements listed here.
+
+**Technical Implementation Guidance:**
+Based on the provided Dockerfile, API documentation, and scripts, create a tool definition that:
+- Reflects the actual container environment and dependencies
+- Includes appropriate resource sizing based on the tool's computational requirements
+- References the correct container image and configuration
+- Incorporates API endpoints and functionality from the documentation
+- Considers the scripts and implementation patterns provided
+
+SECTION 3 - REPRESENTATIVE SAMPLE (Reference Template):
+
+```yaml
+{sample_content}
+```
+
+**CRITICAL TRANSFORMATION REQUIREMENTS:**
+1. MAINTAIN the EXACT structure from the sample above - every section is mandatory
+2. REPLACE sample tool name with: {tool_name}
+3. REPLACE sample description with: {tool_description}
+4. UPDATE container image path to match: {docker_image}
+   - **CRITICAL**: If {docker_image} does not contain `.azurecr.io`, you MUST add it to make it valid ACR format
+   - Transform `registry/image:tag` → `registry.azurecr.io/image:tag`
+   - Example: `mdqlabsuksouth/myimage:v1` → `mdqlabsuksouth.azurecr.io/myimage:v1`
+5. **MANDATORY: Use the exact SKU and resource specifications provided in Infrastructure Context above**
+6. UPDATE category to match the tool's domain
+7. PRESERVE ALL required sections from the sample
+8. ENSURE infrastructure specifications are realistic and appropriate
+9. FOCUS on the specific technology: {domain}
+10. CREATE specifications that support the tool's intended use case
+
+**CRITICAL RESOURCE REQUIREMENTS:**
+{sku_resource_info}
+
+If specific SKU recommendations and resource ranges are provided above, you MUST:
+- Use ONLY the recommended SKUs listed (do not substitute other SKUs)
+- Set min_resources and max_resources within the specified CPU and memory ranges
+- Ensure the recommended_sku field contains exactly the SKUs specified
+- Do NOT exceed the maximum CPU and memory values provided
+- Do NOT use fewer resources than the minimum values provided
+
+**FINAL VALIDATION CHECKLIST:**
+Before generating the YAML, verify that:
+1. The infra[0].image.acr field contains `.azurecr.io` in the registry name (MANDATORY)
+2. The recommended_sku field matches exactly what was specified in constraints
+3. The min_resources cpu and ram values match the specified minimums
+4. The max_resources cpu and ram values match the specified maximums
+5. No substitutions or "improvements" were made to the SKU specifications
+6. The ACR image format is: `<name>.azurecr.io/<image>:<tag>` (not Docker Hub format)
+
+**Output Format:**
+Return ONLY the final YAML document (no extra commentary or code fences). The YAML must be a COMPLETE tool definition with ALL sections from the sample template, customized for the specific tool purpose and requirements.

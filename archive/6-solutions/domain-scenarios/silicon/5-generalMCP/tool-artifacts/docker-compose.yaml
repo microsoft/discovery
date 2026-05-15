@@ -1,0 +1,24 @@
+services:
+    server: 
+        build: 
+            context: example_server
+            dockerfile: Dockerfile
+        healthcheck:
+            test: ["CMD", "curl", "--fail", "http://server:80/status"]
+            interval: 30s
+            timeout: 10s
+            retries: 3
+            start_period: 5s # Grace period before counting failures
+        container_name: mcp_server_container
+        ports:
+            - 5000:80
+    client:
+        build: 
+            context: example_client
+            dockerfile: Dockerfile
+        container_name: mcp_client_container
+        ports:
+            - 3000:80
+        depends_on:
+            server:
+              condition: service_healthy

@@ -1,0 +1,40 @@
+name: rfdiffusion
+description: Protein backbone design via RFDiffusion denoising diffusion probabilistic model
+version: 1.0.0
+category: "Physics-Based Simulations"
+license: BSD-3-Clause
+
+infra:
+  - name: worker
+    infra_type: container
+    image:
+      acr: "{name}.azurecr.io/rfdiffusion:latest"
+    compute:
+      min_resources:
+        cpu: 4
+        ram: "32Gi"
+        gpu: 1
+        storage: "0Gi"
+      max_resources:
+        cpu: 96
+        ram: "1800Gi"
+        gpu: 8
+        storage: "0Gi"
+      infiniband: false
+      recommended_sku:
+        - Standard_NC40ads_H100_v5
+        - Standard_NC80adis_H100_v5
+        - Standard_NC24ads_A100_v4
+      pool_type: static
+      pool_size: 1
+
+code_environments:
+  - language: python3
+    command: "python3 -u \"/{{scriptName}}\" > {{output_directory}}/logs.out 2>&1; cp -r /workdir/* {{output_directory}}/ 2>/dev/null || true; tail -n 100 {{output_directory}}/logs.out"
+    description: |
+      Python code environment with RFDiffusion for protein backbone design.
+      Includes PyTorch (CUDA), DGL, SE3Transformer, RFDiffusion inference.
+      GPU required — diffusion model inference needs CUDA.
+      Key capabilities: unconditional generation, binder design, motif scaffolding,
+      symmetric oligomers, fold-conditioned generation.
+    infra_node: worker

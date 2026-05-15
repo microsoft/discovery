@@ -1,0 +1,48 @@
+name: boltzgen
+description: >
+  BoltzGen is a diffusion-based protein binder design pipeline. Generates,
+  folds, scores, and ranks protein/peptide/antibody/nanobody binder designs.
+  Supports 6 protocols: protein-anything, peptide-anything, protein-small_molecule,
+  antibody-anything, nanobody-anything, protein-redesign. Built on PyTorch with
+  GPU-accelerated diffusion inference and Boltz-2 structure prediction.
+version: "1.0.0"
+category: "Physics-Based Simulations"
+license: MIT
+
+infra:
+  - name: worker
+    infra_type: container
+    image:
+      acr: "{name}.azurecr.io/boltzgen:latest"
+    compute:
+      min_resources:
+        cpu: 4
+        ram: "32Gi"
+        gpu: 1
+        storage: "0Gi"
+      max_resources:
+        cpu: 96
+        ram: "1800Gi"
+        gpu: 8
+        storage: "0Gi"
+      infiniband: false
+      recommended_sku:
+        - Standard_NC40ads_H100_v5
+        - Standard_NC80adis_H100_v5
+        - Standard_ND96isr_H100_v5
+        - Standard_NC24ads_A100_v4
+        - Standard_NC48ads_A100_v4
+      pool_type: static
+      pool_size: 1
+
+code_environments:
+  - language: python3
+    command: "python3 -u \"/{{scriptName}}\" > {{output_directory}}/logs.out 2>&1; cp -r /workdir/* {{output_directory}}/ 2>/dev/null || true; tail -n 100 {{output_directory}}/logs.out"
+    description: |
+      Python code environment with BoltzGen for protein binder design.
+      Includes boltzgen CLI, PyTorch (CUDA), rdkit, pytorch-lightning, Boltz-2 folding.
+      GPU required — diffusion model inference, inverse folding, structure prediction.
+      Key commands: boltzgen run, boltzgen check, boltzgen merge, boltzgen download.
+      Protocols: protein-anything, peptide-anything, protein-small_molecule,
+      antibody-anything, nanobody-anything, protein-redesign.
+    infra_node: worker

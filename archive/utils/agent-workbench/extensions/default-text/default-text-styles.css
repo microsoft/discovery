@@ -1,0 +1,273 @@
+/* Default Text Extension Styles */
+
+.text-content {
+    width: 100% !important;
+    max-width: 100% !important;
+    box-sizing: border-box !important;
+    background: #f8f9fa;
+    border: 1px solid #e9ecef;
+    border-radius: 4px;
+    padding: 16px;
+    margin: 0;
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+    font-size: 13px;
+    line-height: 1.4;
+    color: #333;
+    overflow: auto;
+    white-space: pre-wrap !important;
+    word-wrap: break-word !important;
+    word-break: break-word !important;
+    overflow-wrap: break-word !important;
+}
+
+/* More specific selectors for language-specific content */
+.text-content.language-json,
+.text-content.language-xml,
+.text-content.language-yaml,
+.text-content.language-markdown,
+.text-content[class*="language-"] {
+    white-space: pre-wrap !important;
+    word-wrap: break-word !important;
+    word-break: break-word !important;
+    overflow-wrap: break-word !important;
+}
+
+/* Ensure word wrap for code elements within text-content */
+.text-content code,
+.text-content code[class*="language-"] {
+    white-space: pre-wrap !important;
+    word-wrap: break-word !important;
+    word-break: break-word !important;
+    overflow-wrap: break-word !important;
+}
+
+/* Ensure word wrap for individual tokens */
+.text-content .token {
+    white-space: pre-wrap !important;
+    word-wrap: break-word !important;
+    word-break: break-word !important;
+    overflow-wrap: break-word !important;
+}
+
+/* Override any default pre element constraints */
+pre.text-content {
+    width: 100% !important;
+    max-width: 100% !important;
+    box-sizing: border-box !important;
+    display: block !important;
+}
+
+/* Specific override for language-json class combination */
+pre.text-content.language-json {
+    width: 100% !important;
+    max-width: 100% !important;
+    box-sizing: border-box !important;
+    display: block !important;
+}
+
+.text-content code {
+    width: 100% !important;
+    max-width: 100% !important;
+    box-sizing: border-box !important;
+    display: block !important;
+    background: transparent;
+    border: none;
+    padding: 0;
+    font-family: inherit;
+    font-size: inherit;
+    color: inherit;
+}
+
+/* Format error indicator */
+.format-error {
+    background: #fff3cd;
+    border: 1px solid #ffeaa7;
+    color: #856404;
+    padding: 8px 12px;
+    border-radius: 4px;
+    margin-bottom: 8px;
+    font-size: 12px;
+    font-weight: 500;
+}
+
+/* CSV Table Styles */
+.csv-container {
+    background: white;
+    border: 1px solid #dee2e6;
+    border-radius: 4px;
+    overflow: auto;
+    max-height: 500px;
+    margin: 0;
+}
+
+.csv-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    font-size: 13px;
+}
+
+.csv-table th,
+.csv-table td {
+    border: 1px solid #dee2e6;
+    padding: 8px 12px;
+    text-align: left;
+    vertical-align: top;
+    /* Allow text wrapping in preview mode for better fit */
+    word-wrap: break-word;
+    max-width: 200px; /* Prevent overly wide columns in preview */
+}
+
+.csv-table th {
+    background: #f8f9fa;
+    font-weight: 600;
+    color: #495057;
+    position: sticky;
+    top: 0;
+    z-index: 1;
+}
+
+.csv-table tr:nth-child(even) {
+    background: #f8f9fa;
+}
+
+.csv-table tr:hover {
+    background: #e9ecef;
+}
+
+/* CSV table styles for modal/full view */
+.modal-content .csv-container {
+    max-height: none; /* Remove height constraint in modal */
+    height: 100%;
+    overflow: auto;
+    border-radius: 0; /* Remove border radius for full coverage */
+    width: 100%; /* Ensure container doesn't exceed modal width */
+    max-width: 100%; /* Prevent container from growing beyond modal */
+}
+
+.modal-content .csv-table {
+    font-size: 14px; /* Slightly larger font in modal */
+    table-layout: fixed; /* Use fixed layout to control column widths */
+    width: 100%; /* Fill the container width */
+    min-width: 800px; /* Minimum table width for readability */
+}
+
+.modal-content .csv-table th,
+.modal-content .csv-table td {
+    padding: 10px 14px; /* More generous padding in modal */
+    white-space: nowrap; /* Prevent wrapping in modal for better readability */
+    overflow: hidden; /* Hide overflow */
+    text-overflow: ellipsis; /* Show ellipsis for long content */
+    min-width: 120px; /* Ensure reasonable minimum width */
+    max-width: 300px; /* Prevent extremely wide columns */
+}
+
+/* Special handling for very long content columns */
+.modal-content .csv-table td:hover {
+    overflow: visible; /* Show full content on hover */
+    white-space: normal; /* Allow wrapping on hover */
+    max-width: none; /* Remove width constraint on hover */
+    position: relative;
+    z-index: 10;
+    background: #fff;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+}
+
+.csv-table td {
+    color: #212529;
+}
+
+/* Override for legacy text classes */
+.text-preview,
+.text-fullview {
+    background: #f8f9fa;
+    border: 1px solid #e9ecef;
+    border-radius: 4px;
+    padding: 16px;
+    margin: 0;
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+    font-size: 13px;
+    line-height: 1.4;
+    color: #333;
+    overflow: auto;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+}
+
+/* Prism.js theme overrides for better integration */
+.text-content .token.property,
+.text-content .token.tag,
+.text-content .token.constant,
+.text-content .token.symbol,
+.text-content .token.deleted {
+    color: #905;
+}
+
+.text-content .token.boolean,
+.text-content .token.number {
+    color: #166f8a;
+}
+
+.text-content .token.selector,
+.text-content .token.attr-name,
+.text-content .token.string,
+.text-content .token.char,
+.text-content .token.builtin,
+.text-content .token.inserted {
+    color: #690;
+}
+
+.text-content .token.operator,
+.text-content .token.entity,
+.text-content .token.url,
+.text-content .token.variable {
+    color: #9a6e3a;
+}
+
+.text-content .token.atrule,
+.text-content .token.attr-value,
+.text-content .token.keyword {
+    color: #07a;
+}
+
+.text-content .token.function,
+.text-content .token.class-name {
+    color: #DD4A68;
+}
+
+.text-content .token.comment,
+.text-content .token.prolog,
+.text-content .token.doctype,
+.text-content .token.cdata {
+    color: #708090;
+    font-style: italic;
+}
+
+.text-content .token.punctuation {
+    color: #999;
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+    .csv-table {
+        font-size: 12px;
+    }
+    
+    .csv-table th,
+    .csv-table td {
+        padding: 6px 8px;
+    }
+    
+    .text-content {
+        font-size: 12px;
+        padding: 12px;
+    }
+}
+
+/* Additional responsive handling for very wide CSV tables */
+@media (min-width: 1200px) {
+    .modal-content .csv-table th,
+    .modal-content .csv-table td {
+        min-width: 140px; /* Larger columns on wide screens */
+    }
+}

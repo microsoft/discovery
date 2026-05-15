@@ -1,0 +1,531 @@
+/* Code blocks in chat */
+.code-block-container {
+	margin: 16px 0;
+	border: 1px solid var(--ms-chat-border);
+	border-radius: 8px;
+	overflow: visible;
+	background: var(--ms-white);
+	position: relative;
+}
+
+.code-header {
+	background: var(--ms-gray-bg);
+	padding: 12px 16px;
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	border-bottom: 1px solid var(--ms-chat-border);
+}
+
+/* Code language chip styling to match M365 Copilot */
+.code-language-chip {
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+	padding: 4px 8px;
+	background: var(--ms-white);
+	border: 1px solid var(--ms-gray-lighter);
+	border-radius: 12px;
+	color: var(--ms-gray-dark);
+	font-size: 12px;
+	font-weight: 500;
+	cursor: default;
+	transition: all 0.2s ease;
+}
+
+.code-language-chip:hover {
+	background: var(--ms-gray-bg);
+	border-color: var(--ms-gray-light);
+}
+
+.code-icon {
+	width: 14px;
+	height: 14px;
+	flex-shrink: 0;
+	filter: opacity(0.7);
+}
+
+.code-language-text {
+	font-size: 12px;
+	font-weight: 500;
+	color: var(--ms-gray-dark);
+	white-space: nowrap;
+}
+
+.button-container {
+	display: flex;
+	gap: 8px;
+}
+
+/* Updated button styling to match Microsoft Fluent design */
+.copy-btn {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	min-width: 32px;
+	height: 32px;
+	padding: 0;
+	background: transparent;
+	border: 1px solid var(--ms-gray-lighter);
+	border-radius: 6px;
+	color: var(--ms-gray-medium);
+	cursor: pointer;
+	transition: all 0.2s ease;
+	margin-right: 8px;
+}
+
+.copy-btn:hover {
+	background: var(--ms-gray-bg);
+	border-color: var(--ms-gray-light);
+	color: var(--ms-gray-dark);
+}
+
+.copy-btn:active {
+	background: var(--ms-gray-lightest);
+	transform: scale(0.96);
+}
+
+.copy-btn.copied {
+	background: var(--ms-success);
+	border-color: var(--ms-success);
+	color: white;
+}
+
+.copy-btn-icon {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	width: 20px;
+	height: 20px;
+}
+
+/* Entry Agent action icons container (right side of tabs) */
+.entry-agent-actions .copy-btn-output {
+	margin-right: 0;
+}
+
+/* Add right-side breathing room so icons don't hug scrollbar edge */
+.entry-agent-actions {
+	/* Increased to align with inner-tab-bar right edge */
+	padding-right: 20px;
+}
+
+/* Danger variant for delete */
+.entry-agent-actions .danger-btn {
+	border-color: #fecaca;
+	color: #dc2626;
+}
+.entry-agent-actions .danger-btn:hover {
+	background: #fef2f2;
+	border-color: #dc2626;
+	color: #b91c1c;
+}
+.entry-agent-actions .danger-btn:active {
+	background: #fee2e2;
+}
+
+/* Update run button to maintain existing style but adjust spacing */
+.run-btn {
+	background: var(--ms-success);
+	padding: 8px 20px !important;
+	min-width: 120px !important;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	gap: 8px;
+	border: none;
+	border-radius: 6px 0 0 6px; /* Adjust for dropdown button */
+	color: white;
+	font-size: 12px;
+	font-weight: 500;
+	cursor: pointer;
+	transition: background-color 0.2s ease;
+	margin-left: 0;
+	height: 36px;
+}
+
+.run-btn:hover {
+	background: #0E6E0E;
+}
+
+.run-btn:disabled {
+	opacity: 0.6;
+	cursor: not-allowed;
+	background: var(--ms-success);
+}
+
+.run-btn:disabled:hover {
+	background: var(--ms-success);
+}
+
+.run-btn.loading {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	gap: 8px;
+	min-height: 32px; /* Maintain consistent height */
+	box-sizing: border-box;
+}
+
+.run-btn .loading-spinner {
+	margin: 0;
+	flex-shrink: 0; /* Prevent spinner from shrinking */
+}
+
+/* Cancel button styles */
+.cancel-btn {
+	background: white;
+	padding: 8px 16px;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	gap: 6px;
+	border: 1px solid var(--ms-danger, #D13438);
+	border-radius: 4px;
+	color: var(--ms-danger, #D13438);
+	font-size: 12px;
+	font-weight: 500;
+	cursor: pointer;
+	transition: all 0.2s ease;
+	margin-left: 8px;
+	height: 36px;
+}
+
+.cancel-btn:hover:not(:disabled) {
+	background: #FEF2F2;
+	border-color: #A4262C;
+	color: #A4262C;
+}
+
+.cancel-btn:disabled {
+	opacity: 0.6;
+	cursor: not-allowed;
+}
+
+.cancel-btn .loading-spinner {
+	margin: 0;
+	flex-shrink: 0;
+}
+
+/* Run button container and dropdown styles */
+.run-button-container {
+	display: flex;
+	align-items: center;
+	position: relative;
+}
+
+.run-dropdown {
+	position: relative;
+	margin-left: -1px; /* Connect to run button */
+}
+
+.run-dropdown-btn {
+	background: var(--ms-success);
+	border: none;
+	border-left: 1px solid rgba(255, 255, 255, 0.3);
+	padding: 8px 6px;
+	color: white;
+	cursor: pointer;
+	border-radius: 0 6px 6px 0;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	height: 36px; /* Match run button height */
+	transition: background-color 0.2s ease;
+}
+
+.run-dropdown-btn:hover {
+	background: #0E6E0E;
+}
+
+.run-dropdown-btn:disabled {
+	opacity: 0.6;
+	cursor: not-allowed;
+	background: var(--ms-success);
+}
+
+.run-dropdown-btn:disabled:hover {
+	background: var(--ms-success);
+}
+
+.run-dropdown-menu {
+	position: absolute;
+	top: 100%;
+	right: 0;
+	background: var(--ms-white);
+	border: 1px solid var(--ms-chat-border);
+	border-radius: 6px;
+	box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+	z-index: 1000;
+	min-width: 240px;
+	padding: 4px 0;
+	margin-top: 4px;
+}
+
+.run-dropdown-item {
+	display: flex;
+	flex-direction: column;
+	padding: 8px 12px;
+	cursor: pointer;
+	transition: background-color 0.2s ease;
+	border: none;
+	background: none;
+	text-align: left;
+	width: 100%;
+}
+
+.run-dropdown-item:hover {
+	background: var(--ms-blue-tint);
+}
+
+.run-dropdown-item span {
+	font-size: 13px;
+	font-weight: 500;
+	color: var(--ms-gray-dark);
+	margin-bottom: 2px;
+}
+
+.run-dropdown-item small {
+	font-size: 11px;
+	color: var(--ms-gray-medium);
+	line-height: 1.2;
+}
+
+.dropdown-separator {
+	height: 1px;
+	background: var(--ms-chat-border);
+	margin: 4px 0;
+}
+
+.dropdown-section-header {
+	padding: 6px 12px 2px 12px;
+	font-size: 11px;
+	font-weight: 600;
+	color: var(--ms-gray-medium);
+	text-transform: uppercase;
+	letter-spacing: 0.5px;
+}
+
+.tool-action-item {
+	border-left: 3px solid transparent;
+}
+
+.tool-action-item:hover {
+	background: var(--ms-blue-tint);
+	border-left-color: var(--ms-blue-primary);
+}
+
+.tool-actions-section {
+	border-top: 1px solid var(--ms-chat-border);
+	margin-top: 4px;
+	padding-top: 4px;
+}
+
+/* Fix code content styling to prevent line artifacts */
+.code-content {
+	padding: 16px;
+	overflow: visible;
+	background: var(--ms-white);
+}
+
+.code-content pre {
+	margin: 0;
+	font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+	font-size: 13px;
+	line-height: 1.4;
+	color: var(--ms-gray-dark);
+	background: transparent;
+	border: none;
+	outline: none;
+	overflow: visible;
+}
+
+.code-content code {
+	background: transparent;
+	border: none;
+	padding: 0;
+}
+
+/* Code expansion functionality */
+.code-hidden-pre {
+	margin: 0;
+	font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+	font-size: 13px;
+	line-height: 1.4;
+	color: var(--ms-gray-dark);
+	background: transparent;
+	border: none;
+	outline: none;
+	overflow: visible;
+}
+
+.show-more-container {
+	display: flex;
+	justify-content: center;
+	margin: 20px 0 0px 0;
+}
+
+.show-more-btn {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	gap: 8px;
+	padding: 8px 16px;
+	background: transparent;
+	border: 1px solid var(--ms-chat-border);
+	border-radius: 6px;
+	color: var(--ms-gray-medium);
+	font-size: 13px;
+	font-weight: 500;
+	cursor: pointer;
+	transition: all 0.2s ease;
+}
+
+.show-more-btn:hover {
+	background: var(--ms-gray-bg);
+	color: var(--ms-gray-dark);
+	border-color: var(--ms-gray-light);
+}
+
+.show-more-btn .btn-text {
+	font-weight: 500;
+}
+
+/* Syntax highlighting customizations for Prism.js - Light Theme */
+.code-content pre[class*="language-"],
+.code-content code[class*="language-"] {
+	background: transparent !important;
+	color: var(--ms-gray-dark) !important;
+	font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+	font-size: 13px;
+	line-height: 1.4;
+	white-space: pre-wrap;
+	word-wrap: break-word;
+	text-shadow: none;
+}
+
+/* Override Prism.js default styles */
+pre[class*="language-"] {
+	background: transparent !important;
+	border: none !important;
+	box-shadow: none !important;
+	margin: 0 !important;
+	padding: 0 !important;
+}
+
+code[class*="language-"] {
+	background: transparent !important;
+	box-shadow: none !important;
+	text-shadow: none !important;
+}
+
+/* Ensure no line styling artifacts */
+.code-content .token {
+	background: transparent !important;
+	border: none !important;
+	box-shadow: none !important;
+	text-shadow: none !important;
+}
+
+/* Light theme syntax highlighting colors matching Microsoft Copilot */
+.token.comment,
+.token.prolog,
+.token.doctype,
+.token.cdata {
+	color: #008000 !important; /* Green for comments */
+	font-style: italic;
+}
+
+.token.punctuation {
+	color: var(--ms-gray-dark) !important; /* Dark gray for punctuation */
+}
+
+.token.property,
+.token.tag,
+.token.boolean,
+.token.number,
+.token.constant,
+.token.symbol,
+.token.deleted {
+	color: #0000FF !important; /* Blue for numbers and constants */
+}
+
+.token.selector,
+.token.attr-name,
+.token.string,
+.token.char,
+.token.builtin,
+.token.inserted {
+	color: #A31515 !important; /* Red/brown for strings */
+}
+
+.token.operator,
+.token.entity,
+.token.url,
+.language-css .token.string,
+.style .token.string {
+	color: var(--ms-gray-dark) !important; /* Dark gray for operators */
+}
+
+.token.atrule,
+.token.attr-value,
+.token.keyword {
+	color: #0000FF !important; /* Blue for keywords */
+}
+
+.token.function,
+.token.class-name {
+	color: #795E26 !important; /* Brown for functions and classes */
+}
+
+.token.regex,
+.token.important,
+.token.variable {
+	color: #EE0000 !important; /* Red for regex and variables */
+}
+
+.token.important,
+.token.bold {
+	font-weight: bold;
+}
+
+.token.italic {
+	font-style: italic;
+}
+
+.token.entity {
+	cursor: help;
+}
+
+/* Prism overrides for file previews */
+.file-preview pre[class*="language-"] {
+	background: transparent !important;
+	color: var(--ms-gray-dark) !important;
+	font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+	font-size: 12px;
+	line-height: 1.4;
+	white-space: pre-wrap;
+	word-wrap: break-word;
+	margin: 0;
+	padding: 0 16px 16px 16px; /* No top padding, keep side and bottom padding */
+	border-radius: 0;
+	text-shadow: none;
+	overflow: visible;
+	max-height: none;
+}
+
+.file-preview code[class*="language-"] {
+	background: transparent !important;
+	color: var(--ms-gray-dark) !important;
+	font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+	font-size: 12px;
+	line-height: 1.4;
+	white-space: pre-wrap;
+	word-wrap: break-word;
+	margin: 0;
+	padding: 0; /* No padding on code element when inside pre */
+	border-radius: 0;
+	text-shadow: none;
+	overflow: visible;
+	max-height: none;
+}

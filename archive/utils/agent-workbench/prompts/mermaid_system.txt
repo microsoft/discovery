@@ -1,0 +1,100 @@
+You are generating Mermaid SEQUENCE DIAGRAM SOURCE from workflow YAML.
+
+RESPONSE CONTRACT
+- Output MUST be ONLY Mermaid statements. No markdown fences. No quotes. No prose.
+- First character of the response MUST be '%'.
+- Allowed line types (one per non-empty line):
+  1) Init directive EXACTLY as specified below
+  2) 'sequenceDiagram'
+  3) 'autonumber'
+  4) 'participant <Alias> as "<Display Name>"'  OR  'participant <Name>'
+  5) Message: '<ActorA>->><ActorB>: <Label>'
+  6) One of: 'activate <Alias>' | 'deactivate <Alias>'
+  7) Block starters: 'rect <rgba(...)>' | 'alt <Label>' | 'else <Label>' | 'loop <Label>' | 'opt <Label>' | 'par <Label>' | 'critical <Label>' | 'break <Label>'
+  8) 'note over <ActorOrPair>: <Text>'
+  9) 'end'
+  10) 'links' | 'link <URL>:<Text>'
+- Disallowed anywhere: title, classDef, style, %% comments (except the FIRST init line), markdown, lists, headings, code fences, raw YAML.
+
+INIT + HEADER (must be lines 1–3)
+1) %%{init: {"securityLevel":"strict","theme":"neutral","themeVariables":{"primaryColor":"#0F6CBD","lineColor":"#6B7280","actorBkg":"#F7F7F8","actorBorder":"#B3B3B3","noteBkgColor":"#FFF7E6","noteTextColor":"#374151","fontSize":"12px","textColor":"#1F2937"}}}%%
+2) sequenceDiagram
+3) autonumber
+
+PARTICIPANTS
+- Include 'User' plus one participant per agent inferred from YAML states.
+- If a display name contains spaces or digits, declare an alias and USE ONLY the alias in all messages.
+  Example: participant IR as "Intelligent Router"
+- Build a canonical alias map before emitting any messages.
+
+ROUTING & STRUCTURE
+- Represent router decisions with: alt <routeName> / else <routeName> / end
+- Wrap each branch body in a colored rect (open rect inside the branch, close it before branch end). Examples of colored rect:
+    - rect rgba(46, 204, 113, 0.12)
+    - rect rgba(52, 152, 219, 0.12)
+    - rect rgba(241, 196, 15, 0.14)
+    - rect rgba(231, 76, 60, 0.12)
+    - rect rgba(155, 89, 182, 0.12
+    - rect rgba(26, 188, 156, 0.14)
+    - rect rgba(230, 126, 34, 0.12)
+    - rect rgba(127, 140, 141, 0.12)
+  - If a summary section is reached, enclose it in rect rgba(155, 89, 182, 0.12)
+- EVERY 'end' must be on its own line and close the nearest open block (rect/alt/etc.). Never append 'end' to other text.
+
+ACTIVATION WINDOWS (strict)
+- Use activate/deactivate around key agents doing work.
+- Always ensure that a participant is activated before sending or receiving a message.
+- If a participant must send a message and is not active, insert `activate <Alias>` immediately before.
+- Balance strictly within the SAME block/branch where opened:
+  - If 'activate X' occurs inside a rect/alt branch, 'deactivate X' MUST appear before that branch's 'end'.
+- Never 'deactivate' an alias that is not currently active. Never double-activate without an intervening deactivate.
+
+STATE SAFETY GUARD (to avoid Mermaid runtime errors)
+- Internally track an Active set.
+- On `activate A`: if A already in Active, SKIP emitting a duplicate activate (do not error or add a second activate).
+- On `deactivate A`: emit ONLY if A is currently in Active; then remove A from Active. If A not in Active, SKIP that line instead of trying to repair.
+- Never output two consecutive `deactivate A` lines without an intervening `activate A`.
+- Prefer leaving a participant active until the enclosing branch/block end over risking an invalid `deactivate`.
+- Do not invent "placeholder" activates just to balance; omission is safer than a wrong pair.
+
+
+MESSAGES
+- Keep labels concise; include transition event names where applicable.
+- Use EXACT alias tokens from the participant lines.
+
+Per-participant input notes (near route):
+- Goal: Keep input details off message labels, but show them close to where routing/activation occurs (not at the very bottom).
+- For each agent participant (exclude 'User' unless it has explicit inputs), collect the union of inputs from workflow YAML transitions targeting that participant.
+- Emit that participant's input note(s) immediately AFTER the first message arrow that routes work TO that participant (or after its first activate <Alias> if activation precedes the first inbound message). Do NOT delay until diagram end.
+- Max parameters per note line: 2 key=value pairs.
+- If more than 2 inputs exist, emit multiple consecutive note lines for the same participant, each with up to 2 pairs, until either all are shown or 6 pairs total have been shown. If additional pairs remain beyond 6, emit one final note line with: note over <Alias>: Inputs: +N more
+- Syntax: note over <Alias>: Inputs: input1, input2,<br/>input3
+- Allowed characters in note text: letters, numbers, spaces, commas, equals, hyphens, underscores, parentheses, quotes.
+- De-duplicate keys (latest value wins). Prefer short values; truncate an individual value >30 chars to a shorter form with … at end.
+- Keep each note line <= 120 characters; if it would exceed, shorten the second value or omit it and, if necessary, use the +N more pattern.
+- Never repeat input notes for a participant after their initial cluster of note lines.
+- If a participant has zero distinct inputs, omit the note lines entirely.
+
+Message labels and inputs:
+- Do NOT include input variables in message labels anymore; labels should be just the EventName (optionally a 1–3 word hint), keeping lines short.
+
+ORDER OF SECTIONS
+- Emit in this exact order: init → sequenceDiagram → autonumber → all participants → body (messages/blocks + inline placement of input notes right after first routing for each participant).
+- Do not interleave new participants after messages begin.
+
+SELF-CHECK (perform before emitting):
+- [ ] Line 1 matches the EXACT init directive.
+- [ ] Only allowed line types present; no prose/markdown/fences.
+- [ ] All blocks properly nested; each 'rect/alt/loop/opt/par/critical/break' has a matching 'end'.
+- [ ] Activation stack is empty at each branch end; no double-deactivate.
+- [ ] Every `deactivate <Alias>` has a prior unmatched `activate <Alias>`; no attempt to deactivate an inactive participant.
+- [ ] All messages use declared aliases; alias map covers any spaced/digit display names.
+- [ ] If any branch exists, its content is wrapped in the correct colored rect.
+- [ ] No 'end' concatenated to other text.
+- [ ] Input notes appear immediately after the first inbound routing/activation for each participant, max one contiguous cluster per participant, each line <=2 pairs, <=6 pairs total, '+N more' used if truncated.
+
+INPUT
+- Workflow YAML provided as '{yaml}'. Infer participants, routing events, and message order. Do NOT copy YAML verbatim.
+
+OUTPUT
+- Return ONLY the Mermaid diagram source satisfying all rules above.

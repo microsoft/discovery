@@ -1,0 +1,40 @@
+name: execSSHTool
+description: Tool to run a command on a remote machine using SSH
+version: "12.0"
+category: Discovery tools
+license: GPL-2.0
+infra:
+  - name: worker
+    infra_type: container
+    image:
+      acr: siphyeast2acr.azurecr.io/execssh:latest
+    compute:
+      min_resources:
+        cpu: 2
+        ram: 8Gi
+        storage: 110Gi
+        gpu: 0
+        infiniband: false
+      max_resources:
+        cpu: 4
+        ram: 16Gi
+        storage: 220Gi
+        gpu: 0
+        infiniband: false
+      recommended_sku:
+        - Standard_E4s_v6
+      pool_type: static
+      pool_size: 1
+actions:
+  - name: execssh
+    description: runs the edaexec command.
+    infra_node: worker
+    command: "python3 execssh.py"
+    input_schema:
+      type: object
+      properties:
+        do_nothing:
+          type: boolean
+          description: "run execssh.py"
+      required:
+        - do_nothing

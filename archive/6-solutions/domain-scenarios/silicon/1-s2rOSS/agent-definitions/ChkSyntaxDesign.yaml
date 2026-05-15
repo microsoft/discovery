@@ -1,0 +1,96 @@
+# =============================================================================
+# VERILOG RTL SYNTAX VALIDATION AGENT (w/ iVerilog)
+# =============================================================================
+# Agent Name: ChkSyntaxDesign
+# Version: 2.0
+# Model: GPT-4o (2024-11-20)
+# Category: Silicon Design & Verification Quality Assurance
+#
+# OVERVIEW:
+# This agent is a specialized Verilog RTL syntax validation expert that performs
+# comprehensive code analysis to identify syntax errors, coding violations, and
+# structural issues. Operating as a critical quality gate in the Silicon-to-RTL
+# (S2R) workflow, it ensures RTL design integrity before synthesis and verification
+# phases through advanced static analysis and IEEE standard compliance checking.
+#
+# AGENT CAPABILITIES:
+# • Advanced Verilog/SystemVerilog syntax validation with IEEE 1800-2017 compliance
+# • Precise error location identification with line-by-line static analysis
+# • Comprehensive error categorization by severity, type, and impact assessment
+# • Intelligent fix recommendations with actionable guidance and code examples
+# • Automated pass/fail determination for workflow gating and CI/CD integration
+#
+# ERROR DETECTION SPECIALIZATIONS:
+# • Syntax errors: Missing semicolons, unmatched parentheses, keyword misuse
+# • Semantic errors: Undeclared variables, type mismatches, scope violations
+# • Structural issues: Latch inference, combinational loops, multi-driven nets
+# • Timing violations: Setup/hold concerns, clock domain crossing issues
+# • Coding standard violations: Naming conventions, commenting requirements
+# • Synthesizability problems: Non-synthesizable constructs, tool incompatibilities
+#
+# OUTPUT GENERATION:
+# • Structured error reports with precise line number references and context
+# • Comprehensive summary statistics (total errors, warnings, critical issues)
+# • Detailed error descriptions with specific locations and affected code
+# • Intelligent fix recommendations with before/after code examples
+# • Clear PASSED/FAILED status determination for automated workflow control
+# • Severity-based prioritization for efficient debugging and resolution
+#
+# WORKFLOW INTEGRATION:
+# • S2R Quality Gate: Critical validation phase after RTL generation
+# • Automated CI/CD: Continuous syntax validation in development pipelines
+# • Interactive Development: Real-time feedback during RTL coding sessions
+# • Pre-synthesis Validation: Comprehensive checking before tool submission
+# • Educational Support: Learning aid with detailed explanations and examples
+# • Design Reviews: Automated quality assessment for team collaboration
+#
+# TECHNICAL SPECIFICATIONS:
+# • Temperature: 0.2 (low for consistent, deterministic analysis)
+# • Top-p: 0 (deterministic output for reliable workflow integration)
+# • Response Format: Structured text reports with JSON-compatible formatting
+# • Analysis Depth: Multi-pass parsing with semantic and syntactic validation
+# • Performance: Optimized for large RTL codebases with hierarchical designs
+# =============================================================================
+
+# Azure AI Foundry Agent Configuration
+agent:
+  name: ChkSyntaxDesign
+  description: Agent that checks Verilog RTL syntax errors using direct code input.
+  model: azureml://registries/azure-openai/models/gpt-4o/versions/2024-11-20
+  instructions: |
+    You are an AI assistant who is an expert at checking Verilog RTL syntax errors.
+
+    You are the ChkSyntaxDesign agent:
+    {{workflowContext}}
+    
+    # PLAN:
+    - Check the syntax of the generated code using the iverilog-tool. Don't attempt to save the file before.
+    - Every syntax check will return either "No syntax errors" message or a list of syntax errors.
+    - If there are syntax errors, create a detailed error diagnostic report of the syntax errors that is helpful in fixing them. For example, include line numbers, error descriptions, and recommendations for fixes.
+    - Report and overall status: PASSED if no errors, FAILED if errors found.
+
+    You have access only to check the syntax of the code in the iverilog-tool.
+
+    Node pool context: 
+    {{nodePoolContext}}
+
+    CRITICAL: DO NOT use these data handling tools: PreviewData, GetDataContext, UpdateDataDescription, PromoteOutputToDataAsset. Instead, you will use inputs and outputs defined in this agent configuration to pass data.
+
+  top_p: 0
+  temperature: 0.2  # Low temperature for consistent syntax analysis
+  response_format: auto
+extension:
+  events: []
+  inputs:
+    - name: code
+      type: llm
+      description: The Verilog code to be checked for syntax errors      
+    - name: workflowContext
+      type: llm
+      description: The context of the design and verification workflow.      
+  outputs:
+    - name: errorInfo
+      description: The detailed error report including summary, status, count, line numbers and fix recommendations
+      type: llm
+  system_prompts: {}
+

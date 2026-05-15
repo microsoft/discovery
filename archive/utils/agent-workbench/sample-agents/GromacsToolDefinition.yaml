@@ -1,0 +1,31 @@
+name: gromacs
+description: Gromacs is a widely used molecular dynamics software package that simulates the Newtonian equations of motion for systems with hundreds to millions of particles. This agent automates complex Gromacs workflows, handling everything from structure preparation to analysis of simulation results.
+version: 1.0.0
+category: "Physics-Based Simulations"
+license: MIT
+infra:
+  - name: worker 
+    infra_type: container
+    image:
+      acr: test.azurecr.io/gromacs-image:latest 
+    compute:
+      min_resources:
+        cpu: 6 
+        ram: 112Gi
+        storage: 64Gi
+        gpu: 0
+      max_resources:
+        cpu: 12 
+        ram: 224Gi
+        storage: 128Gi
+        gpu: 0  
+      infiniband: false 
+      recommended_sku: 
+        - Standard_D4s_v6
+      pool_type: static 
+      pool_size: 1 
+code_environments:
+  - language: python
+    command: "python \"/{{scriptName}}\""
+    description: "Python code environment on Gromacs container image."
+    infra_node: worker

@@ -1,0 +1,59 @@
+name: RetroChimera-Tool
+description: This is the RetroChimera tool that takes as input a product molecule that one wants to synthesize (encoded as a SMILES string), and produces several potential chemical reactions which could be used to produce that input molecule. Each reaction is represented as a group of ingredients (reactant molecules), with those molecules again represented each by a SMILES string.
+version: 1.0.0
+category: Chemistry
+license: MIT
+infra:
+  - name: worker
+    infra_type: container
+    image:
+      acr: mdqlabsacr.azurecr.io/retrochimera:latest 
+    compute:
+      min_resources:
+        cpu: "1"
+        ram: "2Gi"
+        storage: "32"
+        gpu: "0"
+      max_resources:
+        cpu: "2"
+        ram: "4Gi"
+        storage: "64"
+        gpu: "0"
+      recommended_sku:
+        - Standard_D4s_v6
+      infiniband: false
+      pool_type: static
+      pool_size: 1
+actions:
+  - name: retrochimera
+    description: This action executes the RetroChimera model to predict the reactants given the smiles string. The smiles string(s) may be provided directly as input or read from input files. Note, if provided as input files, input mount path where the SMILES data will be stored for the computation is /app/inputs. Multiple smiles can be processed within the same run as long as they are mounted to the same input path or provided as a list in the input directly. Set the `output_directory` to `/app/outputs` to store the results.
+    infra_node: worker
+    input_schema:
+      type: object
+      properties:
+        workflow:
+          type: string
+          description: Type of workflow to be executed. Use single_step for straightforward, individual reactions where a single transformation is needed and multi_step for complex synthesis requiring multiple sequential reactions to achieve the final product.
+        smiles:
+          type: string
+          description: SMILES string(s) to process. Can be a single SMILES string or multiple SMILES strings separated by commas.
+        num_results:
+          type: number
+          description: Number of reactions is optional. Applicable just for the single_step workflow. Set to 3 by default.
+        time_limit_s:
+          type: number
+          description: Time_limit_s is optional. Applicable just for the multi_step workflow. Seconds to pre-empt this call. Set by default to 60.
+        num_routes:
+          type: number
+          description: Number of routes to consider. Set the default to 3.
+        num_routes_for_initial_extraction:
+          type: number
+          description: Number of routes for initial extraction. Set the default to 500.
+      required:
+        - workflow
+        - smiles
+    command: python3 retro.py --workflow "{{ workflow }}" --smiles "{{ smiles }}"
+      {{#if num_results}} --num_results {{ num_results }}{{/if}}
+      {{#if time_limit_s}} --time_limit_s {{ time_limit_s }}{{/if}}
+      {{#if num_routes}} --num_routes {{ num_routes }}{{/if}}
+      {{#if num_routes_for_initial_extraction}} --num_routes_for_initial_extraction {{ num_routes_for_initial_extraction }}{{/if}}

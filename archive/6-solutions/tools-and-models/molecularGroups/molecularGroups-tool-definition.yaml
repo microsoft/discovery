@@ -1,0 +1,80 @@
+name: molecular-groups-tool
+description: A specialized tool for identifying functional groups in molecular structures. Provides both general functional group identification (carbonyls, amines, alcohols, etc.) and hazardous group screening (explosives, PFAS, CWC compounds). Processes chemical data from input directories and outputs structured analysis results.
+version: 1.0.0
+category: Molecular Analysis
+license: MIT
+infra:
+  - name: worker
+    infra_type: container
+    image:
+      acr: "{name}.azurecr.io/molecular-groups-tool:latest"
+    compute:
+      min_resources:
+        cpu: 1
+        ram: 4Gi
+        storage: 32Gi
+        gpu: 0
+      max_resources:
+        cpu: 4
+        ram: 8Gi
+        storage: 64Gi
+        gpu: 0
+      recommended_sku:
+        - Standard_D4_v4
+      pool_type: static
+      pool_size: 1
+actions:
+  - name: identify_functional_groups
+    description: Identifies common functional groups in molecular structures (carbonyls, amines, alcohols, ethers, halides, etc.). Reads input files (CSV, SMILES, etc.) from input_directory, processes SMILES strings, and outputs detailed functional group analysis to output_directory/results.json.
+    infra_node: worker
+    input_schema:
+      type: object
+      properties:
+        input_directory:
+          type: string
+          description: "Directory containing input files (CSV, SMILES, TXT, etc.)."
+        output_directory:
+          type: string
+          description: "Directory where output files and analysis results will be saved."
+        column_name:
+          type: string
+          description: "For CSV/TSV files, the name of the column containing SMILES strings"
+        batch_size:
+          type: integer
+          description: "Number of molecules to process in each batch (default is 100)"
+        file_pattern:
+          type: string
+          description: "Glob pattern to filter which files to process (default is *.*)"
+      required:
+        - input_directory
+        - output_directory
+    command: "python3 /app/entrypoint.py --action identify_functional_groups --input {{input_directory}} --output {{output_directory}} {{#if column_name}}--column-name {{column_name}}{{/if}} {{#if batch_size}}--batch-size {{batch_size}}{{/if}} {{#if file_pattern}}--file-pattern {{file_pattern}}{{/if}}"
+
+  - name: identify_hazardous_groups
+    description: Identifies hazardous and safety-related functional groups in molecular structures. Screens for explosive groups, chemical weapon convention groups, PFAS compounds, self-reactive groups, air/water sensitive groups, and other hazardous patterns. Reads input files (CSV, SMILES, etc.) from input_directory, processes SMILES strings, and outputs detailed safety assessment results to output_directory/results.json.
+    infra_node: worker
+    input_schema:
+      type: object
+      properties:
+        input_directory:
+          type: string
+          description: "Directory containing input files (CSV, SMILES, TXT, etc.)."
+        output_directory:
+          type: string
+          description: "Directory where output files and analysis results will be saved."
+        column_name:
+          type: string
+          description: "For CSV/TSV files, the name of the column containing SMILES strings"
+        batch_size:
+          type: integer
+          description: "Number of molecules to process in each batch (default is 100)"
+        file_pattern:
+          type: string
+          description: "Glob pattern to filter which files to process (default is *.*)"
+        categories:
+          type: string
+          description: "Comma-separated list of hazard categories to check. Options: us_pfas_groups, cwc_groups, explosive_groups, self_reactive_groups, autorxn_reactive_groups, pnnl_hazardous_groups, pnnl_air_water_sensitive_groups, pnnl_flourinated_reactive_groups, pnnl_fg_dependent_reactive_groups, richman_reactive_groups, cf3_pfas_groups, cf2_pfas_groups, triple_bond_groups, all. Default: all"
+      required:
+        - input_directory
+        - output_directory
+    command: "python3 /app/entrypoint.py --action identify_hazardous_groups --input {{input_directory}} --output {{output_directory}} {{#if column_name}}--column-name {{column_name}}{{/if}} {{#if batch_size}}--batch-size {{batch_size}}{{/if}} {{#if file_pattern}}--file-pattern {{file_pattern}}{{/if}} {{#if categories}}--categories {{categories}}{{/if}}"

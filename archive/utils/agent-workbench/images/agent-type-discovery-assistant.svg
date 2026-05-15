@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16" fill="none">
+  <!-- Simple assistant/spark icon, matching existing stroke style -->
+  <path d="M8 1.75l1.05 2.6 2.7.2-2.05 1.75.65 2.65L8 7.9 5.65 8.95l.65-2.65L4.25 4.55l2.7-.2L8 1.75Z" stroke="#242424" stroke-width="1.1" stroke-linejoin="round"/>
+  <path d="M12.25 9.25l.55 1.35 1.4.1-1.05.9.35 1.35-1.25-.55-1.25.55.35-1.35-1.05-.9 1.4-.1.55-1.35Z" stroke="#242424" stroke-width="1.1" stroke-linejoin="round"/>
+</svg>

@@ -1,0 +1,24 @@
+# Test outputs
+test_output/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+
+# Documentation
+*.md
+DOCKER_FIX.md
+IMPLEMENTATION_SUMMARY.md
+COMPLETION_REPORT.md
+
+# Git
+.git/
+.gitignore
+
+# Editor
+.vscode/
+.idea/
+*.swp
+*.swo
+*~

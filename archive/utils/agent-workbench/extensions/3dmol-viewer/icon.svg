@@ -1,0 +1,18 @@
+<svg width="16" height="16" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg">
+    <!-- Protein/molecule representation -->
+    <g fill="#4a90e2" opacity="0.8">
+        <!-- Main helix/backbone -->
+        <path d="M2 8 Q 4 4, 8 8 Q 12 12, 14 8" stroke="#4a90e2" stroke-width="1.5" fill="none"/>
+        
+        <!-- Atoms/residues -->
+        <circle cx="3" cy="6.5" r="1.2" fill="#e74c3c"/>
+        <circle cx="6" cy="8.5" r="1" fill="#2ecc71"/>
+        <circle cx="9" cy="7" r="1.1" fill="#f39c12"/>
+        <circle cx="12" cy="9" r="1" fill="#9b59b6"/>
+        
+        <!-- Bonds -->
+        <line x1="3" y1="6.5" x2="6" y2="8.5" stroke="#666" stroke-width="0.8"/>
+        <line x1="6" y1="8.5" x2="9" y2="7" stroke="#666" stroke-width="0.8"/>
+        <line x1="9" y1="7" x2="12" y2="9" stroke="#666" stroke-width="0.8"/>
+    </g>
+</svg>

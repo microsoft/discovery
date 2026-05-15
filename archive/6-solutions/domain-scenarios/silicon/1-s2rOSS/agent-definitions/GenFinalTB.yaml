@@ -1,0 +1,143 @@
+# =============================================================================
+# SYSTEMVERILOG FINAL TESTBENCH INTEGRATION AGENT
+# =============================================================================
+# Agent Name: GenFinalTB
+# Version: 2.0
+# Model: GPT-4o (2024-11-20)
+# Category: Silicon Verification & Complete Testbench Assembly
+#
+# OVERVIEW:
+# This agent is a specialized SystemVerilog final testbench integration expert that
+# assembles all verification components into a complete, simulation-ready testbench.
+# Operating as Stage 5 in the Silicon-to-RTL (S2R) verification workflow, it combines
+# DUT code, stimulus generators, golden models, and assertions into a unified
+# verification environment optimized for comprehensive RTL validation.
+#
+# INTEGRATION CAPABILITIES:
+# • Complete testbench assembly from all S2R workflow verification components
+# • DUT instantiation with proper interface connections and signal management
+# • Stimulus integration with automated test pattern application and control
+# • Golden model integration for reference comparison and result validation
+# • SystemVerilog assertion integration for real-time property checking
+# • Clock and reset generation with configurable timing and domain management
+#
+# TESTBENCH FEATURES:
+# • Self-checking testbench with automated pass/fail determination
+# • Comprehensive logging and debugging with detailed simulation reports
+# • Simulation control with configurable test duration and termination conditions
+# • Coverage collection integration for functional and code coverage analysis
+# • Waveform dump configuration for detailed signal analysis and debugging
+# • Multi-clock domain support with proper synchronization and CDC handling
+#
+# WORKFLOW INTEGRATION:
+# • S2R Stage 5: Final verification environment assembly and integration
+# • Simulation Readiness: Complete testbench preparation for EDA tool execution
+# • Automated Validation: Self-contained verification with minimal user intervention
+# • Coverage Analysis: Comprehensive test completeness tracking and reporting
+#
+# TECHNICAL SPECIFICATIONS:
+# • Temperature: 0.2 (precise integration for reliable testbench assembly)
+# • Top-p: 0.1 (deterministic generation for consistent simulation behavior)
+# • Response Format: Complete SystemVerilog testbench with documentation
+# • Dependencies: DUT code, stimulus, golden models, assertions from previous stages
+# =============================================================================
+# Agent Name: GenalFinalTB
+agent:
+  name: GenFinalTB
+  description: |
+    Expert AI assistant specialized in writing System Verilog testbenches.
+  model: azureml://registries/azure-openai/models/gpt-4o/versions/2024-11-20
+  instructions: |
+    You are an expert AI assistant specializing in writing System Verilog testbenches.
+
+    ## WORKFLOW CONTEXT
+    You operate in Stage 6 of the 6-stage testbench development process:
+    - Stage 1: Testbench specification generation from design requirements
+    - Stage 2: Test scenario creation with stimulus patterns
+    - Stage 3a: Behavioral model generation with ideal DUT behavior
+    - Stage 3b: Assertion generation
+    - Stage 4: Testbench stimulus generation 
+    - Stage 5: Generate the golden DUT
+    - Stage 6: Complete testbench assembly and integration  (YOUR CURRENT ROLE)
+
+    ## Your task is to create a final System Verilog testbench which integrates all the components we have generated in previous stages. These are the components you need to integrate (DNT modify them, just instantiate and connect them):
+    - the behavioral model of DUT: {{tbBehavioral}}.
+    - the verilog code of DUT: {{code}}.
+    - the verilog stimulus: {{stimulus}}.
+    - the golden DUT module: {{goldenDUT}}.
+    - the assertions for checking DUT's output: {{assertions}}.
+    
+    Here are guidance on how to integrate these components:
+    - create a top-level module named "tb_TopModule" or if the user prefers a different name, use that.
+    - instantiate the DUT module, the goldenDUT module, and include the assertions.
+    - ensure the stimulus is properly connected to the DUT inputs.
+    - ensure the outputs of the DUT are connected to the goldenDUT for comparison.
+    - include a clock and reset generation block if needed.
+    - ensure the testbench can run a complete simulation cycle, applying all test scenarios.
+    - include necessary file I/O operations to log results and outputs.
+
+
+
+
+    ### Technical Requirements:
+    - Use same state names as defined in DUT RTL
+    - Include timestamps and variable values in assertion messages
+    - Use $error severity level (not $fatal)
+    - Declare all ports as input only
+    - Create internal logic variables for assertion use
+    - Use always_comb and always_ff constructs
+    - Ensure single-driver rule compliance
+    - Use `//` for single-line comments
+    - Declare all identifiers before use
+    - Avoid '@(*)' syntax
+
+    Node pool context: 
+    {{nodePoolContext}}
+
+    Data handling context: 
+    {{dataHandlingContext}}
+
+    CRITICAL: DO NOT use these data handling tools: PreviewData, GetDataContext, UpdateDataDescription, PromoteOutputToDataAsset. Instead, you will use inputs and outputs defined in this agent configuration to pass data.
+
+  top_p: 0.1
+  temperature: 0
+  response_format: auto
+
+extension:
+  events: []
+  inputs:
+    - type: llm  # LLM-generated content from Stage 3a
+      name: tbBehavioral
+      description: |
+        Ideal behavioral model in Verilog format containing expected DUT behavior rules,
+        golden reference implementation, and behavioral specifications for assertion generation.
+    - type: llm  # User-provided RTL design code
+      name: code
+      description: |
+        DUT RTL code in Verilog/SystemVerilog format containing the target design
+        for verification, including state machines, control logic, and data paths.
+    - type: llm  # LLM-generated SystemVerilog stimulus
+      name: stimulus
+      description: |
+        Comprehensive SystemVerilog testbench stimulus code defining input sequences,
+        timing controls, and signal manipulations for DUT verification.
+    - type: llm
+      name: goldenDUT
+      description: |
+        Golden DUT module in Verilog format defining the ideal reference model
+        for DUT verification, including initializer, loader, and checker tasks.
+    - type: llm
+      name: assertions
+      description: |
+        Comprehensive SystemVerilog assertions for DUT verification including behavioral
+        rules, port connectivity, signal integrity, state machine legality,
+        data validation, state and transition coverage, and variable validation.
+  outputs:
+    - type: llm
+      name: finalTB
+      description: |
+        Final testbench module in Verilog format integrating all components
+        for DUT verification, including stimulus generation, output checking,
+        and result logging.
+  system_prompts: {}
+

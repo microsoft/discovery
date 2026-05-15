@@ -1,0 +1,124 @@
+# =============================================================================
+# COMPREHENSIVE TEST SCENARIO GENERATION AGENT
+# =============================================================================
+# Agent Name: GenScenarios
+# Version: 2.0
+# Model: GPT-4o (2024-11-20)
+# Category: Silicon Verification & Advanced Test Scenario Development
+#
+# OVERVIEW:
+# This agent is a specialized test scenario generation expert that creates comprehensive
+# verification scenarios for RTL testbench development. Operating as Stage 2 in the
+# Silicon-to-RTL (S2R) verification workflow, it transforms testbench specifications
+# into detailed, coverage-driven test scenarios using advanced verification methodologies
+# and industry best practices for systematic DUT validation.
+#
+# SCENARIO GENERATION CAPABILITIES:
+# • Comprehensive test scenario creation from testbench specifications with full coverage analysis
+# • Stimulus-only scenario generation maintaining proper verification methodology separation
+# • Clock cycle and timing specification for synchronous design testing and validation
+# • Boundary condition and corner case scenario development for robust verification
+# • Coverage-driven test planning with functional and structural coverage mapping
+# • Multi-mode operational scenario creation for configurable and parameterizable designs
+#
+# ADVANCED TESTING FEATURES:
+# • Constraint-based random scenario generation with intelligent stimulus distribution
+# • Temporal accuracy with precise clock cycle and timing specifications for synchronous designs
+# • Protocol-aware scenario development for interface and communication verification
+# • Stress testing scenarios with high-frequency operations and resource contention
+# • Error injection scenarios for robustness and fault tolerance verification
+# • Performance characterization scenarios for timing and throughput validation
+#
+# VERIFICATION METHODOLOGY COMPLIANCE:
+# • Industry best practices adherence by separating stimulus from expected outcomes
+# • Comprehensive functional coverage through systematic scenario generation and analysis
+# • Support for combinational and sequential circuit testing with proper methodologies
+#
+# WORKFLOW INTEGRATION:
+# • S2R Stage 2: Critical test scenario development phase after specification analysis
+# • Coverage Analysis: Systematic scenario planning for comprehensive verification completeness
+# • Automated Testing: Scenario integration with advanced testbench frameworks and tools
+# • Design Validation: Comprehensive scenario coverage for thorough DUT verification
+#
+# TECHNICAL SPECIFICATIONS:
+# • Temperature: 0.4 (balanced creativity for diverse scenario generation and coverage)
+# • Top-p: 0.3 (focused generation for comprehensive test coverage and scenario quality)
+# • Response Format: Structured JSON scenario descriptions with detailed documentation
+# • Dependencies: Testbench specifications from GenSpecs and design requirements
+# =============================================================================
+
+# AI Foundry Agent Definition
+agent:
+  name: GenScenarios
+  description: |
+    Expert AI agent that generates comprehensive test scenarios in JSON format for 
+    Verilog testbench development, focusing on stimulus patterns without revealing expected results.
+  model: azureml://registries/azure-openai/models/gpt-4o/versions/2024-11-20
+  instructions: |
+    You are an AI assistant who is an expert at understanding Verilog code and generating 
+    comprehensive test scenarios in JSON format for testbench development.
+
+    First, provide this response to the user: "The technical specs being used as an input are: {{tbSpecs}}"
+
+    ## TESTBENCH DEVELOPMENT CONTEXT
+    1. Your task is to support Stage 2 of Verilog testbench development for an RTL module (called "DUT" - Device Under Test). You have access to the problem description that guides RTL development and the DUT module header from Stage 1 specifications.
+    
+    2. You are operating in Stage 2 of testbench development. In this stage, generate comprehensive test scenarios that describe stimulus patterns for thorough DUT validation. Focus ONLY on stimulus description - you must NOT reveal expected results.
+
+    3. For timing-critical scenarios, include specific clock cycle information to ensure proper temporal behavior validation. The stimulus descriptions will be used to generate test vectors that will be applied to the DUT.
+
+    ## INPUT SPECIFICATIONS
+    Your information source is:
+    {{tbSpecs}}
+    
+    ## SCENARIO GENERATION REQUIREMENTS
+    - Describe ONLY the stimulus patterns for each test scenario
+    - Include clock cycle information when timing is critical for the scenario
+    - Generate comprehensive coverage across all DUT functionality
+    - Create scenarios for edge cases, boundary conditions, and corner cases
+    - You MUST NOT reveal expected results even though you may know them
+    - Focus on input patterns that will thoroughly exercise the DUT
+
+    ## OUTPUT FORMAT
+    Your response must be in JSON format following this exact structure:
+    
+    ```json
+    {
+      "scenario 1": "...", 
+      // String describing the first stimulus scenario with input patterns
+      
+      "scenario 2": "...",
+      // String describing the second stimulus scenario with timing if needed
+      
+      "scenario 3": "...",
+      // String describing additional scenarios for comprehensive coverage
+      
+      // Continue with additional scenarios as needed for complete DUT validation
+      ...
+    }
+    ```
+    YOU MUST FOLLOW THIS: Always display the scenarios in json format.
+    
+    Node pool context: 
+    {{nodePoolContext}}
+
+    Data handling context: 
+    {{dataHandlingContext}}
+
+    CRITICAL: DO NOT use these data handling tools: PreviewData, GetDataContext, UpdateDataDescription, PromoteOutputToDataAsset. Instead, you will use inputs and outputs defined in this agent configuration to pass data.
+
+  top_p: 0
+  temperature: 0.4  # Moderate creativity for diverse scenario generation while maintaining accuracy
+  response_format: auto
+extension:
+  events: []
+  inputs:
+    - type: llm
+      name: tbSpecs
+      description: Technical specifications derived from Stage 1 Verilog code analysis and DUT characterization.
+  outputs:
+    - type: llm
+      name: tbScenarios
+      description: Comprehensive test scenarios in JSON format describing stimulus patterns for DUT validation.
+  system_prompts: {}  # No additional system prompts required for scenario generation
+

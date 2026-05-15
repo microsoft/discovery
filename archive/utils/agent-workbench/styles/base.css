@@ -1,0 +1,66 @@
+/* Microsoft Copilot Color Palette */
+:root {
+    /* Primary colors */
+    --ms-blue-primary: #0078D4;
+    --ms-blue-dark: #106EBE;
+    --ms-blue-light: #4F9EDB;
+    --ms-blue-tint: #DEECF9;
+    
+    /* Neutral colors */
+    --ms-gray-dark: #323130;
+    --ms-gray-medium: #605E5C;
+    --ms-gray-light: #8A8886;
+    --ms-gray-lighter: #C8C6C4;
+    --ms-gray-lightest: #EDEBE9;
+    --ms-gray-bg: #F8F8F8;
+    --ms-white: #FFFFFF;
+    --ms-background: #FAFAFA;
+    
+    /* Accent colors */
+    --ms-success: #107C10;
+    --ms-warning: #FF8C00;
+    --ms-error: #D13438;
+    
+    /* Chat specific */
+    --ms-chat-user-bg: #FFFFFF;
+    --ms-chat-assistant-bg: #F8F8F8;
+    --ms-chat-border: #E1DFDD;
+
+    /* Header */
+    --ms-header-bg: #4a8a8f;
+}
+
+/* Global styles */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+/* Hide scrollbars while preserving scroll functionality */
+html, body {
+    scrollbar-width: none; /* Firefox */
+    -ms-overflow-style: none; /* Internet Explorer 10+ */
+}
+
+html::-webkit-scrollbar, 
+body::-webkit-scrollbar {
+    display: none; /* Chrome, Safari, Edge */
+}
+
+body {
+    font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, sans-serif;
+    background-color: var(--ms-background);
+    color: var(--ms-gray-dark);
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    margin: 0;
+    overflow-x: hidden; /* Hide horizontal overflow */
+}
+
+/* Spinner animation for loading states */
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}

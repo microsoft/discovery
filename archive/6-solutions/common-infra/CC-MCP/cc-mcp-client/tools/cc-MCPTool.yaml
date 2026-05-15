@@ -1,0 +1,196 @@
+name: cc-MCPTool
+description: A Discovery-integrated MCP client tool for managing Cyclecloud for VM orchestration with SLURM commands (squeue, sbatch, sinfo, sacct), system commands (systemctl, journalctl), file operations (head_file, tail_file, search_file, create_file), and Azure/HPC queries (get_infiniband_pkeys, get_physical_hostnames).
+version: "12.0.0"
+category: Discovery tools
+license: GPL-2.0
+
+infra:
+  - name: worker
+    infra_type: container
+    image:
+      acr: siphyeast2acr.azurecr.io/cc-mcp:latest
+    compute:
+      min_resources:
+        cpu: 2
+        ram: 8Gi
+        storage: 110Gi
+        gpu: 0
+        infiniband: false
+      max_resources:
+        cpu: 4
+        ram: 16Gi
+        storage: 220Gi
+        gpu: 0
+        infiniband: false
+      recommended_sku:
+        - Standard_E4s_v6
+      pool_type: static
+      pool_size: 1
+
+actions:
+  - name: checkqueue
+    description: "Run Slurm squeue to check job queue. Optionally specify output format."
+    infra_node: worker
+    input_schema:
+      type: object
+      properties:
+        format:
+          type: string
+          description: "Optional format string for squeue output."
+          default: "%t,%j,%u,%T,%M,%N"
+      required: []
+    command: |
+      python /app/entrypoint.py check-queue '{"format":"{{format}}"}'
+
+  - name: submitjob
+    description: "Submit a job using sbatch. Optionally specify partition."
+    infra_node: worker
+    input_schema:
+      type: object
+      properties:
+        script:
+          type: string
+          description: "Path to the job script."
+        partition:
+          type: string
+          description: "Optional partition name."
+          default: "hpc"
+      required:
+        - script
+    command: |
+      python /app/entrypoint.py submit-job '{"script":"{{script}}","partition":"{{partition}}"}'
+
+  - name: clusterinfo
+    description: "Get cluster node and partition info using sinfo. Optionally specify output format."
+    infra_node: worker
+    input_schema:
+      type: object
+      properties:
+        format:
+          type: string
+          description: "Optional format string for sinfo output."
+          default: "NodeList,CPUs,Memory,State"
+      required: []
+    command: |
+      python /app/entrypoint.py cluster-info '{"format":"{{format}}"}'
+
+  - name: jobaccounting
+    description: "Retrieve job accounting data using sacct."
+    infra_node: worker
+    input_schema:
+      type: object
+      properties:
+        starttime:
+          type: string
+          description: "Start time for job accounting query."
+          default: "now-1day"
+        endtime:
+          type: string
+          description: "End time for job accounting query."
+          default: "now"
+      required: []
+    command: |
+      python /app/entrypoint.py job-accounting '{"starttime":"{{starttime}}","endtime":"{{endtime}}"}'
+
+  # File operations
+  - name: filehead
+    description: "Read first lines of a file."
+    infra_node: worker
+    input_schema:
+      type: object
+      properties:
+        path:
+          type: string
+          description: "Path to the file."
+        length:
+          type: integer
+          description: "Number of lines to read from the start."
+          default: 10
+      required:
+        - path
+    command: | 
+      python /app/entrypoint.py file-head '{"path":"{{path}}","length":'{{length}}'}'
+
+  - name: filetail
+    description: "Read last lines of a file."
+    infra_node: worker
+    input_schema:
+      type: object
+      properties:
+        path:
+          type: string
+          description: "Path to the file."
+        length:
+          type: integer
+          description: "Number of lines to read from the end."
+          default: 10
+      required:
+        - path
+    command: |
+      python /app/entrypoint.py file-tail '{"path":"{{path}}","length":'{{length}}'}'
+
+  - name: filesearch
+    description: "Search for a pattern in a file."
+    infra_node: worker
+    input_schema:
+      type: object
+      properties:
+        path:
+          type: string
+          description: "Path to the file."
+        pattern:
+          type: string
+          description: "Pattern to search for."
+      required:
+        - path
+        - pattern
+    command: |
+      python /app/entrypoint.py file-search '{"path":"{{path}}","pattern":"{{pattern}}"}'
+
+  - name: createfile
+    description: "Create a file with content."
+    infra_node: worker
+    input_schema:
+      type: object
+      properties:
+        path:
+          type: string
+          description: "Path to the file to create."
+        content:
+          type: string
+          description: "Content to write to the file."
+      required:
+        - path
+        - content
+    command: |
+      python /app/entrypoint.py create-file '{"path":"{{path}}","content":"{{content}}"}'
+
+  # Azure/HPC queries
+
+  - name: getinfinibandpkeys
+    description: "Retrieve InfiniBand P_Keys for hosts."
+    infra_node: worker
+    input_schema:
+      type: object
+      properties:
+        hosts:
+          type: string
+          description: "Comma-separated list of hostnames."
+          default: ""
+      required: []
+    command: |
+      python /app/entrypoint.py get-infiniband-pkeys '{"hosts":"{{hosts}}"}'
+
+  - name: getphysicalhostnames
+    description: "Retrieve Azure physical hostnames for VMs."
+    infra_node: worker
+    input_schema:
+      type: object
+      properties:
+        hosts:
+          type: string
+          description: "Comma-separated list of VM hostnames."
+          default: ""
+      required: []
+    command: |
+      python /app/entrypoint.py get-physical-hostnames '{"hosts":"{{hosts}}"}'

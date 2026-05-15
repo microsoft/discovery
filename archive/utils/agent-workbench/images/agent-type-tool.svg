@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16" fill="none">
+  <!-- Function symbol (ƒ) to represent a callable tool/capability -->
+  <path d="M10.6 3.1c-.9-.5-2.6-.4-3.5.6-.7.7-.9 1.6-1 2.6l-.2 1.2H4.3" stroke="#242424" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M5.7 8h3.3" stroke="#242424" stroke-width="1.4" stroke-linecap="round"/>
+  <path d="M6.4 8c-.4 2.4-.7 4.8-2.1 4.8" stroke="#242424" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

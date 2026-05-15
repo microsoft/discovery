@@ -1,0 +1,694 @@
+/* Microsoft Discovery Publishing Modal Styles */
+.discovery-modal {
+	max-width: 750px !important; /* Reduced from 800px for better balance */
+	width: min(750px, 95vw) !important;
+	/* Override the general modal-content overflow settings */
+	overflow: hidden !important;
+	max-height: none !important;
+}
+
+.discovery-modal-body {
+	max-height: 70vh;
+	overflow-y: auto;
+	padding: 20px;
+}
+
+/* Compact styling for discovery modal - reduce spacing between form rows */
+.discovery-modal .form-row {
+	gap: 6px; /* Reduced from 12px */
+	margin-bottom: 6px; /* Reduce row spacing */
+}
+
+.discovery-modal .form-group {
+	margin-bottom: 2px; /* Further reduced from 4px */
+}
+
+.discovery-modal .form-group label {
+	margin-bottom: 4px;
+}
+
+.discovery-modal .form-group input,
+.discovery-modal .form-group select,
+.discovery-modal .form-group textarea {
+	padding: 6px 6px; /* Reduced from 8px 12px */
+}
+
+.discovery-modal .form-section {
+	margin-bottom: 16px; /* Further reduced from 16px */
+	padding-bottom: 10px; /* Further reduced from 12px */
+}
+
+.discovery-modal .section-title {
+	margin-bottom: 8px;
+}
+
+.form-section {
+	margin-bottom: 24px;
+	padding-bottom: 20px;
+	border-bottom: 1px solid var(--ms-gray-lightest);
+}
+
+.form-section:last-child {
+	border-bottom: none;
+	margin-bottom: 0;
+}
+
+.section-title {
+	font-size: 14px;
+	font-weight: 600;
+	color: var(--ms-gray-dark);
+	margin-bottom: 12px;
+	display: flex;
+	align-items: center;
+	gap: 8px;
+}
+
+.section-title::before {
+	content: '';
+	width: 3px;
+	height: 16px;
+	background: var(--ms-blue-primary);
+	border-radius: 2px;
+}
+
+.form-row {
+	display: flex;
+	gap: 12px;
+	align-items: flex-start;
+}
+
+/* Right-align action buttons in Publishing tab */
+.form-row.actions-row {
+	justify-content: flex-end;
+}
+
+.form-group {
+	margin-bottom: 8px;
+}
+
+.form-group.full-width {
+	flex: 1;
+	width: 100%;
+}
+
+.form-group.half-width {
+	flex: 1;
+}
+
+.form-group.quarter-width {
+	flex: 0 0 calc(25% - 9px);
+	min-width: 100px;
+}
+
+.form-group label {
+	display: block;
+	font-size: 13px;
+	font-weight: 600;
+	color: var(--ms-gray-dark);
+	margin-bottom: 4px;
+}
+
+.form-group input,
+.form-group select,
+.form-group textarea {
+	width: 100%;
+	padding: 8px 12px;
+	border: 1px solid var(--ms-gray-lighter);
+	border-radius: 4px;
+	font-size: 13px;
+	font-family: inherit;
+	transition: border-color 0.2s;
+}
+
+.form-group input:focus,
+.form-group select:focus,
+.form-group textarea:focus {
+	outline: none;
+	border-color: var(--ms-blue-primary);
+	box-shadow: 0 0 0 2px rgba(0, 120, 212, 0.2);
+}
+
+.form-group input[readonly],
+.form-group textarea[readonly] {
+	background-color: var(--ms-gray-bg);
+	color: var(--ms-gray-medium);
+}
+
+.form-group textarea {
+	resize: vertical;
+	min-height: 60px;
+}
+
+.form-hint {
+	display: none;
+	font-size: 11px;
+	color: var(--ms-gray-medium);
+	margin-top: 4px;
+	margin-left: 24px;
+}
+
+.checkbox-group {
+	display: flex;
+	align-items: flex-start;
+	gap: 8px;
+	margin-bottom: 8px;
+}
+
+.checkbox-label {
+	display: flex;
+	align-items: center;
+	cursor: pointer;
+	font-size: 13px;
+	color: var(--ms-gray-dark);
+	font-weight: normal;
+	margin-bottom: 0;
+	position: relative;
+	padding-left: 24px;
+	min-height: 20px;
+}
+
+/* Override form-group input styles for checkboxes */
+.form-group.checkbox-group {
+	margin-bottom: 12px;
+}
+
+.checkbox-label input[type="checkbox"] {
+	width: auto;
+	margin: 0;
+	position: absolute;
+	opacity: 0;
+	cursor: pointer;
+	height: 16px;
+	width: 16px;
+	left: 0;
+	top: 0;
+}
+
+.checkmark {
+	position: absolute;
+	left: 0;
+	top: 50%;
+	transform: translateY(-50%);
+	width: 16px;
+	height: 16px;
+	border: 2px solid var(--ms-gray-lighter);
+	border-radius: 3px;
+	background: var(--ms-white);
+	transition: all 0.2s;
+	flex-shrink: 0;
+}
+
+.checkbox-label input[type="checkbox"] {
+	position: absolute;
+	opacity: 0;
+	cursor: pointer;
+	height: 16px;
+	width: 16px;
+	left: 0;
+	top: 0;
+}
+
+.checkbox-label input[type="checkbox"]:checked + .checkmark {
+	background-color: var(--ms-blue-primary);
+	border-color: var(--ms-blue-primary);
+}
+
+.checkbox-label input[type="checkbox"]:checked + .checkmark::after {
+	content: '';
+	position: absolute;
+	left: 4px;
+	top: 1px;
+	width: 4px;
+	height: 8px;
+	border: solid white;
+	border-width: 0 2px 2px 0;
+	transform: rotate(45deg);
+}
+
+.status-info {
+	padding: 12px;
+	border-radius: 6px;
+	font-size: 13px;
+	line-height: 1.4;
+	white-space: pre-line;
+}
+
+.status-info.info {
+	background: var(--ms-blue-tint);
+	color: var(--ms-blue-dark);
+	border: 1px solid var(--ms-blue-light);
+}
+
+.status-info.success {
+	background: #DFF6DD;
+	color: var(--ms-success);
+	border: 1px solid var(--ms-success);
+}
+
+.status-info.warning {
+	background: #FFF4CE;
+	color: #8A6914;
+	border: 1px solid var(--ms-warning);
+}
+
+.status-info.error {
+	background: #FDE7E9;
+	color: var(--ms-error);
+	border: 1px solid var(--ms-error);
+}
+
+/* Hyperlinks within status info sections */
+.status-info a {
+	color: inherit;
+	text-decoration: underline;
+	font-weight: 500;
+}
+
+.status-info a:hover {
+	text-decoration: none;
+	opacity: 0.8;
+}
+
+.status-info.success a {
+	color: var(--ms-success);
+}
+
+.status-info.info a {
+	color: var(--ms-blue-dark);
+}
+
+.status-info.warning a {
+	color: #8A6914;
+}
+
+.status-info.error a {
+	color: var(--ms-error);
+}
+
+/* Modal footer for Discovery modal */
+.discovery-modal .modal-footer {
+	padding: 16px 20px;
+	background: var(--ms-gray-bg);
+	border-top: 1px solid var(--ms-gray-lightest);
+	display: flex;
+	gap: 8px;
+	justify-content: flex-end;
+	flex-shrink: 0; /* Don't shrink the footer */
+}
+
+.discovery-modal .modal-header {
+	flex-shrink: 0; /* Don't shrink the header */
+}
+
+.discovery-modal .modal-footer .fui-Button {
+	min-width: 80px;
+	padding: 8px 16px;
+}
+
+/* Responsive adjustments */
+@media (max-width: 600px) {
+	.discovery-modal {
+		width: 95vw;
+		margin: 10px;
+	}
+    
+	.form-row {
+		flex-direction: column;
+		gap: 0;
+	}
+    
+	.form-group.half-width,
+	.form-group.quarter-width {
+		flex: none;
+		width: 100%;
+	}
+    
+	.discovery-modal-body {
+		max-height: 80vh;
+		padding: 16px;
+	}
+}
+
+/* Discovery Resource Management Styles */
+.resource-checkbox {
+	margin-right: 8px;
+	accent-color: var(--ms-blue-primary);
+}
+
+.resource-selection-controls {
+	margin-bottom: 15px;
+	padding: 10px;
+	background-color: var(--ms-gray-bg);
+	border-radius: 4px;
+	border: 1px solid var(--ms-gray-lighter);
+}
+
+.resource-selection-controls label {
+	display: inline-flex;
+	align-items: center;
+	margin-right: 15px;
+	font-weight: 500;
+	color: var(--ms-gray-dark);
+}
+
+.resource-selection-controls button {
+	border: none;
+	padding: 6px 12px;
+	border-radius: 3px;
+	font-size: 14px;
+	font-weight: 500;
+	cursor: pointer;
+	margin-right: 8px;
+	transition: all 0.2s ease;
+}
+
+.resource-selection-controls button:disabled {
+	opacity: 0.6;
+	cursor: not-allowed;
+}
+
+.resource-selection-controls button:not(:disabled):hover {
+	transform: translateY(-1px);
+	box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+#deleteSelectedBtn {
+	background-color: var(--ms-error);
+	color: white;
+}
+
+#deleteSelectedBtn:not(:disabled):hover {
+	background-color: #B71C1C;
+}
+
+#reuseSelectedBtn {
+	background-color: var(--ms-success);
+	color: white;
+}
+
+#reuseSelectedBtn:not(:disabled):hover {
+	background-color: #0D6A0D;
+}
+
+.resource-list-item {
+	display: block;
+	margin-bottom: 8px;
+	padding: 4px 0;
+}
+
+.resource-list-item label {
+	display: flex;
+	align-items: center;
+	cursor: pointer;
+	padding: 4px;
+	border-radius: 3px;
+	transition: background-color 0.2s ease;
+}
+
+.resource-list-item label:hover {
+	background-color: var(--ms-gray-lightest);
+}
+
+.status-info {
+	white-space: pre-line;
+}
+
+/* Hyperlink styles for status sections */
+.status-info a {
+	color: var(--ms-blue-primary);
+	text-decoration: none;
+	font-weight: 500;
+}
+
+.status-info a:hover {
+	text-decoration: underline;
+	color: var(--ms-blue-dark);
+}
+
+.status-info a:visited {
+	color: var(--ms-blue-dark);
+}
+
+/* Diagram Tab Styles */
+.diagram-wrapper { display: flex; flex-direction: column; gap: 8px; height: 100%; min-height: 0; }
+/* Inner tab bar now holds the diagram toolbar so it remains visible and aligned with tabs */
+#entry-workflow-panel .workflow-inner-tabs .inner-tab-bar {
+		display: flex;
+		gap: 4px;
+		border-bottom: 1px solid var(--ms-gray-lighter);
+		padding: 0 8px 4px 8px;
+		align-items: center;
+		justify-content: space-between;
+}
+
+.inner-tab-buttons { display: flex; gap: 4px; align-items: center; }
+.inner-tab-toolbar { display: none; gap: 2px; align-items: center; }
+.inner-tab-toolbar.visible { display: flex; }
+
+.diagram-toolbar {
+	display: flex;
+	gap: 8px;
+	align-items: center;
+	justify-content: flex-end;
+	width: auto;
+	margin-left: 12px;
+}
+.diagram-messages { font-size: 12px; color: var(--ms-gray-medium); }
+
+/* Diagram status styles for background generation */
+.diagram-status-loading {
+	color: var(--ms-blue);
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	padding: 8px 12px;
+	background: rgba(0, 120, 212, 0.08);
+	border-radius: 4px;
+	margin-bottom: 8px;
+}
+.diagram-status-error {
+	color: var(--ms-red, #d13438);
+	padding: 8px 12px;
+	background: rgba(209, 52, 56, 0.08);
+	border-radius: 4px;
+	margin-bottom: 8px;
+}
+.diagram-status-success {
+	color: var(--ms-green, #107c10);
+	padding: 8px 12px;
+	background: rgba(16, 124, 16, 0.08);
+	border-radius: 4px;
+	margin-bottom: 8px;
+}
+
+/* Loading spinner for diagram generation */
+.loading-spinner {
+	display: inline-block;
+	width: 14px;
+	height: 14px;
+	border: 2px solid var(--ms-blue);
+	border-top-color: transparent;
+	border-radius: 50%;
+	animation: diagram-spin 0.8s linear infinite;
+}
+@keyframes diagram-spin {
+	to { transform: rotate(360deg); }
+}
+
+.diagram-container {
+	flex: 1 1 auto;
+	/* Fill the available height provided by parent and allow internal scrolling */
+	height: 100%;
+	max-height: none; /* allow parent to constrain height so container fills it */
+	min-height: 0;
+	overflow: auto;
+	border: 1px solid var(--ms-gray-lighter);
+	border-radius: 6px;
+	padding: 8px;
+	background: var(--ms-white);
+	/* Ensure this container shows scrollbars when needed even if global rules hide them */
+	scrollbar-width: auto; /* Firefox */
+	-ms-overflow-style: auto; /* IE 10+ */
+	position: relative;
+	box-sizing: border-box;
+}
+.diagram-container svg { width: 100%; height: auto; }
+
+/* Webkit-based browsers (Chrome, Edge, Safari) - restore scrollbar display for this container */
+.workflow-inner-tabs .diagram-container, .inner-tab-toolbar + .diagram-container, .diagram-container {
+	overflow: auto !important; /* force override of global hidden scrollbar rules */
+	align-self: stretch; /* ensure the container stretches in its flex column parent */
+	box-sizing: border-box;
+}
+.workflow-inner-tabs .diagram-container::-webkit-scrollbar, .diagram-container::-webkit-scrollbar { display: block; width: 12px; height: 12px; }
+.workflow-inner-tabs .diagram-container::-webkit-scrollbar-track, .diagram-container::-webkit-scrollbar-track { background: transparent; }
+.workflow-inner-tabs .diagram-container::-webkit-scrollbar-thumb, .diagram-container::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.15); border-radius: 6px; }
+.workflow-inner-tabs .diagram-container::-webkit-scrollbar-thumb:hover, .diagram-container::-webkit-scrollbar-thumb:hover { background: rgba(0,0,0,0.25); }
+/* Show pointer cursor when hovering the rendered diagram to indicate click-to-expand */
+.diagram-container svg { cursor: pointer; }
+
+/* Workflow Tab Layout - Split between Definition and Diagram */
+#entry-workflow-panel .yaml-editors-vertical {
+	height: 100%;
+	display: flex;
+	flex-direction: column;
+	gap: 12px;
+	/* For the workflow inner tabs, let inner subpanels control scrolling (so the diagram shows its own scrollbar) */
+	overflow: hidden; /* default: keep outer container from scrolling */
+}
+
+/* When inside the entry workflow inner tabs, allow inner panels to manage overflow instead of the outer vertical stack */
+#entry-workflow-panel .yaml-editors-vertical.workflow-inner-tabs {
+    overflow: visible; /* allow diagram-container to display its own scrollbars */
+    min-height: 0;
+}
+
+/* Inner tabs (Definition / Diagram) */
+#entry-workflow-panel .workflow-inner-tabs .inner-tab-bar {
+	display: flex;
+	gap: 4px;
+	border-bottom: 1px solid var(--ms-gray-lighter);
+	padding: 0 4px 4px 4px;
+}
+
+#entry-workflow-panel .workflow-inner-tabs .inner-tab {
+	background: var(--ms-white);
+	border: 1px solid var(--ms-gray-lighter);
+	border-bottom: none;
+	padding: 6px 10px;
+	font-size: 12px;
+	border-top-left-radius: 6px;
+	border-top-right-radius: 6px;
+	cursor: pointer;
+	color: var(--ms-gray-700);
+}
+
+#entry-workflow-panel .workflow-inner-tabs .inner-tab.active {
+	background: var(--ms-gray-50);
+	font-weight: 600;
+	color: var(--ms-gray-900);
+}
+
+#entry-workflow-panel .workflow-inner-tabs .workflow-subpanels {
+	flex: 1;
+	display: flex;
+	flex-direction: column;
+	position: relative;
+}
+
+/* Ensure the flex ancestor chain allows children to shrink/grow and enables internal scrolling
+   (prevents children from being clipped by implicit min-height on flex items) */
+#entry-workflow-panel .workflow-inner-tabs .workflow-subpanels,
+#entry-workflow-panel .workflow-inner-tabs .workflow-subpanel,
+#entry-workflow-panel .yaml-editor-wrapper.full-height,
+#entry-workflow-panel .yaml-editors-vertical.workflow-inner-tabs,
+#entry-workflow-panel .form-section:last-child .diagram-wrapper,
+#entry-workflow-panel .yaml-editors-vertical {
+    flex: 1 1 0;
+    min-height: 0;
+}
+
+#entry-workflow-panel .workflow-inner-tabs .workflow-subpanel {
+	flex: 1;
+	display: none;
+	flex-direction: column;
+	min-height: 0;
+}
+
+#entry-workflow-panel .workflow-inner-tabs .workflow-subpanel.active {
+	display: flex;
+}
+
+#entry-workflow-panel .form-section:first-child {
+	/* Workflow Definition Section - approximately half height */
+	display: none; /* Deprecated old split layout replaced by inner tabs */
+}
+
+/* Tool inner tabs (Dockerfile / Env Vars / Tool Definition) */
+#tool-panel .tool-inner-tabs .inner-tab-bar {
+	display: flex;
+	gap: 4px;
+	border-bottom: 1px solid var(--ms-gray-lighter);
+	padding: 0 4px 4px 4px;
+}
+
+#tool-panel .tool-inner-tabs .inner-tab {
+	background: var(--ms-white);
+	border: 1px solid var(--ms-gray-lighter);
+	border-bottom: none;
+	padding: 6px 10px;
+	font-size: 12px;
+	border-top-left-radius: 6px;
+	border-top-right-radius: 6px;
+	cursor: pointer;
+	color: var(--ms-gray-700);
+}
+
+#tool-panel .tool-inner-tabs .inner-tab.active {
+	background: var(--ms-gray-50);
+	font-weight: 600;
+	color: var(--ms-gray-900);
+}
+
+#tool-panel .tool-inner-tabs .tool-subpanels {
+	flex: 1;
+	display: flex;
+	flex-direction: column;
+	position: relative;
+}
+
+#tool-panel .tool-inner-tabs .tool-subpanel {
+	flex: 1;
+	display: none;
+	flex-direction: column;
+	min-height: 0;
+}
+
+#tool-panel .tool-inner-tabs .tool-subpanel.active {
+	display: flex;
+}
+
+#entry-workflow-panel .form-section:first-child .yaml-editor-section {
+	flex: 1;
+	min-height: 0;
+	overflow: hidden;
+}
+
+#entry-workflow-panel .form-section:first-child .yaml-editor-section .CodeMirror {
+	height: 100%;
+	max-height: none;
+}
+
+#entry-workflow-panel .form-section:first-child .yaml-editor-section .CodeMirror .CodeMirror-scroll {
+	max-height: 100%;
+	overflow-y: auto;
+}
+
+/* Compact tab-info section in workflow tab */
+#entry-workflow-panel .tab-info {
+	margin-bottom: 8px;
+}
+
+#entry-workflow-panel .tab-info h4 {
+	margin-bottom: 4px;
+	font-size: 14px;
+}
+
+#entry-workflow-panel .tab-info p {
+	margin-bottom: 0;
+	font-size: 12px;
+	line-height: 1.3;
+}
+
+#entry-workflow-panel .form-section:last-child {
+	/* Workflow Diagram Section - approximately half height */
+	flex: 1;
+	min-height: 0;
+	display: flex;
+	flex-direction: column;
+}
+
+#entry-workflow-panel .form-section:last-child .diagram-wrapper {
+	flex: 1;
+	min-height: 0;
+}

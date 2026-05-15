@@ -1,0 +1,33 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "outLocation": {"type": "String"},
+        "outStorageContainerName": {"type": "String"},
+        "outApiVersion": {
+            "defaultValue": "2026-02-01-preview",
+            "type": "String"
+        },
+        "outStorageAccountId": {
+            "type": "String",
+            "metadata": {
+                "description": "Full resource ID of a Microsoft.Storage/storageAccounts resource."
+            }
+        }
+    },
+    "variables": {},
+    "resources": [
+        {
+            "type": "Microsoft.Discovery/storageContainers",
+            "apiVersion": "[parameters('outApiVersion')]",
+            "name": "[parameters('outStorageContainerName')]",
+            "location": "[parameters('outLocation')]",
+            "properties": {
+                "storageStore": {
+                    "kind": "AzureStorageBlob",
+                    "storageAccountId": "[parameters('outStorageAccountId')]"
+                }
+            }
+        }
+    ]
+}

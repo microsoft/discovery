@@ -1,0 +1,102 @@
+/* Base colors, resets, and body styles are in base.css */
+
+/* Header styles moved to header.css */
+
+/* Main container layout moved to layout.css */
+
+/* Copilot header and agent selector styles moved to agent-selector.css */
+
+/* Chat area and welcome styles moved to chat.css */
+
+/* Chat messages and typing indicator moved to messages.css */
+
+/* Input and run button styles moved to input.css and code.css */
+
+/* File actions moved to outputs.css */
+
+/* Output, file preview, and logs moved to outputs.css */
+
+/* Loading spinners moved to utilities.css */
+
+/* Prism token and code-content overrides moved to code.css; keep file-preview styles below */
+
+/* Prism file-preview overrides moved to code.css */
+
+/* Input attachments and progress moved to input.css */
+
+/* Execution and loading indicator moved to execution.css */
+
+/* Conversation stats moved to conversation.css */
+
+/* Modal system and buttons moved to modal.css */
+
+/* Responsive modal/settings moved to modal.css */
+
+/* Stdout header and copy button styles moved to execution.css */
+
+/* Discovery modal and resource management moved to discovery.css */
+
+/* API Docs and Markdown preview typography -------------------------------------------------- */
+/* Ensure API docs and EasyMDE preview share the same readable spacing and typography */
+.api-docs-content,
+.notepad-editor .editor-preview,
+.EasyMDEContainer .editor-preview,
+.editor-preview,
+.editor-preview-side {
+	font-size: 14px;
+	line-height: 1.6;
+	color: var(--ms-gray-dark);
+}
+
+.api-docs-content p,
+.notepad-editor .editor-preview p,
+.editor-preview p {
+	margin: 0 0 12px 0;
+}
+
+.api-docs-content h1,
+.api-docs-content h2,
+.api-docs-content h3,
+.notepad-editor .editor-preview h1,
+.notepad-editor .editor-preview h2,
+.notepad-editor .editor-preview h3,
+.editor-preview h1,
+.editor-preview h2,
+.editor-preview h3 {
+	margin: 18px 0 8px 0;
+	font-weight: 600;
+	color: var(--ms-gray-dark);
+}
+
+.api-docs-content ul,
+.api-docs-content ol,
+.notepad-editor .editor-preview ul,
+.notepad-editor .editor-preview ol,
+.editor-preview ul,
+.editor-preview ol {
+	margin: 0 0 12px 20px;
+}
+
+.api-docs-content pre,
+.notepad-editor .editor-preview pre,
+.editor-preview pre {
+	background: #f6f6f6;
+	padding: 12px;
+	border-radius: 6px;
+	overflow: auto;
+	font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+	font-size: 13px;
+}
+
+.api-docs-content img,
+.notepad-editor .editor-preview img,
+.editor-preview img {
+	max-width: 100%;
+	height: auto;
+	display: block;
+	margin: 8px 0;
+}
+
+/* Small helper: ensure preview uses readable max width inside panels */
+.api-docs-content, .notepad-editor .editor-preview { max-width: 100%; }
+

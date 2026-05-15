@@ -1,0 +1,147 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Agent Definition Schema",
+  "description": "JSON schema for validating agent definition YAML files",
+  "type": "object",
+  "required": ["agent"],
+  "properties": {
+    "components": {
+      "oneOf": [
+        {
+          "type": "object",
+          "description": "Optional components block as an object (permissive).",
+          "additionalProperties": true
+        },
+        {
+          "type": "array",
+          "description": "Optional components block as an array of component objects (compatibility with samples).",
+          "items": {
+            "type": "object",
+            "properties": {
+              "name": { "type": "string" },
+              "capabilities": { "type": "string" }
+            },
+            "required": ["name"],
+            "additionalProperties": true
+          }
+        }
+      ]
+    },
+    "discovery_extensions": {
+      "oneOf": [
+        { "type": "boolean" },
+        { "type": "object", "description": "Optional Discovery-specific extensions as an object.", "additionalProperties": true }
+      ],
+      "description": "Optional Discovery-specific extensions. Accepts boolean flags or an object for key/value extensions."
+    },
+    "discovery_extension": {
+      "oneOf": [
+        { "type": "boolean" },
+        { "type": "object", "description": "Legacy singular discovery_extension key, accepted for compatibility.", "additionalProperties": true }
+      ]
+    },
+    "agent": {
+      "type": "object",
+      "required": ["name", "description", "model", "instructions", "top_p", "temperature", "response_format"],
+      "properties": {
+        "name": {
+          "type": "string",
+          "pattern": "^[A-Za-z][A-Za-z0-9_-]*$",
+          "description": "Agent name, must start with letter and contain only alphanumeric, underscore, or dash"
+        },
+        "description": {
+          "type": "string",
+          "minLength": 10,
+          "description": "Detailed description of the agent's purpose and capabilities"
+        },
+        "model": {
+          "type": "string",
+          "pattern": "^azureml://registries/azure-openai/models/[^/]+/versions/[^/]+$",
+          "description": "Azure ML model endpoint URL"
+        },
+        "instructions": {
+          "type": "string",
+          "minLength": 50,
+          "description": "Detailed instructions for the agent"
+        },
+        "top_p": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1,
+          "description": "Top-p sampling parameter"
+        },
+        "temperature": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 2,
+          "description": "Temperature sampling parameter"
+        },
+        "response_format": {
+          "type": "string",
+          "enum": ["auto", "json", "text"],
+          "description": "Response format specification"
+        }
+      },
+      "additionalProperties": false
+    },
+    "extension": {
+      "type": "object",
+      "required": ["inputs", "events", "outputs", "system_prompts"],
+      "properties": {
+        "events": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "name": { "type": "string" },
+              "description": { "type": "string" },
+              "type": { "type": "string" },
+              "condition": { "type": "string" }
+            },
+            "required": ["name"],
+            "additionalProperties": false
+          },
+          "description": "List of events the agent can handle"
+        },
+        "inputs": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "properties": {
+              "name": { "type": "string", "pattern": "^[a-zA-Z][a-zA-Z0-9_]*$" },
+              "type": { "type": "string", "enum": ["llm", "string", "number", "boolean", "array", "object"] },
+              "description": { "type": "string", "minLength": 5 },
+              "required": { "type": "boolean" }
+            },
+            "required": ["name", "type", "description"],
+            "additionalProperties": false
+          },
+          "description": "Input parameters the agent accepts"
+        },
+        "outputs": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "name": { "type": "string", "pattern": "^[a-zA-Z][a-zA-Z0-9_]*$" },
+              "type": { "type": "string", "enum": ["llm", "string", "number", "boolean", "array", "object", "file"] },
+              "description": { "type": "string" }
+            },
+            "required": ["name", "type", "description"],
+            "additionalProperties": false
+          },
+          "description": "Output parameters the agent produces"
+        },
+        "system_prompts": {
+          "type": "object",
+          "patternProperties": { "^[a-zA-Z][a-zA-Z0-9_]*$": { "type": "string" } },
+          "additionalProperties": false,
+          "description": "System prompts for different contexts"
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}

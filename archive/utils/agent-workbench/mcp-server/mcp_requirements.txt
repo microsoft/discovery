@@ -1,0 +1,9 @@
+# Model Context Protocol server dependencies
+mcp>=1.0.0
+pydantic>=2.0.0
+requests>=2.25.0
+azure-identity>=1.12.0
+azure-storage-blob>=12.0.0
+docker>=6.0.0
+pyyaml>=6.0.0
+jsonschema>=4.0.0

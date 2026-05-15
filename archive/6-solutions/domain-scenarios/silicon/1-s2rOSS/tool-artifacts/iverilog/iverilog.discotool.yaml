@@ -1,0 +1,91 @@
+name: iverilog-tool
+description: Tools for generating and checking Verilog code.
+version: "12.0"
+category: Discovery tools
+license: GPL-2.0
+infra:
+  - name: worker
+    infra_type: container
+    image:
+      acr: siphyeast2acr.azurecr.io/siphys2r-iverilog:latest
+    compute:
+      min_resources:
+        cpu: 2
+        ram: 8Gi
+        storage: 110Gi
+        gpu: 0
+        infiniband: false
+      max_resources:
+        cpu: 4
+        ram: 16Gi
+        storage: 440Gi
+        gpu: 0
+        infiniband: false
+      recommended_sku:
+        - Standard_E4s_v6
+      pool_type: static
+      pool_size: 1
+actions:
+  - name: iverilog_version
+    description: Displays iVerilog version information and exits.
+    infra_node: worker
+    command: "iverilog -V"
+    input_schema:
+      type: object
+      properties:
+        do_nothing:
+          type: boolean
+          description: "A no-op property"
+      required:
+        - do_nothing
+  - name: iverilog_syntax_check
+    description: Perform a syntax check on the given Verilog code.
+    infra_node: worker
+    command: |
+      DELIM='__DISCO_VERILOG_PAYLOAD__'
+      CODE_FILE="code_$(date +%s%N).v"
+
+      # Write the code literally (no expansion)
+      python3 html_decode.py  > "/app/${CODE_FILE}" <<'__DISCO_VERILOG_PAYLOAD__'
+      {{code}}
+      __DISCO_VERILOG_PAYLOAD__
+
+      # Run syntax check; always capture output
+      iverilog -Wall -t null -o /dev/null "/app/${CODE_FILE}" 2>&1 && echo 'No syntax errors'
+
+    input_schema:
+      type: object
+      properties:
+        code:
+          type: string
+          description: "Verilog code to check syntax"
+      required:
+        - code
+    output_schema:
+      type: object
+      properties:
+        syntax_report:
+          type: string
+          description: "The syntax check report from iverilog."
+  - name: file_save
+    description: Save the provided code to a file with the given file name.
+    infra_node: worker
+    command: |
+      DELIM='__DISCO_VERILOG_PAYLOAD__'
+
+      # Write the code literally (no expansion)
+      python3 html_decode.py  > {{file_name}} <<'__DISCO_VERILOG_PAYLOAD__'
+      {{code}}
+      __DISCO_VERILOG_PAYLOAD__
+    input_schema:
+      type: object
+      properties:
+        code:
+          type: string
+          description: "Verilog code to save to file"
+        file_name:
+          type: string
+          description: "The absolute path to the file where the code will be saved."
+      required:
+        - code
+        - file_name

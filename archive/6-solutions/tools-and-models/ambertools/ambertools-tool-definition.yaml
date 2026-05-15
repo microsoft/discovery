@@ -1,0 +1,42 @@
+name: ambertools
+description: |
+  AmberTools is a comprehensive suite of programs for biomolecular simulation.
+  Includes sander (MD engine), tleap (system preparation), cpptraj (trajectory analysis),
+  antechamber (small molecule parameterization), parmchk2, pdb4amber, parmed, and pytraj.
+  Supports protein, nucleic acid, lipid, and small molecule simulations with AMBER force fields.
+version: 1.0.0
+category: "Physics-Based Simulations"
+license: GPL-2.0
+
+infra:
+  - name: worker
+    infra_type: container
+    image:
+      acr: "{name}.azurecr.io/ambertools:latest"
+    compute:
+      min_resources:
+        cpu: 2
+        ram: "4Gi"
+        gpu: 0
+        storage: "0Gi"
+      max_resources:
+        cpu: 16
+        ram: "32Gi"
+        gpu: 0
+        storage: "0Gi"
+      infiniband: false
+      recommended_sku:
+        - Standard_D4s_v6
+        - Standard_D8s_v6
+        - Standard_D16s_v6
+      pool_type: static
+      pool_size: 1
+
+code_environments:
+  - language: python3
+    command: "python3 -u \"/{{scriptName}}\" > {{output_directory}}/logs.out 2>&1; cp -r /workdir/* {{output_directory}}/ 2>/dev/null || true; tail -n 100 {{output_directory}}/logs.out"
+    description: |
+      Python code environment with AmberTools for biomolecular simulations.
+      Includes sander (MD), tleap (system prep), cpptraj (trajectory analysis),
+      antechamber (parameterization), pytraj, parmed, MDAnalysis, and ASE.
+    infra_node: worker

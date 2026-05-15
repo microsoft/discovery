@@ -1,0 +1,9 @@
+Agent description (short):
+
+{agent_resource_json}
+
+Agent instructions (raw):
+
+{agent_instructions}
+
+Produce a concise capabilities summary (one paragraph, max 100 words) describing what this agent does, its typical inputs, and typical outputs. Do NOT produce a separate "Actions" section or any bulleted lists — return one plain paragraph only. Keep language plain and suitable for inclusion in a workflow agentTeam. Return only the paragraph.

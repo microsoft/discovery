@@ -1,0 +1,222 @@
+name: MolecularScienceWorkflow
+
+states:
+  - name: Planning
+    actors:
+      - agent: chemPlannerAgent
+        inputs:
+          userGoal: userGoal
+          dataHandlingContext: dataHandlingContext
+          messageId: messageId
+          nodePoolContext: nodePoolContext
+          agentTeam: agentTeam
+          workflowContext: workflowContext
+        thread: MainThread
+        humanInLoopMode: never
+        streamOutput: false
+    isFinal: false
+  - name: AgentRouter
+    actors:
+      - agent: chemRouterAgent
+        inputs:
+          userGoal: userGoal
+          dataHandlingContext: dataHandlingContext
+          messageId: messageId
+          nodePoolContext: nodePoolContext
+          agentTeam: agentTeam
+          workflowContext: workflowContext
+        thread: MainThread
+        humanInLoopMode: never
+        streamOutput: false
+        maxTurn: 10
+    isFinal: false
+  - name: KnowledgeBase
+    actors:
+      - agent: kbAgent
+        inputs:
+          userGoal: userGoal
+          nodePoolContext: nodePoolContext
+          messageId: messageId
+          dataHandlingContext: dataHandlingContext
+          agentTeam: agentTeam
+          workflowContext: workflowContext
+        thread: MainThread
+        maxTurn: 20
+        humanInLoopMode: never
+        streamOutput: false
+    isFinal: false
+  - name: CorePython
+    actors:
+      - agent: corePythonAgent
+        inputs:
+          userGoal: userGoal
+          nodePoolContext: nodePoolContext
+          messageId: messageId
+          dataHandlingContext: dataHandlingContext
+          agentTeam: agentTeam
+          workflowContext: workflowContext
+        thread: MainThread
+        maxTurn: 100
+        humanInLoopMode: never
+        streamOutput: false
+    isFinal: false
+  - name: Gromacs
+    actors:
+      - agent: GromacsAgent
+        inputs:
+          userGoal: userGoal
+          nodePoolContext: nodePoolContext
+          messageId: messageId
+          dataHandlingContext: dataHandlingContext
+          agentTeam: agentTeam
+          workflowContext: workflowContext
+        thread: MainThread
+        maxTurn: 100
+        humanInLoopMode: never
+        streamOutput: false
+    isFinal: false
+  - name: Summary
+    actors:
+      - agent: summarizerAgent
+        inputs:
+          messageId: messageId
+          dataHandlingContext: dataHandlingContext
+          nodePoolContext: nodePoolContext
+          agentTeam: agentTeam
+          workflowContext: workflowContext
+          userGoal: userGoal
+        thread: MainThread
+        humanInLoopMode: never
+        streamOutput: true
+    isFinal: false
+  - name: End
+    actors: []
+    isFinal: true
+
+transitions:
+  - from: Planning
+    to: AgentRouter
+  - from: AgentRouter
+    to: CorePython
+    event: RunCorePythonTools
+  - from: AgentRouter
+    to: KnowledgeBase
+    event: RunKnowledgeBase
+  - from: AgentRouter
+    to: Gromacs
+    event: RunGromacs
+  - from: AgentRouter
+    to: Summary
+    event: GenerateSummary
+  - from: CorePython
+    to: AgentRouter
+  - from: Gromacs
+    to: AgentRouter
+  - from: KnowledgeBase
+    to: AgentRouter
+  - from: Summary
+    to: End
+
+variables:
+  - Type: thread
+    name: MainThread
+  - Type: userDefined
+    name: userGoal
+  - Type: userDefined
+    name: nodePoolContext
+  - Type: userDefined
+    name: messageId
+  - Type: userDefined
+    name: agentTeam
+    value: "Here are the list of agents and their description:
+
+      1. PlannerAgent - Agent for planning and orchestrating molecular science workflows
+        Capabilities: Generates a plan to achieve the user goal by breaking it down into actionable steps
+        Actions:
+        - Generate Plan: Creates a detailed plan with steps, agents, inputs, and outputs based on the user goal
+
+      2. RouterAgent - Agent for routing tasks to appropriate agents based on the plan
+        Capabilities: Routes tasks to the correct agent based on the plan and context
+        Actions:
+        - Route Tasks: Determines the next agent to execute based on the plan and current state of execution
+
+      3. CorePythonToolsAgent - Agent for comprehensive cheminformatics tasks
+        Capabilities: Performs various cheminformatics analyses and transformations
+        Actions:
+        - Execute Python Code: Writes and executes general Python code utilizing pre-installed chemistry libraries
+          for custom molecular analyses, property calculations, structural modifications, and visualizations.
+
+      4. GromacsAgent - Agent for molecular dynamics simulations and analysis
+        Capabilities: Performs high-performance molecular dynamics (MD) simulations, system preparation, energy minimization, and trajectory analysis using GROMACS tools. Can automatically generate Python scripts for MD workflows and analysis.
+        Actions:
+        - System Preparation: Convert molecular structures to GROMACS format, add solvation and ions
+        - Energy Minimization: Optimize molecular structures before MD simulations
+        - MD Simulations: Run equilibration (NVT, NPT) and production molecular dynamics simulations
+        - Trajectory Analysis: Analyze MD trajectories for structural properties, dynamics, and thermodynamic quantities
+        - Force Field Operations: Work with various force fields (AMBER, CHARMM, GROMOS) for accurate simulations
+
+      5. KnowledgeBaseAgent - Agent for retrieving information from domain-specific knowledge bases
+        Capabilities: Retrieves information from various knowledge bases relevant to molecular science
+
+      6. SummarizerAgent - Agent for summarizing the results of the workflow
+        Capabilities: Reviews the execution of the workflow and provides a final summary
+        Actions:
+        - Generate Summary: Summarizes the results of the workflow, including key findings, insights, and relevant data points
+          that emerged during the execution of the plan, along with any data assets that were created as part of the process.
+          Responds in a friendly, conversational, and informative manner to the user."
+  
+  - Type: userDefined
+    name: workflowContext
+    value: "
+      # Workflow Context:
+      You are apart of a team of AI agents working together to perform molecular computations using various tools and techniques.
+      You will receive a plan that comes from the ChemistryPlannerAgent with steps to execute in order to achieve the user goal, you should look through the plan as well as 
+      the steps that have already been executed by other agents and decide what to do next based on the plan and the steps that have already been executed.
+      
+      ## Workflow specific rules and guidelines
+      - *Important* You should only perform actions which have been assigned to you in the plan.
+      - If there is a tool available that can accomplish your step, you should use it, making sure to follow the instructions to use it precisely.
+      - It is ok to not know the answer, if you don't know the answer to something or you have no tools to accomplish the given task, you may respond accordingly.
+      - *Important* you should never hallucinate any tool invocations.
+      "    
+  - Type: userDefined
+    name: dataHandlingContext
+    value: "
+    GUIDELINES:
+    
+    **Definitions**
+    - **Virtual path**: System-assigned absolute namespace for passing data between steps (e.g., `/step0/app/outputs`). Not the container’s real filesystem path.
+    - **Container path**: Absolute path inside the tool container (e.g., `/app/outputs`). Used only in `outputMounts` and `inputMountPath`.
+    - **Mapping**: Tool reads/writes container (mount) path → system maps to virtual path. Pass **virtual path** downstream, not container path.
+    - **Implicit extension**: If `/step0/app/outputs` exists, `/step0/app/outputs/reports` is valid (assuming 'reports' exists in the data pointed to by `/step0/app/outputs`.  Make extension explicit by giving the implicit path a description.
+    -**No shortening virtual paths**: Implied 'shortening' is disallowed (So if you had `/step0/app/outputs/reports` as the only item in the context, shortening it to just `/step0/app/outputs` would not be valid).
+    ---
+    
+    **Global Rules**
+    1. ALL paths must be ABSOLUTE. Never use relative paths.
+    2. Retrieve current data context before any action.
+    3. Preview data before updating descriptions.
+    4. Update virtualPath description **before** promoting to data asset (or description won’t propagate).
+    5. Remember to promote data asset after updating description. 
+    
+    ---
+    
+    **Tool Mount Rules**
+    - `outputMounts` = absolute container path where tool stores outputs.  Only directories are permitted.
+    - `inputMounts` = array of `{ virtualPath: <virtual path>, inputMountPath: <absolute container path> }`. Files or directories are permitted. The mount path will be of the type (file/directory) that is keyed by the virtual path given.
+    
+      ---
+      
+      **Example Flow**
+      1. Tool writes `molecule.txt` to `/app/outputs` (container path).
+      2. System maps to virtual path `/step0/app/outputs`.
+      3. Update description for `/step0/app/outputs`.
+      4. Next tool mounts `/step0/app/outputs` as `virtualPath`; `inputMountPath = /app/inputs`.
+      ```json
+      inputMounts: [ { virtualPath: /step0/app/outputs, inputMountPath: /app/inputs } ]
+      ```
+      5. Tool produces `step1/app/outputs`
+      6. Update description of `step1/app/outputs`
+      7. Promote `step1/app/outputs`"
+
+startstate: Planning

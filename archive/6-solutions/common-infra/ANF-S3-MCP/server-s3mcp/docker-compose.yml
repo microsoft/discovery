@@ -1,0 +1,22 @@
+version: '3.8'
+
+services:
+  s3-mcp:
+    build: .
+    container_name: s3-mcp-server
+    environment:
+      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
+      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
+      - AWS_REGION=${AWS_REGION}
+      - S3_BUCKET_NAME=${S3_BUCKET_NAME}
+      - READ_ONLY=${READ_ONLY:-true}
+    ports:
+      - "8000:8000"
+    restart: unless-stopped
+    volumes:
+      - ./logs:/app/logs
+    healthcheck:
+      test: ["CMD", "python", "scripts/test_server.py"]
+      interval: 30s
+      timeout: 10s
+      retries: 3

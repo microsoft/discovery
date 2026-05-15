@@ -1,0 +1,37 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+.venv/
+venv/
+ENV/
+
+# Sensitive credentials
+.env
+.azure-sp-info.txt
+
+# VS Code Extension saving state
+investigations/
+cache/
+
+# User session data
+user-session/
+
+# Local workbench state (includes sessions)
+.workbench/
+
+# Legacy docker shared directories
+docker-shared/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db

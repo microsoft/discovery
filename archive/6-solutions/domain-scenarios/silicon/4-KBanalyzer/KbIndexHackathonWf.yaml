@@ -1,0 +1,92 @@
+
+# =============================================================================
+# KNOWLEDGE BASE ANALYZER WORKFLOW
+# =============================================================================
+# This workflow analyzes knowledge base content using the KbAnalyzer2 agent
+# to provide insights and answer questions about stored information. It
+# demonstrates knowledge retrieval and analysis capabilities within the
+# Discovery platform.
+#
+# The workflow validates that:
+# - KbAnalyzer2 agent effectively searches and analyzes knowledge base content
+# - Knowledge retrieval operates correctly with proper context handling
+# - Analysis provides relevant insights based on user goals
+# - Data handling context is properly managed throughout the process
+# - Integration with platform data services functions correctly
+# =============================================================================
+
+name: KbIndexHackathonWf
+
+states:
+  - name: KbIndexHackathonWfEntryState
+    actors:
+      - agent: KbIndexHackathon
+        inputs:
+          userGoal: userGoal
+          nodePoolContext: nodePoolContext     # Compute resource allocation
+          messageId: messageId                  # Message tracking identifier
+          dataHandlingContext: dataHandlingContext  # Data processing capabilities
+        thread: MainThread
+        humanInLoopMode: never
+        streamOutput: true
+    isFinal: false
+
+  - name: End
+    actors: []
+    isFinal: true
+  
+transitions:
+# Simple progression from test to end
+- from: KbIndexHackathonWfEntryState
+  to: End
+
+
+variables:
+  - Type: thread
+    name: MainThread                        # Primary execution thread
+  - Type: userDefined
+    name: userGoal                          # User's question from chat prompt
+  - Type: userDefined
+    name: nodePoolContext                   # Compute resource allocation context
+  - Type: userDefined
+    name: messageId                         # Unique message tracking identifier
+  - Type: userDefined
+    name: dataHandlingContext              # Comprehensive data lifecycle management capabilities
+    value: "
+      GUIDELINES:
+      
+      **Definitions**
+      - **Virtual path**: System-assigned absolute namespace for passing data between steps (e.g., `/step0/app/outputs`). Not the container's real filesystem path.
+      - **Container path**: Absolute path inside the tool container (e.g., `/app/outputs`). Used only in `outputMounts` and `inputMountPath`.
+      - **Mapping**: Tool reads/writes container (mount) path → system maps to virtual path. Pass **virtual path** downstream, not container path.
+      - **Implicit extension**: If `/step0/app/outputs` exists, `/step0/app/outputs/reports` is valid (assuming 'reports' exists in the data pointed to by `/step0/app/outputs`.  Make extension explicit by giving the implicit path a description.
+      -**No shortening virtual paths**: Implied 'shortening' is disallowed (So if you had `/step0/app/outputs/reports` as the only item in the context, shortening it to just `/step0/app/outputs` would not be valid).
+      ---
+      
+      **Global Rules**
+      1. ALL paths must be ABSOLUTE. Never use relative paths.
+      2. Retrieve current data context before any action.
+      3. Preview data before updating descriptions.
+      4. Update virtualPath description **before** promoting to data asset (or description won't propagate).
+      5. Promote only final outputs for end user; intermediate results don't need promotion.
+      
+      ---
+      
+      **Tool Mount Rules**
+      - `outputMounts` = absolute container path where tool stores outputs.  Only directories are permitted.
+      - `inputMounts` = array of `{ virtualPath: <virtual path>, inputMountPath: <absolute container path> }`. Files or directories are permitted. The mount path will be of the type (file/directory) that is keyed by the virtual path given.
+      
+        ---
+        
+        **Example Flow**
+        1. Tool writes `report.txt` to `/app/outputs` (container path).
+        2. System maps to virtual path `/step0/app/outputs`.
+        3. Update description for `/step0/app/outputs`.
+        4. Next tool mounts `/step0/app/outputs` as `virtualPath`; `inputMountPath = /app/inputs`.
+        ```json
+        inputMounts: [ { virtualPath: /step0/app/outputs, inputMountPath: /app/inputs } ]
+        ```
+        5. Tool produces `step1/app/outputs`
+        6. Update description of `step1/app/outputs`
+        7. Promote `step1/app/outputs`"
+startstate: KbIndexHackathonWfEntryState

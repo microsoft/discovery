@@ -1,0 +1,143 @@
+/* Image Viewer Extension Styles */
+
+.image-container {
+    background: #f8f9fa;
+    border-radius: 4px;
+    -webkit-user-select: none;
+    user-select: none;
+}
+
+.image-container img {
+    border-radius: 4px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+/* Control Panel Styles */
+.image-controls {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    background: rgba(255, 255, 255, 0.95);
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    padding: 8px;
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.15);
+    z-index: 10;
+    -webkit-backdrop-filter: blur(4px);
+    backdrop-filter: blur(4px);
+}
+
+.image-controls .control-group {
+    display: flex;
+    gap: 6px;
+    margin-bottom: 6px;
+}
+
+.image-controls .control-group:last-child {
+    margin-bottom: 0;
+}
+
+.image-controls button {
+    background: #fff;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    padding: 6px 8px;
+    font-size: 12px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    min-width: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.image-controls button:hover {
+    background: #f0f0f0;
+    border-color: #0078d4;
+    transform: translateY(-1px);
+}
+
+.image-controls button:active {
+    transform: translateY(0);
+    background: #e6e6e6;
+}
+
+.image-controls button:focus {
+    outline: none;
+    border-color: #0078d4;
+    box-shadow: 0 0 0 2px rgba(0, 120, 212, 0.2);
+}
+
+/* Preview mode adjustments */
+.extension-preview .image-container {
+    background: #fff;
+}
+
+.extension-preview .image-container img {
+    box-shadow: none;
+}
+
+/* Error display styles */
+.extension-error .error-icon {
+    font-size: 24px;
+    margin-bottom: 8px;
+}
+
+.extension-error .error-suggestion {
+    margin-top: 12px;
+    padding: 12px;
+    background: #f8f9fa;
+    border-radius: 4px;
+    font-size: 12px;
+    line-height: 1.4;
+}
+
+.extension-error .error-suggestion ul {
+    margin: 8px 0 0 0;
+    padding-left: 16px;
+}
+
+.extension-error .error-suggestion li {
+    margin-bottom: 4px;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .image-controls {
+        top: 5px;
+        right: 5px;
+        padding: 6px;
+    }
+    
+    .image-controls .control-group {
+        gap: 4px;
+    }
+    
+    .image-controls button {
+        padding: 4px 6px;
+        font-size: 11px;
+        min-width: 28px;
+    }
+}
+
+/* Loading state */
+.image-loading {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    background: #f8f9fa;
+    color: #666;
+    font-size: 14px;
+}
+
+.image-loading::before {
+    content: "🖼️";
+    margin-right: 8px;
+    animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+}

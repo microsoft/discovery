@@ -1,0 +1,327 @@
+/* Knowledge Base Agent Styles */
+.knowledge-base-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    height: calc(100vh - 250px);
+    min-height: 300px;
+    overflow-y: auto;
+    padding: 10px;
+}
+
+.knowledge-base-item {
+    display: flex;
+    align-items: flex-start;
+    padding: 12px;
+    border: 2px solid #e1e5e9;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    background: #ffffff;
+    position: relative;
+}
+
+.knowledge-base-item:hover:not(.disabled) {
+    border-color: #0078d4;
+    background: #f8f9fa;
+}
+
+.knowledge-base-item.disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    background: #f5f5f5;
+}
+
+.knowledge-base-item.disabled input[type="checkbox"] {
+    cursor: not-allowed;
+    pointer-events: none;
+}
+
+.knowledge-base-item input[type="checkbox"] {
+    margin-right: 12px;
+    margin-top: 2px;
+    width: 18px;
+    height: 18px;
+    cursor: pointer;
+}
+
+.knowledge-base-item input[type="checkbox"]:checked {
+    accent-color: #0078d4;
+}
+
+.knowledge-base-item .checkmark {
+    display: none; /* Using native checkbox for now */
+}
+
+.kb-info {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+}
+
+.kb-name {
+    font-weight: 600;
+    font-size: 15px;
+    color: #323130;
+    margin-bottom: 2px;
+}
+
+.kb-path {
+    font-size: 11px;
+    color: #605e5c;
+    font-family: 'Courier New', monospace;
+    word-break: break-all;
+    line-height: 1.3;
+}
+
+.kb-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.kb-header-content {
+    flex: 1;
+}
+
+.kb-refresh-btn {
+    background: #0078d4;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    padding: 8px 12px;
+    cursor: pointer;
+    font-size: 12px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    transition: background-color 0.2s;
+}
+
+.kb-refresh-btn:hover {
+    background: #106ebe;
+}
+
+.kb-refresh-btn:disabled {
+    background: #a19f9d;
+    cursor: not-allowed;
+}
+
+.knowledge-base-item input[type="checkbox"]:checked + .checkmark + .kb-info .kb-name {
+    color: #0078d4;
+}
+
+/* Publish Summary Styles */
+.summary-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+}
+
+.summary-label {
+    font-weight: 600;
+    color: #323130;
+}
+
+.summary-value {
+    color: #605e5c;
+}
+
+.summary-detail {
+    padding-left: 20px;
+    font-style: italic;
+}
+
+/* Knowledge Base Tab Panel Styles */
+#kb-knowledge-bases-panel {
+    height: 100%;
+    overflow-y: auto;
+}
+
+#kb-publish-panel {
+    height: 100%;
+    overflow-y: auto;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .knowledge-base-item {
+        padding: 12px;
+    }
+    
+    .kb-name {
+        font-size: 14px;
+    }
+    
+    .kb-path {
+        font-size: 11px;
+    }
+}
+
+/* Height-based responsive adjustments to prevent overlapping */
+@media (max-height: 700px) {
+    /* Hide the "What can I help you with?" text when height is too short */
+    .welcome-greeting {
+        display: none !important;
+    }
+    
+    /* Adjust Microsoft Discovery logo position to be higher */
+    .microsoft-discovery-logo {
+        top: 20% !important;
+    }
+    
+    /* Reduce gap in welcome-centered container */
+    .welcome-centered {
+        gap: 24px !important;
+    }
+}
+
+@media (max-height: 600px) {
+    /* Hide testing environment text for very short heights */
+    .testing-environment-text {
+        display: none !important;
+    }
+    
+    /* Move logo even higher */
+    .microsoft-discovery-logo {
+        top: 15% !important;
+    }
+    
+    /* Further reduce gaps */
+    .welcome-centered {
+        gap: 16px !important;
+    }
+    
+    /* Reduce input container size */
+    .input-container {
+        padding: 8px 12px !important;
+    }
+    
+    .chat-input {
+        min-height: 36px !important;
+    }
+}
+
+@media (max-height: 500px) {
+    /* For very short screens, make the logo smaller but keep it visible */
+    .discovery-logo-icon {
+        width: 36px !important;
+        height: 36px !important;
+    }
+    
+    .discovery-logo-text {
+        font-size: 24px !important;
+    }
+    
+    /* Move logo to top quarter */
+    .microsoft-discovery-logo {
+        top: 12% !important;
+    }
+    
+    /* Minimal gaps */
+    .welcome-centered {
+        gap: 8px !important;
+    }
+}
+
+/* Loading states */
+.knowledge-base-item.loading {
+    opacity: 0.6;
+    pointer-events: none;
+}
+
+.knowledge-base-item.loading::after {
+    content: "";
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 20px;
+    height: 20px;
+    margin: -10px 0 0 -10px;
+    border: 2px solid #f3f3f3;
+    border-top: 2px solid #0078d4;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* Publish output styling */
+.publish-output {
+    white-space: pre-wrap;
+    border: 1px solid #d1d1d1;
+}
+
+/* Knowledge base publish output - add bottom padding */
+#kbPublishOutput.publish-output {
+    padding-bottom: 20px !important;
+}
+
+.publish-output.success {
+    border-color: #28a745;
+    background-color: #f8fff8;
+}
+
+.publish-output.error {
+    border-color: #dc3545;
+    background-color: #fff8f8;
+}
+
+/* Loading and status messages */
+.loading-message, .no-knowledge-bases {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.loading-message i {
+    font-size: 18px;
+    margin-bottom: 4px;
+}
+
+.error-message {
+    font-size: 14px;
+    line-height: 1.4;
+}
+
+.error-message i {
+    margin-right: 5px;
+}
+
+/* Knowledge base additional info */
+.kb-bookshelf, .kb-status {
+    margin-top: 2px;
+}
+
+.kb-bookshelf {
+    font-style: italic;
+}
+
+.kb-status {
+    font-weight: 500;
+}
+
+/* Fix for publish button loading state alignment */
+.kb-publish-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+}
+
+/* When button contains loading spinner and text */
+.kb-publish-btn .loading-spinner {
+    margin: 0;
+}
+
+.kb-publish-btn span {
+    display: inline-block;
+    line-height: 1;
+}

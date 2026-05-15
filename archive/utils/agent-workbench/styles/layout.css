@@ -1,0 +1,104 @@
+/* Layout styles - extracted from app.css */
+.container {
+    display: flex;
+    width: 100%;
+    height: calc(100vh - 36px); /* Updated from 48px to match new header height */
+    flex: 1;
+    background-color: var(--ms-gray-lightest);
+    overflow: hidden; /* Hide any potential overflow */
+}
+
+.left-panel {
+    flex: 0 0 auto; /* Changed from flex: 1 to allow explicit width control */
+    width: 50%; /* Default width, will be overridden by JavaScript */
+    background: var(--ms-white);
+    padding: 16px 24px 36px 24px; /* Increased top padding from 6px to 16px for better spacing */
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto;
+    border-right: 1px solid var(--ms-chat-border);
+    position: relative; /* For absolute positioning of input container */
+    min-width: 300px; /* Minimum width constraint */
+    max-width: calc(100% - 320px); /* Maximum width (leaves 320px minimum for right panel) */
+}
+
+.right-panel {
+    flex: 0 0 auto; /* Changed from flex: 1 to allow explicit width control */
+    width: 50%; /* Default width, will be overridden by JavaScript */
+    background: var(--ms-white);
+    display: flex;
+    flex-direction: column;
+    border-left: 1px solid var(--ms-chat-border);
+    min-width: 300px; /* Minimum width constraint */
+    max-width: calc(100% - 320px); /* Maximum width (leaves 320px minimum for left panel) */
+    overflow: hidden; /* Prevent any overflow from escaping the panel */
+}
+
+/* Resize handle between panels */
+.resize-handle {
+    width: 4px;
+    background: var(--ms-gray-lighter);
+    cursor: col-resize;
+    position: relative;
+    flex-shrink: 0;
+    transition: background-color 0.2s ease;
+    z-index: 10; /* Ensure handle is above panel content */
+}
+
+.resize-handle:hover {
+    background: var(--ms-blue-primary);
+}
+
+.resize-handle::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 3px;
+    height: 20px;
+    background: repeating-linear-gradient(
+        to bottom,
+        var(--ms-gray-medium) 0px,
+        var(--ms-gray-medium) 2px,
+        transparent 2px,
+        transparent 4px
+    );
+    opacity: 0.6;
+    transition: opacity 0.2s ease;
+}
+
+.resize-handle:hover::before {
+    opacity: 1;
+}
+
+/* Active resize state */
+.resize-handle.resizing {
+    background: var(--ms-blue-primary);
+}
+
+.container.resizing {
+    -webkit-user-select: none; /* Safari support */
+    user-select: none; /* Prevent text selection during resize */
+    cursor: col-resize;
+}
+
+.container.resizing .left-panel,
+.container.resizing .right-panel {
+    pointer-events: none; /* Prevent interference during resize */
+}
+
+/* AI Disclaimer at bottom of left panel */
+.ai-disclaimer {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    text-align: center;
+    padding: 6px 16px;
+    background: var(--ms-white);
+    font-size: 12px;
+    color: var(--ms-gray-dark);
+    z-index: 100;
+    flex-shrink: 0;
+}

@@ -1,0 +1,83 @@
+name: quantum-espresso
+description: Quantum ESPRESSO is an integrated suite of open-source computer codes for electronic-structure calculations and materials modeling at the nanoscale. It is based on density-functional theory (DFT), plane waves, and pseudopotentials.
+version: 1.0.0
+category: "Quantum Mechanical Simulations"
+license: GPL-2.0
+
+infra:
+  - name: worker
+    infra_type: container
+    image:
+      acr: "{name}.azurecr.io/quantum-espresso:cpu"
+    compute:
+      min_resources:
+        cpu: 2
+        ram: "8Gi"
+        gpu: 0
+        storage: "0Gi"
+      max_resources:
+        cpu: 96
+        ram: "220Gi"
+        gpu: 1
+        storage: "0Gi"
+      # =========================================================================
+      # INFINIBAND CONFIGURATION
+      # -------------------------------------------------------------------------
+      # Current setting: infiniband: false
+      #   - Jobs run on standard AKS nodes using TCP/ethernet for MPI
+      #   - Works on all nodepools (D-series, NC-series, etc.)
+      #   - Suitable for single-node calculations up to ~200 atoms
+      #
+      # The container uses OpenMPI configured for TCP fallback:
+      #   - OMPI_MCA_btl_tcp_if_include=eth0 (forces TCP over ethernet)
+      #   - Works reliably in containerized environments without IB drivers
+      #
+      # To enable Infiniband (for multi-node HPC workloads):
+      #   1. Set infiniband: true below
+      #   2. Set pool_size: 2-8 for multi-node jobs
+      #   3. Target HB-series VMs (HBv3, HBv4) with IB support
+      #   4. Modify Dockerfile to remove OMPI_MCA_btl_tcp_if_include=eth0
+      #      (let OpenMPI auto-detect IB when available)
+      #
+      # When Infiniband helps:
+      #   - Multi-node calculations (pool_size > 1)
+      #   - Large systems (>200 atoms) with heavy MPI communication
+      #   - Phonon supercells, AIMD, or extensive k-point sampling
+      # =========================================================================
+      infiniband: false
+      recommended_sku:
+        - Standard_NC40ads_H100_v5
+        - Standard_NC24ads_A100_v4
+        - Standard_NC48ads_A100_v4
+        - Standard_NC96ads_A100_v4
+        - Standard_D4s_v6
+        - Standard_D4s_v3
+        # For Infiniband-enabled HPC workloads, consider:
+        # - Standard_HB120rs_v3 (AMD EPYC, 200 Gb/s HDR IB)
+        # - Standard_HB176rs_v4 (AMD Genoa, 400 Gb/s NDR IB)
+        # - Standard_HC44rs (Intel Xeon, 100 Gb/s EDR IB)
+      pool_type: static
+      # pool_size: 1 = single-node only (no IB needed)
+      # For multi-node with IB, set pool_size: 2-8
+      pool_size: 1
+
+code_environments:
+  - language: python3
+    command: "python3 -u \"/{{scriptName}}\" > {{output_directory}}/logs.out 2>&1; cp -r /app/workdir/* {{output_directory}}/ 2>/dev/null || true; tail -n 100 {{output_directory}}/logs.out"
+    description: |
+      Python code environment with Quantum ESPRESSO for density-functional theory (DFT) calculations.
+      Use this for complete automated workflows including SCF, relaxation, band structure, DOS,
+      and phonon calculations. The script can call QE executables (pw.x, ph.x, pp.x, dos.x, etc.)
+      via subprocess and perform pre/post-processing with ASE and Python libraries.
+
+      Available QE executables:
+        - pw.x: Main program for SCF, relaxation, molecular dynamics, and band structure
+        - pp.x: Post-processing for charge density, potentials, and other properties
+        - dos.x: Density of states calculation
+        - projwfc.x: Projected density of states and band character analysis
+        - bands.x: Band structure post-processing
+        - ph.x: Phonon calculations (if built)
+
+      Pseudopotentials: SSSP Efficiency library pre-installed at /opt/apps/qe/7.3/pseudo
+
+    infra_node: worker

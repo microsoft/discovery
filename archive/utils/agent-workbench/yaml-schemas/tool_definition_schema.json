@@ -1,0 +1,231 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Tool Definition Schema",
+  "description": "JSON schema for validating tool definition YAML files",
+  "type": "object",
+  "required": ["name", "description", "version", "infra"],
+  "properties": {
+    "name": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_-]*$",
+      "description": "Tool name, must start with lowercase letter and contain only lowercase, numbers, underscore, or dash"
+    },
+    "description": {
+      "type": "string",
+      "minLength": 20,
+      "description": "Detailed description of the tool's purpose and capabilities"
+    },
+    "version": {
+      "type": "string",
+      "pattern": "^\\d+\\.\\d+\\.\\d+$",
+      "description": "Semantic version (e.g., 1.0.0)"
+    },
+    "category": {
+      "type": "string",
+      "description": "Tool category"
+    },
+    "license": {
+      "type": "string",
+      "description": "License information"
+    },
+    "actions": {
+      "type": "array",
+      "description": "List of pre-defined actions that the tool can perform",
+      "items": {
+        "type": "object",
+        "required": ["name", "description", "infra_node"],
+        "properties": {
+          "name": {
+            "type": "string",
+            "pattern": "^[a-zA-Z][a-zA-Z0-9_-]*$",
+            "description": "Action name"
+          },
+          "description": {
+            "type": "string",
+            "minLength": 20,
+            "description": "Detailed description of the action's purpose and functionality"
+          },
+          "infra_node": {
+            "type": "string",
+            "description": "Reference to infrastructure node name where this action runs"
+          },
+          "input_schema": {
+            "type": "object",
+            "description": "JSON schema defining the input parameters for this action",
+            "properties": {
+              "type": {
+                "type": "string",
+                "enum": ["object"]
+              },
+              "properties": {
+                "type": "object"
+              },
+              "required": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            },
+            "additionalProperties": true
+          },
+          "command": {
+            "type": "string",
+            "description": "Command template to execute this action, with parameter substitution"
+          },
+          "environment_variables": {
+            "type": "array",
+            "description": "Environment variables to set when executing this action",
+            "items": {
+              "type": "object",
+              "required": ["name", "value"],
+              "properties": {
+                "name": {
+                  "type": "string",
+                  "description": "Environment variable name"
+                },
+                "value": {
+                  "type": "string",
+                  "description": "Environment variable value (can include template substitutions)"
+                }
+              },
+              "additionalProperties": false
+            }
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    "infra": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["name", "infra_type", "image", "compute"],
+        "properties": {
+          "name": {
+            "type": "string",
+            "pattern": "^[a-zA-Z][a-zA-Z0-9_-]*$",
+            "description": "Infrastructure node name"
+          },
+          "infra_type": {
+            "type": "string",
+            "enum": ["container", "vm", "bare_metal"],
+            "description": "Type of infrastructure"
+          },
+          "image": {
+            "type": "object",
+            "required": ["acr"],
+            "properties": {
+              "acr": {
+                "type": "string",
+                "pattern": "^(\\{name\\}|[a-zA-Z0-9][a-zA-Z0-9-]*)\\.azurecr\\.io/[a-zA-Z0-9][a-zA-Z0-9_/-]*:[a-zA-Z0-9][a-zA-Z0-9._-]*$",
+                "description": "Azure Container Registry image reference. Use {name} as placeholder for ACR name from settings."
+              }
+            },
+            "additionalProperties": false
+          },
+          "compute": {
+            "type": "object",
+            "required": ["min_resources", "max_resources"],
+            "properties": {
+              "min_resources": {
+                "$ref": "#/definitions/resourceSpec"
+              },
+              "max_resources": {
+                "$ref": "#/definitions/resourceSpec"
+              },
+              "infiniband": {
+                "type": "boolean",
+                "description": "Whether InfiniBand networking is required"
+              },
+              "recommended_sku": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "pattern": "^(Basic_|Standard_)[A-Za-z0-9_-]+$"
+                },
+                "description": "Recommended Azure SKUs"
+              },
+              "pool_type": {
+                "type": "string",
+                "enum": ["static", "dynamic", "auto"],
+                "description": "Type of compute pool"
+              },
+              "pool_size": {
+                "type": "integer",
+                "minimum": 1,
+                "description": "Size of the compute pool"
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    "code_environments": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["language", "command", "description", "infra_node"],
+        "properties": {
+          "language": {
+            "type": "string",
+            "enum": ["python", "python3", "bash", "powershell", "r", "julia", "nodejs"],
+            "description": "Programming language"
+          },
+          "command": {
+            "type": "string",
+            "description": "Command template to execute code"
+          },
+          "description": {
+            "type": "string",
+            "minLength": 10,
+            "description": "Description of the code environment"
+          },
+          "infra_node": {
+            "type": "string",
+            "description": "Reference to infrastructure node name"
+          }
+        },
+        "additionalProperties": false
+      }
+    }
+  },
+  "anyOf": [
+    { "required": ["actions"] },
+    { "required": ["code_environments"] }
+  ],
+  "definitions": {
+    "resourceSpec": {
+      "type": "object",
+      "required": ["cpu", "ram", "storage"],
+      "properties": {
+        "cpu": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Number of CPU cores"
+        },
+        "ram": {
+          "type": "string",
+          "pattern": "^\\d+(\\.\\d+)?(Gi|Mi|Ti)$",
+          "description": "Memory specification (e.g., 112Gi, 4Mi)"
+        },
+        "storage": {
+          "type": "string",
+          "pattern": "^\\d+(\\.\\d+)?(Gi|Mi|Ti)$",
+          "description": "Storage specification (e.g., 64Gi, 1Ti)"
+        },
+        "gpu": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Number of GPU units"
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}

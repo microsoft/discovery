@@ -1,0 +1,62 @@
+# BindingDB Docker Build - Ignore Rules
+# Exclude large unnecessary files from Docker build context for faster builds
+
+# Database files
+# NOTE: bindingdb.db is NOT ignored - it's needed for the COPY command in Dockerfile
+# Only exclude the journal/temporary database files
+*.db-journal
+*.db-wal
+*.db-shm
+
+# Downloaded BindingDB TSV files (very large)
+BindingDB_All*.tsv
+BindingDB_All*.zip
+BindingDB_All*.tar.gz
+
+# Python cache and compiled files
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+**/__pycache__/
+
+# Virtual environments
+venv/
+env/
+ENV/
+.venv
+
+# Git files
+.git/
+.gitignore
+.gitattributes
+
+# IDE and editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Test outputs and logs
+test_results.txt
+*.log
+output/
+
+# Documentation (not needed in container)
+README.md
+*.md
+
+# Temporary files
+*.tmp
+*.bak
+*.old
+.cache/
+
+# Old/backup files
+Dockerfile.rest-only
+Makefile
+*.old
+*.backup

@@ -1,0 +1,59 @@
+name: crest
+description: >-
+  CREST (Conformer-Rotamer Ensemble Sampling Tool) for automated exploration of
+  low-energy molecular chemical space using GFN-xTB semiempirical methods.
+  Supports conformational search (iMTD-GC, iMTD-sMTD), protonation/deprotonation
+  screening, tautomer generation, conformational entropy, QCG explicit solvation,
+  MSREACT fragmentation, MECP, and PCA clustering.
+version: 1.0.0
+category: "Quantum Mechanical Simulations"
+license: LGPL-3.0
+
+infra:
+  - name: worker
+    infra_type: container
+    image:
+      acr: "{name}.azurecr.io/crest:latest"
+    compute:
+      min_resources:
+        cpu: 2
+        ram: "8Gi"
+        gpu: 0
+        storage: "0Gi"
+      max_resources:
+        cpu: 96
+        ram: "220Gi"
+        gpu: 0
+        storage: "0Gi"
+      infiniband: false
+      recommended_sku:
+        - Standard_D4s_v6
+        - Standard_D8s_v6
+        - Standard_D32s_v6
+        - Standard_E8s_v5
+        - Standard_E32s_v5
+      pool_type: static
+      pool_size: 1
+
+code_environments:
+  - language: python3
+    command: "python3 -u \"/{{scriptName}}\" > {{output_directory}}/logs.out 2>&1; cp -r /workdir/* {{output_directory}}/ 2>/dev/null || true; tail -n 100 {{output_directory}}/logs.out"
+    description: |
+      Python code environment with CREST 3.0 and xtb for conformational sampling
+      and molecular chemical space exploration.
+
+      Key capabilities:
+        - iMTD-GC and iMTD-sMTD conformational search algorithms
+        - GFN2-xTB, GFN1-xTB, GFN-FF, GFN0-xTB methods
+        - ALPB and GBSA implicit solvation models
+        - Protonation/deprotonation/tautomer screening
+        - Conformational entropy (S_conf) calculation
+        - QCG quantum cluster growth (explicit microsolvation)
+        - MSREACT mass spectral fragmentation prediction
+        - MECP minimum energy crossing points
+        - PCA + k-Means ensemble clustering
+        - Standalone ANCOPT geometry optimization
+        - CREGEN ensemble sorting and filtering
+
+      Python libraries: numpy, scipy, matplotlib, pandas, rdkit, ase, openbabel
+    infra_node: worker

@@ -1,0 +1,263 @@
+
+# =============================================================================
+# PROJECT PLANNER WORKFLOW
+# =============================================================================
+# This workflow provides the planning phase for various project types.
+# It focuses solely on analyzing user requirements and creating comprehensive
+# project plans that can be used by other workflows or agents for execution.
+#
+# Workflow Purpose:
+# - Dedicated planning workflow for design and development projects
+# - Analyzes user requirements and creates detailed project plans
+# - Provides structured output for use by execution workflows
+# - Serves as the initial planning stage before delegating to specialized agents
+#
+# Workflow Flow:
+# 1. Project Planning - Analyze requirements and create comprehensive plan
+# 2. Summarize - Generate summary and analysis of the planning results
+# 3. End - Complete planning phase and provide plan output
+# =============================================================================
+
+name: PlannerHitlWf
+# =============================================================================
+# PLANNER WORKFLOW STATES DEFINITION
+# =============================================================================
+# This planning workflow implements a three-state pattern:
+# 1. Planning state - Analyzes requirements and creates comprehensive project plan
+# 2. Summarize state - Generates summary and analysis of the planning results  
+# 3. End state - Completes planning phase with structured plan output
+#
+# The workflow serves as a dedicated planning service that can be used by
+# other workflows or systems that need project plans for various types of projects.
+# =============================================================================
+
+states:
+# ---------------------------------------------------------------------------
+# PROJECT PLANNING STATE
+# ---------------------------------------------------------------------------
+# Core planning state where the Planner agent analyzes user requirements
+# and creates a comprehensive project plan. This plan serves as the foundation
+# for subsequent execution by specialized agents in other workflows.
+# ---------------------------------------------------------------------------
+- name: ProjectPlanning
+  actors:
+    - agent: PlannerHitl
+      inputs:
+        userGoal: userGoal                    # User's project requirements and objectives
+        dataHandlingContext: dataHandlingContext  # Data lifecycle management guidelines
+        messageId: messageId                  # Unique message identifier for tracking
+        nodePoolContext: nodePoolContext     # Compute resource context
+        agentTeam: agentTeam                 # Available agent descriptions and capabilities
+        workflowContext: workflowContext     # Workflow execution context and history
+      thread: MainThread
+      humanInLoopMode: never               # Fully automated planning execution
+      streamOutput: true                   # Enable real-time planning output streaming
+  isFinal: false
+
+# ---------------------------------------------------------------------------
+# PLANNING SUMMARY STATE
+# ---------------------------------------------------------------------------
+# Secondary state where the SummaryAgent analyzes and summarizes the planning
+# results, providing comprehensive analysis and insights about the generated plan.
+# ---------------------------------------------------------------------------
+- name: Summarize
+  actors:
+    - agent: SummaryAgent
+      inputs:
+        userGoal: userGoal                    # User's original project requirements
+        dataHandlingContext: dataHandlingContext  # Data lifecycle management guidelines
+        messageId: messageId                  # Unique message identifier for tracking
+        nodePoolContext: nodePoolContext     # Compute resource context
+      thread: MainThread                     # Primary execution thread
+      humanInLoopMode: never                # Fully automated summary generation
+      streamOutput: true                    # Enable real-time summary output streaming
+  isFinal: false
+
+# ---------------------------------------------------------------------------
+# END STATE
+# ---------------------------------------------------------------------------
+# Terminal state for the planning workflow. The planning phase is complete,
+# summary has been generated, and the comprehensive project plan with analysis
+# is available for use by execution workflows.
+# ---------------------------------------------------------------------------
+- name: End
+  actors: []
+  isFinal: true
+# ===========================================================================
+# PLANNER WORKFLOW TRANSITION LOGIC
+# ===========================================================================
+# Linear progression for the planning workflow:
+# ProjectPlanning -> Summarize -> End
+# 
+# The workflow transitions from planning to summary generation, then to completion
+# after both the comprehensive project plan and analysis summary are created.
+# ===========================================================================
+
+transitions:
+# ---------------------------------------------------------------------------
+# FROM PROJECT PLANNING TO SUMMARIZE
+# ---------------------------------------------------------------------------
+# Transition to summary generation after the project plan has been created
+# ---------------------------------------------------------------------------
+- from: ProjectPlanning
+  to: Summarize
+# ---------------------------------------------------------------------------
+# FROM SUMMARIZE TO END
+# ---------------------------------------------------------------------------
+# Final transition to completion after summary analysis is complete
+# ---------------------------------------------------------------------------
+- from: Summarize
+  to: End
+
+# =============================================================================
+# PLANNER WORKFLOW VARIABLES DEFINITION
+# =============================================================================
+# Variables provide context and configuration for the planning workflow.
+# These enable both the Planner and SummaryAgent to understand requirements,
+# create comprehensive project plans, and generate detailed analysis summaries.
+# =============================================================================
+
+variables:
+  # ---------------------------------------------------------------------------
+  # USER GOAL VARIABLE
+  # ---------------------------------------------------------------------------
+  # Contains the user's project requirements and objectives that will
+  # be analyzed by the Planner agent to create a comprehensive project plan
+  # ---------------------------------------------------------------------------
+  - Type: userDefined
+    name: userGoal
+    description: "The user's project requirements and objectives for the planning workflow."
+
+  # ---------------------------------------------------------------------------
+  # WORKFLOW CONTEXT VARIABLE
+  # ---------------------------------------------------------------------------
+  # Provides the Planner agent with understanding of its role in the planning
+  # workflow and how to create plans for the specialized agent team
+  # ---------------------------------------------------------------------------
+  - Type: userDefined
+    name: workflowContext
+    value: "You are part of a specialized planning workflow for design and development projects.
+      Your role is to analyze user requirements and create comprehensive project plans that will be executed by a team of 5 specialized AI agents.
+      Create detailed, actionable plans that can be followed by the agent team to achieve the user's project goals.
+      Consider the full capabilities of each agent when creating plans, ensuring proper sequencing and coordination of design, development, and verification tasks."
+
+  # ---------------------------------------------------------------------------
+  # CORE PLANNING WORKFLOW VARIABLES
+  # ---------------------------------------------------------------------------
+  # Essential variables for planning workflow execution and communication
+  # ---------------------------------------------------------------------------
+  - Type: thread
+    name: MainThread                        # Primary execution thread
+  - Type: userDefined
+    name: nodePoolContext                   # Compute resource allocation context
+  - Type: userDefined
+    name: messageId                         # Unique message tracking identifier
+  
+  # ---------------------------------------------------------------------------
+  # DATA HANDLING CONTEXT VARIABLE
+  # ---------------------------------------------------------------------------
+  # Comprehensive data lifecycle management guidelines for all agents
+  # Defines tools and procedures for data preview, promotion, and management
+  # ---------------------------------------------------------------------------
+  - Type: userDefined
+    name: dataHandlingContext              # Comprehensive data lifecycle management capabilities
+    value: "
+      GUIDELINES:
+      
+      **Definitions**
+      - **Virtual path**: System-assigned absolute namespace for passing data between steps (e.g., `/step0/app/outputs`). Not the container's real filesystem path.
+      - **Container path**: Absolute path inside the tool container (e.g., `/app/outputs`). Used only in `outputMounts` and `inputMountPath`.
+      - **Mapping**: Tool reads/writes container (mount) path → system maps to virtual path. Pass **virtual path** downstream, not container path.
+      - **Implicit extension**: If `/step0/app/outputs` exists, `/step0/app/outputs/reports` is valid (assuming 'reports' exists in the data pointed to by `/step0/app/outputs`.  Make extension explicit by giving the implicit path a description.
+      -**No shortening virtual paths**: Implied 'shortening' is disallowed (So if you had `/step0/app/outputs/reports` as the only item in the context, shortening it to just `/step0/app/outputs` would not be valid).
+      ---
+      
+      **Global Rules**
+      1. ALL paths must be ABSOLUTE. Never use relative paths.
+      2. Retrieve current data context before any action.
+      3. Preview data before updating descriptions.
+      4. Update virtualPath description **before** promoting to data asset (or description won't propagate).
+      5. Promote only final outputs for end user; intermediate results don't need promotion.
+      
+      ---
+      
+      **Tool Mount Rules**
+      - `outputMounts` = absolute container path where tool stores outputs.  Only directories are permitted.
+      - `inputMounts` = array of `{ virtualPath: <virtual path>, inputMountPath: <absolute container path> }`. Files or directories are permitted. The mount path will be of the type (file/directory) that is keyed by the virtual path given.
+      
+        ---
+        
+        **Example Flow**
+        1. Tool writes `report.txt` to `/app/outputs` (container path).
+        2. System maps to virtual path `/step0/app/outputs`.
+        3. Update description for `/step0/app/outputs`.
+        4. Next tool mounts `/step0/app/outputs` as `virtualPath`; `inputMountPath = /app/inputs`.
+        ```json
+        inputMounts: [ { virtualPath: /step0/app/outputs, inputMountPath: /app/inputs } ]
+        ```
+        5. Tool produces `step1/app/outputs`
+        6. Update description of `step1/app/outputs`
+        7. Promote `step1/app/outputs`"
+
+  # ---------------------------------------------------------------------------
+  # SIMPLIFIED AGENT TEAM DEFINITION VARIABLE
+  # ---------------------------------------------------------------------------
+  # Easy-to-understand descriptions of 5 core specialized agents and their
+  # capabilities. Used by the Planner agent to create informed project plans
+  # that demonstrate sophisticated multi-agent coordination and planning.
+  # ---------------------------------------------------------------------------
+  - Type: userDefined
+    name: agentTeam
+    value: "Here are the 5 specialized agents available for project execution:
+
+      1. **Planner** - Master coordinator and strategic planner
+        Role: Analyzes requirements and creates comprehensive project plans
+        Capabilities:
+        - Breaks down complex user goals into manageable tasks
+        - Creates step-by-step execution plans with proper sequencing
+        - Coordinates overall project strategy and resource allocation
+        - Identifies dependencies and potential risks
+
+      2. **Designer** - Creative design and architecture specialist  
+        Role: Creates designs, architectures, and visual solutions
+        Capabilities:
+        - Transforms requirements into concrete design solutions
+        - Creates system architectures and technical specifications
+        - Develops user interfaces and experience designs
+        - Produces design documentation and blueprints
+
+      3. **Developer** - Implementation and coding expert
+        Role: Builds, codes, and implements the actual solutions
+        Capabilities:
+        - Writes high-quality, efficient code in multiple languages
+        - Implements designs according to specifications
+        - Integrates different system components
+        - Optimizes performance and handles technical complexity
+
+      4. **QualityChecker** - Validation and review specialist
+        Role: Ensures quality, correctness, and compliance
+        Capabilities:
+        - Reviews all work products for accuracy and completeness
+        - Identifies errors, inconsistencies, and improvement opportunities
+        - Validates that solutions meet original requirements
+        - Performs quality assurance and compliance checks
+
+      5. **TestReporter** - Verification and communication expert
+        Role: Tests solutions and provides comprehensive reporting
+        Capabilities:
+        - Creates and executes comprehensive test plans
+        - Validates functionality under various scenarios
+        - Documents results and generates final reports
+        - Communicates outcomes and recommendations to stakeholders
+
+      This streamlined team demonstrates sophisticated AI planning by showing how a Planner can coordinate multiple specialized roles, create detailed execution strategies, and ensure comprehensive coverage of all project phases from conception to completion."
+
+# =============================================================================
+# PLANNER WORKFLOW START STATE
+# =============================================================================
+# The planning workflow begins with the project planning state, where user
+# requirements are analyzed and comprehensive project plans are created, followed
+# by summary generation and final completion.
+# =============================================================================
+
+startstate: ProjectPlanning

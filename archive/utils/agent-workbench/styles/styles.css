@@ -1,0 +1,20 @@
+/* Load variables and global resets first */
+@import url("base.css");
+/* Core sections */
+@import url("header.css");
+@import url("layout.css");
+@import url("agent-selector.css");
+@import url("chat.css");
+@import url("messages.css");
+@import url("input.css");
+@import url("code.css");
+@import url("tabs.css");
+@import url("outputs.css");
+@import url("execution.css");
+@import url("conversation.css");
+@import url("modal.css");
+@import url("discovery.css");
+@import url("knowledge-base.css");
+@import url("utilities.css");
+/* Then load the main app styles (to be modularized progressively) */
+@import url("app.css");

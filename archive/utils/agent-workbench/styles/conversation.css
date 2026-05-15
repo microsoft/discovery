@@ -1,0 +1,71 @@
+/* Conversation Management Styles */
+.conversation-info {
+	background: var(--surface-color);
+	border: 1px solid var(--border-color);
+	border-radius: 8px;
+	margin: 10px 0;
+	padding: 12px;
+	font-size: 0.9em;
+}
+
+.conversation-stats {
+	display: flex;
+	align-items: center;
+	gap: 20px;
+	flex-wrap: wrap;
+}
+
+.conversation-stats .stat {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	color: var(--text-secondary);
+}
+
+.conversation-stats .icon {
+	font-size: 1.1em;
+}
+
+.token-bar {
+	display: inline-block;
+	width: 60px;
+	height: 6px;
+	background: var(--border-color);
+	border-radius: 3px;
+	overflow: hidden;
+	margin-left: 6px;
+}
+
+.token-fill {
+	height: 100%;
+	transition: width 0.3s ease;
+	display: block;
+	min-width: 1px;
+}
+
+.conversation-settings-btn,
+.conversation-feedback-btn {
+	background: transparent;
+	color: var(--ms-gray-dark);
+	border: 1px solid transparent;
+	padding: 6px;
+	border-radius: 4px;
+	cursor: pointer;
+	transition: all 0.2s ease;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+}
+
+.conversation-settings-btn:hover,
+.conversation-feedback-btn:hover {
+	background: rgba(255, 255, 255, 0.15);
+	border-color: rgba(255, 255, 255, 0.25);
+	transform: translateY(-1px);
+}
+
+.conversation-settings-btn svg,
+.conversation-feedback-btn svg {
+	width: 16px;
+	height: 16px;
+}

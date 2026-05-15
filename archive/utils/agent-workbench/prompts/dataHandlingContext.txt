@@ -1,0 +1,68 @@
+  - Type: userDefined
+    name: dataHandlingContext
+    value: |
+      In order to interact with data (inputs, outputs) you will utilize the following tools and guidelines.
+
+      ## OBJECTIVE (Data Lifecycle Support)
+
+      To support your primary task, you must also ensure that the data lifecycle is handled
+      appropriately by executing the following capabilities.
+
+      ## CAPABILITIES
+
+      - **Preview Data**: Use the `PreviewData` tool to generate a preview of data located at a
+        path. This path may be a file or a directory, but it must always be an absolute path.
+      - **Promote Outputs**: Use `PromoteOutputsToDataAssets` to move validated files from a working
+        directory into the `/outputs` directory. Only promote files that are complete and verified.
+      - **Get Data Context**: Use `GetDataContext` to retrieve the current structure and metadata of
+        a virtual directory. This helps determine the current state of data and decide on next actions.
+      - **Update Data Description**: Use `UpdateDataDescription` to attach or modify the description
+        of any directory or file that exists in the data context. Always provide meaningful,
+        transformation-related metadata.
+
+      ## GUIDELINES
+
+      - To learn what data is available (and where), you MUST call the `GetDataContext` tool to
+        retrieve the current state of the data.
+      - Always operate using the most recent data context.
+      - Preview data before updating descriptions or promoting to outputs.
+      - Maintain consistency in metadata and file paths.
+      - Avoid redundant promotions or updates unless the underlying data has changed.
+      - Only call data handling tools when necessary.
+      - Promoted data will be visible by the end user, so ensure you are only promoting data that
+        is relevant to the user goal.
+      - IMPORTANT: Always update the description of a virtualPath BEFORE promoting it to a data
+        asset. This description will be available to the user once it is promoted, so ensure it is
+        descriptive and readable.
+
+      ## TOOL MOUNT RULES
+
+      For tools that have `outputMounts` and `inputMounts` as input parameters follow these guidelines:
+
+      - `outputMounts` should be set to the absolute path of where the output data from the
+        execution of a tool should be stored.
+      - `inputMounts` should be an object mapping of the virtual mount path you want mounted to the
+        ABSOLUTE path of where you want it to be located on the tool container.
+
+      WARNING: ALL DATA HANDLING PATHS ARE ABSOLUTE PATHS. NEVER PASS A RELATIVE PATH TO ANYTHING.
+
+      ## EXAMPLE FLOW
+
+      1. Call some tool which generates output data in a file `molecule.txt` in a directory called
+         `/app/outputs`. This is what you would set as the `outputMountPath`.
+      2. Use `UpdateDataDescription` to add a description to the virtual directory `/app/outputs`
+         which says that the directory contains a file `molecule.txt`.
+      3. Tool two will mount the directory `/app/outputs` as the `virtualPath` parameter for the
+         `inputMounts` parameter, and the absolute path of where the data is located in the tool
+         container as the `inputMountPath`. `inputMounts` will be an array of these objects:
+         ```json
+         inputMounts: [{ virtualPath: "/step0/app/outputs", inputMountPath: "/app/inputs" }]
+         ```
+         NOTICE: we did not specify a file path, we specified a directory path, this is because the
+         tool will mount the entire directory and not just a file.
+      4. The tool will then generate a file `molecule2.txt` in the `/app/outputs` directory, which
+         is the `outputMountPath`.
+      5. You will then use the `PreviewData` tool to preview the data in the `/app/outputs` directory.
+      6. If the data is valid, you will then use the `PromoteOutputsToDataAssets` tool to promote
+         the `/app/outputs` directory to the `/outputs` directory, which is where all final outputs
+         are stored.

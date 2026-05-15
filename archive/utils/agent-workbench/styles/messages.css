@@ -1,0 +1,258 @@
+/* Chat messages */
+.chat-message {
+	display: flex;
+	flex-direction: column;
+	opacity: 0;
+	transform: translateY(20px);
+	transition: all 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+	max-width: 95%;
+	margin-bottom: 16px;
+	position: relative;
+}
+
+.chat-message.visible {
+	opacity: 1;
+	transform: translateY(0);
+}
+
+.chat-message:hover {
+	transform: translateY(-1px);
+}
+
+.chat-message.user-message {
+	align-self: flex-end;
+	margin-left: auto;
+	margin-right: 15px;
+}
+
+.chat-message.assistant-message {
+	align-self: flex-start;
+	margin-right: auto;
+	width: 100%;
+	max-width: 95%;
+}
+
+.chat-message.system-message {
+	align-self: center;
+	justify-content: center;
+	max-width: 60%;
+	margin: 8px auto;
+}
+
+.message-header {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	margin-bottom: 12px;
+	width: 100%;
+}
+
+.assistant-header-row {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+}
+
+.assistant-name {
+	font-weight: 600;
+	color: var(--ms-gray-dark);
+	font-size: 14px;
+}
+
+.message-content {
+	flex: 1;
+	min-width: 0;
+	width: 100%;
+}
+
+.message-text {
+	background: var(--ms-white);
+	border: 1px solid var(--ms-chat-border);
+	border-radius: 16px;
+	padding: 8px 20px; /* Further reduced vertical padding from 12px to 8px */
+	word-wrap: break-word;
+	font-size: 14px;
+	line-height: 1.5;
+	box-shadow: 0 1px 4px rgba(0,0,0,0.04);
+	/* Default: normal white-space for markdown content */
+}
+
+.user-message .message-text {
+	background: #f5f5f5; /* Changed from blue to light grey */
+	color: var(--ms-gray-dark); /* Changed from white to dark grey for readability */
+	border-color: var(--ms-chat-border);
+	white-space: pre-wrap; /* Preserve user's original formatting including line breaks */
+}
+
+.assistant-message .message-text {
+	background: var(--ms-chat-assistant-bg);
+}
+
+.system-message .message-text {
+	background: var(--ms-gray-bg);
+	border-color: var(--ms-gray-lighter);
+	font-style: italic;
+	text-align: center;
+	border-radius: 12px;
+	padding: 12px 16px;
+}
+
+.error-message .message-text {
+	background: #FEF2F2;
+	border-color: var(--ms-error);
+	color: var(--ms-error);
+}
+
+.error-text {
+	color: var(--ms-error) !important;
+}
+
+/* Inline code styling (for markdown content) */
+.message-text code {
+	background: var(--ms-gray-bg);
+	color: var(--ms-gray-dark);
+	padding: 0.2em 0.4em;
+	border-radius: 4px;
+	font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+	font-size: 0.9em;
+	border: 1px solid var(--ms-chat-border);
+}
+
+.message-text blockquote {
+	border-left: 4px solid var(--ms-gray-lighter);
+	margin: 1em 0;
+	padding: 0.5em 1em;
+	background: var(--ms-gray-bg);
+	font-style: italic;
+	border-radius: 0 4px 4px 0;
+}
+
+.message-text strong {
+	font-weight: 600;
+	color: inherit;
+}
+
+.message-text em {
+	font-style: italic;
+}
+
+.message-text h1, 
+.message-text h2, 
+.message-text h3 {
+	margin-top: 1.5em;
+	margin-bottom: 0.8em;
+}
+
+.message-text h1 {
+	font-size: 1.3em;
+	border-bottom: 2px solid var(--ms-gray-lightest);
+	padding-bottom: 0.3em;
+}
+
+.message-text h2 {
+	font-size: 1.2em;
+}
+
+.message-text h3 {
+	font-size: 1.1em;
+}
+
+.message-text ul, 
+.message-text ol {
+	margin: 0.5em 0; /* Reduced from 1em to 0.5em */
+	padding-left: 2em;
+}
+
+.message-text li {
+	margin: 0.25em 0; /* Reduced from 0.5em to 0.25em for tighter spacing */
+}
+
+.message-text p {
+	margin: 1em 0;
+}
+
+.message-text p:first-child {
+	margin-top: 0;
+}
+
+.message-text p:last-child {
+	margin-bottom: 0;
+}
+
+/* Horizontal rule (separator) styling for markdown */
+.message-text hr {
+	border: none;
+	border-top: 1px solid var(--ms-gray-lighter); /* Using lighter grey instead of default */
+	margin: 1.5em 0;
+	opacity: 0.6; /* Make it even lighter */
+}
+
+/* Typing indicator */
+.typing-indicator .message-text {
+	background: var(--ms-chat-assistant-bg);
+	border-color: var(--ms-chat-border);
+	padding: 16px 20px;
+}
+
+.loading-animation {
+	margin-top: 4px; /* Match the avatar's margin-top for vertical alignment */
+	min-height: 32px; /* Match the avatar height to ensure proper alignment */
+}
+
+.loading-animation .loading-header {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	margin-bottom: 4px;
+}
+
+.loading-animation .loading-header img {
+	border-radius: 50%;
+	filter: opacity(0.8);
+}
+
+.loading-animation .loading-progress {
+	margin-left: 28px; /* Align with text after icon (20px icon + 8px gap) */
+}
+
+.loading-animation .loading-progress img {
+	/* Do not apply border-radius to progress bar GIF */
+	filter: opacity(0.8);
+	width: 128px;
+	height: 8px;
+}
+
+.loading-text {
+	color: var(--ms-gray-medium);
+	font-size: 14px;
+	font-weight: 500;
+}
+
+/* Keep the old typing-dots styles for backwards compatibility */
+.typing-dots {
+	display: flex;
+	gap: 4px;
+	align-items: center;
+}
+
+.typing-dots span {
+	width: 8px;
+	height: 8px;
+	border-radius: 50%;
+	background: var(--ms-gray-light);
+	animation: typing 1.4s infinite ease-in-out;
+}
+
+.typing-dots span:nth-child(1) { animation-delay: -0.32s; }
+.typing-dots span:nth-child(2) { animation-delay: -0.16s; }
+
+@keyframes typing {
+	0%, 80%, 100% {
+		transform: scale(0.8);
+		opacity: 0.5;
+	}
+	40% {
+		transform: scale(1);
+		opacity: 1;
+	}
+}

@@ -1,0 +1,76 @@
+Organize and finalize this comprehensive API documentation while preserving all technical details:
+
+**Project Path**: {scripts_path}
+**Total Scripts**: {total_scripts}
+**Folder Count**: {folder_count}
+
+{combined_api_doc}
+
+**IMPORTANT**: Exclude any files named `entrypoint.sh` from the documentation - these are Docker setup files and will confuse AI agents trying to understand the actual APIs.
+
+**CRITICAL IMPORT PATH REQUIREMENT**: When writing ALL code examples and import statements, use import paths that reflect the Docker runtime environment. If the project uses `WORKDIR /app` in its Dockerfile and copies Python files directly to the working directory, use direct imports WITHOUT package prefixes:
+- ✅ CORRECT: `from io_utils import setup_session_logger`
+- ❌ WRONG: `from app.io_utils import setup_session_logger`
+
+This applies to ALL code examples, function calls, and import statements throughout the documentation.
+
+Create the final organized documentation with complete technical specifications:
+
+## 1. **Executive Summary**
+- Project purpose and capabilities
+- Key features and use cases
+
+## 2. **Docker Environment and Available Libraries**
+- **Base Environment**: Docker base image and included packages
+- **Installed Dependencies**: Complete list of available libraries (conda/pip packages)
+- **System Tools**: Command-line utilities and binaries available in container
+- **Standard Libraries**: Python standard modules accessible
+- **Third-Party Packages**: External libraries (RDKit, pandas, numpy, etc.) with versions
+- **Integration Capabilities**: How these libraries extend project functionality
+
+## 3. **Complete API Reference**
+- All functions organized by module with full signatures
+- Parameter specifications and return value details
+- Library dependencies for each function
+- Integration patterns with available Docker packages
+
+### For Each Module:
+- **Module Purpose**: Role in the overall system
+- **Functions**: List with brief descriptions
+- **Usage Patterns**: How functions are typically used together
+
+### For Each Function:
+```
+function_name(param1: Type, param2: Type = default) -> ReturnType
+```
+- **Purpose**: What the function does
+- **Parameters**: 
+  - `param1` (Type): Description, constraints, example values
+  - `param2` (Type, optional): Description, default behavior, example values
+- **Returns**: Type and structure description with example return values
+- **Raises**: All exception types with conditions that trigger them
+- **Example Usage**:
+  ```python
+  result = function_name("example_input", param2=custom_value)
+  # Returns: {"key": "value", "status": "success"}
+  ```
+
+## 5. **Library Integration Examples**
+- 2-3 Real examples combining project functions with Docker libraries
+
+## 6. **Error Handling and Troubleshooting**
+- Common error scenarios and solutions
+- Library-specific error patterns
+- Debugging techniques and logging
+
+Ensure the final documentation contains:
+✅ Complete function signatures with types
+✅ Detailed parameter specifications 
+✅ Complete return value documentation
+✅ Working code examples for every function
+✅ Error handling examples
+✅ Integration patterns with real code
+✅ Command-line usage examples (if applicable)
+✅ Data structure specifications with examples
+
+Optimize for immediate AI agent implementation - no additional research should be needed to start using these APIs effectively.
