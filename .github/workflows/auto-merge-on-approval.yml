@@ -47,19 +47,28 @@ jobs:
         run: |
           set -euo pipefail
           PR_NUMBER=""
+          PR_AUTHOR=""
           case "${{ github.event_name }}" in
             pull_request_target|pull_request_review)
               PR_NUMBER="${{ github.event.pull_request.number }}"
+              PR_AUTHOR="${{ github.event.pull_request.user.login }}"
               ;;
             check_suite)
               PR_NUMBER=$(jq -r '.check_suite.pull_requests[0].number // empty' "$GITHUB_EVENT_PATH")
+              PR_AUTHOR=$(jq -r '.check_suite.pull_requests[0].user.login // empty' "$GITHUB_EVENT_PATH")
               ;;
           esac
           if [ -z "$PR_NUMBER" ]; then
             echo "No PR associated with this event — skipping."
             echo "skip=true" >> "$GITHUB_OUTPUT"
+          elif [ "$PR_AUTHOR" = "dependabot[bot]" ]; then
+            # Dependabot-authored PRs run under a read-only token by GitHub policy;
+            # any gh api call would 404/403. Skip cleanly here, before we try.
+            # (Dependabot uses its own auto-merge via `dependabot.yml` / repo settings.)
+            echo "PR #$PR_NUMBER is authored by Dependabot — skipping (Dependabot manages its own merge)."
+            echo "skip=true" >> "$GITHUB_OUTPUT"
           else
-            echo "Resolved PR #$PR_NUMBER"
+            echo "Resolved PR #$PR_NUMBER (author=$PR_AUTHOR)"
             echo "number=$PR_NUMBER" >> "$GITHUB_OUTPUT"
           fi
 
