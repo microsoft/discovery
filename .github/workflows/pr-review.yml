@@ -27,7 +27,7 @@ jobs:
       has_agents: ${{ steps.classify.outputs.has_agents }}
       has_docs_only: ${{ steps.classify.outputs.has_docs_only }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           ref: ${{ github.event.pull_request.head.sha }}
           fetch-depth: 0
@@ -77,14 +77,14 @@ jobs:
       #   2. `pr/`      — PR head, the untrusted *content* the validator scans.
       # The runner only ever invokes Python that lives under `trusted/`.
       - name: Checkout trusted base (for validator scripts)
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           ref: ${{ github.event.pull_request.base.sha }}
           fetch-depth: 1
           path: trusted
 
       - name: Checkout PR head (content under review — never executed)
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           ref: ${{ github.event.pull_request.head.sha }}
           fetch-depth: 0
@@ -169,7 +169,7 @@ jobs:
     env:
       GIT_LFS_SKIP_SMUDGE: "1"
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           ref: ${{ github.event.pull_request.head.sha }}
           fetch-depth: 0
