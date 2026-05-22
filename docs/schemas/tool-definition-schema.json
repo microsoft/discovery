@@ -1,0 +1,357 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "tool-definition-schema.json",
+  "title": "ToolDefinition",
+  "description": "Schema for the Discovery Tool DefinitionContent payload (VersionNeutral/ToolDefinition.cs). Validated by ToolDefinitionContentValidator.",
+  "type": "object",
+  "required": ["name", "description", "version", "category", "infra"],
+  "additionalProperties": false,
+  "properties": {
+    "name": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Unique name of the tool."
+    },
+    "description": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Human-readable description of the tool."
+    },
+    "version": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Version of the tool definition (e.g. '1.0.0')."
+    },
+    "category": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Category used to group and discover the tool."
+    },
+    "license": {
+      "type": "string",
+      "description": "Optional SPDX license identifier or license text."
+    },
+    "infra": {
+      "type": "array",
+      "minItems": 1,
+      "description": "One or more infrastructure definitions that back the tool's actions.",
+      "items": {
+        "$ref": "#/$defs/InfraDefinition"
+      }
+    },
+    "actions": {
+      "type": "array",
+      "description": "Tool actions that can be invoked by Discovery.",
+      "default": [],
+      "items": {
+        "$ref": "#/$defs/ToolAction"
+      }
+    },
+    "code_environments": {
+      "type": "array",
+      "description": "Code execution environments available for this tool.",
+      "default": [],
+      "items": {
+        "$ref": "#/$defs/CodeEnvironment"
+      }
+    }
+  },
+  "$defs": {
+    "InfraDefinition": {
+      "title": "InfraDefinition",
+      "description": "Describes a single infrastructure node (container + compute) that powers one or more actions.",
+      "type": "object",
+      "required": ["name", "infra_type", "image", "compute"],
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Logical name for this infra node; referenced by actions via infra_node."
+        },
+        "infra_type": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Infrastructure type identifier (e.g. 'container')."
+        },
+        "image": {
+          "$ref": "#/$defs/ImageConfig"
+        },
+        "compute": {
+          "$ref": "#/$defs/ComputeConfig"
+        }
+      }
+    },
+    "ImageConfig": {
+      "title": "ImageConfig",
+      "description": "Container image configuration for an infrastructure node.",
+      "type": "object",
+      "required": ["acr"],
+      "additionalProperties": false,
+      "properties": {
+        "acr": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Fully-qualified Azure Container Registry image reference (e.g. 'myregistry.azurecr.io/myimage:latest')."
+        }
+      }
+    },
+    "ComputeConfig": {
+      "title": "ComputeConfig",
+      "description": "Compute resource requirements and scaling configuration for an infrastructure node.",
+      "type": "object",
+      "required": ["min_resources", "max_resources"],
+      "additionalProperties": true,
+      "properties": {
+        "min_resources": {
+          "$ref": "#/$defs/VmSku",
+          "description": "Minimum compute resources required."
+        },
+        "max_resources": {
+          "$ref": "#/$defs/VmSku",
+          "description": "Maximum compute resources allowed."
+        },
+        "infiniband": {
+          "type": "boolean",
+          "description": "Whether InfiniBand networking is required."
+        },
+        "recommended_sku": {
+          "type": "array",
+          "minItems": 1,
+          "description": "Ordered list of recommended Azure VM SKU names (e.g. 'Standard_NC24ads_A100_v4').",
+          "items": {
+            "type": "string"
+          }
+        },
+        "pool_type": {
+          "type": "string",
+          "description": "Pool type for the compute node (snake_case variant)."
+        },
+        "poolType": {
+          "type": "string",
+          "description": "Pool type for the compute node (camelCase variant; use either pool_type or poolType)."
+        },
+        "pool_size": {
+          "type": "integer",
+          "description": "Number of nodes in the pool (snake_case variant)."
+        },
+        "poolSize": {
+          "type": "integer",
+          "description": "Number of nodes in the pool (camelCase variant; use either pool_size or poolSize)."
+        }
+      }
+    },
+    "VmSku": {
+      "title": "VmSku",
+      "description": "Resource specification for a compute node. Numeric fields accept both integer (4) and string ('4') values.",
+      "type": "object",
+      "required": ["cpu", "ram"],
+      "additionalProperties": false,
+      "properties": {
+        "cpu": {
+          "oneOf": [
+            { "type": "string", "minLength": 1 },
+            { "type": "integer", "minimum": 1 }
+          ],
+          "description": "Number of vCPUs."
+        },
+        "ram": {
+          "oneOf": [
+            { "type": "string", "minLength": 1 },
+            { "type": "integer", "minimum": 1 }
+          ],
+          "description": "RAM in GB."
+        },
+        "storage": {
+          "oneOf": [
+            { "type": "string", "minLength": 1 },
+            { "type": "integer", "minimum": 0 }
+          ],
+          "description": "Ephemeral storage in GB (optional)."
+        },
+        "gpu": {
+          "oneOf": [
+            { "type": "string", "minLength": 1 },
+            { "type": "integer", "minimum": 0 }
+          ],
+          "description": "Number of GPUs (optional)."
+        }
+      }
+    },
+    "ToolAction": {
+      "title": "ToolAction",
+      "description": "A discrete, invocable action exposed by this tool.",
+      "type": "object",
+      "required": ["name", "description", "infra_node", "input_schema", "command"],
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Unique action name within this tool."
+        },
+        "description": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Human-readable description of what this action does."
+        },
+        "infra_node": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Reference to an infra[].name entry that runs this action."
+        },
+        "input_schema": {
+          "$ref": "#/$defs/ToolInputSchema"
+        },
+        "command": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Entrypoint command executed inside the container for this action."
+        },
+        "environment_variables": {
+          "type": "array",
+          "description": "Static environment variables injected into the container.",
+          "default": [],
+          "items": {
+            "$ref": "#/$defs/ToolEnvironmentVariable"
+          }
+        },
+        "inline_files": {
+          "type": "array",
+          "description": "Files written into the container at the specified mount paths before execution.",
+          "default": [],
+          "items": {
+            "$ref": "#/$defs/InlineFile"
+          }
+        },
+        "output_mount_configurations": {
+          "type": "array",
+          "description": "Container paths that produce output assets after action execution.",
+          "default": [],
+          "items": {
+            "$ref": "#/$defs/OutputMountConfiguration"
+          }
+        }
+      }
+    },
+    "ToolInputSchema": {
+      "title": "ToolInputSchema",
+      "description": "JSON-Schema-style definition of the inputs accepted by a tool action.",
+      "type": "object",
+      "required": ["type", "required"],
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "type": "string",
+          "minLength": 1,
+          "description": "JSON Schema type (typically 'object')."
+        },
+        "properties": {
+          "type": "object",
+          "description": "Map of parameter name to its JSON Schema definition. Values are open-ended JSON Schema objects.",
+          "additionalProperties": true,
+          "default": {}
+        },
+        "required": {
+          "type": "array",
+          "description": "List of property names that are required when invoking this action.",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "ToolEnvironmentVariable": {
+      "title": "ToolEnvironmentVariable",
+      "description": "A static environment variable injected into the container at runtime.",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "Environment variable name."
+        },
+        "value": {
+          "type": "string",
+          "description": "Environment variable value."
+        }
+      }
+    },
+    "InlineFile": {
+      "title": "InlineFile",
+      "description": "A file written into the container at a specified path before action execution.",
+      "type": "object",
+      "required": ["mount_path", "content"],
+      "additionalProperties": false,
+      "properties": {
+        "mount_path": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Absolute path inside the container where the file is written."
+        },
+        "content": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Raw file content."
+        }
+      }
+    },
+    "OutputMountConfiguration": {
+      "title": "OutputMountConfiguration",
+      "description": "Configures a container path that produces an output asset after action execution.",
+      "type": "object",
+      "required": ["mount_path", "auto_promote", "output_name", "output_description"],
+      "additionalProperties": false,
+      "properties": {
+        "mount_path": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Absolute container path that will contain the output after execution."
+        },
+        "auto_promote": {
+          "type": "boolean",
+          "description": "When true, the output is automatically promoted to a Discovery data asset."
+        },
+        "output_name": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Name of the resulting output asset."
+        },
+        "output_description": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Description of the resulting output asset."
+        }
+      }
+    },
+    "CodeEnvironment": {
+      "title": "CodeEnvironment",
+      "description": "A language runtime environment available for interactive or notebook-style execution.",
+      "type": "object",
+      "required": ["language", "command", "description", "infra_node"],
+      "additionalProperties": false,
+      "properties": {
+        "language": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Programming language identifier (e.g. 'python', 'r')."
+        },
+        "command": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Entrypoint command that starts the code execution environment."
+        },
+        "description": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Human-readable description of this code environment."
+        },
+        "infra_node": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Reference to an infra[].name entry that hosts this environment."
+        }
+      }
+    }
+  }
+}

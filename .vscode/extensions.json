@@ -1,0 +1,10 @@
+{
+  "recommendations": [
+    "GitHub.copilot",
+    "GitHub.copilot-chat",
+    "ms-vscode.powershell",
+    "ms-python.python",
+    "redhat.vscode-yaml",
+    "DavidAnson.vscode-markdownlint"
+  ]
+}

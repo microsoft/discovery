@@ -1,0 +1,113 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://github.com/microsoft/discovery/blob/main/schemas/metadata-schema.json",
+  "title": "Discovery Catalog — metadata.yaml",
+  "description": "Schema for the metadata.yaml file required in every agent folder.",
+  "type": "object",
+  "required": ["name", "type", "version", "publisher", "description", "tags"],
+  "additionalProperties": false,
+  "properties": {
+    "name": {
+      "type": "string",
+      "description": "Kebab-case unique identifier for this agent.",
+      "pattern": "^[a-z0-9][a-z0-9-]*$",
+      "maxLength": 64
+    },
+    "type": {
+      "type": "string",
+      "enum": ["agent"],
+      "description": "Must be 'agent'."
+    },
+    "version": {
+      "type": "string",
+      "description": "Semantic version string (MAJOR.MINOR.PATCH).",
+      "pattern": "^\\d+\\.\\d+\\.\\d+$"
+    },
+    "associated_tools": {
+      "type": "array",
+      "description": "Relative paths (from repo root) to each tool sub-folder under this agent's tools/ directory.",
+      "items": {
+        "type": "string",
+        "pattern": "^agents/[a-z0-9][a-z0-9-]*/tools/[a-zA-Z0-9][a-zA-Z0-9_-]*/?$"
+      },
+      "default": []
+    },
+    "associated_agents": {
+      "type": "array",
+      "description": "Relative paths to agent folders in this repository that this agent depends on at runtime.",
+      "items": {
+        "type": "string",
+        "pattern": "^agents/[a-z0-9][a-z0-9-]*$"
+      },
+      "default": []
+    },
+    "publisher": {
+      "type": "object",
+      "required": ["name", "contact", "support_url"],
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "Display name of the publishing team or organisation."
+        },
+        "contact": {
+          "type": "string",
+          "format": "email",
+          "description": "Primary contact email for this agent."
+        },
+        "support_url": {
+          "type": "string",
+          "format": "uri",
+          "description": "URL to the support page or issue tracker for this agent."
+        },
+        "party": {
+          "type": "string",
+          "enum": ["1p", "3p"],
+          "description": "Optional. '1p' = Microsoft first-party authored; '3p' = ISV / external partner. Drives the 1p-contribution / 3p-contribution PR labels."
+        }
+      }
+    },
+    "description": {
+      "type": "string",
+      "description": "Plain-language description of what this agent or project does. Maximum 500 characters.",
+      "maxLength": 500
+    },
+    "tags": {
+      "type": "array",
+      "description": "One or more tags for discoverability in Discovery Studio.",
+      "minItems": 1,
+      "items": {
+        "type": "string",
+        "pattern": "^[a-z0-9][a-z0-9-]*$"
+      }
+    },
+    "path": {
+      "type": "string",
+      "description": "Relative path from repo root to this folder (e.g. agents/my-agent). Auto-derived from folder structure if omitted.",
+      "pattern": "^agents/[a-z0-9][a-z0-9-]*$"
+    },
+    "supported_regions": {
+      "type": "array",
+      "description": "Azure region ARM aliases where this agent is supported. If omitted, the agent is considered globally available.",
+      "items": {
+        "type": "string"
+      },
+      "default": []
+    },
+    "compliance": {
+      "type": "object",
+      "description": "Optional compliance certification flags.",
+      "additionalProperties": false,
+      "properties": {
+        "hipaa": {
+          "type": "boolean",
+          "default": false
+        },
+        "soc2": {
+          "type": "boolean",
+          "default": false
+        }
+      }
+    }
+  }
+}

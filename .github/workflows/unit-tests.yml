@@ -1,0 +1,46 @@
+name: Unit Tests
+
+# Runs the .github/tests/ pytest suites that guard the POL-009 model-weight
+# sniffer logic and the picklescan integration inside validate_pr.py.
+#
+# Triggers on every PR that touches the scripts or tests folders, and on push
+# to main so we always have a green baseline. Marked as a required status
+# check in branch protection — failures block the PR from merging.
+
+on:
+  pull_request:
+    paths:
+      - ".github/scripts/**"
+      - ".github/tests/**"
+      - ".github/workflows/unit-tests.yml"
+  push:
+    branches:
+      - main
+    paths:
+      - ".github/scripts/**"
+      - ".github/tests/**"
+      - ".github/workflows/unit-tests.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  pytest:
+    name: Run pytest on .github/tests/
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: pip install pytest jsonschema pyyaml picklescan onnx
+
+      - name: Run unit tests
+        run: python -m pytest .github/tests/ -v

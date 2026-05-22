@@ -1,0 +1,45 @@
+title: "[Q&A] "
+labels: ["question"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Have a question about how to do something in Microsoft Discovery? Ask here so the answer is searchable for the whole community.
+
+        Before posting, please check existing [Q&A](https://github.com/microsoft/discovery/discussions/categories/q-a).
+
+  - type: dropdown
+    id: surface
+    attributes:
+      label: Which Microsoft Discovery surface?
+      description: Pick the one this question is about. A workflow uses this to apply the `app` or `services` label automatically.
+      options:
+        - Microsoft Discovery app (Windows desktop client)
+        - Microsoft Discovery services (Azure cloud)
+        - Both / not sure
+    validations:
+      required: true
+
+  - type: textarea
+    id: goal
+    attributes:
+      label: What are you trying to do?
+      description: One sentence — the goal.
+    validations:
+      required: true
+
+  - type: textarea
+    id: tried
+    attributes:
+      label: What you've tried
+      description: Commands, prompts, settings, error messages.
+    validations:
+      required: false
+
+  - type: input
+    id: version
+    attributes:
+      label: Microsoft Discovery version
+      placeholder: 0.13.41
+    validations:
+      required: false

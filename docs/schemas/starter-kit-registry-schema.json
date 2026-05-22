@@ -1,0 +1,136 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://github.com/microsoft/discovery/blob/main/docs/schemas/starter-kit-registry-schema.json",
+  "title": "Discovery Starter-Kit Registry",
+  "description": "Auto-generated aggregate of every starter-kits/<name>/kit.json in the repository, produced by .github/scripts/update_starter_kits_registry.py and written to .auto-registry/starter-kit-registry.json. Each entry in 'kits' is the full kit.json manifest (which must independently validate against docs/schemas/starter-kit-schema.json before merge) augmented with four computed fields and per-ref agent metadata. This schema validates the wrapper plus the augmentation fields; the upstream per-kit schema enforces kit.json correctness.",
+  "type": "object",
+  "required": ["schemaVersion", "generatedAt", "commitSha", "kits"],
+  "additionalProperties": false,
+  "properties": {
+    "schemaVersion": {
+      "type": "string",
+      "const": "1.0.0",
+      "description": "Schema version of this registry file."
+    },
+    "generatedAt": {
+      "type": "string",
+      "format": "date-time",
+      "description": "UTC timestamp of when this registry was generated."
+    },
+    "commitSha": {
+      "type": "string",
+      "minLength": 7,
+      "description": "Git commit SHA of the repository state used to generate this registry."
+    },
+    "kits": {
+      "type": "array",
+      "description": "One entry per starter-kits/<name>/kit.json in the repository.",
+      "items": { "$ref": "#/definitions/RegistryKitEntry" }
+    }
+  },
+  "definitions": {
+    "RegistryKitEntry": {
+      "type": "object",
+      "description": "A single starter-kit registry entry. Contains every field from the source kit.json (validated upstream by docs/schemas/starter-kit-schema.json) plus the augmentation fields below. additionalProperties is true so that kit.json fields pass through without duplicating the per-kit schema here.",
+      "additionalProperties": true,
+      "required": [
+        "name",
+        "version",
+        "displayName",
+        "lifecycle",
+        "agentRefs",
+        "availability",
+        "missingAgents",
+        "computedAt",
+        "kitPath"
+      ],
+      "properties": {
+        "name": {
+          "type": "string",
+          "pattern": "^[a-z0-9][a-z0-9-]*[a-z0-9]$",
+          "description": "Kebab-case identifier; equals the parent directory name."
+        },
+        "version": {
+          "type": "string",
+          "pattern": "^\\d+\\.\\d+\\.\\d+$"
+        },
+        "displayName": {
+          "type": "string",
+          "minLength": 1
+        },
+        "lifecycle": {
+          "type": "string",
+          "enum": ["active", "archived"]
+        },
+        "party": {
+          "type": "string",
+          "enum": ["1p", "3p"]
+        },
+        "agentRefs": {
+          "type": "array",
+          "description": "Top-level agentRefs from kit.json, with each entry optionally enriched with an agentMeta object describing the referenced agent.",
+          "items": { "$ref": "#/definitions/EnrichedAgentRef" }
+        },
+        "availability": {
+          "type": "string",
+          "enum": ["healthy", "degraded"],
+          "description": "Computed: 'degraded' when any required agentRef is absent from the agent registry for an active kit; otherwise 'healthy'. Archived kits always report 'healthy'."
+        },
+        "missingAgents": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Computed: list of agentRef strings (both required and optional) not found in the agent registry at registry-generation time."
+        },
+        "computedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Computed: ISO-8601 UTC timestamp this entry was generated. Equal to the top-level generatedAt."
+        },
+        "kitPath": {
+          "type": "string",
+          "pattern": "^starter-kits/[a-z0-9][a-z0-9-]*[a-z0-9]$",
+          "description": "Computed: repo-relative path to the source kit directory."
+        }
+      }
+    },
+    "EnrichedAgentRef": {
+      "type": "object",
+      "description": "An agentRef from kit.json, optionally enriched with metadata about the referenced agent. The base shape (ref, role, required, description) mirrors docs/schemas/starter-kit-schema.json#/definitions/agentRef.",
+      "required": ["ref", "role", "required"],
+      "additionalProperties": false,
+      "properties": {
+        "ref": {
+          "type": "string",
+          "pattern": "^agents/[a-z0-9][a-z0-9-]*[a-z0-9]$",
+          "description": "Path to the referenced agent directory, e.g. agents/my-agent."
+        },
+        "role": {
+          "type": "string",
+          "enum": ["primary", "supporting"]
+        },
+        "required": {
+          "type": "boolean"
+        },
+        "description": {
+          "type": "string"
+        },
+        "agentMeta": {
+          "type": "object",
+          "description": "Computed: snapshot of the referenced agent's identity at registry-generation time. Present only when the referenced agent exists in the agent registry AND has a parseable metadata.yaml. Absent when the agent is missing or unparseable.",
+          "additionalProperties": false,
+          "required": ["name"],
+          "properties": {
+            "name": { "type": "string" },
+            "displayName": { "type": "string" },
+            "version": { "type": "string" },
+            "tags": {
+              "type": "array",
+              "items": { "type": "string" }
+            },
+            "description": { "type": "string" }
+          }
+        }
+      }
+    }
+  }
+}

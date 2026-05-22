@@ -1,0 +1,12 @@
+version: 2
+updates:
+  # GitHub Actions — track action versions and surface security advisories.
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 5
+    labels:
+      - "automated-dep-update"
+    commit-message:
+      prefix: "chore(actions)"

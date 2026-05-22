@@ -1,0 +1,51 @@
+title: "[Idea] "
+labels: ["idea"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Share an idea for Microsoft Discovery. Concrete problem statements get traction fastest.
+
+  - type: dropdown
+    id: surface
+    attributes:
+      label: Which Microsoft Discovery surface?
+      description: Pick the one this idea targets. A workflow uses this to apply the `app` or `services` label automatically.
+      options:
+        - Microsoft Discovery app (Windows desktop client)
+        - Microsoft Discovery services (Azure cloud)
+        - Both / not sure
+    validations:
+      required: true
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: What user pain are you solving? Be specific.
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposal
+      description: A sketch is fine; a full design is not required.
+    validations:
+      required: true
+
+  - type: textarea
+    id: who
+    attributes:
+      label: Who benefits
+      description: What kinds of users get value from this?
+    validations:
+      required: false
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: Including "do nothing."
+    validations:
+      required: false

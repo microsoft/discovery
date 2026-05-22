@@ -1,0 +1,83 @@
+name: Validate Everything
+
+on:
+  workflow_dispatch:
+    inputs:
+      reason:
+        description: "Reason for manual full-repo validation"
+        required: false
+        default: "Manual full-repo validation"
+
+permissions:
+  contents: read
+
+jobs:
+  validate-all-agents:
+    name: Validate every agent against current schemas
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: pip install jsonschema pyyaml onnx picklescan
+
+      - name: Build full file list and run validate_pr.py
+        run: |
+          # Pretend every tracked file under agents/ and starter-kits/ is "changed"
+          # so the full rule catalogue runs against the entire repo.
+          {
+            git ls-files agents
+            git ls-files starter-kits
+            git ls-files docs/schemas
+          } > /tmp/changed-files.txt
+          echo "Files under validation: $(wc -l < /tmp/changed-files.txt)"
+
+          python .github/scripts/validate_pr.py \
+            --changed-files /tmp/changed-files.txt \
+            --repo-root "$GITHUB_WORKSPACE" \
+            --output /tmp/validation-results.json || true
+
+          python -c "
+          import json, sys
+          d = json.load(open('/tmp/validation-results.json'))
+          print(f'passed={d[\"passed\"]} failures={d[\"failure_count\"]}')
+          for f in d['failures']:
+              print(f'  [{f[\"rule_id\"]}] {f[\"file\"]}:{f[\"line\"]} — {f[\"message\"]}')
+          sys.exit(0 if d['passed'] else 1)
+          "
+
+      - name: Upload results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: full-validation-results
+          path: /tmp/validation-results.json
+
+  validate-all-starter-kits:
+    name: Validate every starter kit against current schema
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: pip install jsonschema pyyaml
+
+      - name: Run validate_starter_kits.py against all kits
+        run: |
+          python .github/scripts/validate_starter_kits.py --repo-root .

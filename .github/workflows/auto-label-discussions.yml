@@ -1,0 +1,86 @@
+name: Auto-label Discussions
+
+# Reads the "Which Microsoft Discovery surface?" dropdown from each Discussion
+# template and applies the matching `app` or `services` label. Fires on
+# discussion creation and on edit (in case the author picks a different
+# surface after the fact). No-op for "Both / not sure".
+#
+# Uses the GraphQL API because Discussion labels aren't exposed via the REST
+# `issues.addLabels` endpoint.
+
+on:
+  discussion:
+    types: [created, edited, category_changed]
+
+permissions:
+  discussions: write
+
+jobs:
+  apply-surface-label:
+    name: Apply app/services label
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Determine surface from body and apply label
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const body = context.payload.discussion.body || "";
+            const discussionId = context.payload.discussion.node_id;
+
+            // Discussion bodies render dropdown answers as:
+            //   ### Which Microsoft Discovery surface?
+            //
+            //   Microsoft Discovery app (Windows desktop client)
+            //
+            // Grab the line after the heading.
+            const headingRe = /###\s*Which Microsoft Discovery surface\??\s*\r?\n+\s*([^\r\n]+)/i;
+            const m = body.match(headingRe);
+            if (!m) {
+              core.info("No 'Which Microsoft Discovery surface?' section found in body — skipping.");
+              return;
+            }
+            const answer = m[1].trim().toLowerCase();
+            core.info(`Detected surface answer: "${answer}"`);
+
+            let wantedLabel;
+            if (answer.startsWith("microsoft discovery app")) {
+              wantedLabel = "app";
+            } else if (answer.startsWith("microsoft discovery services")) {
+              wantedLabel = "services";
+            } else {
+              core.info("Answer is 'Both / not sure' or unrecognized — no surface label applied.");
+              return;
+            }
+
+            // Look up the label ID by name on this repo.
+            const labelQuery = `
+              query($owner: String!, $repo: String!, $name: String!) {
+                repository(owner: $owner, name: $repo) {
+                  label(name: $name) { id }
+                }
+              }`;
+            const labelResp = await github.graphql(labelQuery, {
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              name: wantedLabel,
+            });
+            const labelId = labelResp.repository.label && labelResp.repository.label.id;
+            if (!labelId) {
+              core.setFailed(`Label "${wantedLabel}" does not exist on this repo. Run the "Create Repository Labels" workflow first.`);
+              return;
+            }
+
+            // Idempotent: addLabelsToLabelable is a no-op if the label is already present.
+            const mutation = `
+              mutation($labelable: ID!, $labels: [ID!]!) {
+                addLabelsToLabelable(input: { labelableId: $labelable, labelIds: $labels }) {
+                  clientMutationId
+                }
+              }`;
+            await github.graphql(mutation, {
+              labelable: discussionId,
+              labels: [labelId],
+            });
+            core.info(`Applied label "${wantedLabel}" to discussion ${context.payload.discussion.number}.`);

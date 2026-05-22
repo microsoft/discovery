@@ -1,0 +1,52 @@
+name: Check Agent Removal Impact
+
+on:
+  pull_request_target:
+    paths:
+      - "agents/**"
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  check-impact:
+    name: Check if agent removal breaks starter kits
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout PR branch
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: pip install pyyaml
+
+      - name: Detect fork PR
+        id: fork
+        run: |
+          if [ "${{ github.event.pull_request.head.repo.fork }}" = "true" ]; then
+            echo "is_fork=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "is_fork=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Check agent removal impact
+        run: |
+          FORK_FLAG=""
+          if [ "${{ steps.fork.outputs.is_fork }}" = "true" ]; then
+            FORK_FLAG="--is-fork"
+          fi
+          python .github/scripts/check_agent_removal_impact.py \
+            --repo-root . \
+            --base-sha "${{ github.event.pull_request.base.sha }}" \
+            --pr-number "${{ github.event.pull_request.number }}" \
+            --github-token "${{ secrets.GITHUB_TOKEN }}" \
+            --repo "${{ github.repository }}" \
+            $FORK_FLAG

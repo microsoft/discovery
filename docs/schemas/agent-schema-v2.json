@@ -1,0 +1,258 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Discovery Agent Definition",
+  "description": "Agent definition schema based on Microsoft AgentSchema (https://microsoft.github.io/AgentSchema/reference/agentdefinition/) extended with Discovery-specific properties under discoveryExtensions. Only prompt agents are supported.",
+  "$ref": "#/$defs/PromptAgent",
+  "$defs": {
+    "AgentDefinitionBase": {
+      "type": "object",
+      "description": "Base properties shared by all agent types (AgentDefinition).",
+      "properties": {
+        "kind": {
+          "type": "string",
+          "const": "prompt",
+          "description": "Kind represented by the document. Must be 'prompt'."
+        },
+        "name": {
+          "type": "string",
+          "description": "Human-readable name of the agent.",
+          "pattern": "^[A-Za-z][A-Za-z0-9_-]*$"
+        },
+        "displayName": {
+          "type": "string",
+          "description": "Display name of the agent for UI purposes."
+        },
+        "description": {
+          "type": "string",
+          "description": "Description of the agent's capabilities and purpose.",
+          "maxLength": 512
+        },
+        "metadata": {
+          "type": "object",
+          "description": "Additional metadata including authors, tags, and other arbitrary properties.",
+          "additionalProperties": true
+        },
+        "inputSchema": { "$ref": "#/$defs/PropertySchema" },
+        "outputSchema": { "$ref": "#/$defs/PropertySchema" },
+        "discoveryExtensions": { "$ref": "#/$defs/DiscoveryExtensions" }
+      },
+      "required": ["kind", "name"]
+    },
+
+    "PromptAgent": {
+      "description": "Prompt-based agent definition. Extends AgentDefinition with model, tools, template, and instructions.",
+      "allOf": [
+        { "$ref": "#/$defs/AgentDefinitionBase" },
+        {
+          "type": "object",
+          "properties": {
+            "kind": { "const": "prompt" },
+            "model": { "$ref": "#/$defs/Model" },
+            "tools": {
+              "type": "array",
+              "description": "Tools available to the agent for extended functionality.",
+              "items": { "$ref": "#/$defs/Tool" }
+            },
+            "template": { "$ref": "#/$defs/Template" },
+            "instructions": {
+              "type": "string",
+              "description": "System prompt / instructions for the agent. Must be less than 32,000 characters. Use YAML block scalar (|) for multi-line."
+            },
+            "additionalInstructions": {
+              "type": "string",
+              "description": "Additional instructions or context for the agent."
+            }
+          },
+          "required": ["model", "instructions"]
+        }
+      ]
+    },
+
+    "Model": {
+      "description": "AI model configuration. Supports shorthand (just a string ID) or full object.",
+      "oneOf": [
+        { "type": "string", "description": "Model ID shorthand (e.g., 'gpt-5-1')." },
+        {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "description": "The unique identifier / deployment name of the model."
+            },
+            "provider": {
+              "type": "string",
+              "description": "The provider of the model (e.g., 'openai', 'azure', 'anthropic')."
+            },
+            "apiType": {
+              "type": "string",
+              "description": "The type of API to use (e.g., 'chat', 'response')."
+            },
+            "connection": { "$ref": "#/$defs/Connection" },
+            "options": { "$ref": "#/$defs/ModelOptions" }
+          },
+          "required": ["id"]
+        }
+      ]
+    },
+
+    "Connection": {
+      "type": "object",
+      "description": "Connection configuration for models or tools.",
+      "properties": {
+        "kind": { "type": "string", "description": "Connection type (e.g., 'key', 'reference', 'foundry')." },
+        "authenticationMode": { "type": "string" },
+        "usageDescription": { "type": "string" },
+        "endpoint": { "type": "string" },
+        "key": { "type": "string" }
+      },
+      "required": ["kind"],
+      "additionalProperties": true
+    },
+
+    "ModelOptions": {
+      "type": "object",
+      "description": "Additional options for model behavior.",
+      "properties": {
+        "frequencyPenalty": { "type": "number" },
+        "maxOutputTokens": { "type": "integer" },
+        "presencePenalty": { "type": "number" },
+        "seed": { "type": "integer" },
+        "temperature": { "type": "number", "minimum": 0, "maximum": 2 },
+        "topK": { "type": "integer" },
+        "topP": { "type": "number", "minimum": 0, "maximum": 1 },
+        "stopSequences": { "type": "array", "items": { "type": "string" } },
+        "allowMultipleToolCalls": { "type": "boolean" },
+        "additionalProperties": { "type": "object" }
+      },
+      "additionalProperties": false
+    },
+
+    "Tool": {
+      "type": "object",
+      "description": "Tool available to the agent. Subtypes: function, custom, web_search, file_search, mcp, openapi, code_interpreter.",
+      "properties": {
+        "name": { "type": "string", "description": "Name of the tool." },
+        "kind": { "type": "string", "description": "The kind identifier (e.g., 'function', 'custom', 'mcp', 'openapi', 'web_search', 'file_search', 'code_interpreter')." },
+        "description": { "type": "string", "description": "A short description of the tool." },
+        "bindings": {
+          "type": "array",
+          "description": "Tool argument bindings to input properties.",
+          "items": {
+            "type": "object",
+            "properties": {
+              "name": { "type": "string" },
+              "input": { "type": "string" }
+            },
+            "additionalProperties": false
+          }
+        },
+        "parameters": { "$ref": "#/$defs/PropertySchema" },
+        "strict": { "type": "boolean" },
+        "connection": { "$ref": "#/$defs/Connection" },
+        "options": { "type": "object", "additionalProperties": true }
+      },
+      "required": ["name", "kind"],
+      "additionalProperties": true
+    },
+
+    "Template": {
+      "type": "object",
+      "description": "Template configuration for prompt rendering.",
+      "properties": {
+        "format": { "type": "string", "description": "Template format (e.g., 'mustache', 'jinja2')." },
+        "parser": { "type": "string", "description": "Template parser (e.g., 'prompty')." }
+      },
+      "additionalProperties": false
+    },
+
+    "PropertySchema": {
+      "type": "object",
+      "description": "Schema for input/output properties.",
+      "properties": {
+        "examples": {
+          "type": "array",
+          "items": { "type": "object", "additionalProperties": true }
+        },
+        "strict": { "type": "boolean" },
+        "properties": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "object",
+            "properties": {
+              "kind": { "type": "string" },
+              "description": { "type": "string" },
+              "required": { "type": "boolean" },
+              "default": {},
+              "example": {},
+              "value": {},
+              "enumValues": { "type": "array" }
+            },
+            "additionalProperties": true
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+
+    "DiscoveryExtensions": {
+      "type": "object",
+      "description": "Discovery-specific extensions. These properties are mapped to Discovery Agent API fields at deploy time and are not part of the standard Microsoft AgentSchema.",
+      "properties": {
+        "humanInTheLoop": {
+          "type": "string",
+          "enum": ["Enabled", "Disabled"],
+          "default": "Disabled",
+          "description": "When Enabled, the GetUserInput tool is added to the agent, allowing it to pause for user confirmation. Only applicable to prompt agents."
+        },
+        "tools": {
+          "type": "array",
+          "description": "Discovery-managed tools (external computation tools like RDKit, simulation engines). Separate from AgentSchema tools to avoid overlap with Foundry-native tools.",
+          "items": {
+            "type": "object",
+            "required": ["toolId"],
+            "additionalProperties": false,
+            "properties": {
+              "toolId": {
+                "type": "string",
+                "description": "ARM resource ID of the Discovery tool."
+              },
+              "confirmation": {
+                "type": "string",
+                "enum": ["Enabled", "Disabled"],
+                "default": "Disabled",
+                "description": "When Enabled, tool invocation requires user confirmation."
+              }
+            }
+          }
+        },
+        "knowledgeBases": {
+          "type": "array",
+          "description": "Discovery-managed knowledge bases for retrieval-augmented context.",
+          "items": {
+            "type": "object",
+            "required": ["knowledgeBaseId"],
+            "additionalProperties": false,
+            "properties": {
+              "knowledgeBaseId": {
+                "type": "string",
+                "description": "Discovery knowledge base resource ID. Format: /bookshelves/{bookshelf_name}/knowledgeBases/{knowledgebase_name}/versions/{version}",
+                "pattern": "^/bookshelves/[^/]+/knowledgeBases/[^/]+/versions/[^/]+$"
+              }
+            }
+          }
+        },
+        "disableDataHandlingTools": {
+          "type": "boolean",
+          "default": false,
+          "description": "When true, Discovery data handling tools are not injected."
+        },
+        "disableDiscoveryInjectedTools": {
+          "type": "boolean",
+          "default": false,
+          "description": "When true, all Discovery-injected tools are disabled."
+        }
+      },
+      "additionalProperties": true
+    }
+  }
+}

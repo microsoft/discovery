@@ -1,0 +1,67 @@
+name: Create Repository Labels
+
+on:
+  workflow_dispatch: # Run manually once after repo setup
+
+permissions:
+  issues: write
+
+jobs:
+  create-labels:
+    name: Create Labels
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Create all required labels
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const labels = [
+              { name: 'automated-checks-passed', color: '0e8a16', description: 'All automated checks passed; PR is ready for human review' },
+              { name: 'automated-checks-failed', color: 'd73a4a', description: 'One or more automated checks failed; see inline comments' },
+              { name: 'human-review-approved',   color: '2cbe4e', description: 'A human reviewer has approved the PR' },
+              { name: '1p-contribution',         color: '1d76db', description: "Authored by Microsoft (party='1p' in metadata)" },
+              { name: '3p-contribution',         color: '0052cc', description: "Authored by a third-party partner (party='3p' in metadata)" },
+              { name: 'docs-only',               color: 'cfd3d7', description: 'PR only modifies files in docs/schemas/' },
+              { name: 'breaking-change',         color: 'b60205', description: 'PR introduces a breaking change to schema or structure' },
+              { name: 'update-branch',           color: 'fbca04', description: 'PR branch is behind base — please update' },
+              { name: 'needs-human-review',      color: '0075ca', description: 'Awaiting human approval' },
+              { name: 'ready-for-auto-merge',    color: '0e8a16', description: 'All gates green — will be auto-merged' },
+              // ── Discussion-template labels ──
+              { name: 'bug',                     color: 'd73a4a', description: 'Bug report (Discussions → Bugs template)' },
+              { name: 'idea',                    color: 'a2eeef', description: 'Feature idea / proposal (Discussions → Ideas template)' },
+              { name: 'question',                color: 'd876e3', description: 'Authoring or usage question (Discussions → Q&A template)' },
+              { name: 'show-and-tell',           color: '0e8a16', description: 'Community demo (Discussions → Show and tell template)' },
+              // ── Surface labels (auto-applied to discussions by auto-label-discussions.yml) ──
+              { name: 'app',                     color: '5319e7', description: 'Microsoft Discovery app (Windows desktop client)' },
+              { name: 'services',                color: '006b75', description: 'Microsoft Discovery services (Azure cloud)' },
+            ];
+
+            for (const label of labels) {
+              try {
+                await github.rest.issues.createLabel({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  name: label.name,
+                  color: label.color,
+                  description: label.description,
+                });
+                console.log(`Created label: ${label.name}`);
+              } catch (err) {
+                if (err.status === 422) {
+                  // Label already exists — update it
+                  await github.rest.issues.updateLabel({
+                    owner: context.repo.owner,
+                    repo: context.repo.repo,
+                    name: label.name,
+                    color: label.color,
+                    description: label.description,
+                  });
+                  console.log(`Updated label: ${label.name}`);
+                } else {
+                  throw err;
+                }
+              }
+            }
+            console.log('All labels created/updated successfully.');

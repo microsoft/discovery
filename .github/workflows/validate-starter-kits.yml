@@ -1,0 +1,47 @@
+name: Validate Starter Kits
+
+on:
+  pull_request:
+    paths:
+      - "starter-kits/**"
+      - "docs/schemas/starter-kit-schema.json"
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    name: Validate starter kit manifests
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout PR branch
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: pip install jsonschema pyyaml
+
+      - name: Determine changed starter kits
+        id: changed
+        run: |
+          CHANGED=$(git diff --name-only origin/${{ github.base_ref }}...HEAD \
+            | grep '^starter-kits/' \
+            | awk -F/ 'NF >= 2 { print $2 }' \
+            | sort -u | tr '\n' ' ')
+          echo "kits=$CHANGED" >> "$GITHUB_OUTPUT"
+
+      - name: Run validation
+        run: |
+          KITS="${{ steps.changed.outputs.kits }}"
+          ARGS=""
+          if [ -n "$KITS" ]; then
+            ARGS="--changed-kits $KITS"
+          fi
+          python .github/scripts/validate_starter_kits.py --repo-root . $ARGS

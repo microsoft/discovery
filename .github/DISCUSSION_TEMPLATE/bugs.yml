@@ -1,0 +1,105 @@
+title: "[Bug] "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting a bug! A clear, reproducible report dramatically increases the odds of a fix.
+
+        **Security issues do not belong here.** See [SECURITY.md](https://github.com/microsoft/discovery/blob/main/SECURITY.md) for responsible disclosure.
+
+  - type: dropdown
+    id: surface
+    attributes:
+      label: Which Microsoft Discovery surface?
+      description: Pick the one this bug affects. A workflow uses this to apply the `app` or `services` label automatically.
+      options:
+        - Microsoft Discovery app (Windows desktop client)
+        - Microsoft Discovery services (Azure cloud)
+        - Both / not sure
+    validations:
+      required: true
+
+  - type: input
+    id: version
+    attributes:
+      label: Microsoft Discovery app version
+      description: Required only if this is an **app** bug. From `Help → About`, or the installer filename (e.g. `DiscoveryExpressSetup-0.13.41.exe` → `0.13.41`). Leave blank for Services-only bugs.
+      placeholder: 0.13.41
+    validations:
+      required: false
+
+  - type: input
+    id: os
+    attributes:
+      label: OS version
+      description: Run `winver` on Windows.
+      placeholder: Windows 11 23H2
+    validations:
+      required: true
+
+  - type: textarea
+    id: what
+    attributes:
+      label: What were you trying to do?
+      placeholder: One sentence — the goal, not the symptom.
+    validations:
+      required: true
+
+  - type: textarea
+    id: repro
+    attributes:
+      label: Steps to reproduce
+      description: Number the steps. Include exact commands, prompts, or file paths.
+      placeholder: |
+        1. Open a fresh workspace
+        2. `dx init --workspace .`
+        3. ...
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behavior
+    validations:
+      required: true
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs and `dx doctor` output
+      description: |
+        Paste the relevant tail of the **Microsoft Discovery** Output channel and the output of `dx doctor --workspace .`. Wrap in code fences.
+      render: text
+    validations:
+      required: false
+
+  - type: dropdown
+    id: severity
+    attributes:
+      label: Severity
+      options:
+        - Blocking — I cannot make progress
+        - Major — Workaround exists, but it's painful
+        - Minor — Annoying, easy workaround
+        - Cosmetic
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: confirmations
+    attributes:
+      label: Confirmations
+      options:
+        - label: I have searched [existing Bugs discussions](https://github.com/microsoft/discovery/discussions/categories/bugs) before posting.
+          required: true
+        - label: This report contains no sensitive, regulated, or proprietary data.
+          required: true

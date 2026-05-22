@@ -1,0 +1,180 @@
+name: Auto-merge on Approval
+
+# Evaluates a PR against three gates and manages labels accordingly:
+#   1. checks_passed  — all status checks on the PR head are SUCCESS / NEUTRAL / SKIPPED
+#                       (no FAILURE / CANCELLED / TIMED_OUT and no PENDING entries).
+#   2. up_to_date     — PR branch is not behind base (no "Update branch" needed).
+#   3. human_approved — at least one non-bot reviewer has APPROVED, and the overall
+#                       reviewDecision is not CHANGES_REQUESTED.
+#
+# Labels applied:
+#   - update-branch          when the PR is behind base
+#   - needs-human-review     when no human approval (or changes requested)
+#   - ready-for-auto-merge   when all three gates pass; on this state the workflow
+#                            also performs a squash merge with branch deletion.
+#
+# The workflow runs on PR events, review events, and check_suite completions, so it
+# re-evaluates whenever any of the inputs change.
+
+on:
+  pull_request_target:
+    types: [opened, synchronize, reopened, labeled, unlabeled, ready_for_review]
+  pull_request_review:
+    types: [submitted, dismissed, edited]
+  check_suite:
+    types: [completed]
+
+permissions:
+  contents: write
+  pull-requests: write
+  checks: read
+  statuses: read
+
+concurrency:
+  group: auto-merge-${{ github.event.pull_request.number || github.event.check_suite.pull_requests[0].number || github.run_id }}
+  cancel-in-progress: false
+
+jobs:
+  evaluate-and-merge:
+    name: Evaluate PR gates and merge when ready
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Resolve PR number
+        id: pr
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          PR_NUMBER=""
+          case "${{ github.event_name }}" in
+            pull_request_target|pull_request_review)
+              PR_NUMBER="${{ github.event.pull_request.number }}"
+              ;;
+            check_suite)
+              PR_NUMBER=$(jq -r '.check_suite.pull_requests[0].number // empty' "$GITHUB_EVENT_PATH")
+              ;;
+          esac
+          if [ -z "$PR_NUMBER" ]; then
+            echo "No PR associated with this event — skipping."
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "Resolved PR #$PR_NUMBER"
+            echo "number=$PR_NUMBER" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Ensure managed labels exist
+        if: steps.pr.outputs.skip != 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          ensure_label() {
+            local name="$1"; local color="$2"; local desc="$3"
+            gh api -X POST "/repos/$REPO/labels" \
+              -f name="$name" -f color="$color" -f description="$desc" \
+              >/dev/null 2>&1 || true
+          }
+          ensure_label "update-branch"        "fbca04" "PR branch is behind base — please update"
+          ensure_label "needs-human-review"   "0075ca" "Awaiting human approval"
+          ensure_label "ready-for-auto-merge" "0e8a16" "All gates green — will be auto-merged"
+
+      - name: Evaluate gates, update labels, and merge if ready
+        if: steps.pr.outputs.skip != 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          PR_NUMBER: ${{ steps.pr.outputs.number }}
+        run: |
+          set -euo pipefail
+
+          PR_JSON=$(gh pr view "$PR_NUMBER" --repo "$REPO" --json \
+            number,isDraft,state,mergeStateStatus,mergeable,reviewDecision,reviews,statusCheckRollup,labels,author)
+
+          STATE=$(echo "$PR_JSON"        | jq -r '.state')
+          IS_DRAFT=$(echo "$PR_JSON"     | jq -r '.isDraft')
+          AUTHOR=$(echo "$PR_JSON"       | jq -r '.author.login')
+          MERGE_STATE=$(echo "$PR_JSON"  | jq -r '.mergeStateStatus')
+          MERGEABLE=$(echo "$PR_JSON"    | jq -r '.mergeable')
+          REVIEW_DECISION=$(echo "$PR_JSON" | jq -r '.reviewDecision')
+
+          echo "PR #$PR_NUMBER author=$AUTHOR state=$STATE draft=$IS_DRAFT"
+          echo "mergeStateStatus=$MERGE_STATE mergeable=$MERGEABLE reviewDecision=$REVIEW_DECISION"
+
+          # Skip closed / merged / draft / Dependabot PRs.
+          if [ "$STATE" != "OPEN" ] || [ "$IS_DRAFT" = "true" ] || [ "$AUTHOR" = "dependabot[bot]" ]; then
+            echo "PR is not eligible (closed, draft, or Dependabot) — skipping."
+            exit 0
+          fi
+
+          # ── Gate 1: checks_passed ──────────────────────────────────
+          # Any FAILURE/CANCELLED/TIMED_OUT/ACTION_REQUIRED/STALE conclusion fails.
+          # Any null/IN_PROGRESS/QUEUED conclusion or PENDING state means "still running".
+          CHECKS_FAILED=$(echo "$PR_JSON" | jq '
+            [.statusCheckRollup[]?
+             | (.conclusion // .state // "PENDING")
+             | ascii_upcase
+             | select(. == "FAILURE" or . == "CANCELLED" or . == "TIMED_OUT"
+                       or . == "ACTION_REQUIRED" or . == "STALE" or . == "ERROR")
+            ] | length')
+          CHECKS_PENDING=$(echo "$PR_JSON" | jq '
+            [.statusCheckRollup[]?
+             | (.conclusion // .state // "PENDING")
+             | ascii_upcase
+             | select(. == "PENDING" or . == "IN_PROGRESS" or . == "QUEUED" or . == "WAITING")
+            ] | length')
+          if [ "$CHECKS_FAILED" -gt 0 ] || [ "$CHECKS_PENDING" -gt 0 ]; then
+            CHECKS_PASSED=false
+          else
+            CHECKS_PASSED=true
+          fi
+
+          # ── Gate 2: up_to_date ─────────────────────────────────────
+          if [ "$MERGE_STATE" = "BEHIND" ]; then
+            UP_TO_DATE=false
+          else
+            UP_TO_DATE=true
+          fi
+
+          # ── Gate 3: human_approved ─────────────────────────────────
+          HUMAN_APPROVALS=$(echo "$PR_JSON" | jq '
+            [.reviews[]?
+             | select(.state == "APPROVED")
+             | select((.author.login // "") | endswith("[bot]") | not)
+            ] | length')
+          if [ "$REVIEW_DECISION" = "CHANGES_REQUESTED" ] || [ "$HUMAN_APPROVALS" -lt 1 ]; then
+            HUMAN_APPROVED=false
+          else
+            HUMAN_APPROVED=true
+          fi
+
+          echo "Gates: checks_passed=$CHECKS_PASSED up_to_date=$UP_TO_DATE human_approved=$HUMAN_APPROVED"
+          echo "       (checks_failed=$CHECKS_FAILED pending=$CHECKS_PENDING human_approvals=$HUMAN_APPROVALS)"
+
+          # ── Label management ───────────────────────────────────────
+          add_label() {
+            gh pr edit "$PR_NUMBER" --repo "$REPO" --add-label "$1" >/dev/null 2>&1 || true
+          }
+          remove_label() {
+            gh pr edit "$PR_NUMBER" --repo "$REPO" --remove-label "$1" >/dev/null 2>&1 || true
+          }
+
+          if [ "$UP_TO_DATE" = "false" ]; then add_label "update-branch"; else remove_label "update-branch"; fi
+          if [ "$HUMAN_APPROVED" = "false" ]; then add_label "needs-human-review"; else remove_label "needs-human-review"; fi
+
+          if [ "$CHECKS_PASSED" = "true" ] && [ "$UP_TO_DATE" = "true" ] && [ "$HUMAN_APPROVED" = "true" ]; then
+            add_label "ready-for-auto-merge"
+
+            # Also ensure the PR isn't blocked by merge conflicts.
+            if [ "$MERGEABLE" != "MERGEABLE" ]; then
+              echo "::warning::All gates pass but PR is not in a MERGEABLE state ($MERGEABLE) — leaving for manual review."
+              exit 0
+            fi
+
+            echo "All gates green — enabling auto-merge (squash)."
+            gh pr merge "$PR_NUMBER" --repo "$REPO" --auto --squash --delete-branch
+          else
+            remove_label "ready-for-auto-merge"
+            echo "Not ready for auto-merge yet."
+          fi

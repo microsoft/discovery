@@ -1,0 +1,444 @@
+name: PR Review
+
+on:
+  pull_request_target:
+    branches: [main]
+    types: [opened, synchronize, reopened]
+
+# One run per PR at a time; cancel in-progress runs when a new commit arrives.
+concurrency:
+  group: pr-review-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+# Minimal permissions — only what we need
+permissions:
+  contents: read
+  pull-requests: write
+  issues: write
+
+jobs:
+  # ── Stage 1: Classify changed paths ───────────────────────────────────────
+  classify:
+    name: Classify Changed Paths
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    outputs:
+      changed_files: ${{ steps.changed.outputs.all_changed_files }}
+      has_agents: ${{ steps.classify.outputs.has_agents }}
+      has_docs_only: ${{ steps.classify.outputs.has_docs_only }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+
+      - name: Get changed files
+        id: changed
+        run: |
+          # Fetch the base commit so git diff can compare across fork boundaries
+          git fetch origin ${{ github.event.pull_request.base.sha }} --depth=1 2>/dev/null || true
+          FILES=$(git diff --name-only ${{ github.event.pull_request.base.sha }} ${{ github.event.pull_request.head.sha }} 2>/dev/null || git diff --name-only HEAD~1 HEAD)
+          # Newline-separated list → space-separated for the classify step
+          FILES_INLINE=$(echo "$FILES" | tr '\n' ' ' | sed 's/ $//')
+          echo "all_changed_files=$FILES_INLINE" >> "$GITHUB_OUTPUT"
+          echo "Changed files: $FILES_INLINE"
+
+      - name: Classify paths
+        id: classify
+        run: |
+          FILES="${{ steps.changed.outputs.all_changed_files }}"
+          HAS_AGENTS=false
+          HAS_DOCS_ONLY=true
+          for f in $FILES; do
+            if [[ "$f" == agents/* ]]; then
+              HAS_AGENTS=true
+              HAS_DOCS_ONLY=false
+            elif [[ "$f" != docs/schemas/* ]]; then
+              HAS_DOCS_ONLY=false
+            fi
+          done
+          echo "has_agents=$HAS_AGENTS" >> "$GITHUB_OUTPUT"
+          echo "has_docs_only=$HAS_DOCS_ONLY" >> "$GITHUB_OUTPUT"
+
+  # ── Stages 2–4: Structural + Schema + Content/Policy + Documentation ───────
+  validate:
+    name: Validate PR
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    needs: classify
+    outputs:
+      passed: ${{ steps.run_validator.outputs.passed }}
+      results_json: ${{ steps.run_validator.outputs.results_json }}
+    steps:
+      # B11 hardening: under `pull_request_target` the workflow runs with a
+      # token that can write to the repo. We never want to execute code from
+      # the PR with that token. Two-checkout pattern:
+      #   1. `trusted/` — base SHA, source of the validator scripts.
+      #   2. `pr/`      — PR head, the untrusted *content* the validator scans.
+      # The runner only ever invokes Python that lives under `trusted/`.
+      - name: Checkout trusted base (for validator scripts)
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.base.sha }}
+          fetch-depth: 1
+          path: trusted
+
+      - name: Checkout PR head (content under review — never executed)
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+          lfs: true
+          path: pr
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: pip install jsonschema pyyaml onnx picklescan
+
+      - name: Write changed files list
+        run: |
+          echo "${{ needs.classify.outputs.changed_files }}" \
+            | tr ' ' '\n' \
+            | grep -v '^$' \
+            > /tmp/changed-files.txt
+          echo "Changed files:"
+          cat /tmp/changed-files.txt
+
+      - name: Run validation
+        id: run_validator
+        run: |
+          # Invoke validator from the trusted checkout (base SHA) against PR content.
+          python trusted/.github/scripts/validate_pr.py \
+            --changed-files /tmp/changed-files.txt \
+            --repo-root "$GITHUB_WORKSPACE/pr" \
+            --output /tmp/validation-results.json || true
+
+          if [[ ! -f /tmp/validation-results.json ]]; then
+            echo '{"passed":false,"failure_count":1,"has_agents":false,"has_docs_only":false,"failures":[{"rule_id":"INTERNAL","file":"validate_pr.py","line":1,"message":"Validator crashed before writing output — check the workflow logs."}]}' > /tmp/validation-results.json
+          fi
+
+          PASSED=$(python -c "import json; d=json.load(open('/tmp/validation-results.json')); print('true' if d['passed'] else 'false')")
+          echo "passed=$PASSED" >> "$GITHUB_OUTPUT"
+
+          # Compact JSON for passing between steps
+          RESULTS=$(cat /tmp/validation-results.json)
+          echo "results_json<<EOF" >> "$GITHUB_OUTPUT"
+          echo "$RESULTS" >> "$GITHUB_OUTPUT"
+          echo "EOF" >> "$GITHUB_OUTPUT"
+
+          # Fail the job so the GitHub check shows red when validation issues are found.
+          # post-results uses if: !cancelled() so it still runs to post feedback comments on failure.
+          if [[ "$PASSED" == "false" ]]; then
+            exit 1
+          fi
+
+      - name: Ensure results file exists
+        if: always()
+        run: |
+          # Create fallback if an earlier step (checkout, pip install, etc.) failed
+          # before run_validator had a chance to create the file.
+          if [[ ! -f /tmp/validation-results.json ]]; then
+            echo '{"passed":false,"failure_count":1,"has_agents":false,"has_docs_only":false,"failures":[{"rule_id":"INTERNAL","file":"(workflow)","line":1,"message":"Validator crashed before producing results — check the Validate PR job logs for details."}]}' \
+              > /tmp/validation-results.json
+          fi
+
+      - name: Upload validation results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: validation-results
+          path: /tmp/validation-results.json
+
+  # ── Stage 5: Secret scan ───────────────────────────────────────────────────
+  secret-scan:
+    name: Secret Scan
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    # TruffleHog scans pointer text and commit history; it does NOT need the
+    # actual LFS payloads. Skipping the smudge filter keeps secret scanning
+    # working even when LFS objects are unavailable to the file:// clone
+    # TruffleHog does internally (e.g. fresh PR before LFS objects are
+    # uploaded, exhausted LFS quota, force-pushed branch). Without this,
+    # one PR's LFS hygiene problem kills secret scanning across the repo.
+    # POL-009 catches LFS-hygiene problems separately in the validate job,
+    # which DOES need real bytes for header sniffing.
+    env:
+      GIT_LFS_SKIP_SMUDGE: "1"
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+
+      - name: Run TruffleHog secret scan (verified — blocking)
+        run: |
+          # Install TruffleHog directly — avoids org-level action allowlist restrictions
+          curl -sSfL https://raw.githubusercontent.com/trufflesecurity/trufflehog/main/scripts/install.sh \
+            | sh -s -- -b /usr/local/bin
+          trufflehog git file://. \
+            --since-commit ${{ github.event.pull_request.base.sha }} \
+            --branch ${{ github.event.pull_request.head.sha }} \
+            --only-verified \
+            --fail
+
+      - name: SEC-002 — Audit-mode scan (unverified — non-blocking, informational)
+        continue-on-error: true
+        run: |
+          # Re-run TruffleHog without --only-verified to surface high-entropy
+          # strings and unverified credentials. This does NOT fail the build;
+          # it produces an artefact so reviewers can spot dummy keys / leaked
+          # placeholders that the verified scan deliberately ignores.
+          set +e
+          trufflehog git file://. \
+            --since-commit ${{ github.event.pull_request.base.sha }} \
+            --branch ${{ github.event.pull_request.head.sha }} \
+            --json \
+            > /tmp/trufflehog-audit.json 2>/dev/null
+          if [ -s /tmp/trufflehog-audit.json ]; then
+            COUNT=$(wc -l < /tmp/trufflehog-audit.json)
+            echo "::warning::SEC-002 audit-mode scan found ${COUNT} potential match(es). Download the trufflehog-audit-results artefact for details."
+          else
+            echo "SEC-002: audit-mode scan produced no findings."
+          fi
+
+      - name: Upload audit-mode results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: trufflehog-audit-results
+          path: /tmp/trufflehog-audit.json
+          if-no-files-found: ignore
+
+  # ── Post results: labels + inline comments + summary ──────────────────────
+  post-results:
+    name: Post Results
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    needs: [classify, validate, secret-scan]
+    # Use !cancelled() instead of always() to avoid zombie queued jobs when a run is cancelled.
+    # always() causes Post Results to queue even for cancelled runs, exhausting the runner pool.
+    if: ${{ !cancelled() }}
+    steps:
+      - name: Download validation results
+        id: download
+        continue-on-error: true
+        uses: actions/download-artifact@v4
+        with:
+          name: validation-results
+          path: /tmp
+
+      - name: Create fallback results if artifact missing
+        if: steps.download.outcome == 'failure'
+        run: |
+          echo '{"passed":false,"failure_count":1,"has_agents":false,"has_docs_only":false,"failures":[{"rule_id":"INTERNAL","file":"(workflow)","line":1,"message":"Validation job was skipped or did not produce results — check the Validate PR job logs for details."}]}' \
+            > /tmp/validation-results.json
+
+      - name: Manage labels and post PR feedback
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const fs = require('fs');
+            const results = JSON.parse(fs.readFileSync('/tmp/validation-results.json', 'utf8'));
+            const secretScanPassed = '${{ needs.secret-scan.result }}' === 'success';
+            const allPassed = results.passed && secretScanPassed;
+
+            const pr = context.payload.pull_request;
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+            const prNumber = pr.number;
+
+            // ── 1. Refresh bot-managed labels ──────────────────────
+            const BOT_LABELS = [
+              'automated-checks-passed',
+              'automated-checks-failed',
+              '1p-contribution',
+              '3p-contribution',
+              'docs-only',
+            ];
+
+            const currentLabels = await github.rest.issues.listLabelsOnIssue({
+              owner, repo, issue_number: prNumber
+            });
+            for (const label of currentLabels.data) {
+              if (BOT_LABELS.includes(label.name)) {
+                await github.rest.issues.removeLabel({
+                  owner, repo, issue_number: prNumber, name: label.name
+                });
+              }
+            }
+
+            // ── Helper: ensure a label exists in the repo ──────────
+            const LABEL_DEFS = {
+              'automated-checks-passed':  { color: '0e8a16', description: 'All automated checks passed' },
+              'automated-checks-failed':  { color: 'd93f0b', description: 'One or more automated checks failed' },
+              '1p-contribution':          { color: '1d76db', description: "Authored by Microsoft (party='1p' in metadata)" },
+              '3p-contribution':          { color: 'bfd4f2', description: "Authored by a third-party partner (party='3p' in metadata)" },
+              'docs-only':                { color: 'c5def5', description: 'Changes only affect documentation or schemas' },
+            };
+            async function ensureLabel(name) {
+              try {
+                await github.rest.issues.getLabel({ owner, repo, name });
+              } catch (e) {
+                if (e.status === 404) {
+                  const def = LABEL_DEFS[name] || { color: 'ededed', description: '' };
+                  await github.rest.issues.createLabel({ owner, repo, name, color: def.color, description: def.description });
+                }
+              }
+            }
+
+            // ── 2. Apply classification labels ─────────────────────
+            // 1p / 3p come from the `party` field inside metadata.yaml / kit.json,
+            // not from folder location.
+            const labelsToAdd = [];
+            if (results.has_1p) labelsToAdd.push('1p-contribution');
+            if (results.has_3p) labelsToAdd.push('3p-contribution');
+            if (results.has_docs_only) labelsToAdd.push('docs-only');
+
+            // ── 3. Apply pass/fail labels ──────────────────────────
+            if (allPassed) {
+              labelsToAdd.push('automated-checks-passed');
+            } else {
+              labelsToAdd.push('automated-checks-failed');
+            }
+
+            if (labelsToAdd.length > 0) {
+              for (const label of labelsToAdd) { await ensureLabel(label); }
+              await github.rest.issues.addLabels({
+                owner, repo, issue_number: prNumber, labels: labelsToAdd
+              });
+            }
+
+            // ── 4. Post inline review comments (one per failure) ───
+            const failures = results.failures || [];
+            if (failures.length > 0) {
+              // Create a PR review with inline comments for each failure
+              // We batch all comments into a single review submission so
+              // the submitter gets everything in one pass (DC-AUTO-001).
+              const comments = failures.map(f => ({
+                path: f.file,
+                line: f.line || 1,
+                side: 'RIGHT',
+                body: `**[${f.rule_id}]** ${f.message}`
+              }));
+
+              // GitHub review comments require the file to be in the diff.
+              // Filter to files actually in the diff; remainder go in the summary.
+              const diffFiles = new Set(
+                (await github.rest.pulls.listFiles({ owner, repo, pull_number: prNumber, per_page: 100 }))
+                  .data.map(f => f.filename)
+              );
+
+              const inlineComments = comments.filter(c => diffFiles.has(c.path));
+              const summaryOnlyFailures = failures.filter(f => !diffFiles.has(f.file));
+
+              if (inlineComments.length > 0) {
+                try {
+                  await github.rest.pulls.createReview({
+                    owner,
+                    repo,
+                    pull_number: prNumber,
+                    commit_id: pr.head.sha,
+                    event: 'REQUEST_CHANGES',
+                    body: '',
+                    comments: inlineComments
+                  });
+                } catch (e) {
+                  console.log(`Could not post inline review (PR may be locked): ${e.message}`);
+                }
+              }
+
+              // ── 5. Post single summary comment with all issues ──
+              const rows = failures.map(f =>
+                `| \`${f.rule_id}\` | \`${f.file}\` | ${f.message} |`
+              ).join('\n');
+
+              const secretRow = !secretScanPassed
+                ? `| \`SEC-SCAN\` | _(repository)_ | Secret scan failed — potential credentials detected. Check the TruffleHog job for details. |`
+                : '';
+
+              const tableRows = [secretRow, rows].filter(Boolean).join('\n');
+              const summary = [
+                `## ❌ Automated Check Results — ${failures.length + (!secretScanPassed ? 1 : 0)} issue(s) found`,
+                '',
+                'All issues are listed below. Please address **all** of them before requesting human review.',
+                '',
+                '| Rule ID | File | Issue |',
+                '|---------|------|-------|',
+                tableRows,
+                '',
+                '---',
+                'Once all issues are resolved, push a new commit to re-trigger this check.',
+                'When all checks pass, the `automated-checks-passed` label will be applied and the maintainers will be auto-requested for review.',
+                '',
+                '> See the [authoring guides](https://github.com/microsoft/discovery/tree/main/docs/authoring-guides) for end-to-end walkthroughs.',
+              ].join('\n');
+
+              try {
+                await github.rest.issues.createComment({
+                  owner, repo, issue_number: prNumber, body: summary
+                });
+              } catch (e) {
+                // Log but don't fail the job — PR may be locked or bot lacks write access.
+                console.log(`Could not post summary comment (PR may be locked): ${e.message}`);
+              }
+
+            } else if (allPassed) {
+              // ── 5b. Dismiss any previous bot "Request changes" reviews ──
+              try {
+                const reviews = await github.rest.pulls.listReviews({
+                  owner, repo, pull_number: prNumber, per_page: 100
+                });
+                for (const review of reviews.data) {
+                  if (review.state === 'CHANGES_REQUESTED' && review.user.type === 'Bot') {
+                    await github.rest.pulls.dismissReview({
+                      owner, repo, pull_number: prNumber,
+                      review_id: review.id,
+                      message: 'All automated checks now pass — dismissing previous review.'
+                    });
+                  }
+                }
+              } catch (e) {
+                console.log(`Could not dismiss bot reviews: ${e.message}`);
+              }
+
+              // ── 6. Auto-request maintainer review ───────────────
+              // Reviewers are now governed by .github/CODEOWNERS; GitHub
+              // will automatically request the listed owners. We still
+              // keep an explicit request so the request fires even when
+              // branch protection isn't enforcing CODEOWNERS yet.
+              try {
+                await github.rest.pulls.requestReviewers({
+                  owner,
+                  repo,
+                  pull_number: prNumber,
+                });
+              } catch (e) {
+                // PR author cannot be requested — silently skip if that's the case
+                console.log(`Could not request reviewers: ${e.message}`);
+              }
+
+              // ── 7. Post success summary ──────────────────────────
+              try {
+                await github.rest.issues.createComment({
+                  owner,
+                  repo,
+                  issue_number: prNumber,
+                  body: [
+                    '## ✅ Automated Check Results — All checks passed',
+                    '',
+                    'All structural, schema, content, documentation, and secret scan checks passed.',
+                    '',
+                    'This PR is ready for human review. The maintainers have been automatically requested.',
+                    '',
+                    '> Reminder: 1 approval from a CODEOWNERS reviewer is required before this PR can be merged.',
+                  ].join('\n')
+                });
+              } catch (e) {
+                console.log(`Could not post success comment (PR may be locked): ${e.message}`);
+              }
+            }

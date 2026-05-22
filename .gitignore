@@ -427,3 +427,11 @@ FodyWeavers.xsd
 *.msix
 *.msm
 *.msp
+
+# Skill-specific deployment configuration (contains tenant/subscription IDs)
+# config.template.json is the safe-to-commit template; config.json is local only.
+config.json
+
+
+# Pytest cache directory
+.pytest_cache/

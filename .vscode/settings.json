@@ -1,0 +1,35 @@
+{
+  "yaml.schemas": {
+    "./docs/schemas/metadata-schema.json": [
+      "agents/*/metadata.yaml"
+    ],
+    "./docs/schemas/agent-schema-v2.json": [
+      "agents/*/agent.yaml"
+    ],
+    "./docs/schemas/tool-definition-schema.json": [
+      "agents/*/tools/*/tool.yaml"
+    ]
+  },
+  "json.schemas": [
+    {
+      "fileMatch": ["starter-kits/*/kit.json"],
+      "url": "./docs/schemas/starter-kit-schema.json"
+    },
+    {
+      "fileMatch": [".auto-registry/agent-registry.json"],
+      "url": "./docs/schemas/registry-schema.json"
+    },
+    {
+      "fileMatch": [".auto-registry/starter-kit-registry.json"],
+      "url": "./docs/schemas/starter-kit-registry-schema.json"
+    }
+  ],
+  "files.associations": {
+    "*.yaml": "yaml",
+    "kit.json": "jsonc"
+  },
+  "yaml.format.enable": true,
+  "yaml.completion": true,
+  "yaml.validate": true,
+  "yaml.hover": true
+}

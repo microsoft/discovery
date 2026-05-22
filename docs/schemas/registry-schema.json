@@ -1,0 +1,92 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://github.com/microsoft/discovery/blob/main/schemas/registry-schema.json",
+  "title": "Discovery Catalog Registry",
+  "description": "Catalog of all agents in the discovery-catalog repository.",
+  "type": "object",
+  "required": ["version", "generated_at", "entries"],
+  "additionalProperties": false,
+  "properties": {
+    "version": {
+      "type": "string",
+      "description": "Schema version of this registry file.",
+      "const": "1.0"
+    },
+    "generated_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "UTC timestamp of the last registry update."
+    },
+    "entries": {
+      "type": "array",
+      "description": "One entry per agent in the repo.",
+      "items": { "$ref": "#/definitions/RegistryEntry" }
+    }
+  },
+  "definitions": {
+    "RegistryEntry": {
+      "type": "object",
+      "required": ["name", "type", "publisher_name", "path", "version"],
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "Human-readable name of the agent (from metadata.yaml)."
+        },
+        "type": {
+          "type": "string",
+          "enum": ["agent"],
+          "description": "Entry type. Always 'agent'."
+        },
+        "publisher_name": {
+          "type": "string",
+          "description": "Name of the team or organisation that published this entry (from metadata.yaml)."
+        },
+        "path": {
+          "type": "string",
+          "description": "Relative path from repo root to the agent folder, e.g. agents/my-agent.",
+          "pattern": "^agents/[a-z0-9][a-z0-9-]*$"
+        },
+        "version": {
+          "type": "string",
+          "description": "Semantic version string from metadata.yaml (e.g. 1.0.0).",
+          "pattern": "^\\d+\\.\\d+\\.\\d+$"
+        },
+        "associated_tools": {
+          "type": "array",
+          "description": "Relative paths (from repo root) to each Discovery computation tool container folder under this agent's tools/ directory.",
+          "items": {
+            "type": "string"
+          },
+          "default": []
+        },
+        "foundry_tools": {
+          "type": "array",
+          "description": "Foundry-native tool names referenced in agent.yaml (e.g. web_search, mcp, openapi). Empty for agents with no Foundry-native tools.",
+          "items": {
+            "type": "string"
+          },
+          "default": []
+        },
+        "supported_regions": {
+          "type": "array",
+          "description": "Azure region ARM aliases where this agent is supported (optional; empty means all regions).",
+          "items": {
+            "type": "string"
+          },
+          "default": []
+        },
+        "description": {
+          "type": "string",
+          "description": "Short description of the agent (from metadata.yaml)."
+        },
+        "tags": {
+          "type": "array",
+          "description": "Tags from metadata.yaml for discoverability.",
+          "items": { "type": "string" },
+          "default": []
+        }
+      }
+    }
+  }
+}

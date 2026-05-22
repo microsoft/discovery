@@ -1,0 +1,81 @@
+name: Update Registry
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "agents/**"
+      - "starter-kits/**"
+
+  workflow_dispatch:
+    inputs:
+      reason:
+        description: "Reason for manual trigger"
+        required: false
+        default: "Manual registry refresh"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: update-registry
+  cancel-in-progress: false
+
+jobs:
+  update-registry:
+    name: Rebuild .auto-registry/agent-registry.json
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          # Full history needed so the commit author is resolved correctly
+          fetch-depth: 1
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: pip install pyyaml jsonschema
+
+      - name: Rebuild .auto-registry/agent-registry.json
+        run: python .github/scripts/update_registry.py --repo-root . --output .auto-registry/agent-registry.json
+
+      - name: Validate generated registry against registry-schema.json
+        run: |
+          python -c "
+          import json, sys, jsonschema
+          with open('docs/schemas/registry-schema.json') as f:
+              schema = json.load(f)
+          with open('.auto-registry/agent-registry.json') as f:
+              data = json.load(f)
+          v = jsonschema.Draft7Validator(schema)
+          errors = sorted(v.iter_errors(data), key=lambda e: list(e.path))
+          if errors:
+              for e in errors:
+                  path = ' -> '.join(str(p) for p in e.absolute_path) or '(root)'
+                  print(f'  FAIL: registry at {path}: {e.message}', file=sys.stderr)
+              sys.exit(1)
+          print('  OK: generated registry conforms to registry-schema.json')
+          "
+
+      - name: Check for changes
+        id: diff
+        run: |
+          git diff --quiet .auto-registry/agent-registry.json && echo "changed=false" >> $GITHUB_OUTPUT || echo "changed=true" >> $GITHUB_OUTPUT
+
+      - name: Commit updated registry
+        if: steps.diff.outputs.changed == 'true'
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add .auto-registry/agent-registry.json
+          ADDED=$(git diff HEAD .auto-registry/agent-registry.json | grep '^\+.*"path"' | wc -l | tr -d ' ')
+          REMOVED=$(git diff HEAD .auto-registry/agent-registry.json | grep '^\-.*"path"' | wc -l | tr -d ' ')
+          git commit -m "chore: update .auto-registry/agent-registry.json (+${ADDED}/-${REMOVED} entries) [skip ci]"
+          git push

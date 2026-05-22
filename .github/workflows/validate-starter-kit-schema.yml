@@ -1,0 +1,95 @@
+name: Validate Starter Kit Schema
+
+on:
+  pull_request:
+    paths:
+      - "docs/schemas/starter-kit-schema.json"
+      - "docs/schemas/starter-kit-registry-schema.json"
+
+permissions:
+  contents: read
+
+jobs:
+  validate-schema:
+    name: Schema regression guard (SKS-001 – SKS-003)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Reject schema changes from forks (Microsoft maintainers only)
+        if: ${{ github.event.pull_request.head.repo.fork == true }}
+        run: |
+          echo "::error::Schema changes under docs/schemas/ are restricted to Microsoft maintainers." \
+            "External contributors: please open an Idea in Discussions" \
+            "(https://github.com/microsoft/discovery/discussions/categories/ideas)" \
+            "and a maintainer will land the change once it is agreed. See CONTRIBUTING.md."
+          exit 1
+
+      - name: Checkout PR branch
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: pip install jsonschema pyyaml
+
+      - name: SKS-001 — Schema files are valid JSON
+        run: |
+          python -c "
+          import json, sys
+          for f in [
+              'docs/schemas/starter-kit-schema.json',
+              'docs/schemas/starter-kit-registry-schema.json',
+          ]:
+              try:
+                  with open(f) as fh:
+                      json.load(fh)
+                  print(f'  OK: {f}')
+              except Exception as e:
+                  print(f'  FAIL: {f}: {e}', file=sys.stderr)
+                  sys.exit(1)
+          "
+
+      - name: SKS-002 — Schemas are valid JSON Schema Draft 7
+        run: |
+          python -c "
+          import json, sys, jsonschema
+          for f in [
+              'docs/schemas/starter-kit-schema.json',
+              'docs/schemas/starter-kit-registry-schema.json',
+          ]:
+              with open(f) as fh:
+                  schema = json.load(fh)
+              try:
+                  jsonschema.Draft7Validator.check_schema(schema)
+                  print(f'  OK: {f}')
+              except jsonschema.exceptions.SchemaError as e:
+                  print(f'  FAIL: {f}: {e.message}', file=sys.stderr)
+                  sys.exit(1)
+          "
+
+      - name: SKS-003 — All existing kits validate against updated starter-kit-schema.json
+        run: |
+          python -c "
+          import json, sys, glob, jsonschema
+          with open('docs/schemas/starter-kit-schema.json') as f:
+              schema = json.load(f)
+          validator = jsonschema.Draft7Validator(schema)
+          failed = False
+          paths = sorted(glob.glob('starter-kits/*/kit.json'))
+          for plugin_path in paths:
+              with open(plugin_path) as f:
+                  manifest = json.load(f)
+              errors = list(validator.iter_errors(manifest))
+              if errors:
+                  for e in errors:
+                      path_str = ' -> '.join(str(p) for p in e.absolute_path) or '(root)'
+                      print(f'  FAIL: {plugin_path} at {path_str}: {e.message}', file=sys.stderr)
+                  failed = True
+              else:
+                  print(f'  OK: {plugin_path}')
+          if failed:
+              sys.exit(1)
+          "

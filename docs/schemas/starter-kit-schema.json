@@ -1,0 +1,202 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://github.com/microsoft/discovery/schemas/starter-kit-schema.json",
+  "title": "Discovery Catalog Starter Kit Manifest",
+  "description": "Schema for starter-kits/<name>/kit.json.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["name", "version", "description", "author", "keywords", "category", "lifecycle", "displayName", "longDescription", "agentRefs"],
+  "properties": {
+    "$schema": {
+      "type": "string",
+      "description": "JSON Schema reference URI."
+    },
+    "name": {
+      "type": "string",
+      "pattern": "^[a-z0-9][a-z0-9-]*[a-z0-9]$",
+      "maxLength": 64,
+      "description": "Kebab-case identifier. Must equal the parent directory name."
+    },
+    "version": {
+      "type": "string",
+      "pattern": "^\\d+\\.\\d+\\.\\d+$",
+      "description": "Semantic version, e.g. 1.0.0. Bump on meaningful content changes."
+    },
+    "description": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 200,
+      "description": "One-line description. Shown in CLI browse output."
+    },
+    "author": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "email"],
+      "properties": {
+        "name": { "type": "string" },
+        "email": { "type": "string" },
+        "url": { "type": "string" }
+      }
+    },
+    "license": {
+      "type": "string",
+      "description": "SPDX identifier, e.g. MIT."
+    },
+    "keywords": {
+      "type": "array",
+      "items": { "type": "string" },
+      "minItems": 1,
+      "description": "Lowercase search/filter terms."
+    },
+    "category": {
+      "type": "string",
+      "enum": ["Biology", "Chemistry", "Physics", "Silicon", "Quantum", "Materials", "Neuroscience"],
+      "description": "Primary display category."
+    },
+    "homepage": {
+      "type": "string",
+      "description": "URL for more information."
+    },
+    "repository": {
+      "type": "string",
+      "description": "Source repository URL."
+    },
+    "party": {
+      "type": "string",
+      "enum": ["1p", "3p"],
+      "description": "Optional. '1p' = Microsoft first-party authored; '3p' = third-party / partner. Used to drive the 1p-contribution / 3p-contribution PR labels; not validated against folder path."
+    },
+    "lifecycle": {
+      "type": "string",
+      "enum": ["active", "archived"],
+      "description": "Authored lifecycle state. Never set to 'degraded' (that is computed)."
+    },
+    "featureFlag": {
+      "type": "string",
+      "description": "If set, kit is only surfaced in Discovery UI when this feature flag is enabled."
+    },
+    "displayName": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 80,
+      "description": "Card title shown in Discovery UI and CLI browse."
+    },
+    "longDescription": {
+      "type": "string",
+      "minLength": 50,
+      "description": "Markdown body for the detail view."
+    },
+    "logo": {
+      "type": "string",
+      "pattern": "^https://",
+      "description": "HTTPS URL to the kit logo image. Kit folders may only contain kit.json (see SKT-STR-008), so assets must be hosted externally and linked via HTTPS."
+    },
+    "screenshots": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "pattern": "^https://"
+      },
+      "description": "HTTPS URLs to screenshot images. Kit folders may only contain kit.json (see SKT-STR-008), so assets must be hosted externally and linked via HTTPS."
+    },
+    "websiteURL": {
+      "type": "string"
+    },
+    "privacyPolicyURL": {
+      "type": "string"
+    },
+    "agentRefs": {
+      "type": "array",
+      "items": { "$ref": "#/definitions/agentRef" },
+      "minItems": 1,
+      "description": "All agents used by this kit. Exactly one must have role:primary and required:true."
+    },
+    "samplePrompts": {
+      "type": "array",
+      "items": { "$ref": "#/definitions/samplePrompt" },
+      "minItems": 1,
+      "description": "Rich UI prompts with difficulty and expected output. Required for lifecycle:active kits."
+    },
+    "riskProfile": {
+      "$ref": "#/definitions/riskProfile"
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": { "lifecycle": { "const": "active" } },
+        "required": ["lifecycle"]
+      },
+      "then": {
+        "required": ["samplePrompts"]
+      }
+    }
+  ],
+  "definitions": {
+    "agentRef": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["ref", "role", "required"],
+      "properties": {
+        "ref": {
+          "type": "string",
+          "pattern": "^agents/[a-z0-9][a-z0-9-]*$",
+          "description": "Relative path matching entries[].path in .auto-registry/agent-registry.json."
+        },
+        "role": {
+          "type": "string",
+          "enum": ["primary", "supporting"],
+          "description": "primary: the launch agent for this kit. supporting: auxiliary agent."
+        },
+        "required": {
+          "type": "boolean",
+          "description": "If true, kit is degraded when this agent is absent from the registry."
+        },
+        "description": {
+          "type": "string",
+          "description": "Human-readable description of this agent's role in the kit."
+        }
+      }
+    },
+    "samplePrompt": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "title", "prompt"],
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Stable identifier for this prompt, e.g. sp-1."
+        },
+        "title": { "type": "string" },
+        "prompt": {
+          "type": "string",
+          "description": "Full prompt text shown in the Discovery UI 'Try it' tile."
+        },
+        "difficulty": {
+          "type": "string",
+          "enum": ["beginner", "intermediate", "advanced"]
+        },
+        "expectedOutput": {
+          "type": "string",
+          "description": "Description of what the user should expect as output."
+        }
+      }
+    },
+    "riskProfile": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Trust and compliance information surfaced as UI chips.",
+      "properties": {
+        "requiresExternalCompute": {
+          "type": "boolean",
+          "description": "Whether any agent calls an external compute service."
+        },
+        "dataResidency": {
+          "type": "string",
+          "description": "Freeform description of data residency. E.g. 'user-managed Azure subscription'."
+        }
+      }
+    }
+  }
+}
+

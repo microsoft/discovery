@@ -1,0 +1,25 @@
+# CODEOWNERS — Discovery Catalog
+#
+# Each line is a file pattern followed by one or more owners. Order matters:
+# later patterns take precedence over earlier ones. Maintainers listed for a
+# path are auto-requested for review on any PR that touches the path.
+#
+# See https://docs.github.com/en/repositories/managing-your-repositories-settings-and-customization/customizing-your-repository/about-code-owners
+
+# Default reviewers — applied when no more-specific rule matches.
+*                                       @mukesh-dua @charwen @leijgao @ffrachon @karthikananth @anzaman @surajmb
+
+# CI / workflow tooling
+/.github/workflows/                     @mukesh-dua @charwen @leijgao @ffrachon @karthikananth @anzaman @surajmb
+/.github/scripts/                       @mukesh-dua @charwen @leijgao @ffrachon @karthikananth @anzaman @surajmb
+/.github/CODEOWNERS                     @mukesh-dua @charwen @leijgao @ffrachon @karthikananth @anzaman @surajmb
+
+# Schema files — changes here can break every agent/kit in the catalog.
+/docs/schemas/                          @mukesh-dua @charwen @leijgao @ffrachon @karthikananth @anzaman @surajmb
+
+# Auto-generated registries — should normally never be hand-edited (see POL-011).
+/.auto-registry/                        @mukesh-dua @charwen @leijgao @ffrachon @karthikananth @anzaman @surajmb
+
+# Per-content area
+/agents/                                @mukesh-dua @charwen @leijgao @ffrachon @karthikananth @anzaman @surajmb
+/starter-kits/                          @mukesh-dua @charwen @leijgao @ffrachon @karthikananth @anzaman @surajmb

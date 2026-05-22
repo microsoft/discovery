@@ -1,0 +1,81 @@
+name: Update Starter Kits Registry
+
+on:
+  workflow_run:
+    workflows: ["Update Registry"]
+    types:
+      - completed
+
+concurrency:
+  group: update-starter-kits-registry-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  generate:
+    name: Generate starter-kit-registry.json
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    # Only run when the upstream Update Registry workflow succeeded
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    steps:
+      - name: Checkout main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 1
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: pip install pyyaml jsonschema
+
+      - name: Generate starter-kit registry
+        run: python .github/scripts/update_starter_kits_registry.py --repo-root .
+
+      - name: Validate generated registry against starter-kit-registry-schema.json
+        run: |
+          python -c "
+          import json, sys
+          try:
+              import jsonschema
+              with open('docs/schemas/starter-kit-registry-schema.json') as f:
+                  schema = json.load(f)
+              with open('.auto-registry/starter-kit-registry.json') as f:
+                  registry = json.load(f)
+              jsonschema.Draft7Validator.check_schema(schema)
+              validator = jsonschema.Draft7Validator(schema)
+              errors = sorted(validator.iter_errors(registry), key=lambda e: list(e.absolute_path))
+              if errors:
+                  for err in errors:
+                      path_str = ' -> '.join(str(p) for p in err.absolute_path) or '(root)'
+                      print(f'  FAIL at {path_str}: {err.message}', file=sys.stderr)
+                  sys.exit(1)
+              print(f'  OK: starter-kit-registry.json validates against starter-kit-registry-schema.json ({len(registry.get(\"kits\", []))} kit(s)).')
+          except FileNotFoundError as e:
+              # No starter kits in the repo yet — generator skipped output.
+              if '.auto-registry/starter-kit-registry.json' in str(e):
+                  print('  SKIP: no starter-kit-registry.json produced (no kits in repo).')
+              else:
+                  raise
+          except json.JSONDecodeError as e:
+              print(f'  FAIL: starter-kit-registry.json is not valid JSON: {e}', file=sys.stderr)
+              sys.exit(1)
+          "
+
+      - name: Commit generated files if changed
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add .auto-registry/starter-kit-registry.json
+          if git diff --cached --quiet; then
+            echo "No changes to starter-kit registry."
+          else
+            git commit -m "chore: update starter-kit-registry [skip ci]"
+            git push
+          fi

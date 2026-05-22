@@ -1,0 +1,42 @@
+title: "[Show and tell] "
+labels: ["show-and-tell"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Show off something you built with Microsoft Discovery — a plugin bundle, an individual agent or skill, an MCP integration, a use case, or any other workflow. Want to land it in the repo so others can use it directly? Open a PR alongside this post; see [CONTRIBUTING.md](https://github.com/microsoft/discovery/blob/main/CONTRIBUTING.md).
+
+  - type: dropdown
+    id: surface
+    attributes:
+      label: Which Microsoft Discovery surface?
+      description: Pick the one this build targets. A workflow uses this to apply the `app` or `services` label automatically.
+      options:
+        - Microsoft Discovery app (Windows desktop client)
+        - Microsoft Discovery services (Azure cloud)
+        - Both / not sure
+    validations:
+      required: true
+
+  - type: textarea
+    id: what
+    attributes:
+      label: What did you build?
+      description: One paragraph.
+    validations:
+      required: true
+
+  - type: textarea
+    id: how
+    attributes:
+      label: How did you build it?
+      description: Which Microsoft Discovery pieces you used (Bookshelf, Tasks, Engines, dx CLI, Agent Plugins). Code snippets and screenshots welcome.
+    validations:
+      required: false
+
+  - type: textarea
+    id: who-might-want
+    attributes:
+      label: Who might want to reuse this?
+    validations:
+      required: false
