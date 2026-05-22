@@ -148,7 +148,7 @@ jobs:
 
       - name: Upload validation results
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: validation-results
           path: /tmp/validation-results.json
@@ -207,7 +207,7 @@ jobs:
 
       - name: Upload audit-mode results
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: trufflehog-audit-results
           path: /tmp/trufflehog-audit.json
