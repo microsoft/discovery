@@ -29,6 +29,7 @@ permissions:
   pull-requests: write
   checks: read
   statuses: read
+  actions: read
 
 concurrency:
   group: auto-merge-${{ github.event.pull_request.number || github.event.check_suite.pull_requests[0].number || github.run_id }}

@@ -67,15 +67,24 @@ jobs:
       - name: Check for changes
         id: diff
         run: |
-          git diff --quiet .auto-registry/agent-registry.json && echo "changed=false" >> $GITHUB_OUTPUT || echo "changed=true" >> $GITHUB_OUTPUT
+          # `git diff` ignores untracked files, so we must `git add` first
+          # otherwise a brand-new .auto-registry/agent-registry.json (i.e. the
+          # very first time this workflow runs, or after the file is deleted)
+          # would be classified as "no change" and never committed.
+          git add .auto-registry/agent-registry.json
+          if git diff --cached --quiet -- .auto-registry/agent-registry.json; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          fi
 
       - name: Commit updated registry
         if: steps.diff.outputs.changed == 'true'
         run: |
           git config user.name  "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add .auto-registry/agent-registry.json
-          ADDED=$(git diff HEAD .auto-registry/agent-registry.json | grep '^\+.*"path"' | wc -l | tr -d ' ')
-          REMOVED=$(git diff HEAD .auto-registry/agent-registry.json | grep '^\-.*"path"' | wc -l | tr -d ' ')
+          # Already staged in the previous step.
+          ADDED=$(git diff --cached .auto-registry/agent-registry.json | grep '^\+.*"path"' | wc -l | tr -d ' ')
+          REMOVED=$(git diff --cached .auto-registry/agent-registry.json | grep '^\-.*"path"' | wc -l | tr -d ' ')
           git commit -m "chore: update .auto-registry/agent-registry.json (+${ADDED}/-${REMOVED} entries) [skip ci]"
           git push
