@@ -100,8 +100,9 @@ jobs:
           # Already staged in the previous step.
           # Use `|| true` inside a subshell so that grep exiting with 1 (no
           # matches) does not abort the script under `set -euo pipefail`.
-          ADDED=$(git diff --cached .auto-registry/agent-registry.json | { grep '^\+.*"path"' || true; } | wc -l | tr -d ' ')
-          REMOVED=$(git diff --cached .auto-registry/agent-registry.json | { grep '^\-.*"path"' || true; } | wc -l | tr -d ' ')
+          DIFF=$(git diff --cached .auto-registry/agent-registry.json)
+          ADDED=$(echo "$DIFF" | { grep '^\+.*"path"' || true; } | wc -l | tr -d ' ')
+          REMOVED=$(echo "$DIFF" | { grep '^\-.*"path"' || true; } | wc -l | tr -d ' ')
           COMMIT_MSG="chore: update .auto-registry/agent-registry.json (+${ADDED}/-${REMOVED} entries) [skip ci]"
           git commit -m "$COMMIT_MSG"
 
