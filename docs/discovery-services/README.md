@@ -4,4 +4,4 @@ All documentation for **Microsoft Discovery services** — the cloud-hosted, ent
 
 👉 **<https://learn.microsoft.com/en-us/azure/microsoft-discovery/>**
 
-This folder is intentionally a stub. If you're looking for the local-first **Microsoft Discovery app** docs, see [`docs/apps/`](../apps/) instead.
+This folder is intentionally a stub. If you're looking for the local-first **Microsoft Discovery app** docs, see [`docs/discovery-app/`](../discovery-app/) instead.

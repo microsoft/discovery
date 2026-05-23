@@ -84,7 +84,7 @@ publisher:
   support_url: https://contoso.com/support       # Required — HTTPS URL
   party: 3p                           # Optional — '1p' for Microsoft, '3p' for third-party (drives PR labelling)
 
-description: >                        # Required — 10–500 characters
+description: >                        # Required — up to 500 characters
   Summarises clinical notes into structured SOAP format. Supports English-language
   input from US hospital systems.
 
@@ -113,7 +113,7 @@ compliance:                           # Optional — include only if certified
 | `publisher.contact` | ✅ | Valid email address. |
 | `publisher.support_url` | ✅ | HTTPS URL (issue tracker or support page). |
 | `publisher.party` | optional | `1p` (Microsoft) or `3p` (third-party). Used only for the contribution-source PR label; not validated against folder location. |
-| `description` | ✅ | 10–500 characters, plain language. |
+| `description` | ✅ | Plain-language description, up to 500 characters. |
 | `tags` | ✅ | Non-empty array of kebab-case strings. |
 | `associated_tools` | optional | Paths to tool sub-folders inside this agent's `tools/` directory. Each path must exist on disk. |
 | `associated_agents` | optional | Paths to other agents this one depends on at runtime. |
@@ -222,6 +222,7 @@ actions:
 
 **Constraints enforced by the PR pipeline**
 
+- A tool can be **infra-only** (no `actions:`) — `actions` is an optional array that defaults to empty. Only `name`, `description`, `version`, `category`, and `infra` are strictly required.
 - `infra[].name`, `actions[].name`, `actions[].output_mount_configurations[].output_name`, and `actions[].inline_files[].mount_path` must all be unique within a single `tool.yaml`.
 - Every name listed in `actions[].input_schema.required` must appear in `properties`.
 - Each `actions[].infra_node` must reference an entry in `infra[].name`.
@@ -355,7 +356,7 @@ What happens next:
 
 1. The automated review runs (structural, schema, policy, documentation, and security checks).
 2. Any failures are posted as inline review comments with a rule identifier and remediation hint. Address each comment and push a follow-up commit.
-3. When all checks pass, the `automated-checks-passed` label is applied and the CODEOWNERS maintainers are auto-requested for review.
+3. When all checks pass, the `pr-validation-passed` label is applied and the CODEOWNERS maintainers are auto-requested for review.
 4. One approval from a CODEOWNERS reviewer is required to merge.
 
 ---

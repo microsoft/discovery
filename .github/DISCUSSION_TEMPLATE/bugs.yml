@@ -8,11 +8,15 @@ body:
 
         **Security issues do not belong here.** See [SECURITY.md](https://github.com/microsoft/discovery/blob/main/SECURITY.md) for responsible disclosure.
 
+        > **Scope of Microsoft Discovery *services* bugs in this repo:** this repository accepts bug reports for **catalog content only** — agents (under `agents/`), starter kits (under `starter-kits/`), Discovery-managed tools (under `agents/<name>/tools/`), Copilot skills (under `.github/skills/`), documentation (under `docs/`), or operator utilities (under `utilities/`). General Microsoft Discovery services issues — Foundry, Bookshelf, Discovery Engine, cognitive layer, infrastructure, billing — are out of scope here and should be reported via your **Azure support plan** or the official [Microsoft Discovery services documentation feedback channel](https://learn.microsoft.com/en-us/azure/microsoft-discovery/).
+        >
+        > The **Microsoft Discovery app** (the local Windows desktop client distributed from this repo's Releases) accepts the full range of bug reports here.
+
   - type: dropdown
     id: surface
     attributes:
       label: Which Microsoft Discovery surface?
-      description: Pick the one this bug affects. A workflow uses this to apply the `app` or `services` label automatically.
+      description: Picks the `app` or `services` label automatically. *Both / not sure* leaves the bug unlabeled so it surfaces in both triage views.
       options:
         - Microsoft Discovery app (Windows desktop client)
         - Microsoft Discovery services (Azure cloud)
@@ -20,11 +24,43 @@ body:
     validations:
       required: true
 
+  - type: dropdown
+    id: services_area
+    attributes:
+      label: For Services bugs only — which area in this repo?
+      description: Required if you picked **Microsoft Discovery services** above. For general Services bugs not tied to any of these areas, contact Azure support instead — they're out of scope here. App-bug reporters can pick *N/A — this is an app bug*.
+      options:
+        - Agent (under `agents/<name>/`)
+        - Starter kit (under `starter-kits/<name>/`)
+        - Discovery-managed tool (under `agents/<name>/tools/`)
+        - Copilot skill (under `.github/skills/`)
+        - Documentation (under `docs/`)
+        - Utility / operator script (under `utilities/`)
+        - N/A — this is an app bug
+    validations:
+      required: true
+
   - type: input
-    id: version
+    id: catalog_item
+    attributes:
+      label: Specific catalog item (Services only)
+      description: For Services bugs, name the specific agent, kit, tool, skill, doc file, or script. Leave blank for app bugs.
+      placeholder: "e.g. agents/openfoam, starter-kits/physics-cfd-sim, docs/discovery-app/quickstart.md, utilities/rbac-roles-assignment"
+    validations:
+      required: false
+
+  - type: markdown
+    attributes:
+      value: |
+        ---
+        ### App-specific details
+        *Fill these in only if you picked **Microsoft Discovery app** above. Leave blank for Services bugs.*
+
+  - type: input
+    id: app_version
     attributes:
       label: Microsoft Discovery app version
-      description: Required only if this is an **app** bug. From `Help → About`, or the installer filename (e.g. `DiscoveryExpressSetup-0.13.41.exe` → `0.13.41`). Leave blank for Services-only bugs.
+      description: From `Help → About`, or the installer filename (e.g. `DiscoveryExpressSetup-0.13.41.exe` → `0.13.41`).
       placeholder: 0.13.41
     validations:
       required: false
@@ -32,11 +68,17 @@ body:
   - type: input
     id: os
     attributes:
-      label: OS version
+      label: OS version (app only)
       description: Run `winver` on Windows.
       placeholder: Windows 11 23H2
     validations:
-      required: true
+      required: false
+
+  - type: markdown
+    attributes:
+      value: |
+        ---
+        ### Bug details *(required for both app and services)*
 
   - type: textarea
     id: what
@@ -50,10 +92,13 @@ body:
     id: repro
     attributes:
       label: Steps to reproduce
-      description: Number the steps. Include exact commands, prompts, or file paths.
+      description: |
+        Number the steps. Include exact commands, prompts, file paths, or — for catalog content — the specific agent/kit you were deploying, plus the deployer skill command used.
       placeholder: |
         1. Open a fresh workspace
-        2. `dx init --workspace .`
+        2. `dx init --workspace .`   (app)
+            — or —
+           `/discovery-services-agent-deployer openfoam`   (services)
         3. ...
     validations:
       required: true
@@ -75,9 +120,11 @@ body:
   - type: textarea
     id: logs
     attributes:
-      label: Logs and `dx doctor` output
+      label: Logs and diagnostics
       description: |
-        Paste the relevant tail of the **Microsoft Discovery** Output channel and the output of `dx doctor --workspace .`. Wrap in code fences.
+        - **App bugs:** paste the relevant tail of the **Microsoft Discovery** Output channel and the output of `dx doctor --workspace .`.
+        - **Services bugs:** paste relevant deployer skill output, Foundry project name + Azure region, and any correlation IDs from the Azure portal. **Redact subscription IDs, tenant IDs, and tokens** before pasting.
+        Wrap everything in code fences.
       render: text
     validations:
       required: false
@@ -101,5 +148,7 @@ body:
       options:
         - label: I have searched [existing Bugs discussions](https://github.com/microsoft/discovery/discussions/categories/bugs) before posting.
           required: true
-        - label: This report contains no sensitive, regulated, or proprietary data.
+        - label: This report contains no sensitive, regulated, or proprietary data (no subscription IDs, tenant IDs, tokens, customer data, etc.).
+          required: true
+        - label: If this is a Services bug, it concerns catalog content in this repo (agent, starter-kit, tool, skill, docs, or utility) — not general Discovery services platform issues. *(Tick N/A if this is an app bug.)*
           required: true
