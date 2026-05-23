@@ -137,7 +137,7 @@ displayName: Clinical Summary Agent
 description: Summarises clinical notes into SOAP format.
 
 model:                                # Required
-  id: "{CHAT-MODEL}"                  # Parameterised — end user supplies their model deployment name
+  id: "{{CHAT-MODEL}}"                # Parameterised — end user supplies their model deployment name
   options:
     temperature: 0.3
     maxOutputTokens: 2048
@@ -285,7 +285,7 @@ List everything a user needs before they can deploy this agent:
 
 | Parameter | Description | Example |
 |---|---|---|
-| `{CHAT-MODEL}` | Azure AI Foundry model deployment name | `gpt-4o-deployment` |
+| `{{CHAT-MODEL}}` | Azure AI Foundry model deployment name | `gpt-4o-deployment` |
 
 | Variable | Required | Description |
 |---|---|---|

@@ -1,0 +1,42 @@
+name: openfoam
+description: >
+  OpenFOAM CFD simulation tool. Runs blockMesh, decomposePar, and OpenFOAM solvers
+  (simpleFoam, icoFoam, buoyantSimpleFoam, pimpleFoam) for steady-state and transient
+  CFD simulations. Extracts quantitative metrics from simulation results.
+version: 1.0.0
+category: "Physics-Based Simulations"
+
+infra:
+  - name: worker
+    infra_type: container
+    image:
+      acr: "siphyeast2acr.azurecr.io/openfoam:latest"
+    compute:
+      min_resources:
+        cpu: 2
+        ram: "8Gi"
+        storage: "10Gi"
+        gpu: 0
+      max_resources:
+        cpu: 4
+        ram: "32Gi"
+        storage: "20Gi"
+        gpu: 0
+      recommended_sku:
+        - Standard_E4as_v6
+      pool_type: static
+      pool_size: 1
+
+actions:
+  - name: run
+    description: "Run an OpenFOAM CFD simulation from structured JSON parameters. The container maps the scenario and parameters to the appropriate solver setup, runs the simulation, and extracts metrics."
+    infra_node: worker
+    command: "python3 -u /app/run.py '{{params_json}}'"
+    input_schema:
+      type: object
+      required:
+        - params_json
+      properties:
+        params_json:
+          type: string
+          description: "JSON string with simulation parameters. Must include 'scenario' key (pipe_flow|mrf_fan|external_flow|heat_transfer|cavity) and scenario-specific numeric parameters. Example: {\"scenario\":\"pipe_flow\",\"velocity\":2.0,\"diameter\":0.0508,\"length\":5.0,\"nu\":1e-6}. No single quotes allowed — use double quotes only (standard JSON)."

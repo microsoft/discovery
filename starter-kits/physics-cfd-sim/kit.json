@@ -1,0 +1,61 @@
+{
+  "$schema": "../../docs/schemas/starter-kit-schema.json",
+  "name": "physics-cfd-sim",
+  "version": "1.0.0",
+  "description": "Simulate and analyze computational fluid dynamics (CFD) scenarios using OpenFOAM.",
+  "displayName": "CFD Simulation",
+  "longDescription": "# CFD Simulation\n\nThis starter kit allows users to simulate and analyze computational fluid dynamics (CFD) scenarios using OpenFOAM.\n\n**What you can do:**\n- Simulate internal pipe flow and extract pressure drop metrics\n- Analyze axial fan performance using the MRF approach\n- Evaluate external flow over bodies in a box domain\n\n**Ideal for:** engineering analysis, fluid dynamics research, and performance optimization.",
+  "author": {
+    "name": "Microsoft",
+    "email": "discovery-catalog@microsoft.com",
+    "url": "https://github.com/microsoft/discovery"
+  },
+  "license": "MIT",
+  "keywords": [
+    "cfd",
+    "openfoam",
+    "fluid dynamics",
+    "simulation",
+    "engineering",
+    "physics"
+  ],
+  "category": "Physics",
+  "homepage": "https://github.com/microsoft/discovery/tree/main/starter-kits/physics-cfd-sim",
+  "party": "1p",
+  "lifecycle": "active",
+  "agentRefs": [
+    {
+      "ref": "agents/openfoam",
+      "role": "primary",
+      "required": true,
+      "description": "Runs OpenFOAM simulations based on user-supplied parameters."
+    }
+  ],
+  "samplePrompts": [
+    {
+      "id": "sp-1",
+      "title": "Simulate pipe flow",
+      "prompt": "Simulate a 2-inch pipe with water flowing at 2 m/s over 5 meters and report the pressure drop.",
+      "difficulty": "beginner",
+      "expectedOutput": "Pressure drop [Pa], inlet/outlet pressures."
+    },
+    {
+      "id": "sp-2",
+      "title": "Analyze an axial fan",
+      "prompt": "Evaluate an axial fan at 3000 RPM with 2 m/s inlet velocity in air.",
+      "difficulty": "intermediate",
+      "expectedOutput": "Pressure rise [Pa], torque [N.m], efficiency, mass flow [kg/s]."
+    },
+    {
+      "id": "sp-3",
+      "title": "Simulate external flow",
+      "prompt": "Simulate external flow over a body in a box domain and report velocity field statistics and forces.",
+      "difficulty": "advanced",
+      "expectedOutput": "Velocity field statistics, forces (if applicable)."
+    }
+  ],
+  "riskProfile": {
+    "requiresExternalCompute": true,
+    "dataResidency": "user-managed Azure subscription"
+  }
+}
