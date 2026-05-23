@@ -23,3 +23,6 @@
 # Per-content area
 /agents/                                @mukesh-dua @charwen @leijgao @ffrachon @karthikananth @anzaman @surajmb
 /starter-kits/                          @mukesh-dua @charwen @leijgao @ffrachon @karthikananth @anzaman @surajmb
+
+# Operator utilities for Discovery services (PowerShell scripts).
+/utilities/                             @mukesh-dua @charwen @leijgao @ffrachon @karthikananth @anzaman @surajmb

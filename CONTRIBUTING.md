@@ -7,7 +7,7 @@ This repository serves **two purposes**:
 1. **Discovery App distribution & community hub.** This repo is the home for the Microsoft Discovery app installer and product documentation. _Source code for Microsoft Discovery itself is not in this repository._
 2. **Discovery Catalog.** This repo is the canonical metadata catalog for AI research **agents** (`agents/<name>/`) and **starter kits** (`starter-kits/<name>/`). Agent code, container images, and model weights live in your own infrastructure; the metadata and documentation that describe them live here.
 
-The rest of this guide explains where each kind of contribution goes and what the PR-time checks expect. If you're new to Microsoft Discovery and want to install and try the app, start with the [end-user docs](docs/apps/) below.
+The rest of this guide explains where each kind of contribution goes and what the PR-time checks expect. If you're new to Microsoft Discovery and want to install and try the app, start with the [end-user docs](docs/discovery-app/) below.
 
 ---
 
@@ -17,9 +17,9 @@ If you want to install and use the app, start here:
 
 | Doc | What it covers |
 | --- | --- |
-| [`docs/apps/install.md`](docs/apps/install.md) | Prerequisites, download, install, verify, upgrade, uninstall, and a troubleshooting table. |
-| [`docs/apps/quickstart.md`](docs/apps/quickstart.md) | 15-minute conceptual tour — Bookshelves, Tasks, Engines, Notebooks, and the `dx` CLI. |
-| [`docs/apps/feedback.md`](docs/apps/feedback.md) | Where to file bugs, ideas, questions, and feature feedback. |
+| [`docs/discovery-app/install.md`](docs/discovery-app/install.md) | Prerequisites, download, install, verify, upgrade, uninstall, and a troubleshooting table. |
+| [`docs/discovery-app/quickstart.md`](docs/discovery-app/quickstart.md) | 15-minute conceptual tour — Bookshelves, Tasks, Engines, Notebooks, and the `dx` CLI. |
+| [`docs/discovery-app/feedback.md`](docs/discovery-app/feedback.md) | Where to file bugs, ideas, questions, and feature feedback. |
 
 The remainder of this file is about **contributing** to the catalog (agents and starter kits) via pull request.
 
@@ -38,7 +38,8 @@ Code contributions to the Microsoft Discovery app itself — its plugin, MCP too
 | **Documentation fix** | Pull request against `docs/`, `README.md`, etc. | Typos, broken links, clarifications, missing prerequisites. |
 | **New agent** | Pull request adding `agents/<agent-name>/` | A prompt agent + optional Discovery-managed tools. See the [Agent authoring guide](docs/authoring-guides/agent-authoring-guide.md). |
 | **New starter kit** | Pull request adding `starter-kits/<starter-kit-name>/` | A `kit.json` manifest that bundles one or more agents into a launchable kit. See the [Starter-kit authoring guide](docs/authoring-guides/starter-kit-authoring-guide.md). |
-| **Schema / workflow change** | Pull request against `docs/schemas/` or `.github/workflows/` — **Microsoft maintainers only**. External contributors should open an **Idea in Discussions** first; a Microsoft maintainer will land the change once it is agreed. | Schema and workflow edits are gated by branch protection and CODEOWNERS; fork PRs that modify these paths are auto-rejected. |
+| **Discovery services utility** | Pull request against `utilities/<utility-name>/` | Operator-facing PowerShell scripts that set up or maintain Discovery services (resource-provider registration, RBAC, data-asset migration). See [`utilities/README.md`](utilities/README.md). |
+| **Schema / workflow change** | Pull request against `docs/schemas/` or `.github/workflows/` — **Microsoft maintainers only** (enforced by CODEOWNERS + branch protection). External contributors should open an **Idea in Discussions** first; a Microsoft maintainer will land the change once it is agreed. | All PRs (including maintainers') come from forks. CODEOWNERS makes schema and workflow edits land only when a maintainer approves. |
 | **Discussion triage / answers** | [Discussions](https://github.com/microsoft/discovery/discussions) | Helping other community members. |
 
 ---
@@ -52,11 +53,11 @@ Code contributions to the Microsoft Discovery app itself — its plugin, MCP too
 
 ### Quick start
 
-1. **Fork** this repo (external contributors) or create a topic branch (maintainers).
+1. **Fork** this repo and create a topic branch on your fork. All PRs — including those by Microsoft maintainers — come from forks.
 2. Add your agent under `agents/<agent-name>/` or your starter kit under `starter-kits/<starter-kit-name>/`. See [Repository layout](#repository-layout) below for the expected file tree.
 3. Open a pull request against `main` and fill out **every** section of the PR template.
 4. Automated checks will run on your PR. If anything fails, the bot adds an inline comment with the rule ID and how to fix it — address every finding before requesting human review.
-5. When all checks pass, the `automated-checks-passed` label is applied and the [CODEOWNERS](.github/CODEOWNERS) maintainers are auto-requested for review. **Two approvals** are required to merge.
+5. When the pr-review validator passes, the `pr-validation-passed` label is applied and the [CODEOWNERS](.github/CODEOWNERS) maintainers are auto-requested for review. Other status checks (unit tests, schema regression, etc.) report independently — see the PR status rollup for the full picture. **One CODEOWNERS approval** is required to merge.
 
 ### Required files
 
@@ -96,7 +97,7 @@ Before opening a PR, verify:
 
 ### Schema changes
 
-> **Microsoft maintainers only.** Edits under `docs/schemas/` define the contract every agent and kit in the repo must satisfy. Fork PRs that modify schema files are automatically rejected. If you are an external contributor and need a schema change, please [open an Idea in Discussions](https://github.com/microsoft/discovery/discussions/categories/ideas) describing the use case. A Microsoft maintainer will land the change once it is agreed.
+> **Microsoft maintainers only.** Edits under `docs/schemas/` define the contract every agent and kit in the repo must satisfy. **This is enforced by `.github/CODEOWNERS` plus branch protection's "Require review from Code Owners"** — a schema PR cannot land without a Microsoft maintainer's approval, regardless of who opened it. If you are an external contributor and need a schema change, please [open an Idea in Discussions](https://github.com/microsoft/discovery/discussions/categories/ideas) describing the use case so a Microsoft maintainer can land the change.
 
 ---
 

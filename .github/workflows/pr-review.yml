@@ -27,7 +27,7 @@ jobs:
       has_agents: ${{ steps.classify.outputs.has_agents }}
       has_docs_only: ${{ steps.classify.outputs.has_docs_only }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           ref: ${{ github.event.pull_request.head.sha }}
           fetch-depth: 0
@@ -77,14 +77,14 @@ jobs:
       #   2. `pr/`      — PR head, the untrusted *content* the validator scans.
       # The runner only ever invokes Python that lives under `trusted/`.
       - name: Checkout trusted base (for validator scripts)
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           ref: ${{ github.event.pull_request.base.sha }}
           fetch-depth: 1
           path: trusted
 
       - name: Checkout PR head (content under review — never executed)
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           ref: ${{ github.event.pull_request.head.sha }}
           fetch-depth: 0
@@ -148,7 +148,7 @@ jobs:
 
       - name: Upload validation results
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: validation-results
           path: /tmp/validation-results.json
@@ -169,7 +169,7 @@ jobs:
     env:
       GIT_LFS_SKIP_SMUDGE: "1"
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           ref: ${{ github.event.pull_request.head.sha }}
           fetch-depth: 0
@@ -207,7 +207,7 @@ jobs:
 
       - name: Upload audit-mode results
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: trufflehog-audit-results
           path: /tmp/trufflehog-audit.json
@@ -254,8 +254,8 @@ jobs:
 
             // ── 1. Refresh bot-managed labels ──────────────────────
             const BOT_LABELS = [
-              'automated-checks-passed',
-              'automated-checks-failed',
+              'pr-validation-passed',
+              'pr-validation-failed',
               '1p-contribution',
               '3p-contribution',
               'docs-only',
@@ -274,8 +274,8 @@ jobs:
 
             // ── Helper: ensure a label exists in the repo ──────────
             const LABEL_DEFS = {
-              'automated-checks-passed':  { color: '0e8a16', description: 'All automated checks passed' },
-              'automated-checks-failed':  { color: 'd93f0b', description: 'One or more automated checks failed' },
+              'pr-validation-passed':  { color: '0e8a16', description: "The pr-review workflow's validator passed. Other status checks report separately." },
+              'pr-validation-failed':  { color: 'd93f0b', description: "The pr-review workflow's validator failed; see inline comments." },
               '1p-contribution':          { color: '1d76db', description: "Authored by Microsoft (party='1p' in metadata)" },
               '3p-contribution':          { color: 'bfd4f2', description: "Authored by a third-party partner (party='3p' in metadata)" },
               'docs-only':                { color: 'c5def5', description: 'Changes only affect documentation or schemas' },
@@ -301,9 +301,9 @@ jobs:
 
             // ── 3. Apply pass/fail labels ──────────────────────────
             if (allPassed) {
-              labelsToAdd.push('automated-checks-passed');
+              labelsToAdd.push('pr-validation-passed');
             } else {
-              labelsToAdd.push('automated-checks-failed');
+              labelsToAdd.push('pr-validation-failed');
             }
 
             if (labelsToAdd.length > 0) {
@@ -373,7 +373,7 @@ jobs:
                 '',
                 '---',
                 'Once all issues are resolved, push a new commit to re-trigger this check.',
-                'When all checks pass, the `automated-checks-passed` label will be applied and the maintainers will be auto-requested for review.',
+                'When the pr-review validator passes, the `pr-validation-passed` label will be applied and the maintainers will be auto-requested for review. Note: other status checks (unit-tests, schema regression, etc.) report separately — see the full status rollup at the bottom of this PR.',
                 '',
                 '> See the [authoring guides](https://github.com/microsoft/discovery/tree/main/docs/authoring-guides) for end-to-end walkthroughs.',
               ].join('\n');
