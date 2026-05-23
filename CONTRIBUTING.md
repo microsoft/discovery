@@ -39,7 +39,7 @@ Code contributions to the Microsoft Discovery app itself — its plugin, MCP too
 | **New agent** | Pull request adding `agents/<agent-name>/` | A prompt agent + optional Discovery-managed tools. See the [Agent authoring guide](docs/authoring-guides/agent-authoring-guide.md). |
 | **New starter kit** | Pull request adding `starter-kits/<starter-kit-name>/` | A `kit.json` manifest that bundles one or more agents into a launchable kit. See the [Starter-kit authoring guide](docs/authoring-guides/starter-kit-authoring-guide.md). |
 | **Discovery services utility** | Pull request against `utilities/<utility-name>/` | Operator-facing PowerShell scripts that set up or maintain Discovery services (resource-provider registration, RBAC, data-asset migration). See [`utilities/README.md`](utilities/README.md). |
-| **Schema / workflow change** | Pull request against `docs/schemas/` or `.github/workflows/` — **Microsoft maintainers only**. External contributors should open an **Idea in Discussions** first; a Microsoft maintainer will land the change once it is agreed. | Schema and workflow edits are gated by branch protection and CODEOWNERS; fork PRs that modify these paths are auto-rejected. |
+| **Schema / workflow change** | Pull request against `docs/schemas/` or `.github/workflows/` — **Microsoft maintainers only** (enforced by CODEOWNERS + branch protection). External contributors should open an **Idea in Discussions** first; a Microsoft maintainer will land the change once it is agreed. | All PRs (including maintainers') come from forks. CODEOWNERS makes schema and workflow edits land only when a maintainer approves. |
 | **Discussion triage / answers** | [Discussions](https://github.com/microsoft/discovery/discussions) | Helping other community members. |
 
 ---
@@ -97,7 +97,7 @@ Before opening a PR, verify:
 
 ### Schema changes
 
-> **Microsoft maintainers only.** Edits under `docs/schemas/` define the contract every agent and kit in the repo must satisfy. Fork PRs that modify schema files are automatically rejected. If you are an external contributor and need a schema change, please [open an Idea in Discussions](https://github.com/microsoft/discovery/discussions/categories/ideas) describing the use case. A Microsoft maintainer will land the change once it is agreed.
+> **Microsoft maintainers only.** Edits under `docs/schemas/` define the contract every agent and kit in the repo must satisfy. **This is enforced by `.github/CODEOWNERS` plus branch protection's "Require review from Code Owners"** — a schema PR cannot land without a Microsoft maintainer's approval, regardless of who opened it. If you are an external contributor and need a schema change, please [open an Idea in Discussions](https://github.com/microsoft/discovery/discussions/categories/ideas) describing the use case so a Microsoft maintainer can land the change.
 
 ---
 
