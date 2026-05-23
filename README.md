@@ -8,7 +8,7 @@ Microsoft Discovery is offered in two complementary experiences that share the s
 
 | Experience | What it is | Where to start |
 | --- | --- | --- |
-| 🖥️ **Microsoft Discovery app** | A local-first Windows client for individual evaluation on a laptop. **Distributed from this repository.** | [`docs/apps/`](docs/apps/) — install, quickstart, feedback |
+| 🖥️ **Microsoft Discovery app** | A local-first Windows client for individual evaluation on a laptop. **Distributed from this repository.** | [`docs/discovery-app/`](docs/discovery-app/) — install, quickstart, feedback |
 | ☁️ **Microsoft Discovery services** | The cloud-hosted, team-scale experience on Azure. | [Microsoft Learn](https://learn.microsoft.com/en-us/azure/microsoft-discovery/) — full reference |
 
 In addition, this repository hosts the **public Discovery Catalog** — the canonical metadata catalog of AI research **agents** and **starter kits** contributed by Microsoft and ecosystem partners. Agent code, container images, and model weights live in each contributor's own infrastructure; the metadata and documentation that describe them live here, where they are PR-reviewed, schema-validated, and surfaced to every Discovery user.
@@ -24,7 +24,7 @@ The canonical conceptual reference for both the app and the services is [Microso
 - [Bookshelf and Knowledge Bases](https://learn.microsoft.com/en-us/azure/microsoft-discovery/concept-bookshelf-knowledge-bases) — how indexing and retrieval work
 - [Tasks and investigations](https://learn.microsoft.com/en-us/azure/microsoft-discovery/concept-tasks-investigations) — the task-graph model
 
-For an app-specific 15-minute hands-on tour, see [`docs/apps/quickstart.md`](docs/apps/quickstart.md).
+For an app-specific 15-minute hands-on tour, see [`docs/discovery-app/quickstart.md`](docs/discovery-app/quickstart.md).
 
 ---
 
@@ -59,15 +59,16 @@ discovery/
 │   ├── agent-registry.json
 │   └── starter-kit-registry.json
 ├── docs/
-│   ├── apps/                                 ← End-user docs for the Discovery app
+│   ├── discovery-app/                                 ← End-user docs for the Discovery app
 │   │   ├── install.md
 │   │   ├── quickstart.md
 │   │   └── feedback.md
-│   ├── services/                             ← Pointer to Microsoft Learn (services live there)
+│   ├── discovery-services/                             ← Pointer to Microsoft Learn (services live there)
 │   ├── authoring-guides/                     ← How to author and submit catalog content
 │   │   ├── agent-authoring-guide.md
 │   │   └── starter-kit-authoring-guide.md
 │   └── schemas/                              ← Canonical JSON schemas (*-schema.json)
+├── utilities/                                ← Operator PowerShell scripts for Discovery services (resource-provider registration, RBAC, data-asset migration)
 ├── .github/
 │   ├── skills/                               ← Copilot skills (auto-discovered)
 │   │   ├── discovery-catalog/                          ← Read-only catalog inventory
@@ -91,10 +92,10 @@ discovery/
 
 The Microsoft Discovery app is a **self-contained Windows application** — no SDK, no cloud setup, no IT ticket. Download the signed installer and double-click.
 
-1. **Check prerequisites** and download the installer — see [`docs/apps/install.md`](docs/apps/install.md).
+1. **Check prerequisites** and download the installer — see [`docs/discovery-app/install.md`](docs/discovery-app/install.md).
 2. **Run it.** The app launches as a standard Windows application.
-3. **Follow the 15-minute tour** — [`docs/apps/quickstart.md`](docs/apps/quickstart.md) walks you through building your first Bookshelf, creating a Task graph, and running a Discovery Engine.
-4. **Have feedback?** See [`docs/apps/feedback.md`](docs/apps/feedback.md).
+3. **Follow the 15-minute tour** — [`docs/discovery-app/quickstart.md`](docs/discovery-app/quickstart.md) walks you through building your first Bookshelf, creating a Task graph, and running a Discovery Engine.
+4. **Have feedback?** See [`docs/discovery-app/feedback.md`](docs/discovery-app/feedback.md).
 
 ### Use Microsoft Discovery services (cloud)
 

@@ -7,7 +7,7 @@ This repository serves **two purposes**:
 1. **Discovery App distribution & community hub.** This repo is the home for the Microsoft Discovery app installer and product documentation. _Source code for Microsoft Discovery itself is not in this repository._
 2. **Discovery Catalog.** This repo is the canonical metadata catalog for AI research **agents** (`agents/<name>/`) and **starter kits** (`starter-kits/<name>/`). Agent code, container images, and model weights live in your own infrastructure; the metadata and documentation that describe them live here.
 
-The rest of this guide explains where each kind of contribution goes and what the PR-time checks expect. If you're new to Microsoft Discovery and want to install and try the app, start with the [end-user docs](docs/apps/) below.
+The rest of this guide explains where each kind of contribution goes and what the PR-time checks expect. If you're new to Microsoft Discovery and want to install and try the app, start with the [end-user docs](docs/discovery-app/) below.
 
 ---
 
@@ -17,9 +17,9 @@ If you want to install and use the app, start here:
 
 | Doc | What it covers |
 | --- | --- |
-| [`docs/apps/install.md`](docs/apps/install.md) | Prerequisites, download, install, verify, upgrade, uninstall, and a troubleshooting table. |
-| [`docs/apps/quickstart.md`](docs/apps/quickstart.md) | 15-minute conceptual tour — Bookshelves, Tasks, Engines, Notebooks, and the `dx` CLI. |
-| [`docs/apps/feedback.md`](docs/apps/feedback.md) | Where to file bugs, ideas, questions, and feature feedback. |
+| [`docs/discovery-app/install.md`](docs/discovery-app/install.md) | Prerequisites, download, install, verify, upgrade, uninstall, and a troubleshooting table. |
+| [`docs/discovery-app/quickstart.md`](docs/discovery-app/quickstart.md) | 15-minute conceptual tour — Bookshelves, Tasks, Engines, Notebooks, and the `dx` CLI. |
+| [`docs/discovery-app/feedback.md`](docs/discovery-app/feedback.md) | Where to file bugs, ideas, questions, and feature feedback. |
 
 The remainder of this file is about **contributing** to the catalog (agents and starter kits) via pull request.
 
@@ -38,6 +38,7 @@ Code contributions to the Microsoft Discovery app itself — its plugin, MCP too
 | **Documentation fix** | Pull request against `docs/`, `README.md`, etc. | Typos, broken links, clarifications, missing prerequisites. |
 | **New agent** | Pull request adding `agents/<agent-name>/` | A prompt agent + optional Discovery-managed tools. See the [Agent authoring guide](docs/authoring-guides/agent-authoring-guide.md). |
 | **New starter kit** | Pull request adding `starter-kits/<starter-kit-name>/` | A `kit.json` manifest that bundles one or more agents into a launchable kit. See the [Starter-kit authoring guide](docs/authoring-guides/starter-kit-authoring-guide.md). |
+| **Discovery services utility** | Pull request against `utilities/<utility-name>/` | Operator-facing PowerShell scripts that set up or maintain Discovery services (resource-provider registration, RBAC, data-asset migration). See [`utilities/README.md`](utilities/README.md). |
 | **Schema / workflow change** | Pull request against `docs/schemas/` or `.github/workflows/` — **Microsoft maintainers only**. External contributors should open an **Idea in Discussions** first; a Microsoft maintainer will land the change once it is agreed. | Schema and workflow edits are gated by branch protection and CODEOWNERS; fork PRs that modify these paths are auto-rejected. |
 | **Discussion triage / answers** | [Discussions](https://github.com/microsoft/discovery/discussions) | Helping other community members. |
 
