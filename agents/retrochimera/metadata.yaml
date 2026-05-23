@@ -1,0 +1,21 @@
+name: retrochimera
+type: agent
+version: 1.0.0
+associated_tools:
+  - agents/retrochimera/tools/retrochimera
+publisher:
+  name: Microsoft
+  contact: discovery-catalog@microsoft.com
+  support_url: https://github.com/microsoft/discovery/discussions/categories/bugs
+  party: 1p
+description: >
+  Expert agent for retrosynthetic analysis using the RetroChimera model (Maziarz et al., 2025). Ensembles template-based
+  and de novo models with complementary inductive biases to predict single-step retrosynthetic disconnections and
+  multi-step synthesis routes. Pre-loaded with the Pistachio-trained checkpoint (strongest model).
+tags:
+  - retrosynthesis
+  - computational-chemistry
+  - drug-discovery
+  - reaction-prediction
+  - trained-model
+  - gnn

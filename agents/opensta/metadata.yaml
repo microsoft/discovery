@@ -1,0 +1,22 @@
+name: opensta
+type: agent
+version: 1.0.0
+associated_tools:
+  - agents/opensta/tools/opensta
+publisher:
+  name: Microsoft Discovery
+  contact: discovery-catalog@microsoft.com
+  support_url: https://github.com/microsoft/discovery/discussions/categories/bugs
+  party: 1p
+description: >
+  Static timing analysis for gate-level Verilog netlists using OpenSTA. Supports SKY130 and GF180MCU technology
+  nodes with built-in liberty models. Auto-generates SDC constraints when not provided by the user.
+tags:
+  - static-timing-analysis
+  - sta
+  - verilog
+  - netlist
+  - sky130
+  - gf180mcu
+  - timing
+  - asic

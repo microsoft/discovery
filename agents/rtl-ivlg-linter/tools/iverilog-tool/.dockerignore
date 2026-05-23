@@ -1,0 +1,29 @@
+# Build context exclusions for the iverilog tool image.
+# Keeping the context small protects the layer cache: adding or removing
+# example RTL files (or local notes) no longer invalidates the
+# `apt-get install` and `git clone iverilog` layers.
+
+# Example/sample inputs — never shipped in the image.
+example-input-files/
+
+# Tests, fixtures, and developer notes.
+*.md
+*.test.*
+test_*
+tests/
+__pycache__/
+*.pyc
+*.pyo
+
+# Local junk.
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+.idea/
+.vscode/
+
+# VCS metadata (the build does its own shallow clone of upstream).
+.git/
+.gitignore
+.gitattributes

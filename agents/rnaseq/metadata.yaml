@@ -1,0 +1,17 @@
+name: rnaseq
+type: agent
+version: 1.0.0
+associated_tools:
+  - agents/rnaseq/tools/rnaseq
+publisher:
+  name: Microsoft
+  contact: discovery-catalog@microsoft.com
+  support_url: https://github.com/microsoft/discovery/discussions/categories/bugs
+  party: 1p
+description: >
+  Agent for RNA-seq differential expression analysis. Supports count matrix processing, statistical testing, volcano
+  plot generation, gene ontology enrichment, and pathway analysis for transcriptomics experiments.
+tags:
+  - bioinformatics
+  - transcriptomics
+  - rna-seq

@@ -1,0 +1,17 @@
+# Pistachio checkpoint image -- build once, push to ACR.
+# Produces /app/models/pistachio/ with the extracted checkpoint files.
+#
+# Build:
+#   az acr build -r <acr-name> -t retrochimera-checkpoint:v1 \
+#     -f Dockerfile.checkpoint .
+#
+# The checkpoint is ~4.2 GB zipped from Figshare.  This image only needs
+# base Python (no conda, no RDKit) since it just downloads and extracts.
+
+FROM python:3.9-slim
+
+# Override CHECKPOINT_URL if the default Figshare file ID is stale.
+# NOTE: use ndownloader.figshare.com (302→S3), not figshare.com/ndownloader (WAF).
+ARG CHECKPOINT_URL="https://ndownloader.figshare.com/files/59468882"
+COPY download_checkpoint.py /tmp/download_checkpoint.py
+RUN CHECKPOINT_URL="${CHECKPOINT_URL}" python /tmp/download_checkpoint.py && rm /tmp/download_checkpoint.py

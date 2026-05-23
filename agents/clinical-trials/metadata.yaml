@@ -1,0 +1,16 @@
+name: clinical-trials
+type: agent
+version: 1.0.0
+associated_tools:
+  - agents/clinical-trials/tools/ClinicalTrials
+publisher:
+  name: Microsoft
+  contact: discovery-catalog@microsoft.com
+  support_url: https://github.com/microsoft/discovery/discussions/categories/bugs
+  party: 1p
+description: >
+  Tool for accessing clinical trial data from ClinicalTrials.gov. Access over 400,000 clinical studies from around
+  the world.
+tags:
+  - clinical-trials
+  - database

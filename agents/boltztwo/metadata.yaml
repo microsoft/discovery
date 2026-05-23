@@ -1,0 +1,22 @@
+name: boltztwo
+type: agent
+version: 1.0.0
+associated_tools:
+  - agents/boltztwo/tools/boltztwo
+publisher:
+  name: Microsoft Discovery
+  contact: discovery-catalog@microsoft.com
+  support_url: https://github.com/microsoft/discovery/discussions/categories/bugs
+  party: 1p
+description: >
+  Expert agent for biomolecular structure prediction and binding affinity estimation using Boltz-2. Predicts 3D
+  structures of proteins, nucleic acids, small molecules, and their complexes via co-folding. Features an affinity
+  head that estimates binder probability and pIC50 for protein-ligand and protein-protein interactions. Outputs
+  CIF structures with per-residue confidence (pLDDT), predicted aligned error (pAE), and interface metrics (pTM,
+  iPTM).
+tags:
+  - structure-prediction
+  - binding-affinity
+  - protein-folding
+  - drug-discovery
+  - trained-model

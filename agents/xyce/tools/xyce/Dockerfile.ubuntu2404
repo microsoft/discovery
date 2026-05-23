@@ -1,0 +1,150 @@
+# Build Xyce 7.8 from source on Ubuntu 24.04 (noble). Multi-stage.
+# Same recipe as Dockerfile.debian12 but on Ubuntu noble base for CVE comparison.
+
+# ============================================================
+# Stage 1: Builder
+# ============================================================
+FROM ubuntu:24.04 AS builder
+
+ENV DEBIAN_FRONTEND=noninteractive
+ENV TRILINOS_VERSION=trilinos-release-14-4-0
+ENV XYCE_VERSION=Release-7.8.0
+
+RUN apt-get update && \
+    apt-get -y upgrade && \
+    apt-get install -y --no-install-recommends \
+        ca-certificates \
+        curl \
+        git \
+        cmake \
+        make \
+        g++ \
+        gfortran \
+        autoconf \
+        automake \
+        libtool \
+        bison \
+        flex \
+        libfl-dev \
+        libfftw3-dev \
+        libsuitesparse-dev \
+        libblas-dev \
+        liblapack-dev \
+        libopenblas-dev && \
+    rm -rf /var/lib/apt/lists/*
+
+WORKDIR /src
+RUN git clone --depth 1 --branch ${TRILINOS_VERSION} https://github.com/trilinos/Trilinos.git trilinos
+RUN mkdir -p /src/trilinos-build && cd /src/trilinos-build && \
+    cmake \
+        -DCMAKE_INSTALL_PREFIX=/opt/trilinos \
+        -DCMAKE_BUILD_TYPE=RELEASE \
+        -DCMAKE_CXX_FLAGS="-O3 -fPIC" \
+        -DCMAKE_C_FLAGS="-O3 -fPIC" \
+        -DCMAKE_Fortran_FLAGS="-O3 -fPIC" \
+        -DTrilinos_ENABLE_NOX=ON \
+        -DNOX_ENABLE_LOCA=ON \
+        -DTrilinos_ENABLE_EpetraExt=ON \
+        -DEpetraExt_BUILD_BTF=ON \
+        -DEpetraExt_BUILD_EXPERIMENTAL=ON \
+        -DEpetraExt_BUILD_GRAPH_REORDERINGS=ON \
+        -DEpetraExt_BUILD_BLOCK_AND_INVERSE=ON \
+        -DTrilinos_ENABLE_TrilinosCouplings=ON \
+        -DTrilinos_ENABLE_Ifpack=ON \
+        -DTrilinos_ENABLE_AztecOO=ON \
+        -DTrilinos_ENABLE_Belos=ON \
+        -DTrilinos_ENABLE_Teuchos=ON \
+        -DTeuchos_ENABLE_COMPLEX=ON \
+        -DTrilinos_ENABLE_Amesos=ON \
+        -DAmesos_ENABLE_KLU=ON \
+        -DTrilinos_ENABLE_Sacado=ON \
+        -DTrilinos_ENABLE_Stokhos=ON \
+        -DTrilinos_ENABLE_Kokkos=ON \
+        -DTrilinos_ENABLE_Zoltan=ON \
+        -DTrilinos_ENABLE_ALL_OPTIONAL_PACKAGES=OFF \
+        -DTrilinos_ENABLE_CXX11=ON \
+        -DTPL_ENABLE_AMD=ON \
+        -DAMD_LIBRARY_DIRS="/usr/lib/x86_64-linux-gnu" \
+        -DTPL_AMD_INCLUDE_DIRS="/usr/include/suitesparse" \
+        -DTPL_ENABLE_BLAS=ON \
+        -DTPL_ENABLE_LAPACK=ON \
+        -DBUILD_SHARED_LIBS=ON \
+        /src/trilinos && \
+    make -j"$(nproc)" install && \
+    rm -rf /src/trilinos /src/trilinos-build
+
+RUN git clone --depth 1 --branch ${XYCE_VERSION} https://github.com/Xyce/Xyce.git /src/xyce && \
+    cd /src/xyce && ./bootstrap
+RUN mkdir -p /src/xyce-build && cd /src/xyce-build && \
+    /src/xyce/configure \
+        CXXFLAGS="-O3 -std=c++17" \
+        ARCHDIR="/opt/trilinos" \
+        --prefix=/opt/xyce \
+        --enable-shared \
+        --enable-stokhos \
+        --enable-amesos \
+        && \
+    make -j"$(nproc)" && \
+    make install && \
+    rm -rf /src/xyce /src/xyce-build
+
+# ============================================================
+# Stage 2: Runtime
+# ============================================================
+FROM ubuntu:24.04
+
+ENV DEBIAN_FRONTEND=noninteractive
+
+RUN apt-get update && \
+    apt-get -y upgrade && \
+    apt-get install -y --no-install-recommends \
+        ca-certificates \
+        curl \
+        python3 \
+        python3-pip \
+        libfftw3-double3 \
+        libsuitesparse-dev \
+        libgfortran5 \
+        libopenblas0 \
+        liblapack3 \
+        libgomp1 \
+        libstdc++6 && \
+    apt-get -y autoremove && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/*
+
+COPY --from=builder /opt/trilinos /opt/trilinos
+COPY --from=builder /opt/xyce /opt/xyce
+
+ENV PATH="/opt/xyce/bin:${PATH}"
+ENV LD_LIBRARY_PATH="/opt/xyce/lib:/opt/trilinos/lib:${LD_LIBRARY_PATH}"
+
+RUN mkdir -p /app/pdk/sky130 /app/pdk/gf180mcu /workdir /input /output && \
+    chmod 755 /workdir /input /output
+
+RUN cd /tmp && \
+    curl -L -o sky130_fd_pr.tar.gz \
+    "https://api.github.com/repos/google/skywater-pdk-libs-sky130_fd_pr/tarball/main" && \
+    mkdir -p sky130_extract && \
+    tar xzf sky130_fd_pr.tar.gz -C sky130_extract --strip-components=1 && \
+    cp -r sky130_extract/models/* /app/pdk/sky130/ && \
+    rm -rf /tmp/sky130_*
+
+RUN curl -L -o /app/pdk/gf180mcu/sm141064.xyce \
+    "https://raw.githubusercontent.com/efabless/globalfoundries-pdk-libs-gf180mcu_fd_pr/main/models/xyce/sm141064.xyce" && \
+    curl -L -o /app/pdk/gf180mcu/design.xyce \
+    "https://raw.githubusercontent.com/efabless/globalfoundries-pdk-libs-gf180mcu_fd_pr/main/models/xyce/design.xyce" && \
+    curl -L -o /app/pdk/gf180mcu/sm141064_mim.xyce \
+    "https://raw.githubusercontent.com/efabless/globalfoundries-pdk-libs-gf180mcu_fd_pr/main/models/xyce/sm141064_mim.xyce" && \
+    curl -L -o /app/pdk/gf180mcu/smbb000149.xyce \
+    "https://raw.githubusercontent.com/efabless/globalfoundries-pdk-libs-gf180mcu_fd_pr/main/models/xyce/smbb000149.xyce"
+
+COPY xyce_utils.py /app/
+COPY xyce_run.sh /app/
+COPY xyce_run_from_work.sh /app/
+RUN chmod +x /app/xyce_run.sh /app/xyce_run_from_work.sh
+
+ENV PYTHONUNBUFFERED=1
+ENV OMP_NUM_THREADS=1
+
+CMD ["/bin/bash"]

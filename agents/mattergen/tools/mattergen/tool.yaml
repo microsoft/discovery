@@ -1,0 +1,43 @@
+name: mattergen
+description: >
+  MatterGen generative AI tool for inorganic crystal structure design.
+  Generates novel, stable crystal structures using a diffusion model that can
+  be conditioned on target properties (composition, space group, band gap,
+  magnetic density, bulk modulus). 9 pretrained models available via
+  HuggingFace Hub. Requires GPU for inference.
+version: 1.0.0
+category: "AI & Machine Learning"
+license: MIT
+
+infra:
+  - name: worker
+    infra_type: container
+    image:
+      acr: "{name}.azurecr.io/mattergen:latest"
+    compute:
+      min_resources:
+        cpu: 4
+        ram: "32Gi"
+        gpu: 1
+        storage: "0Gi"
+      max_resources:
+        cpu: 40
+        ram: "320Gi"
+        gpu: 1
+        storage: "0Gi"
+      recommended_sku:
+        - Standard_NC40ads_H100_v5
+        - Standard_NC24ads_A100_v4
+      pool_type: static
+      pool_size: 1
+
+code_environments:
+  - language: python3
+    command: 'python -u "/{{scriptName}}" > {{output_directory}}/logs.out 2>&1; cp -r /app/workdir/* {{output_directory}}/ 2>/dev/null || true; tail -n 100 {{output_directory}}/logs.out'
+    description: |
+      Python code environment with MatterGen for generative crystal structure design.
+      Key features: unconditional generation, property-conditioned generation,
+      composition-constrained generation, batch generation with CIF/extxyz output.
+      Pre-installed: torch (CUDA 11.8), torch_geometric, pymatgen, ase, mattergen,
+      hydra-core, huggingface-hub, pandas, matplotlib, seaborn, numpy, scipy
+    infra_node: worker

@@ -1,0 +1,30 @@
+name: zinc
+version: "2.0.0"
+category: "chemistry"
+description: "Python code environment for searching and retrieving molecular structures from the ZINC22 / CartBlanche database of commercially available compounds."
+infra:
+  - name: worker
+    infra_type: container
+    image:
+      acr: "{name}.azurecr.io/zinc:latest"
+    compute:
+      min_resources:
+        cpu: 1
+        ram: "4Gi"
+        storage: "8Gi"
+        gpu: 0
+      max_resources:
+        cpu: 2
+        ram: "8Gi"
+        storage: "32Gi"
+        gpu: 0
+      infiniband: false
+      recommended_sku:
+        - "Standard_D4s_v6"
+      pool_type: static
+      pool_size: 1
+code_environments:
+  - language: python
+    command: 'python "/{{scriptName}}"'
+    description: "Python code environment for ZINC22 / CartBlanche database access."
+    infra_node: worker

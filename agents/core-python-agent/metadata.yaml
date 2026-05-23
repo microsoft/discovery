@@ -1,0 +1,18 @@
+name: core-python-agent
+type: agent
+version: 1.0.0
+associated_tools:
+  - agents/core-python-agent/tools/corepython
+publisher:
+  name: Microsoft Discovery Studio
+  contact: discovery-catalog@microsoft.com
+  support_url: https://github.com/microsoft/discovery/discussions/categories/bugs
+  party: 1p
+description: >
+  A reusable worker agent for RDKit cheminformatics and general Python execution. Writes and runs Python scripts
+  for molecular manipulation, 2D/3D conformer generation, chemical property calculations, and scientific computing.
+tags:
+  - cheminformatics
+  - python
+  - rdkit
+  - molecular-science

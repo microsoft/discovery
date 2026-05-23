@@ -1,0 +1,16 @@
+name: patent-prior-art
+type: agent
+version: 1.0.0
+associated_tools: []
+publisher:
+  name: Microsoft
+  contact: discovery-catalog@microsoft.com
+  support_url: https://github.com/microsoft/discovery/discussions/categories/bugs
+  party: 1p
+description: >
+  Expert agent for patent prior-art stress testing and claim analysis. Performs claim-centric prior art analysis
+  with atomic element decomposition, evidence mapping, coverage ratings, and executive risk summaries.
+tags:
+  - patent-analysis
+  - prior-art
+  - legal-tech

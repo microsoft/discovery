@@ -1,0 +1,43 @@
+name: boltztwo
+description: >
+  Boltz-2 biomolecular structure prediction and binding affinity tool.
+  Predicts 3D structures of proteins, nucleic acids, small molecules, and
+  their complexes via co-folding. Features an affinity head that estimates
+  binder probability and pIC50. GPU required for inference.
+version: 1.0.0
+category: "Physics-Based Simulations"
+
+infra:
+  - name: worker
+    infra_type: container
+    image:
+      acr: "{name}.azurecr.io/boltztwo:latest"
+    compute:
+      min_resources:
+        cpu: 4
+        ram: 32Gi
+        gpu: 1
+      max_resources:
+        cpu: 96
+        ram: 1800Gi
+        gpu: 8
+      recommended_sku:
+        - Standard_NC40ads_H100_v5
+        - Standard_NC80adis_H100_v5
+        - Standard_NC24ads_A100_v4
+        - Standard_NC48ads_A100_v4
+      pool_type: static
+      pool_size: 1
+
+code_environments:
+  - language: python3
+    command: "python3 -u \"/{{scriptName}}\" > {{output_directory}}/logs.out 2>&1; cp -r /workdir/* {{output_directory}}/ 2>/dev/null || true; tail -n 100 {{output_directory}}/logs.out"
+    description: >
+      Python code environment with Boltz-2 for biomolecular structure prediction.
+      Includes boltz CLI, PyTorch (CUDA), rdkit, biopython, gemmi.
+      GPU required -- structure prediction and affinity inference.
+      Key command: boltz predict <input.yaml> --cache /cache --out_dir /output
+      Capabilities: protein folding, co-folding with ligands/nucleic acids,
+      binding affinity prediction (pIC50, binder probability),
+      confidence metrics (pLDDT, pAE, pTM, iPTM).
+    infra_node: worker

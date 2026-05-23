@@ -1,0 +1,17 @@
+name: molecular-groups
+type: agent
+version: 1.0.0
+associated_tools:
+  - agents/molecular-groups/tools/molecular-groups
+publisher:
+  name: Microsoft
+  contact: discovery-catalog@microsoft.com
+  support_url: https://github.com/microsoft/discovery/discussions/categories/bugs
+  party: 1p
+description: >
+  Expert agent for identifying functional groups in molecular structures. Provides both general functional group
+  analysis and safety screening for hazardous groups.
+tags:
+  - cheminformatics
+  - functional-groups
+  - safety-screening

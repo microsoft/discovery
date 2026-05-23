@@ -1,0 +1,48 @@
+# Probe: layer apt upgrade on hdlc/xyce to see if Debian 11 security updates
+# bring us under CRITICAL=0, HIGH<=2. If not, fall back to source build on Debian 12.
+FROM hdlc/xyce:latest
+
+# Full security upgrade + minimal runtime deps
+RUN apt-get update && \
+    apt-get -y upgrade && \
+    apt-get -y dist-upgrade && \
+    apt-get install -y --no-install-recommends \
+        python3 \
+        python3-pip \
+        curl \
+        ca-certificates && \
+    apt-get -y autoremove && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/*
+
+RUN mkdir -p /app/pdk/sky130 /app/pdk/gf180mcu /workdir /input /output && \
+    chmod 755 /workdir /input /output
+
+# SKY130 transistor SPICE models
+RUN cd /tmp && \
+    curl -L -o sky130_fd_pr.tar.gz \
+    "https://api.github.com/repos/google/skywater-pdk-libs-sky130_fd_pr/tarball/main" && \
+    mkdir -p sky130_extract && \
+    tar xzf sky130_fd_pr.tar.gz -C sky130_extract --strip-components=1 && \
+    cp -r sky130_extract/models/* /app/pdk/sky130/ && \
+    rm -rf /tmp/sky130_*
+
+# GF180MCU transistor SPICE models (Xyce-native)
+RUN curl -L -o /app/pdk/gf180mcu/sm141064.xyce \
+    "https://raw.githubusercontent.com/efabless/globalfoundries-pdk-libs-gf180mcu_fd_pr/main/models/xyce/sm141064.xyce" && \
+    curl -L -o /app/pdk/gf180mcu/design.xyce \
+    "https://raw.githubusercontent.com/efabless/globalfoundries-pdk-libs-gf180mcu_fd_pr/main/models/xyce/design.xyce" && \
+    curl -L -o /app/pdk/gf180mcu/sm141064_mim.xyce \
+    "https://raw.githubusercontent.com/efabless/globalfoundries-pdk-libs-gf180mcu_fd_pr/main/models/xyce/sm141064_mim.xyce" && \
+    curl -L -o /app/pdk/gf180mcu/smbb000149.xyce \
+    "https://raw.githubusercontent.com/efabless/globalfoundries-pdk-libs-gf180mcu_fd_pr/main/models/xyce/smbb000149.xyce"
+
+COPY xyce_utils.py /app/
+COPY xyce_run.sh /app/
+COPY xyce_run_from_work.sh /app/
+RUN chmod +x /app/xyce_run.sh /app/xyce_run_from_work.sh
+
+ENV PYTHONUNBUFFERED=1
+ENV OMP_NUM_THREADS=1
+
+CMD ["/bin/bash"]

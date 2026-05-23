@@ -1,0 +1,38 @@
+name: coconut
+description: >-
+  COCONUT (COlleCtion of Open NatUral producTs) database access tool for
+  natural product research. Provides programmatic search for molecules,
+  molecular properties, source organisms, collections, and citations
+  via the COCONUT v2.0.0 REST API.
+version: 1.0.0
+category: "Data Retrieval"
+license: MIT
+
+infra:
+  - name: worker
+    infra_type: container
+    image:
+      acr: "{name}.azurecr.io/coconut:latest"
+    compute:
+      min_resources:
+        cpu: 1
+        ram: "4Gi"
+        gpu: 0
+        storage: "0Gi"
+      max_resources:
+        cpu: 2
+        ram: "8Gi"
+        gpu: 0
+        storage: "0Gi"
+      recommended_sku:
+        - Standard_D4s_v6
+      pool_type: static
+      pool_size: 1
+
+code_environments:
+  - language: python3
+    command: 'python3 -u "/{{scriptName}}" > {{output_directory}}/logs.out 2>&1; cp -r /app/workdir/* {{output_directory}}/ 2>/dev/null || true; tail -n 100 {{output_directory}}/logs.out'
+    description: |
+      Python code environment for accessing the COCONUT natural products database.
+      Pre-installed: requests, pandas, coconut_utils (custom module)
+    infra_node: worker

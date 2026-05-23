@@ -1,0 +1,38 @@
+name: chemberta
+description: "ChemBERTa-2 molecular property prediction agent. Provides SMILES-based molecular embeddings, classification and regression fine-tuning, SMILES augmentation, confidence scoring, molecular similarity, and clustering using the ChemBERTa-2 transformer model (77M parameters, pre-trained on 77M PubChem molecules)."
+version: 1.0.0
+category: "Molecular Property Prediction"
+license: MIT
+
+infra:
+  - name: worker
+    infra_type: container
+    image:
+      acr: "{name}.azurecr.io/chemberta:latest"
+    compute:
+      min_resources:
+        cpu: 2
+        ram: "8Gi"
+        gpu: 0
+        storage: "0Gi"
+      max_resources:
+        cpu: 40
+        ram: "320Gi"
+        gpu: 1
+        storage: "0Gi"
+      infiniband: false
+      recommended_sku:
+        - Standard_NC40ads_H100_v5
+        - Standard_D4s_v6
+      pool_type: static
+      pool_size: 1
+
+code_environments:
+  - language: python3
+    command: "python3 -u \"/{{scriptName}}\" > {{output_directory}}/logs.out 2>&1; cp -r /workdir/* {{output_directory}}/ 2>/dev/null || true; tail -n 100 {{output_directory}}/logs.out"
+    description: |
+      Python code environment with ChemBERTa-2 (77M-MTR) for molecular property prediction.
+      Pre-cached model at /app/model_cache. Key packages: transformers, torch (CPU), rdkit, scikit-learn.
+      Supports: embedding extraction, classification/regression fine-tuning, SMILES augmentation, 
+      confidence scoring, molecular similarity, and clustering.
+    infra_node: worker

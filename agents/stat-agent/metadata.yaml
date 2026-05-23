@@ -1,0 +1,17 @@
+name: stat-agent
+type: agent
+version: 1.0.0
+associated_tools:
+  - agents/stat-agent/tools/stat-agent
+publisher:
+  name: Microsoft
+  contact: discovery-catalog@microsoft.com
+  support_url: https://github.com/microsoft/discovery/discussions/categories/bugs
+  party: 1p
+description: >
+  Statistical validation agent for experimental data analysis. Provides hypothesis testing, power analysis, effect
+  size estimation, multiple comparison correction, and distribution fitting for scientific datasets.
+tags:
+  - statistics
+  - data-analysis
+  - hypothesis-testing

@@ -1,0 +1,1 @@
+Simple wrapper for PubChem API endpoints: "https://pubchem.ncbi.nlm.nih.gov/rest/pug" allowing to download molecule information.

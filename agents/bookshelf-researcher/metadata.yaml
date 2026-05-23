@@ -1,0 +1,16 @@
+name: bookshelf-researcher
+type: agent
+version: 1.0.0
+associated_tools: []
+publisher:
+  name: Microsoft
+  contact: discovery-catalog@microsoft.com
+  support_url: https://github.com/microsoft/discovery/discussions/categories/bugs
+  party: 1p
+description: >
+  Expert research agent for conducting literature reviews and research analyses using attached Knowledge Bases /
+  Bookshelves as the evidence source. LLM-only agent with no attached computation tools.
+tags:
+  - literature-review
+  - research
+  - knowledge-base

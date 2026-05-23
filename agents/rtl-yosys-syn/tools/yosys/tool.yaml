@@ -1,0 +1,110 @@
+name: yosys
+description: >
+  Open-source Verilog RTL synthesis using Yosys. Synthesizes Verilog designs
+  to gate-level netlists targeting SKY130 or GF180MCU ASIC technology nodes.
+  Produces a gate-level Verilog netlist and a synthesis report with cell
+  count and area statistics.
+version: 1.0.0
+license: GPL-2.0
+category: "Discovery tools"
+
+infra:
+  - name: worker
+    infra_type: container
+    image:
+      acr: "{name}/yosys:latest"
+    compute:
+      pool_type: static
+      pool_size: 1
+      recommended_sku:
+        - Standard_E4as_v6
+      min_resources:
+        cpu: 2
+        ram: "8Gi"
+        storage: "20Gi"
+        gpu: 0
+      max_resources:
+        cpu: 4
+        ram: "16Gi"
+        storage: "40Gi"
+        gpu: 0
+
+actions:
+  - name: yosys_version
+    description: Display Yosys version information.
+    infra_node: worker
+    command: "yosys -V"
+    input_schema:
+      type: object
+      properties: {}
+      required: []
+
+  - name: yosys_help
+    description: >
+      Display Yosys usage/help information and list all available
+      synthesis commands and passes.
+    infra_node: worker
+    command: >-
+      bash -c 'echo "=== yosys -h ===" && yosys -h 2>&1 || true &&
+      echo && echo "=== Available commands ===" &&
+      echo "help" | yosys -q 2>&1 || true'
+    input_schema:
+      type: object
+      properties: {}
+      required: []
+
+  - name: yosys_synth
+    description: >
+      Synthesize a Verilog RTL design to a gate-level netlist. Input files
+      are mounted at /mnt/input via inputMounts. Specify the top module name,
+      the target PDK (sky130 or gf180mcu), and the Verilog filename.
+      Produces a netlist (.v) and synthesis report (.txt) in /output/.
+    infra_node: worker
+    command: "bash -c 'export FILE=\"{{file}}\" TOP=\"{{top}}\" PDK=\"{{pdk}}\" && bash /app/yosys_synth.sh'"
+    input_schema:
+      type: object
+      properties:
+        file:
+          type: string
+          description: >
+            Verilog source filename (relative to /mnt/input).
+        top:
+          type: string
+          description: >
+            Top-level module name. If omitted, Yosys auto-detects.
+        pdk:
+          type: string
+          enum:
+            - sky130
+            - gf180mcu
+          description: >
+            Target technology PDK. Defaults to sky130.
+      required:
+        - file
+
+  - name: yosys_synth_from_work
+    description: >
+      Studio integration -- synthesize a Verilog file attached as a
+      storage asset. Copies .v/.sv files from /mnt/work to /input/,
+      then runs synthesis. Same parameters as yosys_synth.
+    infra_node: worker
+    command: "bash -c 'export FILE=\"{{file}}\" TOP=\"{{top}}\" PDK=\"{{pdk}}\" && bash /app/yosys_synth_from_work.sh'"
+    input_schema:
+      type: object
+      properties:
+        file:
+          type: string
+          description: >
+            Verilog source filename (relative to /mnt/work).
+        top:
+          type: string
+          description: Top-level module name.
+        pdk:
+          type: string
+          enum:
+            - sky130
+            - gf180mcu
+          description: Target technology PDK. Defaults to sky130.
+      required:
+        - file
+

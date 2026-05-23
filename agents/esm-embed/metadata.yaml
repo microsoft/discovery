@@ -1,0 +1,26 @@
+name: esm-embed
+type: agent
+version: 1.0.0
+associated_tools:
+  - agents/esm-embed/tools/esm-embed
+publisher:
+  name: Microsoft
+  contact: discovery-catalog@microsoft.com
+  support_url: https://github.com/microsoft/discovery/discussions/categories/bugs
+  party: 1p
+description: >
+  Generate per-residue and per-sequence embeddings from protein sequences using Meta AI's ESM-2 transformer protein
+  language models (8M to 650M parameters). Supports mean-pooled sequence embeddings, per-residue embeddings, and
+  contact map predictions. GPU-accelerated via PyTorch + CUDA, with automatic CPU fallback.
+tags:
+  - protein
+  - embeddings
+  - language-model
+  - esm2
+  - transformer
+  - bioinformatics
+  - representation-learning
+  - structure-prediction
+  - gpu
+  - trained-model
+  - embedding-model

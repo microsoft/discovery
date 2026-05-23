@@ -1,0 +1,21 @@
+name: nucleotide-tf
+type: agent
+version: 1.0.0
+associated_tools:
+  - agents/nucleotide-tf/tools/nucleotide-tf
+publisher:
+  name: Microsoft
+  contact: discovery-catalog@microsoft.com
+  support_url: https://github.com/microsoft/discovery/discussions/categories/bugs
+  party: 1p
+description: >
+  Expert agent for DNA sequence analysis using InstaDeep's Nucleotide Transformer v2 foundation model. Extracts
+  rich embeddings, predicts masked nucleotides for variant effect scoring, and supports similarity, clustering,
+  and visualization.
+tags:
+  - bioinformatics
+  - genomics
+  - dna-analysis
+  - embeddings
+  - transformer
+  - trained-model

@@ -1,0 +1,201 @@
+SMILES	Name	Category
+O	Water	Solvent
+OO	Hydrogen Peroxide	Oxidizer
+[O]	Atomic Oxygen	Reactive
+O=O	Oxygen	Gas
+N	Ammonia	Toxic Industrial
+O=C=O	Carbon Dioxide	Gas
+CO	Methanol	Toxic Solvent
+CCO	Ethanol	Solvent
+CCCO	1-Propanol	Solvent
+CCCCO	1-Butanol	Solvent
+CC(C)O	Isopropanol	Solvent
+CC(C)(C)O	tert-Butanol	Solvent
+CCCCCO	1-Pentanol	Solvent
+OCC(O)CO	Glycerol	Safe Chemical
+OCCO	Ethylene Glycol	Toxic
+OCCCO	1,3-Propanediol	Safe Chemical
+CC=O	Acetaldehyde	Toxic/Carcinogen
+CCC=O	Propanal	Flammable
+CC(C)=O	Acetone	Solvent
+CCCC(C)=O	2-Hexanone	Solvent
+CCC(CC)=O	3-Pentanone	Solvent
+CC(=O)CC	Methyl Ethyl Ketone	Solvent
+O=CC=O	Glyoxal	Irritant
+CC(=O)OC(C)=O	Acetic Anhydride	Corrosive
+CC(O)=O	Acetic Acid	Corrosive
+CCC(O)=O	Propionic Acid	Corrosive
+CCCC(O)=O	Butyric Acid	Irritant
+OC(=O)CC(O)=O	Malonic Acid	Irritant
+OC(=O)CCC(O)=O	Glutaric Acid	Safe Chemical
+OC(=O)C(O)=O	Oxalic Acid	Toxic
+OC(=O)/C=C/C(O)=O	Fumaric Acid	Safe Chemical
+OC(=O)/C=C\C(O)=O	Maleic Acid	Irritant
+OC(=O)c1ccccc1	Benzoic Acid	Preservative
+OC(=O)c1ccccc1O	Salicylic Acid	Pharmaceutical
+CC(=O)Oc1ccccc1C(O)=O	Aspirin	Pharmaceutical
+CC(=O)Nc1ccc(O)cc1	Acetaminophen	Pharmaceutical
+CC(C)Cc1ccc(cc1)C(C)C(O)=O	Ibuprofen	Pharmaceutical
+OC(=O)c1ccc(cc1)N(CCCl)CCCl	Chlorambucil	Cytotoxic Drug
+CC12CCC3C(CCC4=CC(=O)CCC34C)C1CCC2O	Testosterone	Hormone
+CC12CCC3C(CCc4cc(O)ccc34)C1CCC2O	Estradiol	Hormone
+CC(=O)OC1CC2CCC3C(CCC4(C)C3CCC4OC(C)=O)C2(C)CC1	Medroxyprogesterone Acetate	Pharmaceutical
+OC(=O)C(N)Cc1ccccc1	Phenylalanine	Amino Acid
+NCC(O)=O	Glycine	Amino Acid
+NC(CC(O)=O)C(O)=O	Aspartic Acid	Amino Acid
+NC(CCC(O)=O)C(O)=O	Glutamic Acid	Amino Acid
+NC(CCCCN)C(O)=O	Lysine	Amino Acid
+NC(Cc1c[nH]c2ccccc12)C(O)=O	Tryptophan	Amino Acid
+NC(CS)C(O)=O	Cysteine	Amino Acid
+NC(CCSC)C(O)=O	Methionine	Amino Acid
+NC(CC(N)=O)C(O)=O	Asparagine	Amino Acid
+NC(Cc1ccc(O)cc1)C(O)=O	Tyrosine	Amino Acid
+Cn1c(=O)c2c(ncn2C)n(C)c1=O	Caffeine	Stimulant
+Cn1cnc2c1c(=O)[nH]c(=O)n2C	Theobromine	Stimulant
+c1ccc2c(c1)[nH]c1ccccc12	Carbazole	PAH
+c1ccc2ccccc2c1	Naphthalene	PAH/Irritant
+c1cc2ccc3cccc4ccc(c1)c2c34	Pyrene	PAH/Carcinogen
+c1ccc2c(c1)cc1ccc3ccccc3c1c2	Benz[a]anthracene	PAH/Carcinogen
+c1ccc2c(c1)c1cccc3cccc(c2)c31	Fluoranthene	PAH
+c1ccc2c(c1)ccc1ccc3ccccc3c12	Chrysene	PAH
+c1ccc(cc1)c1ccccc1	Biphenyl	Aromatic
+c1ccccc1	Benzene	Carcinogen
+Cc1ccccc1	Toluene	Solvent
+Cc1ccc(C)cc1	p-Xylene	Solvent
+CCc1ccccc1	Ethylbenzene	Solvent
+c1ccc(cc1)C=C	Styrene	Carcinogen
+C=Cc1cc(C=C)ccc1	Divinylbenzene	Monomer
+Clc1ccccc1	Chlorobenzene	Toxic
+Clc1ccc(Cl)cc1	1,4-Dichlorobenzene	Toxic/Carcinogen
+Clc1cc(Cl)cc(Cl)c1	1,3,5-Trichlorobenzene	Toxic
+Oc1ccccc1	Phenol	Corrosive/Toxic
+Oc1ccc(O)cc1	Hydroquinone	Toxic
+Oc1cccc(O)c1	Resorcinol	Irritant
+Oc1ccc(cc1)[N+]([O-])=O	4-Nitrophenol	Toxic
+Nc1ccccc1	Aniline	Toxic/Carcinogen
+Nc1ccc(N)cc1	p-Phenylenediamine	Sensitizer/Toxic
+[O-][N+](=O)c1ccccc1	Nitrobenzene	Toxic
+[O-][N+](=O)c1ccc(cc1)[N+]([O-])=O	1,4-Dinitrobenzene	Explosive/Toxic
+Cc1c(cc(cc1[N+]([O-])=O)[N+]([O-])=O)[N+]([O-])=O	TNT	Explosive
+O=[N+]([O-])c1cc([N+](=O)[O-])c(O)c([N+](=O)[O-])c1	Picric Acid	Explosive
+C(=O)N	Formamide	Solvent/Toxic
+CN(C)C=O	Dimethylformamide	Toxic Solvent
+CC#N	Acetonitrile	Toxic Solvent
+CCOC(C)=O	Ethyl Acetate	Solvent
+COC(C)=O	Methyl Acetate	Solvent
+CCCOC(C)=O	Propyl Acetate	Solvent
+CC(=O)c1ccccc1	Acetophenone	Fragrance
+O=Cc1ccccc1	Benzaldehyde	Fragrance
+O=Cc1ccc(O)c(OC)c1	Vanillin	Flavoring
+COc1cc(CC=C)ccc1O	Eugenol	Natural Product
+CC(=C)C1CC=C(C)C(=O)C1	Carvone	Natural Product
+CC1=CCC(CC1)C(C)=C	Limonene	Natural Product
+CC1=CCC(=CC1)C(C)C	alpha-Terpinene	Natural Product
+OC(=O)/C=C/c1ccc(O)c(O)c1	Caffeic Acid	Natural Product
+OC(=O)/C=C/c1ccc(O)cc1	p-Coumaric Acid	Natural Product
+Oc1cc(O)c2c(c1)OC(c1ccc(O)c(O)c1)CC2=O	Eriodictyol	Flavonoid
+Oc1ccc(/C=C/c2cc(O)cc(O)c2)cc1	Resveratrol	Natural Product
+OC1C(O)C(OC1(O)CO)CO	Glucose	Sugar
+OCC1OC(O)C(O)C(O)C1O	Galactose	Sugar
+OC(CO)C(O)C(O)C(O)CO	Sorbitol	Sugar Alcohol
+OCC1OC(OC2OC(CO)C(O)C(O)C2O)C(O)C(O)C1O	Sucrose	Sugar
+C(Cl)(Cl)Cl	Chloroform	Toxic Solvent
+ClC(Cl)=C(Cl)Cl	Tetrachloroethylene	Carcinogen
+ClCCCl	1,2-Dichloroethane	Carcinogen
+ClC=CCl	1,2-Dichloroethylene	Toxic
+C(Cl)Cl	Dichloromethane	Possible Carcinogen
+ClC(Cl)(Cl)Cl	Carbon Tetrachloride	Toxic/Carcinogen
+FC(F)(F)Cl	CFC-13	Ozone Depleter
+ClC(F)(F)Cl	CFC-12	Ozone Depleter
+O=S(=O)(O)O	Sulfuric Acid	Corrosive
+O=S(=O)(O)c1ccc(C)cc1	p-Toluenesulfonic Acid	Corrosive
+OP(O)(O)=O	Phosphoric Acid	Corrosive
+Cl	Hydrochloric Acid	Corrosive
+O=[N+]([O-])O	Nitric Acid	Corrosive/Oxidizer
+[O-][N+](=O)O[N+]([O-])=O	Dinitrogen Pentoxide	Oxidizer
+ClCCl	Methylene Chloride	Toxic
+C=C	Ethylene	Flammable Gas
+C=CC=C	1,3-Butadiene	Carcinogen
+CC(=C)C=C	Isoprene	Flammable
+C#C	Acetylene	Flammable
+C#N	Hydrogen Cyanide	Highly Toxic
+CS	Methanethiol	Toxic
+CCS	Ethanethiol	Toxic
+CC(C)(C)S	tert-Butylthiol	Toxic
+O=C(Cl)Cl	Phosgene	Highly Toxic
+ClC=O	Formyl Chloride	Toxic
+C=O	Formaldehyde	Carcinogen
+CCCCCCCCCCCCCCCCCC(O)=O	Stearic Acid	Safe Chemical
+CCCCCCCCCCCCCCCC(O)=O	Palmitic Acid	Safe Chemical
+CCCCCCCC/C=C\CCCCCCCC(O)=O	Oleic Acid	Safe Chemical
+CCCCC/C=C\C/C=C\CCCCCCCC(O)=O	Linoleic Acid	Essential Fatty Acid
+OC(=O)CC(O)(CC(O)=O)C(O)=O	Citric Acid	Safe Chemical
+OC(CC(O)=O)C(O)=O	Malic Acid	Safe Chemical
+OC(=O)C(O)C(O)C(O)=O	Tartaric Acid	Safe Chemical
+OC(=O)C(O)=O	Glyoxylic Acid	Irritant
+O=C1OC(C(O)C1O)CO	Ascorbic Acid	Vitamin C
+CC1(C)CCC(C(=O)O1)C(C)CCC(O)=O	Camphoric Acid	Safe Chemical
+Nc1ncnc2[nH]cnc12	Adenine	Nucleobase
+Nc1ccn(c(=O)n1)C1CC(O)C(CO)O1	Cytidine	Nucleoside
+O=c1[nH]c(=O)c(c[nH]1)C	Thymine	Nucleobase
+Nc1nc2[nH]cnc2c(=O)[nH]1	Guanine	Nucleobase
+O=c1cc[nH]c(=O)[nH]1	Uracil	Nucleobase
+Oc1ccnc2ccccc12	4-Hydroxyquinoline	Heterocycle
+c1ccncc1	Pyridine	Toxic Solvent
+c1cc[nH]c1	Pyrrole	Heterocycle
+c1cnc2ccccc2n1	Quinazoline	Heterocycle
+c1ccc2[nH]ccc2c1	Indole	Natural Product
+c1ccc2ncccc2c1	Quinoline	Toxic
+c1ccc2c(c1)cnc1ccccc12	Acridine	Toxic/Carcinogen
+c1cn[nH]c1	Pyrazole	Heterocycle
+c1ccoc1	Furan	Carcinogen
+c1ccsc1	Thiophene	Heterocycle
+c1cnoc1	Isoxazole	Heterocycle
+c1c[nH]cn1	Imidazole	Heterocycle
+NCCCCCCN	1,6-Hexanediamine	Irritant
+C(CO)N	Ethanolamine	Irritant
+OCCN(CCO)CCO	Triethanolamine	Safe Chemical
+CCN(CC)CC	Triethylamine	Flammable/Toxic
+CN(C)c1ccccc1	N,N-Dimethylaniline	Toxic
+CCOCC	Diethyl Ether	Highly Flammable
+C1CCOC1	Tetrahydrofuran	Flammable Solvent
+C1COCCO1	1,4-Dioxane	Carcinogen
+C1CCOCC1	Tetrahydropyran	Solvent
+COC	Dimethyl Ether	Flammable Gas
+CCOP(=S)(OCC)Oc1cc(Cl)c(Cl)cc1Cl	Chlorpyrifos	Pesticide/Toxic
+COP(=S)(OC)Oc1ccc(cc1)[N+]([O-])=O	Methyl Parathion	Highly Toxic Pesticide
+COP(=O)(OC)OC=C(Cl)Cl	Dichlorvos	Toxic Pesticide
+CC(Oc1ccc(Cl)cc1)C(O)=O	MCPA	Herbicide
+Clc1ccc(c(Cl)c1)c1ccc(Cl)c(Cl)c1	PCB-47	Persistent Pollutant
+ClC1=C(Cl)C2(Cl)C3C4CC(C5OC45)C3(Cl)C1(Cl)C2(Cl)Cl	Dieldrin	Banned Pesticide
+CC(C)OC(=O)Nc1ccc(Oc2ccc(cc2)C(C)(C)C)cc1	Fenoxycarb	Insecticide
+CCCCCCCCCCCCCCCCCCCCCCCCCC	Hexacosane	Alkane
+CCCCCCCCCCCCCCCC	Hexadecane	Alkane
+CCCCCCCC	Octane	Flammable
+CCCCCC	Hexane	Neurotoxic Solvent
+CS(C)=O	Dimethyl Sulfoxide	Solvent
+CC1=CC(=O)c2ccccc2C1=O	Menadione	Vitamin K3
+CC(=O)S	Thioacetic Acid	Irritant
+O=C1CCCCC1	Cyclohexanone	Solvent
+OC1CCCCC1	Cyclohexanol	Solvent
+C1CCCCC1	Cyclohexane	Solvent
+C1CCCCCC1	Cycloheptane	Hydrocarbon
+C1=CCCCC1	Cyclohexene	Flammable
+C1=CCCC1	Cyclopentene	Flammable
+OC(=O)c1cc(O)c(O)c(O)c1	Gallic Acid	Natural Product
+COc1cc(C=O)ccc1O	Vanillin Alt	Flavoring
+OC(=O)c1ccc(O)cc1	4-Hydroxybenzoic Acid	Preservative
+COc1ccc(cc1OC)C(=O)C=C	Chalcone Deriv	Natural Product
+CC(=O)c1ccc(O)cc1	4-Hydroxyacetophenone	Pharmaceutical Intermediate
+CC(=O)c1ccc(cc1)N	4-Aminoacetophenone	Intermediate
+N#Cc1ccccc1	Benzonitrile	Toxic
+OC(c1ccccc1)c1ccccc1	Benzhydrol	Intermediate
+c1ccc(cc1)C(=O)c1ccccc1	Benzophenone	UV Filter
+O=C1c2ccccc2C(=O)c2ccccc12	Anthraquinone	Dye Intermediate
+CC1=CC=CC2CCC(C(C)C)CC12	Guaiazulene	Natural Product
+OC(=O)c1cccc(c1)C(O)=O	Isophthalic Acid	Monomer
+OC(=O)c1ccc(cc1)C(O)=O	Terephthalic Acid	Monomer
+C(=O)(O)CO	Glycolic Acid	Cosmetic Ingredient
+OC(=O)C(O)CO	Glyceric Acid	Metabolite
+CC(O)C(O)=O	Lactic Acid	Safe Chemical
+CC(O)CC(O)=O	3-Hydroxybutyric Acid	Metabolite

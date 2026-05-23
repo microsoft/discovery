@@ -1,0 +1,15 @@
+name: pubchem
+type: agent
+version: 1.0.0
+associated_tools:
+  - agents/pubchem/tools/PubChem
+publisher:
+  name: Microsoft
+  contact: discovery-catalog@microsoft.com
+  support_url: https://github.com/microsoft/discovery/discussions/categories/bugs
+  party: 1p
+description: >
+  Tool for accessing chemical information from the PubChem database using the PubChem API.
+tags:
+  - cheminformatics
+  - database

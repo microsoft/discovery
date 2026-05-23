@@ -1,0 +1,22 @@
+name: xyce
+type: agent
+version: 1.0.0
+associated_tools:
+  - agents/xyce/tools/xyce
+publisher:
+  name: Microsoft Discovery
+  contact: discovery-catalog@microsoft.com
+  support_url: https://github.com/microsoft/discovery/discussions/categories/bugs
+  party: 1p
+description: >
+  SPICE circuit simulation using the Xyce parallel electronic simulator. Supports transient, DC, AC, and noise analyses.
+  Includes SKY130 and GF180MCU transistor PDK models. Auto-generates testbenches when not provided by the user.
+tags:
+  - spice
+  - circuit-simulation
+  - transient
+  - analog
+  - sky130
+  - gf180mcu
+  - xyce
+  - asic

@@ -1,0 +1,13 @@
+dsstox_substance_id,preferred_name,smiles,qc_level
+DTXSIDDEMO0001,benzene,c1ccccc1,1
+DTXSIDDEMO0002,toluene,Cc1ccccc1,1
+DTXSIDDEMO0003,aniline,Nc1ccccc1,1
+DTXSIDDEMO0004,phenol,Oc1ccccc1,1
+DTXSIDDEMO0005,acetanilide,CC(=O)Nc1ccccc1,1
+DTXSIDDEMO0006,acetaminophen,CC(=O)NC1=CC=C(C=C1)O,1
+DTXSIDDEMO0007,caffeine,Cn1cnc2c1c(=O)n(C)c(=O)n2C,1
+DTXSIDDEMO0008,aspirin,CC(=O)Oc1ccccc1C(=O)O,1
+DTXSIDDEMO0009,ibuprofen,CC(C)Cc1ccc(cc1)[C@@H](C)C(=O)O,1
+DTXSIDDEMO0010,naproxen,COc1ccc2cc(ccc2c1)C(C)C(=O)O,1
+DTXSIDDEMO0011,propranolol,CC(C)NCC(O)COc1cccc2ccccc12,1
+DTXSIDDEMO0012,diphenhydramine,CN(C)CCOC(c1ccccc1)c2ccccc2,1

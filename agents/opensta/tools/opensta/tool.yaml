@@ -1,0 +1,127 @@
+name: opensta
+description: >
+  Static timing analysis using OpenSTA. Analyzes gate-level Verilog netlists
+  against Liberty timing models for SKY130 and GF180MCU technology nodes.
+  Input data is delivered via inputMounts (mounted at /mnt/input).
+  Outputs are written to /output/.
+version: 1.0.0
+license: GPL-2.0
+category: "Discovery tools"
+
+infra:
+  - name: worker
+    infra_type: container
+    image:
+      acr: "{name}/opensta:latest"
+    compute:
+      pool_type: static
+      pool_size: 1
+      recommended_sku:
+        - Standard_E4as_v6
+      min_resources:
+        cpu: 2
+        ram: "8Gi"
+        storage: "20Gi"
+        gpu: 0
+      max_resources:
+        cpu: 4
+        ram: "16Gi"
+        storage: "40Gi"
+        gpu: 0
+
+actions:
+  - name: sta_version
+    description: Display OpenSTA version information.
+    infra_node: worker
+    command: "bash -c 'echo \"OpenSTA version:\" && sta -version 2>&1 || echo \"help\" | sta -no_splash 2>&1 | head -5 || true'"
+    input_schema:
+      type: object
+      properties: {}
+      required: []
+
+  - name: sta_help
+    description: >
+      Display OpenSTA usage/help information and list available TCL commands.
+    infra_node: worker
+    command: "bash -c 'echo \"=== sta -help ===\" && sta -help 2>&1 || true && echo && echo \"=== Available commands ===\" && echo \"help\" | sta -no_splash 2>&1 || true'"
+    input_schema:
+      type: object
+      properties: {}
+      required: []
+
+  - name: sta_run
+    description: >
+      Run static timing analysis on a gate-level Verilog netlist.
+      Input files are mounted at /mnt/input via inputMounts.
+      If no SDC file is provided, timing constraints are auto-generated
+      using the specified clock port and period.
+      Produces a detailed timing report in /output/.
+    infra_node: worker
+    command: "bash -c 'export FILE=\"{{file}}\" SDC=\"{{sdc}}\" PDK=\"{{pdk}}\" CLK_PORT=\"{{clk_port}}\" CLK_PERIOD=\"{{clk_period}}\" && bash /app/sta_run.sh'"
+    input_schema:
+      type: object
+      properties:
+        file:
+          type: string
+          description: >
+            Gate-level Verilog netlist filename (relative to /mnt/input).
+        sdc:
+          type: string
+          description: >
+            SDC timing constraints filename (relative to /mnt/input).
+            If omitted, constraints are auto-generated.
+        pdk:
+          type: string
+          enum:
+            - sky130
+            - gf180mcu
+          description: >
+            Target technology PDK. Defaults to sky130.
+        clk_port:
+          type: string
+          description: >
+            Clock port name for auto-generated SDC. Defaults to 'clk'.
+        clk_period:
+          type: string
+          description: >
+            Clock period in nanoseconds for auto-generated SDC. Defaults to '10'.
+      required:
+        - file
+
+  - name: sta_run_from_work
+    description: >
+      Studio integration -- run STA on a Verilog netlist attached as a
+      storage asset. Copies .v/.sv files from /mnt/work to /input/,
+      then runs STA. Same parameters as sta_run.
+    infra_node: worker
+    command: "bash -c 'export FILE=\"{{file}}\" SDC=\"{{sdc}}\" PDK=\"{{pdk}}\" CLK_PORT=\"{{clk_port}}\" CLK_PERIOD=\"{{clk_period}}\" && bash /app/sta_run_from_work.sh'"
+    input_schema:
+      type: object
+      properties:
+        file:
+          type: string
+          description: >
+            Gate-level Verilog netlist filename (relative to /mnt/work).
+        sdc:
+          type: string
+          description: >
+            SDC timing constraints filename (relative to /mnt/work).
+            If omitted, constraints are auto-generated.
+        pdk:
+          type: string
+          enum:
+            - sky130
+            - gf180mcu
+          description: >
+            Target technology PDK. Defaults to sky130.
+        clk_port:
+          type: string
+          description: >
+            Clock port name for auto-generated SDC. Defaults to 'clk'.
+        clk_period:
+          type: string
+          description: >
+            Clock period in nanoseconds for auto-generated SDC. Defaults to '10'.
+      required:
+        - file
+

@@ -1,0 +1,18 @@
+name: rfdiffusion
+type: agent
+version: 1.0.0
+associated_tools:
+  - agents/rfdiffusion/tools/rfdiffusion
+publisher:
+  name: Microsoft
+  contact: discovery-catalog@microsoft.com
+  support_url: https://github.com/microsoft/discovery/discussions/categories/bugs
+  party: 1p
+description: >
+  Expert agent for protein backbone design using the RFDiffusion denoising diffusion model. Supports unconditional
+  generation, binder design, motif scaffolding, and symmetric oligomers.
+tags:
+  - protein-design
+  - trained-model
+  - diffusion-model
+  - generative-model

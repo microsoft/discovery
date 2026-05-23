@@ -1,0 +1,8 @@
+CCC(=O)C(F)(F)C(F)(F)F
+COC(F)(F)C(F)(F)C(F)(F)C(F)(F)F
+COC(F)(F)C(F)(F)C(F)(F)C(F)(F)C(F)(F)C(F)(F)F
+C[Si](C)(C)O[Si](C)(C)C
+CCOC(=O)C(C)(C)C
+CCC(=O)CCC
+CC(=O)CC(C)C
+CC1CCCCC1

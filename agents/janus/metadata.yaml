@@ -1,0 +1,23 @@
+name: janus
+type: agent
+version: 1.0.0
+associated_tools:
+  - agents/janus/tools/janus
+publisher:
+  name: Microsoft Discovery
+  contact: discovery-catalog@microsoft.com
+  support_url: https://github.com/microsoft/discovery/discussions/categories/bugs
+  party: 1p
+description: >
+  De novo molecule generator wrapping the JANUS algorithm (Nigam et al., Digital Discovery 2022): a parallel-tempered
+  SELFIES-based genetic algorithm with a DNN classifier guiding exploitation. SELFIES encoding guarantees 100% chemical
+  validity. Accepts user-supplied fitness functions and optional custom filters (e.g. `make_pfas_filter()` for PFAS-free
+  runs, applied as a hard post-filter). CPU-only, no bundled weights, no runtime internet.
+tags:
+  - molecular-design
+  - generative
+  - de-novo
+  - selfies
+  - inverse-design
+  - genetic-algorithm
+  - materials-discovery

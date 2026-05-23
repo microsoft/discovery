@@ -1,0 +1,19 @@
+name: alphafold
+type: agent
+version: 1.0.0
+associated_tools:
+  - agents/alphafold/tools/alphafold
+publisher:
+  name: Microsoft
+  contact: discovery-catalog@microsoft.com
+  support_url: https://github.com/microsoft/discovery/discussions/categories/bugs
+  party: 1p
+description: >
+  Agent for protein structure prediction using AlphaFold. Supports monomer and multimer folding, pLDDT and PAE quality
+  assessment, FASTA input handling, and structure analysis for proteins and protein complexes.
+tags:
+  - structural-biology
+  - protein-folding
+  - alphafold
+  - trained-model
+  - structure-prediction

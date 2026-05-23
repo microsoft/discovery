@@ -1,0 +1,39 @@
+name: rnaseq
+description: "Python code environment for bulk RNA-seq bioinformatics: GEO data ingestion, QC/normalization (DESeq2-style), differential expression (limma-voom), co-expression modules (WGCNA-style), sparse classification (elastic net), nonlinear feature ranking (XGBoost), and structured handoff artifacts."
+version: 1.0.0
+category: "Scientific Computing"
+license: MIT
+
+infra:
+  - name: worker
+    infra_type: container
+    image:
+      acr: "{name}.azurecr.io/rnaseq:latest"
+    compute:
+      min_resources:
+        cpu: 2
+        ram: "8Gi"
+        gpu: 0
+        storage: "0Gi"
+      max_resources:
+        cpu: 16
+        ram: "64Gi"
+        gpu: 0
+        storage: "0Gi"
+      infiniband: false
+      recommended_sku:
+        - Standard_D4s_v6
+        - Standard_D8s_v6
+        - Standard_D16s_v6
+      pool_type: static
+      pool_size: 1
+
+code_environments:
+  - language: python3
+    command: "python3 -u \"/{{scriptName}}\" > {{output_directory}}/logs.out 2>&1; cp -r /workdir/* {{output_directory}}/ 2>/dev/null || true; tail -n 100 {{output_directory}}/logs.out"
+    description: |
+      Python code environment for bulk RNA-seq bioinformatics analysis.
+      Includes GEOparse, statsmodels, scikit-learn, XGBoost, scipy, and matplotlib.
+      Key capabilities: GEO dataset download, DESeq2 normalization, limma-voom DE,
+      WGCNA co-expression modules, elastic net and XGBoost feature ranking.
+    infra_node: worker

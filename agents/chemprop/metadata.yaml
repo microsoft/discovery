@@ -1,0 +1,18 @@
+name: chemprop
+type: agent
+version: 1.0.0
+associated_tools:
+  - agents/chemprop/tools/chemprop
+publisher:
+  name: Microsoft
+  contact: discovery-catalog@microsoft.com
+  support_url: https://github.com/microsoft/discovery/discussions/categories/bugs
+  party: 1p
+description: >
+  Expert agent for molecular property prediction using Chemprop v2 (D-MPNN). Trains, evaluates, and deploys message-passing
+  neural networks for regression, classification, and multi-task molecular property prediction.
+tags:
+  - molecular-properties
+  - trained-model
+  - d-mpnn
+  - property-prediction

@@ -1,0 +1,13 @@
+smiles,label,split
+c1ccccc1,1,train
+Cc1ccccc1,0,train
+Nc1ccccc1,1,train
+Oc1ccccc1,1,train
+CC(=O)Nc1ccccc1,0,train
+CC(=O)NC1=CC=C(C=C1)O,0,train
+Cn1cnc2c1c(=O)n(C)c(=O)n2C,0,train
+CC(=O)Oc1ccccc1C(=O)O,0,train
+CC(C)Cc1ccc(cc1)[C@@H](C)C(=O)O,0,val
+COc1ccc2cc(ccc2c1)C(C)C(=O)O,0,test
+CC(C)NCC(O)COc1cccc2ccccc12,0,test
+CN(C)CCOC(c1ccccc1)c2ccccc2,0,train

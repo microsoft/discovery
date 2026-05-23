@@ -1,0 +1,17 @@
+name: autodock
+type: agent
+version: 1.0.0
+associated_tools:
+  - agents/autodock/tools/autodock
+publisher:
+  name: Microsoft
+  contact: discovery-catalog@microsoft.com
+  support_url: https://github.com/microsoft/discovery/discussions/categories/bugs
+  party: 1p
+description: >
+  Expert molecular docking agent using AutoDock Vina for protein-ligand binding affinity prediction, virtual screening,
+  and structure-based drug design.
+tags:
+  - molecule-docking
+  - drug-discovery
+  - virtual-screening

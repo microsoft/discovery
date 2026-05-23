@@ -1,0 +1,19 @@
+name: boltzgen
+type: agent
+version: 1.0.0
+associated_tools:
+  - agents/boltzgen/tools/boltzgen
+publisher:
+  name: Microsoft
+  contact: discovery-catalog@microsoft.com
+  support_url: https://github.com/microsoft/discovery/discussions/categories/bugs
+  party: 1p
+description: >
+  Expert agent for protein binder design using the BoltzGen diffusion pipeline. Generates, folds, scores, and ranks
+  binder designs using Boltz-2 for structure prediction and filtering.
+tags:
+  - protein-design
+  - structure-prediction
+  - trained-model
+  - diffusion-model
+  - generative-model

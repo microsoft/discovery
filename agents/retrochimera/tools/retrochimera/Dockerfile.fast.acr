@@ -1,0 +1,28 @@
+# RetroChimera main image -- ARG defaults use {acr} placeholder,
+# resolved at build time via build.yaml + build-tool.ps1.
+ARG DEPS_IMAGE={acr}.azurecr.io/retrochimera-deps:1.1.0
+ARG CHECKPOINT_IMAGE={acr}.azurecr.io/retrochimera-checkpoint:v1
+ARG BB_IMAGE={acr}.azurecr.io/retrochimera-bb:2026-04
+
+FROM ${CHECKPOINT_IMAGE} AS checkpoint
+FROM ${BB_IMAGE} AS bb-data
+FROM ${DEPS_IMAGE}
+
+COPY --from=checkpoint /app/models/pistachio /app/models/pistachio
+RUN mkdir -p /app/data
+COPY --from=bb-data /app/data/building_blocks.smi /app/data/building_blocks.smi
+
+COPY retrochimera_utils.py /app/
+COPY test_retrochimera_utils.py /app/
+
+# Re-declare critical ENV vars explicitly (do not rely on inheritance alone,
+# as platform launchers may reset the environment).
+ENV PYTHONPATH=/app
+ENV PATH=/opt/conda/envs/retrochimera/bin:$PATH
+ENV PYTHONUNBUFFERED=1
+ENV MPLBACKEND=Agg
+ENV MPLCONFIGDIR=/tmp/matplotlib
+
+RUN mkdir -p /workdir /input /output /tmp/retrochimera_scratch /tmp/matplotlib
+WORKDIR /workdir
+CMD ["/bin/bash"]

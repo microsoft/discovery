@@ -1,0 +1,145 @@
+name: xyce
+description: >
+  SPICE circuit simulation using the Xyce parallel electronic simulator.
+  Supports transient, DC, AC, and noise analyses with SKY130 and GF180MCU
+  transistor PDK models. Input data is delivered via inputMounts (mounted
+  at /mnt/input). Outputs are written to /output/.
+version: 1.0.0
+license: GPL-3.0
+category: "EDA Tools"
+
+infra:
+  - name: worker
+    infra_type: container
+    image:
+      acr: "{name}/xyce:latest"
+    compute:
+      pool_type: static
+      pool_size: 1
+      recommended_sku:
+        - Standard_E4as_v6
+      min_resources:
+        cpu: 2
+        ram: "8Gi"
+        storage: "20Gi"
+        gpu: 0
+      max_resources:
+        cpu: 4
+        ram: "16Gi"
+        storage: "40Gi"
+        gpu: 0
+
+actions:
+  - name: xyce_version
+    description: Display Xyce version and compiled-in capabilities.
+    infra_node: worker
+    command: "bash -c 'Xyce -v 2>&1 && echo && Xyce -capabilities 2>&1 || true'"
+    input_schema:
+      type: object
+      properties: {}
+      required: []
+
+  - name: xyce_help
+    description: >
+      Display Xyce usage/help information and available command-line options.
+    infra_node: worker
+    command: "bash -c 'Xyce -h 2>&1 || true'"
+    input_schema:
+      type: object
+      properties: {}
+      required: []
+
+  - name: xyce_run
+    description: >
+      Run a SPICE simulation on a circuit netlist. Input files are mounted
+      at /mnt/input via inputMounts. If no testbench is provided, one is
+      auto-generated with supply voltages, stimulus, and measurements.
+      Produces .prn waveform data and .mt0 measurement results in /output/.
+    infra_node: worker
+    command: "bash -c 'export FILE=\"{{file}}\" TESTBENCH=\"{{testbench}}\" PDK=\"{{pdk}}\" SIM_TYPE=\"{{sim_type}}\" SIM_TIME=\"{{sim_time}}\" SIM_STEP=\"{{sim_step}}\" && bash /app/xyce_run.sh'"
+    input_schema:
+      type: object
+      properties:
+        file:
+          type: string
+          description: >
+            SPICE netlist filename (relative to /mnt/input). Can be a full
+            testbench (.cir) or a subcircuit definition requiring auto-testbench.
+        testbench:
+          type: string
+          description: >
+            Optional testbench filename (relative to /mnt/input). If provided,
+            this is used instead of auto-generation.
+        pdk:
+          type: string
+          enum:
+            - sky130
+            - gf180mcu
+          description: >
+            Target technology PDK for model includes. Defaults to sky130.
+            Auto-detected from netlist model references when possible.
+        sim_type:
+          type: string
+          enum:
+            - tran
+            - noise
+            - tran+noise
+          description: >
+            Simulation type. Defaults to tran. Use tran+noise to run both
+            transient and noise analyses.
+        sim_time:
+          type: string
+          description: >
+            Transient simulation end time (e.g. '100n', '1u', '10m').
+            Defaults to '100n'.
+        sim_step:
+          type: string
+          description: >
+            Transient simulation time step (e.g. '0.1n', '1n', '10n').
+            Defaults to '0.1n'.
+      required:
+        - file
+
+  - name: xyce_run_from_work
+    description: >
+      Studio integration -- run a SPICE simulation on a netlist attached as
+      a storage asset. Copies .cir/.spice/.sp files from /mnt/work to
+      /input/, then runs simulation. Same parameters as xyce_run.
+    infra_node: worker
+    command: "bash -c 'export FILE=\"{{file}}\" TESTBENCH=\"{{testbench}}\" PDK=\"{{pdk}}\" SIM_TYPE=\"{{sim_type}}\" SIM_TIME=\"{{sim_time}}\" SIM_STEP=\"{{sim_step}}\" && bash /app/xyce_run_from_work.sh'"
+    input_schema:
+      type: object
+      properties:
+        file:
+          type: string
+          description: >
+            SPICE netlist filename (relative to /mnt/work).
+        testbench:
+          type: string
+          description: >
+            Optional testbench filename (relative to /mnt/work).
+        pdk:
+          type: string
+          enum:
+            - sky130
+            - gf180mcu
+          description: >
+            Target technology PDK. Defaults to sky130.
+        sim_type:
+          type: string
+          enum:
+            - tran
+            - noise
+            - tran+noise
+          description: >
+            Simulation type. Defaults to tran.
+        sim_time:
+          type: string
+          description: >
+            Transient simulation end time. Defaults to '100n'.
+        sim_step:
+          type: string
+          description: >
+            Transient simulation time step. Defaults to '0.1n'.
+      required:
+        - file

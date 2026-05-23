@@ -1,0 +1,65 @@
+# RetroChimera dependencies image -- rebuild when package versions change.
+# Produces a conda env at /opt/conda/envs/retrochimera/ with all runtime deps.
+#
+# Build:
+#   az acr build -r <acr-name> -t retrochimera-deps:1.1.0 \
+#     -f Dockerfile.deps .
+#
+# Override package versions at build time:
+#   --build-arg RETROCHIMERA_VERSION=1.2.0
+#   --build-arg SYNTHESEUS_VERSION=0.8.0
+
+FROM condaforge/mambaforge:24.3.0-0
+
+ENV PYTHONUNBUFFERED=1
+ENV PYTHONDONTWRITEBYTECODE=1
+ENV PYTHONPATH=/app
+ENV MPLBACKEND=Agg
+ENV MPLCONFIGDIR=/tmp/matplotlib
+ENV OMP_NUM_THREADS=1
+ENV MKL_NUM_THREADS=1
+ENV HDF5_USE_FILE_LOCKING=FALSE
+
+# Create conda environment with RetroChimera's heavy dependencies
+RUN mamba create -n retrochimera python=3.9 -y && \
+    mamba clean -afy
+
+# Install conda-only dependencies (PyTorch ecosystem + RDKit + rdchiral)
+RUN mamba install -n retrochimera -c pytorch -c nvidia -c pyg -c conda-forge \
+    numpy \
+    pandas \
+    "scipy<1.12" \
+    "rdkit=2023.09.6" \
+    rdchiral_cpp \
+    "pytorch=2.2.2" \
+    "pytorch-lightning=2.2.2" \
+    "pytorch-sparse=0.6.18" \
+    "pytorch-cluster=1.6.3" \
+    "pytorch-scatter=2.1.2" \
+    "torchvision=0.17.2" \
+    "pyg=2.5.2" \
+    "torchmetrics<0.11.0" \
+    matplotlib \
+    requests \
+    -y && \
+    mamba clean -afy
+
+SHELL ["mamba", "run", "-n", "retrochimera", "/bin/bash", "-c"]
+
+ARG RETROCHIMERA_VERSION="1.1.0"
+ARG SEABORN_VERSION="0.13.2"
+RUN pip install --no-cache-dir "retrochimera==$RETROCHIMERA_VERSION" "seaborn==$SEABORN_VERSION"
+
+ARG SYNTHESEUS_VERSION="0.7.2"
+RUN mamba install -n retrochimera -c conda-forge graphviz -y && \
+    mamba clean -afy && \
+    pip install --no-cache-dir "syntheseus[viz]==$SYNTHESEUS_VERSION"
+
+# Preserve upstream LICENSE from retrochimera package
+RUN mkdir -p /app/retrochimera-license && \
+    python -c "import retrochimera,os,shutil; pkg=os.path.dirname(os.path.dirname(retrochimera.__file__)); [shutil.copy(os.path.join(pkg,d,'LICENSE'),'/app/retrochimera-license/LICENSE') for d in os.listdir(pkg) if 'retrochimera' in d.lower() and os.path.isdir(os.path.join(pkg,d)) and os.path.exists(os.path.join(pkg,d,'LICENSE'))]" || \
+    python -c "import urllib.request; urllib.request.urlretrieve('https://raw.githubusercontent.com/microsoft/retrochimera/main/LICENSE','/app/retrochimera-license/LICENSE')" && \
+    cat /app/retrochimera-license/LICENSE | head -1
+
+RUN echo "conda activate retrochimera" >> ~/.bashrc
+ENV PATH=/opt/conda/envs/retrochimera/bin:$PATH

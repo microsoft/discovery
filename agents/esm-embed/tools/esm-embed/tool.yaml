@@ -1,0 +1,62 @@
+name: esm-embed
+description: ESM-2 protein language model for generating per-residue and per-sequence embeddings, contact maps, and learned representations of protein sequences. Backed by Meta AI's ESM-2 family (8M / 35M / 150M / 650M parameters) via HuggingFace transformers.
+version: 1.0.0
+category: "Machine Learning / Bioinformatics"
+license: MIT
+
+infra:
+  - name: worker
+    infra_type: container
+    image:
+      acr: "{name}.azurecr.io/esm-embed:latest"
+    compute:
+      min_resources:
+        cpu: 3
+        ram: "13Gi"
+        gpu: 0
+        storage: "0Gi"
+      max_resources:
+        cpu: 24
+        ram: "220Gi"
+        gpu: 1
+        storage: "0Gi"
+      infiniband: false
+      recommended_sku:
+        - Standard_NC40ads_H100_v5   # 1x H100 80GB - recommended for 650M model
+        - Standard_NC24ads_A100_v4   # 1x A100 80GB - large batches / long sequences
+        - Standard_D4s_v6            # 4 vCPUs, 16 GB RAM - CPU fallback (small models only)
+        - Standard_D8s_v6            # 8 vCPUs, 32 GB RAM - CPU fallback (medium batches)
+        - Standard_D16s_v6           # 16 vCPUs, 64 GB RAM - CPU fallback (large batches)
+      pool_type: static
+      pool_size: 1
+
+code_environments:
+  - language: python3
+    command: 'python3 -u "/{{scriptName}}" > {{output_directory}}/logs.out 2>&1; cp -r /app/workdir/* {{output_directory}}/ 2>/dev/null || true; tail -n 100 {{output_directory}}/logs.out'
+    description: |
+      Python code environment with PyTorch + HuggingFace transformers + ESM-2 weights pre-cached.
+
+      Pre-cached ESM-2 checkpoints (loaded from /opt/hf-cache, no network at job time):
+      - facebook/esm2_t6_8M_UR50D     (6 layers,  dim 320,  ~8M params)
+      - facebook/esm2_t12_35M_UR50D   (12 layers, dim 480,  ~35M params)
+      - facebook/esm2_t30_150M_UR50D  (30 layers, dim 640,  ~150M params)
+      - facebook/esm2_t33_650M_UR50D  (33 layers, dim 1280, ~650M params) [DEFAULT]
+
+      Pre-installed Python packages:
+      - esm_utils: Custom utilities for loading models and embedding sequences
+      - torch (CUDA 12.1): Backend deep learning framework
+      - transformers, tokenizers, huggingface_hub: Model loading
+      - biopython: FASTA parsing and protein sequence utilities
+      - numpy, scipy, pandas, matplotlib: Scientific computing stack
+
+      Supported workflows:
+      - Per-sequence (mean-pooled) embeddings for downstream ML
+      - Per-residue embeddings for site-level prediction tasks
+      - Contact / attention maps for structure analysis
+      - Batch embedding with automatic length-bucketing
+      - Auto GPU/CPU device selection with mixed-precision (fp16) on GPU
+
+      Input file formats: FASTA (.fasta, .fa), JSON list of {id, sequence}
+      Output file formats: NPZ (compressed), NPY (per-residue tensors), JSON (manifest)
+
+    infra_node: worker

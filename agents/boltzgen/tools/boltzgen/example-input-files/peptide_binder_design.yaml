@@ -1,0 +1,29 @@
+# BoltzGen Design Specification — Peptide Binder with Binding Site
+# Designs a peptide binder (12-25 residues) against a specific binding site on the target.
+#
+# Usage:
+#   1. Download the target structure: curl -o 6m1u.cif https://files.rcsb.org/download/6m1u.cif
+#   2. Place 6m1u.cif in the same directory as this YAML file
+#   3. Run: boltzgen run peptide_binder_design.yaml --output ./output --protocol peptide-anything --num_designs 50 --budget 5
+#
+# The designed peptide (chain B) will have a random length between 12 and 25 residues.
+# The binding site is specified on chain A residues 50-80.
+
+entities:
+  # Designed peptide — 12-25 residues
+  - protein:
+      id: B
+      sequence: 12..25
+
+  # Target structure with binding site specification
+  - file:
+      path: 6m1u.cif
+      include:
+        - chain:
+            id: A
+
+      # Specify where the peptide should bind
+      binding_types:
+        - chain:
+            id: A
+            binding: 50..80

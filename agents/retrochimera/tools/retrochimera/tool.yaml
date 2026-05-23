@@ -1,0 +1,45 @@
+name: retrochimera
+description: >-
+  Frontier retrosynthesis prediction using RetroChimera (Maziarz et al., 2025).
+  Ensembles template-based and de novo models with complementary inductive biases.
+  Supports single-step reaction prediction and multi-step route search via syntheseus.
+  Pre-loaded with the Pistachio checkpoint (strongest model).
+version: 1.0.0
+category: Scientific Computing
+license: MIT
+
+infra:
+  - name: worker
+    infra_type: container
+    image:
+      acr: "{name}.azurecr.io/retrochimera:latest"
+    compute:
+      min_resources:
+        cpu: 4
+        ram: "16Gi"
+        gpu: 1
+        storage: "0Gi"
+      max_resources:
+        cpu: 96
+        ram: "320Gi"
+        gpu: 1
+        storage: "0Gi"
+      infiniband: false
+      recommended_sku:
+        - Standard_NC40ads_H100_v5
+        - Standard_NC80adis_H100_v5
+        - Standard_NC24ads_A100_v4
+      pool_type: static
+      pool_size: 1
+
+code_environments:
+  - language: python3
+    command: >-
+      python3 -u "/{{scriptName}}" > {{output_directory}}/logs.out 2>&1;
+      cp -r /workdir/* {{output_directory}}/ 2>/dev/null || true;
+      tail -n 100 {{output_directory}}/logs.out
+    description: |
+      Python code environment with RetroChimera for retrosynthesis prediction.
+      Pre-loaded with the Pistachio checkpoint. Key packages: retrochimera,
+      syntheseus, rdkit, pytorch, torch_geometric, matplotlib, pandas.
+    infra_node: worker

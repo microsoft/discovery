@@ -1,0 +1,21 @@
+name: mattergen
+type: agent
+version: 1.0.0
+associated_tools:
+  - agents/mattergen/tools/mattergen
+publisher:
+  name: Microsoft Discovery
+  contact: discovery-catalog@microsoft.com
+  support_url: https://github.com/microsoft/discovery/discussions/categories/bugs
+  party: 1p
+description: >
+  Generative AI agent for inorganic crystal structure design using MatterGen (Zeni et al., Nature 2025). Generates
+  novel, stable crystal structures unconditionally or conditioned on target properties including chemical composition,
+  space group, band gap, magnetic density, and bulk modulus. Supports 9 pretrained models from the HuggingFace Hub.
+tags:
+  - materials-science
+  - generative-model
+  - crystal-structure
+  - diffusion-model
+  - computational-chemistry
+  - trained-model

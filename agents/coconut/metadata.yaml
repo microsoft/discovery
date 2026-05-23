@@ -1,0 +1,17 @@
+name: coconut
+type: agent
+version: 1.0.0
+associated_tools:
+  - agents/coconut/tools/coconut
+publisher:
+  name: Microsoft
+  contact: discovery-catalog@microsoft.com
+  support_url: https://github.com/microsoft/discovery/discussions/categories/bugs
+  party: 1p
+description: >
+  Agent for searching and retrieving natural product structures from the COCONUT (Collection of Open Natural Products)
+  database. Provides access to natural product chemical data, molecular properties, and taxonomic classifications.
+tags:
+  - cheminformatics
+  - natural-products
+  - database

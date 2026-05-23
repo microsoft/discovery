@@ -1,0 +1,254 @@
+#!/usr/bin/env bash
+# sta_run.sh -- Run OpenSTA static timing analysis
+# Expects environment variables:
+#   FILE       -- Gate-level Verilog netlist filename
+#   SDC        -- SDC constraints filename (optional)
+#   PDK        -- Target PDK: sky130 (default) or gf180mcu
+#   CLK_PORT   -- Clock port name for auto-SDC (default: clk)
+#   CLK_PERIOD -- Clock period in ns for auto-SDC (default: 10)
+set -euo pipefail
+
+FILE="${FILE:-}"
+if [ -z "${FILE}" ]; then
+  echo "ERROR: FILE environment variable not set"
+  exit 2
+fi
+
+# --- Resolve input file (6-case fallback, same as Yosys) ---
+SRC_FILE=""
+SDC_FILE=""
+
+echo "=== Input Resolution Debug ==="
+echo "  FILE=${FILE}"
+echo "  SDC=${SDC:-<not provided>}"
+echo "  /mnt/input exists: $(test -e /mnt/input && echo yes || echo no)"
+echo "  /mnt/input is dir: $(test -d /mnt/input && echo yes || echo no)"
+echo "  /mnt/input is file: $(test -f /mnt/input && echo yes || echo no)"
+if [ -d "/mnt/input" ]; then
+  echo "  /mnt/input contents:"
+  find /mnt/input -type f \( -name "*.v" -o -name "*.sv" -o -name "*.sdc" \) 2>/dev/null | head -20 | sed 's/^/    /'
+fi
+echo "  /input exists: $(test -e /input && echo yes || echo no)"
+if [ -d "/input" ]; then
+  echo "  /input contents:"
+  ls -la /input/ 2>/dev/null | head -10 | sed 's/^/    /'
+fi
+echo ""
+
+# Case 1: /mnt/input directory with file directly
+if [ -d "/mnt/input" ] && [ -f "/mnt/input/${FILE}" ]; then
+  SRC_FILE="/mnt/input/${FILE}"
+# Case 2: /mnt/input directory, file in subdirectory
+elif [ -d "/mnt/input" ]; then
+  FOUND=$(find /mnt/input -type f -name "${FILE}" 2>/dev/null | head -1)
+  if [ -n "${FOUND}" ]; then
+    SRC_FILE="${FOUND}"
+  fi
+fi
+# Case 3: /mnt/input itself IS the file
+if [ -z "${SRC_FILE}" ] && [ -f "/mnt/input" ]; then
+  SRC_FILE="/mnt/input"
+fi
+# Case 4: /input directory (workbench mode)
+if [ -z "${SRC_FILE}" ] && [ -d "/input" ] && [ -f "/input/${FILE}" ]; then
+  SRC_FILE="/input/${FILE}"
+fi
+# Case 5: search /input recursively
+if [ -z "${SRC_FILE}" ] && [ -d "/input" ]; then
+  FOUND=$(find /input -type f -name "${FILE}" 2>/dev/null | head -1)
+  if [ -n "${FOUND}" ]; then
+    SRC_FILE="${FOUND}"
+  fi
+fi
+# Case 6: find ANY .v/.sv file (last resort)
+if [ -z "${SRC_FILE}" ]; then
+  for DIR in /mnt/input /input; do
+    if [ -d "${DIR}" ]; then
+      FOUND=$(find "${DIR}" -type f \( -name "*.v" -o -name "*.sv" \) 2>/dev/null | head -1)
+      if [ -n "${FOUND}" ]; then
+        echo "WARNING: Could not find '${FILE}' but found '${FOUND}', using it."
+        SRC_FILE="${FOUND}"
+        break
+      fi
+    fi
+  done
+fi
+
+if [ -z "${SRC_FILE}" ]; then
+  echo "ERROR: Could not find Verilog netlist '${FILE}'"
+  ls -laR /mnt/ 2>/dev/null | head -30 || true
+  ls -laR /input/ 2>/dev/null | head -30 || true
+  exit 2
+fi
+echo "Resolved netlist: ${SRC_FILE}"
+
+# --- Resolve SDC file (if provided) ---
+SDC="${SDC:-}"
+if [ -n "${SDC}" ]; then
+  for DIR in /mnt/input /input; do
+    if [ ! -d "${DIR}" ]; then
+      continue
+    fi
+    if [ -f "${DIR}/${SDC}" ]; then
+      SDC_FILE="${DIR}/${SDC}"
+      break
+    fi
+    FOUND=$(find "${DIR}" -type f -name "${SDC}" 2>/dev/null | head -1)
+    if [ -n "${FOUND}" ]; then
+      SDC_FILE="${FOUND}"
+      break
+    fi
+  done
+  if [ -n "${SDC_FILE}" ]; then
+    echo "Resolved SDC: ${SDC_FILE}"
+  else
+    echo "WARNING: SDC file '${SDC}' not found, will auto-generate."
+  fi
+fi
+
+# --- PDK selection ---
+PDK="${PDK:-sky130}"
+case "${PDK}" in
+  sky130)
+    LIB_FILE="/app/pdk/sky130hd_tt.lib.gz"
+    ;;
+  gf180mcu)
+    LIB_FILE="/app/pdk/gf180mcu_fd_sc_mcu7t5v0__tt_025C_3v30.lib"
+    ;;
+  *)
+    echo "ERROR: Unknown PDK '${PDK}'. Supported: sky130, gf180mcu"
+    exit 2
+    ;;
+esac
+
+if [ ! -f "${LIB_FILE}" ]; then
+  echo "ERROR: Liberty file not found: ${LIB_FILE}"
+  exit 2
+fi
+
+# --- Parameters ---
+CLK_PORT="${CLK_PORT:-clk}"
+CLK_PERIOD="${CLK_PERIOD:-10}"
+BASENAME=$(basename "${FILE}" .v)
+BASENAME=$(basename "${BASENAME}" .sv)
+
+mkdir -p /output
+
+# --- Auto-generate SDC if not provided ---
+if [ -z "${SDC_FILE}" ]; then
+  echo "Auto-generating SDC constraints..."
+  SDC_FILE="/tmp/${BASENAME}_auto.sdc"
+  python3 /app/sta_utils.py generate-sdc \
+    --netlist "${SRC_FILE}" \
+    --clk-port "${CLK_PORT}" \
+    --clk-period "${CLK_PERIOD}" \
+    --output "${SDC_FILE}" 2>&1
+  echo "Generated SDC: ${SDC_FILE}"
+  cat "${SDC_FILE}"
+  echo ""
+fi
+
+# --- Detect top module name from netlist ---
+TOP_MODULE="${TOP:-}"
+if [ -z "${TOP_MODULE}" ]; then
+  # Extract first module name from the Verilog netlist
+  TOP_MODULE=$(grep -m1 '^\s*module\s' "${SRC_FILE}" | sed 's/.*module\s\+\(\w\+\).*/\1/')
+  if [ -z "${TOP_MODULE}" ]; then
+    TOP_MODULE="top"
+  fi
+  echo "Auto-detected top module: ${TOP_MODULE}"
+fi
+
+# --- Generate TCL script for OpenSTA ---
+TCL_SCRIPT="/tmp/${BASENAME}_sta.tcl"
+REPORT="/output/${BASENAME}_sta_report.txt"
+LOG="/output/${BASENAME}_sta.log"
+
+cat > "${TCL_SCRIPT}" <<EOF
+# OpenSTA timing analysis script
+# Auto-generated by sta_run.sh
+
+# Read liberty timing model
+read_liberty ${LIB_FILE}
+
+# Read gate-level netlist
+read_verilog ${SRC_FILE}
+
+# Link design
+link_design ${TOP_MODULE}
+
+# Read timing constraints
+read_sdc ${SDC_FILE}
+
+# Report timing
+puts "============================================================"
+puts "STATIC TIMING ANALYSIS REPORT"
+puts "============================================================"
+puts ""
+puts "Design:  ${BASENAME}"
+puts "PDK:     ${PDK}"
+puts "Liberty: ${LIB_FILE}"
+puts "Clock:   ${CLK_PORT} (period=${CLK_PERIOD} ns)"
+puts ""
+
+puts "=== Setup Timing (Max Delay) ==="
+report_checks -path_delay max -format full_clock_expanded
+puts ""
+
+puts "=== Hold Timing (Min Delay) ==="
+report_checks -path_delay min -format full_clock_expanded
+puts ""
+
+puts "=== Worst Slack ==="
+set ws_max [sta::worst_slack -max]
+set ws_min [sta::worst_slack -min]
+if { [string is double -strict \$ws_max] } {
+  puts "Setup (max): [format %.4f \$ws_max]"
+} else {
+  puts "Setup (max): N/A (no paths)"
+}
+if { [string is double -strict \$ws_min] } {
+  puts "Hold  (min): [format %.4f \$ws_min]"
+} else {
+  puts "Hold  (min): N/A (no paths)"
+}
+puts ""
+
+puts "=== Timing Summary ==="
+report_checks -path_delay min_max -group_count 5
+puts ""
+
+puts "=== Check Setup/Hold Violations ==="
+report_check_types -max_slew -max_capacitance -max_fanout
+puts ""
+
+exit
+EOF
+
+echo "=== OpenSTA Analysis ==="
+echo "  Netlist: ${SRC_FILE}"
+echo "  PDK:    ${PDK}"
+echo "  Liberty: ${LIB_FILE}"
+echo "  SDC:    ${SDC_FILE}"
+echo "  Clock:  ${CLK_PORT} period=${CLK_PERIOD}ns"
+echo ""
+
+# --- Run OpenSTA ---
+sta -no_splash -exit "${TCL_SCRIPT}" 2>&1 | tee "${LOG}"
+
+# --- Parse and format report ---
+python3 /app/sta_utils.py parse-report "${LOG}" > "${REPORT}" 2>&1 || {
+  echo "Warning: Could not parse report, copying raw log"
+  cp "${LOG}" "${REPORT}"
+}
+
+# Copy the auto-generated SDC to output if we made one
+if [[ "${SDC_FILE}" == /tmp/* ]]; then
+  cp "${SDC_FILE}" "/output/${BASENAME}_auto.sdc"
+fi
+
+echo ""
+echo "=== Done ==="
+echo "Report: ${REPORT}"
+echo "Log:    ${LOG}"
+cat "${REPORT}"

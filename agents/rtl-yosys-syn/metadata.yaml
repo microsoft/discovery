@@ -1,0 +1,19 @@
+name: rtl-yosys-syn
+type: agent
+version: 1.0.0
+associated_tools:
+  - agents/rtl-yosys-syn/tools/yosys
+publisher:
+  name: Microsoft Discovery
+  contact: discovery-catalog@microsoft.com
+  support_url: https://github.com/microsoft/discovery/discussions/categories/bugs
+  party: 1p
+description: >
+  Open-source Verilog RTL synthesis agent powered by Yosys. Synthesizes Verilog designs to gate-level netlists targeting
+  SKY130 or GF180MCU ASIC technology nodes. Produces netlists and synthesis reports with cell count and area statistics.
+tags:
+  - rtl
+  - synthesis
+  - verilog
+  - asic
+  - digital-design

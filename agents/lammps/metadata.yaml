@@ -1,0 +1,16 @@
+name: lammps
+type: agent
+version: 1.0.0
+associated_tools:
+  - agents/lammps/tools/lammps-cpu
+publisher:
+  name: Microsoft
+  contact: discovery-catalog@microsoft.com
+  support_url: https://github.com/microsoft/discovery/discussions/categories/bugs
+  party: 1p
+description: >
+  Agent for orchestrating LAMMPS CPU tool for molecular simulations. Includes MDAnalysis, ASE, freud, and pandas
+  for self-sufficient trajectory analysis and structure manipulation.
+tags:
+  - molecular-dynamics
+  - materials-science

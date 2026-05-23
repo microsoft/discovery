@@ -1,0 +1,4 @@
+compound_id,smiles
+query_001,CCOC(=O)c1ccccc1
+query_002,CCN(CC)CCOc1ccc(cc1)C(=O)O
+query_003,CN1CCC(CC1)OC2=CC=CC=C2Cl

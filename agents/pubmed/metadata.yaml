@@ -1,0 +1,16 @@
+name: pubmed
+type: agent
+version: 1.0.0
+associated_tools:
+  - agents/pubmed/tools/PubMed
+publisher:
+  name: Microsoft
+  contact: discovery-catalog@microsoft.com
+  support_url: https://github.com/microsoft/discovery/discussions/categories/bugs
+  party: 1p
+description: >
+  Tool for accessing biomedical literature from PubMed. Search and download articles, citations, and full-text content
+  using PubMed/NCBI API. Includes PMC integration for open access articles.
+tags:
+  - literature-search
+  - biomedical

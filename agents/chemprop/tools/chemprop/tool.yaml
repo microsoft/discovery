@@ -1,0 +1,39 @@
+name: chemProp
+description: "Chemprop v2 Message-passing neural networks (D-MPNN) for molecular property prediction. Supports regression, binary classification, and multiclass tasks with scaffold/random splitting, cross-validation, hyperparameter optimization, and learned molecular fingerprints."
+version: 1.0.0
+category: "Machine Learning"
+license: MIT
+
+infra:
+  - name: worker
+    infra_type: container
+    image:
+      acr: "{name}.azurecr.io/chemprop:latest"
+    compute:
+      min_resources:
+        cpu: 2
+        ram: "8Gi"
+        gpu: 0
+        storage: "0Gi"
+      max_resources:
+        cpu: 96
+        ram: "220Gi"
+        gpu: 1
+        storage: "0Gi"
+      infiniband: false
+      recommended_sku:
+        - Standard_D4s_v6
+        - Standard_D8s_v6
+        - Standard_D32s_v6
+        - Standard_NC40ads_H100_v5
+      pool_type: static
+      pool_size: 1
+
+code_environments:
+  - language: python3
+    command: "python3 -u \"/{{scriptName}}\" > {{output_directory}}/logs.out 2>&1; cp -r /workdir/* {{output_directory}}/ 2>/dev/null || true; tail -n 100 {{output_directory}}/logs.out"
+    description: |
+      Python code environment with Chemprop v2 for training and evaluating
+      message-passing neural networks for molecular property prediction.
+      Includes PyTorch, RDKit, Lightning, scikit-learn, and chemprop_utils.
+    infra_node: worker

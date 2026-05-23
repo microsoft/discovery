@@ -1,0 +1,19 @@
+name: zinc
+type: agent
+version: 2.0.0
+associated_tools:
+  - agents/zinc/tools/zinc
+publisher:
+  name: Microsoft
+  contact: discovery-catalog@microsoft.com
+  support_url: https://github.com/microsoft/discovery/discussions/categories/bugs
+  party: 1p
+description: >
+  Agent for searching and retrieving molecular structures from the ZINC22 / CartBlanche database of commercially
+  available compounds. Provides access to 37B+ substances with vendor availability, molecular properties, and SMILES-based
+  exact/similarity search.
+tags:
+  - cheminformatics
+  - database
+  - compound-search
+  - virtual-screening

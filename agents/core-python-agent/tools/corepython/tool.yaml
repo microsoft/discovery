@@ -1,0 +1,30 @@
+name: corepython
+description: >-
+  Core Python execution environment for cheminformatics and scientific computing.
+  Pre-installed with RDKit, ASE, BioPython, PyMatGen, and other molecular science
+  libraries. Input mount is /input, output mount is /output.
+version: 1.0.0
+category: scientific-computing
+license: MIT
+infra:
+  - name: corepython-container
+    infra_type: container
+    image:
+      acr: "{ACR-NAME}.azurecr.io/corepython:latest"
+    compute:
+      min_resources:
+        cpu: 1
+        ram: 8
+      max_resources:
+        cpu: 2
+        ram: 16
+      infiniband: false
+      recommended_sku:
+        - Standard_D4s_v6
+      pool_type: static
+      pool_size: 1
+code_environments:
+  - language: python
+    command: "python \"/{{scriptName}}\""
+    description: "Python code environment on CorePython container image."
+    infra_node: corepython-container

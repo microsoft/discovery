@@ -1,0 +1,20 @@
+name: toxpred
+type: agent
+version: 1.0.0
+associated_tools:
+  - agents/toxpred/tools/toxpred
+publisher:
+  name: Microsoft
+  contact: discovery-catalog@microsoft.com
+  support_url: https://github.com/microsoft/discovery/discussions/categories/bugs
+  party: 1p
+description: >
+  Toxicity prediction agent for chemical compounds. Predicts multiple toxicity endpoints including acute toxicity,
+  mutagenicity, carcinogenicity, and organ-specific effects from molecular structures.
+tags:
+  - toxicology
+  - safety-assessment
+  - cheminformatics
+  - trained-model
+  - d-mpnn
+  - property-prediction

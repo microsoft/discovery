@@ -1,0 +1,128 @@
+###############################################################################
+#
+#  Green-Kubo Thermal Conductivity Calculation for Lennard-Jones Fluid
+#
+#  Description:
+#  ------------
+#
+#  This LAMMPS input script computes the thermal conductivity of a
+#  Lennard-Jones fluid using the Green-Kubo equilibrium method.
+#
+#  The Green-Kubo formula relates thermal conductivity to the
+#  autocorrelation of spontaneous heat flux fluctuations:
+#
+#     kappa = (V / 3*kB*T^2) * integral_0^inf <J(0).J(t)> dt
+#
+#  where J is the heat flux vector and <...> denotes ensemble average.
+#
+#  Output files:
+#  - log.lj_gk: LAMMPS log file with thermodynamic data
+#  - out.Jlj_gk: Heat flux autocorrelation function (HFACF)
+#
+#  The thermal conductivity can be computed by integrating the HFACF.
+#
+###############################################################################
+
+log             log.lj_gk
+
+# simulation parameters
+variable        T_target equal 1.0              # target temperature (LJ units)
+variable        dt       equal 0.005            # timestep (smaller than NEMD for accuracy)
+variable        rc       equal 3.0              # LJ cutoff radius
+
+# equilibration time
+variable        t_equil  equal 500              # equilibration time
+variable        N_equil  equal floor(${t_equil}/${dt})
+
+# production time for correlation sampling
+variable        t_prod   equal 5000             # production time (same as NEMD for comparison)
+variable        N_prod   equal floor(${t_prod}/${dt})
+
+# correlation function parameters
+variable        Nsamp    equal 5                # sample interval
+variable        Nrepeat  equal 200              # number of correlation values
+variable        Nevery   equal ${Nsamp}*${Nrepeat}  # dump interval
+
+# read equilibrated configuration
+read_data       "data.lj"
+
+# use same LJ shifted force pair style as NEMD simulations
+pair_style      lj/sf ${rc}
+pair_coeff      1 1 1.0 1.0 ${rc}
+
+# neighbor list settings
+neighbor        0.8 bin
+neigh_modify    every 1 delay 0 check yes
+
+# timestep
+timestep        ${dt}
+
+# ============= EQUILIBRATION (NVT) =============
+# First equilibrate at target temperature
+
+fix             fNVT all nvt temp ${T_target} ${T_target} $(100*dt)
+
+thermo          1000
+thermo_style    custom step temp pe ke etotal press
+
+print "=== Equilibrating at T = ${T_target} for ${t_equil} time units ==="
+run             ${N_equil}
+
+unfix           fNVT
+
+# ============= PRODUCTION (NVE with heat flux sampling) =============
+# Switch to NVE for microcanonical sampling of fluctuations
+
+fix             fNVE all nve
+
+# Compute per-atom energies and stress for heat flux calculation
+compute         ke_atom all ke/atom
+compute         pe_atom all pe/atom
+compute         stress_atom all stress/atom NULL virial
+
+# Compute heat flux vector J = (Jx, Jy, Jz)
+# heat/flux computes: J = sum_i [e_i * v_i + S_i * v_i]
+# where e_i = per-atom energy, S_i = per-atom stress, v_i = velocity
+compute         flux all heat/flux ke_atom pe_atom stress_atom
+
+# Get system volume for normalization
+variable        V equal vol
+
+# Store heat flux components for correlation
+variable        Jx equal c_flux[1]/vol
+variable        Jy equal c_flux[2]/vol
+variable        Jz equal c_flux[3]/vol
+
+# Compute heat flux autocorrelation function (HFACF)
+# This computes <Jx(0)*Jx(t)>, <Jy(0)*Jy(t)>, <Jz(0)*Jz(t)>
+# and their sum (total HFACF)
+fix             fHFACF all ave/correlate ${Nsamp} ${Nrepeat} ${Nevery} &
+                c_flux[1] c_flux[2] c_flux[3] type auto &
+                file out.Jlj_gk ave running
+
+# Also track total energy to verify NVE conservation
+variable        E equal etotal
+
+thermo          10000
+thermo_style    custom step temp etotal press v_Jx v_Jy v_Jz
+
+print "=== Production run: sampling heat flux correlations ==="
+print "=== Running for ${t_prod} time units ==="
+run             ${N_prod}
+
+# ============= POST-PROCESSING NOTES =============
+# The output file out.Jlj_gk contains the HFACF data.
+# To compute thermal conductivity:
+#
+# 1. Read the correlation data from out.Jlj_gk
+# 2. The total HFACF = <Jx*Jx> + <Jy*Jy> + <Jz*Jz>
+# 3. Integrate: kappa = (V / 3*kB*T^2) * integral(HFACF) * dt
+#
+# In LJ units where kB=1:
+#   kappa = (V / 3*T^2) * sum(HFACF) * dt * conversion_factor
+#
+# The conversion factor accounts for LAMMPS internal units.
+# See LAMMPS documentation for compute heat/flux for details.
+
+print "=== Green-Kubo simulation complete ==="
+print "=== HFACF data written to out.Jlj_gk ==="

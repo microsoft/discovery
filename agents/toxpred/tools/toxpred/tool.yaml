@@ -1,0 +1,38 @@
+name: toxpred
+description: Toxicity prediction tool for drug-like compounds using DSSTox harmonization, ToxCast aggregation, endpoint tables, and Chemprop-ready workflows
+version: 0.1.0
+category: "QSAR and Toxicology"
+license: Apache-2.0
+
+infra:
+  - name: worker
+    infra_type: container
+    image:
+      acr: "{name}.azurecr.io/toxpred:latest"
+    compute:
+      min_resources:
+        cpu: 2
+        ram: "8Gi"
+        gpu: 0
+        storage: "0Gi"
+      max_resources:
+        cpu: 32
+        ram: "128Gi"
+        gpu: 0
+        storage: "0Gi"
+      recommended_sku:
+        - Standard_D4s_v6
+        - Standard_D8s_v6
+        - Standard_D16s_v6
+        - Standard_D32s_v6
+      pool_type: static
+      pool_size: 1
+
+code_environments:
+  - language: python3
+    command: 'python3 -u "/{{scriptName}}" > {{output_directory}}/logs.out 2>&1; cp -r /app/workdir/* {{output_directory}}/ 2>/dev/null || true; tail -n 100 {{output_directory}}/logs.out'
+    description: |
+      Python code environment for toxicity modeling.
+      Packages: toxpred_utils, rdkit, chemprop, pandas, numpy, scikit-learn, scipy, matplotlib, seaborn.
+      Supports DSSTox spine harmonization, ToxCast assay summarization, endpoint-table ingestion, Chemprop training, and batch prediction.
+    infra_node: worker

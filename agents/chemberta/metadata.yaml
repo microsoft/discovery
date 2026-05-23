@@ -1,0 +1,18 @@
+name: chemberta
+type: agent
+version: 1.0.0
+associated_tools:
+  - agents/chemberta/tools/chemberta
+publisher:
+  name: Microsoft
+  contact: discovery-catalog@microsoft.com
+  support_url: https://github.com/microsoft/discovery/discussions/categories/bugs
+  party: 1p
+description: >
+  Molecular property prediction agent using ChemBERTa-2 transformer. Provides SMILES-based molecular embeddings,
+  classification and regression fine-tuning, SMILES augmentation, confidence scoring, similarity search, and clustering.
+tags:
+  - cheminformatics
+  - molecular-property-prediction
+  - trained-model
+  - transformer

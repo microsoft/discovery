@@ -1,0 +1,34 @@
+name: stat-agent
+description: >
+  Statistical validation agent for rigorous evaluation of computational workflow results.
+  Provides comprehensive hypothesis testing, effect size calculations, correlation analysis,
+  model evaluation, bootstrap confidence intervals, Bayesian analysis, and domain-specific
+  thresholds for QSAR, docking, MD, quantum chemistry, and ADMET workflows.
+version: "1.0.0"
+category: statistics
+infra:
+  - name: worker
+    infra_type: container
+    image:
+      acr: "{name}.azurecr.io/statagent:latest"
+    compute:
+      min_resources:
+        cpu: 1
+        ram: 4Gi
+        storage: 8Gi
+        gpu: 0
+      max_resources:
+        cpu: 2
+        ram: 8Gi
+        storage: 16Gi
+        gpu: 0
+      infiniband: false
+      recommended_sku:
+        - Standard_D4s_v6
+      pool_type: static
+      pool_size: 1
+code_environments:
+  - language: python
+    command: python3 "/{{scriptName}}"
+    description: Python code environment with statistical validation libraries.
+    infra_node: worker
