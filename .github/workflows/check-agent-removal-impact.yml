@@ -1,9 +1,14 @@
 name: Check Agent Removal Impact
 
+# NB: This workflow is a *required* status check on `main` (it's listed in branch
+# protection). GitHub treats a non-triggered required check as "expected, never
+# reported", which permanently blocks PRs that don't touch the trigger paths.
+# To avoid that, the workflow now runs on every PR and uses an internal
+# "Detect relevant changes" guard step — the real work is skipped (but the
+# check still reports success) when no agents/** paths changed.
+
 on:
   pull_request_target:
-    paths:
-      - "agents/**"
 
 permissions:
   contents: read
@@ -15,20 +20,40 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
+      - name: Detect relevant changes
+        id: changes
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          FILES=$(gh api \
+            "repos/${GITHUB_REPOSITORY}/pulls/${{ github.event.pull_request.number }}/files" \
+            --paginate --jq '.[].filename')
+          if echo "$FILES" | grep -E '^agents/' >/dev/null; then
+            echo "relevant=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "relevant=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::No agents/** paths changed; reporting success without running the impact check."
+          fi
+
       - name: Checkout PR branch
+        if: steps.changes.outputs.relevant == 'true'
         uses: actions/checkout@v6
         with:
           fetch-depth: 0
 
       - name: Set up Python
+        if: steps.changes.outputs.relevant == 'true'
         uses: actions/setup-python@v6
         with:
           python-version: "3.11"
 
       - name: Install dependencies
+        if: steps.changes.outputs.relevant == 'true'
         run: pip install pyyaml
 
       - name: Detect fork PR
+        if: steps.changes.outputs.relevant == 'true'
         id: fork
         run: |
           if [ "${{ github.event.pull_request.head.repo.fork }}" = "true" ]; then
@@ -38,6 +63,7 @@ jobs:
           fi
 
       - name: Check agent removal impact
+        if: steps.changes.outputs.relevant == 'true'
         run: |
           FORK_FLAG=""
           if [ "${{ steps.fork.outputs.is_fork }}" = "true" ]; then

@@ -1,14 +1,18 @@
 name: Validate Agent Schemas
 
+# This workflow is a *required* status check on `main`. GitHub treats a
+# non-triggered required check as "expected, never reported" which blocks PRs
+# that don't touch the trigger paths. To avoid that, the workflow runs on
+# every PR and uses an internal "Detect relevant changes" guard step — the
+# real work is skipped (but the check still reports success) when none of
+# the agent/tool/metadata schema files changed.
+
 on:
   pull_request:
-    paths:
-      - "docs/schemas/agent-schema-v2.json"
-      - "docs/schemas/tool-definition-schema.json"
-      - "docs/schemas/metadata-schema.json"
 
 permissions:
   contents: read
+  pull-requests: read
 
 jobs:
   validate-schemas:
@@ -22,18 +26,38 @@ jobs:
       # the existing catalog. The workflow is data-only — it reads JSON files
       # as data and never executes PR-supplied code.
 
+      - name: Detect relevant changes
+        id: changes
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          FILES=$(gh api \
+            "repos/${GITHUB_REPOSITORY}/pulls/${{ github.event.pull_request.number }}/files" \
+            --paginate --jq '.[].filename')
+          if echo "$FILES" | grep -E '^docs/schemas/(agent-schema-v2|tool-definition-schema|metadata-schema)\.json$' >/dev/null; then
+            echo "relevant=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "relevant=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::No agent/tool/metadata schema files changed; reporting success without running regression guard."
+          fi
+
       - name: Checkout PR branch
+        if: steps.changes.outputs.relevant == 'true'
         uses: actions/checkout@v6
 
       - name: Set up Python
+        if: steps.changes.outputs.relevant == 'true'
         uses: actions/setup-python@v6
         with:
           python-version: "3.11"
 
       - name: Install dependencies
+        if: steps.changes.outputs.relevant == 'true'
         run: pip install jsonschema pyyaml
 
       - name: AS-001 — Schema files are valid JSON
+        if: steps.changes.outputs.relevant == 'true'
         run: |
           python -c "
           import json, sys
@@ -52,6 +76,7 @@ jobs:
           "
 
       - name: AS-002 — Schemas are valid JSON Schema Draft 7
+        if: steps.changes.outputs.relevant == 'true'
         run: |
           python -c "
           import json, sys, jsonschema
@@ -71,6 +96,7 @@ jobs:
           "
 
       - name: AS-003 — Every existing agents/*/metadata.yaml validates against updated metadata-schema.json
+        if: steps.changes.outputs.relevant == 'true'
         run: |
           python -c "
           import json, sys, glob, jsonschema, yaml
@@ -94,6 +120,7 @@ jobs:
           "
 
       - name: AS-004 — Every existing agents/*/agent.yaml validates against updated agent-schema-v2.json
+        if: steps.changes.outputs.relevant == 'true'
         run: |
           python -c "
           import json, sys, glob, jsonschema, yaml
@@ -117,6 +144,7 @@ jobs:
           "
 
       - name: AS-005 — Every existing agents/*/tools/*/tool.yaml validates against updated tool-definition-schema.json
+        if: steps.changes.outputs.relevant == 'true'
         run: |
           python -c "
           import json, sys, glob, jsonschema, yaml

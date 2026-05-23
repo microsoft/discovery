@@ -3,16 +3,14 @@ name: Unit Tests
 # Runs the .github/tests/ pytest suites that guard the POL-009 model-weight
 # sniffer logic and the picklescan integration inside validate_pr.py.
 #
-# Triggers on every PR that touches the scripts or tests folders, and on push
-# to main so we always have a green baseline. Marked as a required status
-# check in branch protection — failures block the PR from merging.
+# This workflow is a *required* status check on `main`. GitHub treats a
+# non-triggered required check as "expected, never reported" which blocks PRs
+# that don't touch the relevant paths. To avoid that, the workflow runs on
+# every PR and a "Detect relevant changes" guard step skips the real work
+# (but still reports success) when no scripts/tests/workflow files changed.
 
 on:
   pull_request:
-    paths:
-      - ".github/scripts/**"
-      - ".github/tests/**"
-      - ".github/workflows/unit-tests.yml"
   push:
     branches:
       - main
@@ -24,6 +22,7 @@ on:
 
 permissions:
   contents: read
+  pull-requests: read
 
 jobs:
   pytest:
@@ -31,16 +30,37 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
+      - name: Detect relevant changes
+        id: changes
+        if: github.event_name == 'pull_request'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          FILES=$(gh api \
+            "repos/${GITHUB_REPOSITORY}/pulls/${{ github.event.pull_request.number }}/files" \
+            --paginate --jq '.[].filename')
+          if echo "$FILES" | grep -E '^\.github/(scripts|tests)/|^\.github/workflows/unit-tests\.yml$' >/dev/null; then
+            echo "relevant=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "relevant=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::No scripts/tests/unit-tests-workflow paths changed; reporting success without running pytest."
+          fi
+
       - name: Checkout
+        if: github.event_name != 'pull_request' || steps.changes.outputs.relevant == 'true'
         uses: actions/checkout@v6
 
       - name: Set up Python
+        if: github.event_name != 'pull_request' || steps.changes.outputs.relevant == 'true'
         uses: actions/setup-python@v6
         with:
           python-version: "3.12"
 
       - name: Install dependencies
+        if: github.event_name != 'pull_request' || steps.changes.outputs.relevant == 'true'
         run: pip install pytest jsonschema pyyaml picklescan onnx
 
       - name: Run unit tests
+        if: github.event_name != 'pull_request' || steps.changes.outputs.relevant == 'true'
         run: python -m pytest .github/tests/ -v

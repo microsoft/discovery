@@ -1,13 +1,17 @@
 name: Validate Starter Kits
 
+# This workflow is a *required* status check on `main`. GitHub treats a
+# non-triggered required check as "expected, never reported" which blocks PRs
+# that don't touch the trigger paths. The workflow now runs on every PR and a
+# "Detect relevant changes" guard step skips the real work (still reporting
+# success) when no starter-kit files were touched.
+
 on:
   pull_request:
-    paths:
-      - "starter-kits/**"
-      - "docs/schemas/starter-kit-schema.json"
 
 permissions:
   contents: read
+  pull-requests: read
 
 jobs:
   validate:
@@ -15,20 +19,40 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
+      - name: Detect relevant changes
+        id: changes
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          FILES=$(gh api \
+            "repos/${GITHUB_REPOSITORY}/pulls/${{ github.event.pull_request.number }}/files" \
+            --paginate --jq '.[].filename')
+          if echo "$FILES" | grep -E '^starter-kits/|^docs/schemas/starter-kit-schema\.json$' >/dev/null; then
+            echo "relevant=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "relevant=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::No starter-kits/** or starter-kit-schema.json changes; reporting success without running validation."
+          fi
+
       - name: Checkout PR branch
+        if: steps.changes.outputs.relevant == 'true'
         uses: actions/checkout@v6
         with:
           fetch-depth: 0
 
       - name: Set up Python
+        if: steps.changes.outputs.relevant == 'true'
         uses: actions/setup-python@v6
         with:
           python-version: "3.11"
 
       - name: Install dependencies
+        if: steps.changes.outputs.relevant == 'true'
         run: pip install jsonschema pyyaml
 
       - name: Determine changed starter kits
+        if: steps.changes.outputs.relevant == 'true'
         id: changed
         run: |
           CHANGED=$(git diff --name-only origin/${{ github.base_ref }}...HEAD \
@@ -38,6 +62,7 @@ jobs:
           echo "kits=$CHANGED" >> "$GITHUB_OUTPUT"
 
       - name: Run validation
+        if: steps.changes.outputs.relevant == 'true'
         run: |
           KITS="${{ steps.changed.outputs.kits }}"
           ARGS=""
