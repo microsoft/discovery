@@ -47,19 +47,28 @@ jobs:
         run: |
           set -euo pipefail
           PR_NUMBER=""
+          PR_AUTHOR=""
           case "${{ github.event_name }}" in
             pull_request_target|pull_request_review)
               PR_NUMBER="${{ github.event.pull_request.number }}"
+              PR_AUTHOR="${{ github.event.pull_request.user.login }}"
               ;;
             check_suite)
               PR_NUMBER=$(jq -r '.check_suite.pull_requests[0].number // empty' "$GITHUB_EVENT_PATH")
+              PR_AUTHOR=$(jq -r '.check_suite.pull_requests[0].user.login // empty' "$GITHUB_EVENT_PATH")
               ;;
           esac
           if [ -z "$PR_NUMBER" ]; then
             echo "No PR associated with this event — skipping."
             echo "skip=true" >> "$GITHUB_OUTPUT"
+          elif [ "$PR_AUTHOR" = "dependabot[bot]" ]; then
+            # Dependabot-authored PRs run under a read-only token by GitHub policy;
+            # any gh api call would 404/403. Skip cleanly here, before we try.
+            # (Dependabot uses its own auto-merge via `dependabot.yml` / repo settings.)
+            echo "PR #$PR_NUMBER is authored by Dependabot — skipping (Dependabot manages its own merge)."
+            echo "skip=true" >> "$GITHUB_OUTPUT"
           else
-            echo "Resolved PR #$PR_NUMBER"
+            echo "Resolved PR #$PR_NUMBER (author=$PR_AUTHOR)"
             echo "number=$PR_NUMBER" >> "$GITHUB_OUTPUT"
           fi
 
@@ -79,6 +88,7 @@ jobs:
           ensure_label "update-branch"        "fbca04" "PR branch is behind base — please update"
           ensure_label "needs-human-review"   "0075ca" "Awaiting human approval"
           ensure_label "ready-for-auto-merge" "0e8a16" "All gates green — will be auto-merged"
+          ensure_label "checks-in-progress"   "ededed" "One or more required status checks are still running on this PR"
 
       - name: Evaluate gates, update labels, and merge if ready
         if: steps.pr.outputs.skip != 'true'
@@ -162,6 +172,9 @@ jobs:
 
           if [ "$UP_TO_DATE" = "false" ]; then add_label "update-branch"; else remove_label "update-branch"; fi
           if [ "$HUMAN_APPROVED" = "false" ]; then add_label "needs-human-review"; else remove_label "needs-human-review"; fi
+          # checks-in-progress: any required check is still PENDING / IN_PROGRESS / QUEUED.
+          # Cleared as soon as every check has reported (pass or fail).
+          if [ "$CHECKS_PENDING" -gt 0 ]; then add_label "checks-in-progress"; else remove_label "checks-in-progress"; fi
 
           if [ "$CHECKS_PASSED" = "true" ] && [ "$UP_TO_DATE" = "true" ] && [ "$HUMAN_APPROVED" = "true" ]; then
             add_label "ready-for-auto-merge"

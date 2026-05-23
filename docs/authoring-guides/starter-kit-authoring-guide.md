@@ -34,11 +34,10 @@ The folder name must match `kit.json`'s `name` field.
 
 | Field | Purpose |
 |---|---|
-| `$schema` | Relative path to `docs/schemas/starter-kit-schema.json`. |
 | `name` | Kebab-case kit identifier; must match the kit folder name. |
 | `version` | Semantic version (`MAJOR.MINOR.PATCH`). |
-| `description` | One-line summary shown in catalog and CLI output. |
-| `displayName` | Card title shown in Discovery UI. |
+| `description` | One-line summary shown in catalog and CLI output. Max 200 characters. |
+| `displayName` | Card title shown in Discovery UI. Max 80 characters. |
 | `longDescription` | Markdown detail-view body (≥ 50 characters). |
 | `author` | Maintainer `name`, `email`, and optional `url`. |
 | `keywords` | Search terms (non-empty array). |
@@ -46,7 +45,7 @@ The folder name must match `kit.json`'s `name` field.
 | `lifecycle` | `active` or `archived`. |
 | `agentRefs` | Agents that make up the kit (see §5). |
 
-Optional top-level fields include `license` (SPDX identifier), `homepage`, `repository`, `featureFlag`, `logo` (HTTPS URL), `screenshots` (HTTPS URLs), `websiteURL`, `privacyPolicyURL`, `riskProfile`, and `party` (`1p` / `3p` — drives the contribution-source PR label).
+Optional top-level fields include `$schema` (relative path to the schema for editor IntelliSense — recommended), `license` (SPDX identifier), `homepage`, `repository`, `featureFlag`, `logo` (HTTPS URL), `screenshots` (HTTPS URLs), `websiteURL`, `privacyPolicyURL`, `riskProfile`, and `party` (`1p` / `3p` — drives the contribution-source PR label).
 
 Active kits must also include `samplePrompts`.
 

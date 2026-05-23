@@ -16,20 +16,17 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
-      - name: Reject schema changes from forks (Microsoft maintainers only)
-        if: ${{ github.event.pull_request.head.repo.fork == true }}
-        run: |
-          echo "::error::Schema changes under docs/schemas/ are restricted to Microsoft maintainers." \
-            "External contributors: please open an Idea in Discussions" \
-            "(https://github.com/microsoft/discovery/discussions/categories/ideas)" \
-            "and a maintainer will land the change once it is agreed. See CONTRIBUTING.md."
-          exit 1
+      # NOTE: All PRs in this repo come from forks (including those by maintainers).
+      # CODEOWNERS + branch protection are the merge gate; the schema-regression
+      # checks below just verify that any proposed schema change doesn't break
+      # the existing catalog. The workflow is data-only — it reads JSON files
+      # as data and never executes PR-supplied code.
 
       - name: Checkout PR branch
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: "3.11"
 

@@ -19,7 +19,7 @@ Before opening a new discussion, please search existing posts — the answer or 
 
 ## Microsoft Discovery app and Microsoft Discovery services
 
-- **Discovery app** (Windows desktop client, distributed from this repository's [Releases](https://github.com/microsoft/discovery/releases)) — install/quickstart docs live in [`docs/apps/`](docs/apps/); product feedback goes through Discussions as above.
+- **Discovery app** (Windows desktop client, distributed from this repository's [Releases](https://github.com/microsoft/discovery/releases)) — install/quickstart docs live in [`docs/discovery-app/`](docs/discovery-app/); product feedback goes through Discussions as above.
 - **Discovery services** (Azure cloud experience) — documented at [learn.microsoft.com/azure/microsoft-discovery](https://learn.microsoft.com/en-us/azure/microsoft-discovery/). For Azure-specific support, follow your Azure support plan.
 
 ## Microsoft Support Policy
