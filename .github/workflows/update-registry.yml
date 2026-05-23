@@ -98,8 +98,10 @@ jobs:
           git checkout -B "$BRANCH"
 
           # Already staged in the previous step.
-          ADDED=$(git diff --cached .auto-registry/agent-registry.json | grep '^\+.*"path"' | wc -l | tr -d ' ')
-          REMOVED=$(git diff --cached .auto-registry/agent-registry.json | grep '^\-.*"path"' | wc -l | tr -d ' ')
+          # Use `|| true` inside a subshell so that grep exiting with 1 (no
+          # matches) does not abort the script under `set -euo pipefail`.
+          ADDED=$(git diff --cached .auto-registry/agent-registry.json | { grep '^\+.*"path"' || true; } | wc -l | tr -d ' ')
+          REMOVED=$(git diff --cached .auto-registry/agent-registry.json | { grep '^\-.*"path"' || true; } | wc -l | tr -d ' ')
           COMMIT_MSG="chore: update .auto-registry/agent-registry.json (+${ADDED}/-${REMOVED} entries) [skip ci]"
           git commit -m "$COMMIT_MSG"
 
