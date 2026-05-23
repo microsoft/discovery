@@ -88,6 +88,7 @@ jobs:
           ensure_label "update-branch"        "fbca04" "PR branch is behind base — please update"
           ensure_label "needs-human-review"   "0075ca" "Awaiting human approval"
           ensure_label "ready-for-auto-merge" "0e8a16" "All gates green — will be auto-merged"
+          ensure_label "checks-in-progress"   "ededed" "One or more required status checks are still running on this PR"
 
       - name: Evaluate gates, update labels, and merge if ready
         if: steps.pr.outputs.skip != 'true'
@@ -171,6 +172,9 @@ jobs:
 
           if [ "$UP_TO_DATE" = "false" ]; then add_label "update-branch"; else remove_label "update-branch"; fi
           if [ "$HUMAN_APPROVED" = "false" ]; then add_label "needs-human-review"; else remove_label "needs-human-review"; fi
+          # checks-in-progress: any required check is still PENDING / IN_PROGRESS / QUEUED.
+          # Cleared as soon as every check has reported (pass or fail).
+          if [ "$CHECKS_PENDING" -gt 0 ]; then add_label "checks-in-progress"; else remove_label "checks-in-progress"; fi
 
           if [ "$CHECKS_PASSED" = "true" ] && [ "$UP_TO_DATE" = "true" ] && [ "$HUMAN_APPROVED" = "true" ]; then
             add_label "ready-for-auto-merge"

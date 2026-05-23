@@ -18,8 +18,8 @@ jobs:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
             const labels = [
-              { name: 'automated-checks-passed', color: '0e8a16', description: 'All automated checks passed; PR is ready for human review' },
-              { name: 'automated-checks-failed', color: 'd73a4a', description: 'One or more automated checks failed; see inline comments' },
+              { name: 'pr-validation-passed', color: '0e8a16', description: "The pr-review workflow's validator (validate_pr.py) passed. Other status checks (unit-tests, schema regression, etc.) report separately — see the PR status rollup for the full picture." },
+              { name: 'pr-validation-failed', color: 'd73a4a', description: "The pr-review workflow's validator (validate_pr.py) failed; see inline comments. Other status checks report separately." },
               { name: 'human-review-approved',   color: '2cbe4e', description: 'A human reviewer has approved the PR' },
               { name: '1p-contribution',         color: '1d76db', description: "Authored by Microsoft (party='1p' in metadata)" },
               { name: '3p-contribution',         color: '0052cc', description: "Authored by a third-party partner (party='3p' in metadata)" },
@@ -28,6 +28,7 @@ jobs:
               { name: 'update-branch',           color: 'fbca04', description: 'PR branch is behind base — please update' },
               { name: 'needs-human-review',      color: '0075ca', description: 'Awaiting human approval' },
               { name: 'ready-for-auto-merge',    color: '0e8a16', description: 'All gates green — will be auto-merged' },
+              { name: 'checks-in-progress',      color: 'ededed', description: 'One or more required status checks are still running on this PR. Removed automatically once all checks have reported.' },
               // ── Discussion-template labels ──
               { name: 'bug',                     color: 'd73a4a', description: 'Bug report (Discussions → Bugs template)' },
               { name: 'idea',                    color: 'a2eeef', description: 'Feature idea / proposal (Discussions → Ideas template)' },

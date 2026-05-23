@@ -53,11 +53,11 @@ Code contributions to the Microsoft Discovery app itself — its plugin, MCP too
 
 ### Quick start
 
-1. **Fork** this repo (external contributors) or create a topic branch (maintainers).
+1. **Fork** this repo and create a topic branch on your fork. All PRs — including those by Microsoft maintainers — come from forks.
 2. Add your agent under `agents/<agent-name>/` or your starter kit under `starter-kits/<starter-kit-name>/`. See [Repository layout](#repository-layout) below for the expected file tree.
 3. Open a pull request against `main` and fill out **every** section of the PR template.
 4. Automated checks will run on your PR. If anything fails, the bot adds an inline comment with the rule ID and how to fix it — address every finding before requesting human review.
-5. When all checks pass, the `automated-checks-passed` label is applied and the [CODEOWNERS](.github/CODEOWNERS) maintainers are auto-requested for review. **Two approvals** are required to merge.
+5. When the pr-review validator passes, the `pr-validation-passed` label is applied and the [CODEOWNERS](.github/CODEOWNERS) maintainers are auto-requested for review. Other status checks (unit tests, schema regression, etc.) report independently — see the PR status rollup for the full picture. **One CODEOWNERS approval** is required to merge.
 
 ### Required files
 

@@ -356,7 +356,7 @@ What happens next:
 
 1. The automated review runs (structural, schema, policy, documentation, and security checks).
 2. Any failures are posted as inline review comments with a rule identifier and remediation hint. Address each comment and push a follow-up commit.
-3. When all checks pass, the `automated-checks-passed` label is applied and the CODEOWNERS maintainers are auto-requested for review.
+3. When all checks pass, the `pr-validation-passed` label is applied and the CODEOWNERS maintainers are auto-requested for review.
 4. One approval from a CODEOWNERS reviewer is required to merge.
 
 ---
