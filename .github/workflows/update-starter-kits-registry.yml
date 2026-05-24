@@ -71,7 +71,13 @@ jobs:
 
       - name: Commit generated files via a PR
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # See update-registry.yml for the full rationale: when the org
+          # disables "Allow GitHub Actions to create and approve pull
+          # requests" we need a PAT/App token to call `gh pr create` and
+          # `gh pr merge --auto`. Falls back to GITHUB_TOKEN + a warning
+          # when the secret is missing.
+          GH_TOKEN: ${{ secrets.REGISTRY_PR_TOKEN || secrets.GITHUB_TOKEN }}
+          HAS_PAT: ${{ secrets.REGISTRY_PR_TOKEN != '' }}
         run: |
           set -euo pipefail
           git config user.name "github-actions[bot]"
@@ -88,7 +94,14 @@ jobs:
 
           COMMIT_MSG="chore: update .auto-registry/starter-kit-registry.json [skip ci]"
           git commit -m "$COMMIT_MSG"
-          git push --force origin "$BRANCH"
+          git push --force \
+            "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${GITHUB_REPOSITORY}.git" \
+            "$BRANCH"
+
+          if [ "$HAS_PAT" != "true" ]; then
+            echo "::warning::REGISTRY_PR_TOKEN secret is not configured. Branch ${BRANCH} was force-pushed with the regenerated starter-kit registry, but no PR can be opened from GITHUB_TOKEN under this repo's policy. A maintainer must open the PR manually, or add the REGISTRY_PR_TOKEN secret."
+            exit 0
+          fi
 
           if ! gh pr view "$BRANCH" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
             gh pr create \

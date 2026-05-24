@@ -82,7 +82,18 @@ jobs:
       - name: Commit updated registry to a PR
         if: steps.diff.outputs.changed == 'true'
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # `gh pr create` and `gh pr merge --auto` require a token that is
+          # *not* the default GITHUB_TOKEN when the org-level setting
+          # "Allow GitHub Actions to create and approve pull requests" is
+          # disabled (which is the default for microsoft/* repos and cannot
+          # be enabled at the repo level). REGISTRY_PR_TOKEN must be a PAT
+          # (classic or fine-grained) or GitHub App installation token from
+          # a service account with `Contents: Read` and `Pull requests:
+          # Write` on this repo. If the secret is missing the script falls
+          # back to GITHUB_TOKEN and surfaces a clear warning instead of
+          # failing the job.
+          GH_TOKEN: ${{ secrets.REGISTRY_PR_TOKEN || secrets.GITHUB_TOKEN }}
+          HAS_PAT: ${{ secrets.REGISTRY_PR_TOKEN != '' }}
         run: |
           set -euo pipefail
           git config user.name  "github-actions[bot]"
@@ -107,7 +118,16 @@ jobs:
           git commit -m "$COMMIT_MSG"
 
           # Force-push so the branch is always exactly "main + this commit".
-          git push --force origin "$BRANCH"
+          # GITHUB_TOKEN has Contents: write here, so the push works regardless
+          # of which token GH_TOKEN points at.
+          git push --force \
+            "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${GITHUB_REPOSITORY}.git" \
+            "$BRANCH"
+
+          if [ "$HAS_PAT" != "true" ]; then
+            echo "::warning::REGISTRY_PR_TOKEN secret is not configured. Branch ${BRANCH} was force-pushed with the regenerated registry, but no PR can be opened from GITHUB_TOKEN under this repo's policy. A maintainer must open the PR manually, or add the REGISTRY_PR_TOKEN secret."
+            exit 0
+          fi
 
           # Create the PR if one doesn't already exist for this branch.
           if ! gh pr view "$BRANCH" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
