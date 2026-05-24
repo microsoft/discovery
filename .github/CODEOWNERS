@@ -7,15 +7,15 @@
 # See https://docs.github.com/en/repositories/managing-your-repositories-settings-and-customization/customizing-your-repository/about-code-owners
 
 # Default reviewers — applied when no more-specific rule matches.
-*                                       @mukesh-dua @charwen @leijgao @ffrachon @karthikananth @anzaman @surajmb
+*                                       @mukesh-dua @charwen @leijgao @ffrachon @karthikananth @anzaman @surajmb @prashney
 
 # CI / workflow tooling
-/.github/workflows/                     @mukesh-dua @charwen @leijgao @ffrachon @karthikananth @anzaman @surajmb
-/.github/scripts/                       @mukesh-dua @charwen @leijgao @ffrachon @karthikananth @anzaman @surajmb
-/.github/CODEOWNERS                     @mukesh-dua @charwen @leijgao @ffrachon @karthikananth @anzaman @surajmb
+/.github/workflows/                     @mukesh-dua @charwen @leijgao @ffrachon @karthikananth @anzaman @surajmb @prashney
+/.github/scripts/                       @mukesh-dua @charwen @leijgao @ffrachon @karthikananth @anzaman @surajmb @prashney
+/.github/CODEOWNERS                     @mukesh-dua @charwen @leijgao @ffrachon @karthikananth @anzaman @surajmb @prashney
 
 # Schema files — changes here can break every agent/kit in the catalog.
-/docs/schemas/                          @mukesh-dua @charwen @leijgao @ffrachon @karthikananth @anzaman @surajmb
+/docs/schemas/                          @mukesh-dua @charwen @leijgao @ffrachon @karthikananth @anzaman @surajmb @prashney
 
 # Auto-generated registries — should normally never be hand-edited (see POL-011).
 # `discovery-registry-bot` is the GitHub App that authors the chore/registry-refresh*
@@ -28,8 +28,8 @@
 /.auto-registry/                        @mukesh-dua @charwen @leijgao @ffrachon @karthikananth @anzaman @surajmb @prashney @discovery-registry-bot
 
 # Per-content area
-/agents/                                @mukesh-dua @charwen @leijgao @ffrachon @karthikananth @anzaman @surajmb
-/starter-kits/                          @mukesh-dua @charwen @leijgao @ffrachon @karthikananth @anzaman @surajmb
+/agents/                                @mukesh-dua @charwen @leijgao @ffrachon @karthikananth @anzaman @surajmb @prashney
+/starter-kits/                          @mukesh-dua @charwen @leijgao @ffrachon @karthikananth @anzaman @surajmb @prashney
 
 # Operator utilities for Discovery services (PowerShell scripts).
-/utilities/                             @mukesh-dua @charwen @leijgao @ffrachon @karthikananth @anzaman @surajmb
+/utilities/                             @mukesh-dua @charwen @leijgao @ffrachon @karthikananth @anzaman @surajmb @prashney
