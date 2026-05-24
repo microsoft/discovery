@@ -110,6 +110,12 @@ jobs:
 
       - name: Run validation
         id: run_validator
+        env:
+          # POL-011 exempts the bot-authored chore/registry-refresh PR so
+          # the update-registry.yml workflow can actually land its output.
+          # Exempt requires BOTH author and head ref to match.
+          PR_AUTHOR: ${{ github.event.pull_request.user.login }}
+          PR_HEAD_REF: ${{ github.event.pull_request.head.ref }}
         run: |
           # Invoke validator from the trusted checkout (base SHA) against PR content.
           python trusted/.github/scripts/validate_pr.py \
