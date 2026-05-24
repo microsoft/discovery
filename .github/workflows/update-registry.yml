@@ -116,6 +116,23 @@ jobs:
             echo "changed=true" >> "$GITHUB_OUTPUT"
           fi
 
+      # Detect whether the App secrets are configured. GitHub Actions does
+      # NOT allow `secrets.X` to be referenced from a step-level `if:`
+      # condition (the workflow fails to parse with "Unrecognized named-value:
+      # secrets"). Use an intermediate shell step to surface the presence as
+      # a step output, then gate subsequent steps on that.
+      - name: Check for App secrets
+        id: app_check
+        if: steps.diff.outputs.changed == 'true'
+        env:
+          REGISTRY_APP_ID: ${{ secrets.REGISTRY_APP_ID }}
+        run: |
+          if [ -n "${REGISTRY_APP_ID:-}" ]; then
+            echo "configured=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "configured=false" >> "$GITHUB_OUTPUT"
+          fi
+
       # Mint a short-lived (~1h) GitHub App installation token. Required
       # because the org disables "Allow GitHub Actions to create and approve
       # pull requests", so the default GITHUB_TOKEN cannot call gh pr create /
@@ -124,7 +141,7 @@ jobs:
       # If REGISTRY_APP_ID is unset (App not yet wired up), this step is
       # skipped and the workflow falls back to the warn-and-exit path below.
       - name: Generate App installation token
-        if: steps.diff.outputs.changed == 'true' && secrets.REGISTRY_APP_ID != ''
+        if: steps.app_check.outputs.configured == 'true'
         id: app_token
         uses: actions/create-github-app-token@v1
         with:
