@@ -1,0 +1,75 @@
+name: Auto-approve registry refresh PRs
+
+# Background:
+# update-registry.yml and update-starter-kits-registry.yml open
+# `chore/registry-refresh` / `chore/starter-kit-registry-refresh` PRs after an
+# agent or starter-kit merges to main. Those PRs need at least one approving
+# review to satisfy `required_approving_review_count: 1` on main.
+#
+# This workflow auto-approves those bot-authored PRs so they can merge
+# without a human round-trip. It only fires when:
+#   - the PR was opened by `github-actions[bot]`, AND
+#   - the head branch is one of the deterministic registry-refresh branches.
+#
+# IMPORTANT: GitHub forbids any user from approving their own pull request.
+# A workflow run using the default GITHUB_TOKEN authenticates as
+# `github-actions[bot]`, which is also the PR author — so the default token
+# cannot approve. The approver must be a *different* identity.
+#
+# This workflow expects an `AUTO_APPROVE_TOKEN` secret containing a fine-scoped
+# PAT (or GitHub App installation token) from a service account that has
+# `pull-requests: write` on this repo. If the secret is missing, the job
+# logs a warning and exits successfully — leaving the PR for a human to
+# approve.
+#
+# Note on CODEOWNERS: branch protection on main has
+# `require_code_owner_reviews: true`. For the auto-approval to actually
+# satisfy the merge gate, the service account that owns
+# AUTO_APPROVE_TOKEN must be listed in `.github/CODEOWNERS` for
+# `/.auto-registry/`. Without that, the PR will still be blocked at
+# "Code owner approval required" even after this workflow approves it.
+
+on:
+  pull_request_target:
+    types: [opened, reopened, synchronize, ready_for_review]
+
+permissions:
+  pull-requests: write
+  contents: read
+
+jobs:
+  approve:
+    name: Approve bot-authored registry refresh PR
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    if: >-
+      github.event.pull_request.user.login == 'github-actions[bot]' &&
+      (
+        startsWith(github.event.pull_request.head.ref, 'chore/registry-refresh') ||
+        startsWith(github.event.pull_request.head.ref, 'chore/starter-kit-registry-refresh')
+      )
+    steps:
+      - name: Approve PR
+        env:
+          # Must be a token from a *different* identity than github-actions[bot].
+          # Falls back to GITHUB_TOKEN so the workflow logs a clear message when
+          # the secret hasn't been configured yet (instead of failing silently).
+          GH_TOKEN: ${{ secrets.AUTO_APPROVE_TOKEN || secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          REPO: ${{ github.repository }}
+          HEAD_REF: ${{ github.event.pull_request.head.ref }}
+        run: |
+          set -euo pipefail
+          if [ -z "${{ secrets.AUTO_APPROVE_TOKEN }}" ]; then
+            echo "::warning::AUTO_APPROVE_TOKEN secret is not set."
+            echo "::warning::Cannot auto-approve PR #$PR_NUMBER ($HEAD_REF) because"
+            echo "::warning::the default GITHUB_TOKEN authenticates as github-actions[bot],"
+            echo "::warning::which is also the PR author. GitHub forbids self-approval."
+            echo "::warning::Add a service-account PAT as AUTO_APPROVE_TOKEN to enable"
+            echo "::warning::fully-automated registry refresh merges."
+            exit 0
+          fi
+
+          gh pr review "$PR_NUMBER" --repo "$REPO" --approve \
+            --body "Auto-approving bot-authored registry refresh PR (\`$HEAD_REF\`)."
+          echo "Approved PR #$PR_NUMBER."
