@@ -18,7 +18,14 @@
 /docs/schemas/                          @mukesh-dua @charwen @leijgao @ffrachon @karthikananth @anzaman @surajmb @prashney
 
 # Auto-generated registries — should normally never be hand-edited (see POL-011).
-/.auto-registry/                        @mukesh-dua @charwen @leijgao @ffrachon @karthikananth @anzaman @surajmb @prashney
+# `discovery-registry-bot` is the GitHub App that authors the chore/registry-refresh*
+# PRs. Listing it as a codeowner here means a *second* identity (a future second
+# App or service account) configured as AUTO_APPROVE_TOKEN can satisfy the
+# CODEOWNERS gate by approving the bot-authored PR. The App itself cannot
+# approve its own PRs (GitHub forbids self-approval), so this line is structural
+# prep for fully-automated registry merges; until a second identity is wired up,
+# a human codeowner from the list below still needs to approve.
+/.auto-registry/                        @mukesh-dua @charwen @leijgao @ffrachon @karthikananth @anzaman @surajmb @prashney @discovery-registry-bot
 
 # Per-content area
 /agents/                                @mukesh-dua @charwen @leijgao @ffrachon @karthikananth @anzaman @surajmb @prashney
