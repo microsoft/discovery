@@ -1,0 +1,26 @@
+{
+  "version": "1.0",
+  "generated_at": "2026-05-24T17:26:30Z",
+  "entries": [
+    {
+      "name": "openfoam",
+      "type": "agent",
+      "publisher_name": "Microsoft Discovery",
+      "path": "agents/openfoam",
+      "version": "1.0.0",
+      "associated_tools": [
+        "agents/openfoam/tools/openfoam"
+      ],
+      "foundry_tools": [],
+      "supported_regions": [],
+      "description": "Generalizable CFD agent powered by OpenFOAM. Infers simulation scenarios from natural language prompts, maps physical parameters, executes steady-state and transient solvers, and extracts quantitative metrics (drag, pressure drop, heat transfer, etc.) reported directly in chat. Supports internal flows, external aerodynamics, heat transfer, and rotating machinery via MRF.\n",
+      "tags": [
+        "computational-fluid-dynamics",
+        "openfoam",
+        "cfd",
+        "engineering",
+        "simulation"
+      ]
+    }
+  ]
+}
