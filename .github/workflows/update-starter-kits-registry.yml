@@ -69,15 +69,23 @@ jobs:
               sys.exit(1)
           "
 
+      # Mint a short-lived GitHub App installation token (discovery-registry-bot).
+      # See update-registry.yml for the rationale.
+      - name: Generate App installation token
+        if: secrets.REGISTRY_APP_ID != ''
+        id: app_token
+        uses: actions/create-github-app-token@v1
+        with:
+          app-id: ${{ secrets.REGISTRY_APP_ID }}
+          private-key: ${{ secrets.REGISTRY_APP_PRIVATE_KEY }}
+
       - name: Commit generated files via a PR
         env:
-          # See update-registry.yml for the full rationale: when the org
-          # disables "Allow GitHub Actions to create and approve pull
-          # requests" we need a PAT/App token to call `gh pr create` and
-          # `gh pr merge --auto`. Falls back to GITHUB_TOKEN + a warning
-          # when the secret is missing.
-          GH_TOKEN: ${{ secrets.REGISTRY_PR_TOKEN || secrets.GITHUB_TOKEN }}
-          HAS_PAT: ${{ secrets.REGISTRY_PR_TOKEN != '' }}
+          # Use the App installation token for gh pr create / gh pr merge --auto
+          # when available; fall back to GITHUB_TOKEN otherwise so the script
+          # can still log a useful diagnostic instead of hard-failing.
+          GH_TOKEN: ${{ steps.app_token.outputs.token || secrets.GITHUB_TOKEN }}
+          HAS_APP_TOKEN: ${{ steps.app_token.outputs.token != '' }}
         run: |
           set -euo pipefail
           git config user.name "github-actions[bot]"
@@ -98,8 +106,8 @@ jobs:
             "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${GITHUB_REPOSITORY}.git" \
             "$BRANCH"
 
-          if [ "$HAS_PAT" != "true" ]; then
-            echo "::warning::REGISTRY_PR_TOKEN secret is not configured. Branch ${BRANCH} was force-pushed with the regenerated starter-kit registry, but no PR can be opened from GITHUB_TOKEN under this repo's policy. A maintainer must open the PR manually, or add the REGISTRY_PR_TOKEN secret."
+          if [ "$HAS_APP_TOKEN" != "true" ]; then
+            echo "::warning::REGISTRY_APP_ID/REGISTRY_APP_PRIVATE_KEY secrets are not configured. Branch ${BRANCH} was force-pushed with the regenerated starter-kit registry, but no PR can be opened from GITHUB_TOKEN under this repo's policy. A maintainer must open the PR manually, or wire up the discovery-registry-bot GitHub App."
             exit 0
           fi
 

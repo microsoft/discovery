@@ -79,21 +79,29 @@ jobs:
             echo "changed=true" >> "$GITHUB_OUTPUT"
           fi
 
+      # Mint a short-lived (~1h) GitHub App installation token. Required
+      # because the org disables "Allow GitHub Actions to create and approve
+      # pull requests", so the default GITHUB_TOKEN cannot call gh pr create /
+      # gh pr merge --auto on this repo. The App (discovery-registry-bot) has
+      # Contents: Read + Pull requests: Write on microsoft/discovery.
+      # If REGISTRY_APP_ID is unset (App not yet wired up), this step is
+      # skipped and the workflow falls back to the warn-and-exit path below.
+      - name: Generate App installation token
+        if: steps.diff.outputs.changed == 'true' && secrets.REGISTRY_APP_ID != ''
+        id: app_token
+        uses: actions/create-github-app-token@v1
+        with:
+          app-id: ${{ secrets.REGISTRY_APP_ID }}
+          private-key: ${{ secrets.REGISTRY_APP_PRIVATE_KEY }}
+
       - name: Commit updated registry to a PR
         if: steps.diff.outputs.changed == 'true'
         env:
-          # `gh pr create` and `gh pr merge --auto` require a token that is
-          # *not* the default GITHUB_TOKEN when the org-level setting
-          # "Allow GitHub Actions to create and approve pull requests" is
-          # disabled (which is the default for microsoft/* repos and cannot
-          # be enabled at the repo level). REGISTRY_PR_TOKEN must be a PAT
-          # (classic or fine-grained) or GitHub App installation token from
-          # a service account with `Contents: Read` and `Pull requests:
-          # Write` on this repo. If the secret is missing the script falls
-          # back to GITHUB_TOKEN and surfaces a clear warning instead of
-          # failing the job.
-          GH_TOKEN: ${{ secrets.REGISTRY_PR_TOKEN || secrets.GITHUB_TOKEN }}
-          HAS_PAT: ${{ secrets.REGISTRY_PR_TOKEN != '' }}
+          # Use the App installation token for gh pr create / gh pr merge --auto
+          # when available; fall back to GITHUB_TOKEN otherwise so the script
+          # can still log a useful diagnostic instead of hard-failing.
+          GH_TOKEN: ${{ steps.app_token.outputs.token || secrets.GITHUB_TOKEN }}
+          HAS_APP_TOKEN: ${{ steps.app_token.outputs.token != '' }}
         run: |
           set -euo pipefail
           git config user.name  "github-actions[bot]"
@@ -124,8 +132,8 @@ jobs:
             "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${GITHUB_REPOSITORY}.git" \
             "$BRANCH"
 
-          if [ "$HAS_PAT" != "true" ]; then
-            echo "::warning::REGISTRY_PR_TOKEN secret is not configured. Branch ${BRANCH} was force-pushed with the regenerated registry, but no PR can be opened from GITHUB_TOKEN under this repo's policy. A maintainer must open the PR manually, or add the REGISTRY_PR_TOKEN secret."
+          if [ "$HAS_APP_TOKEN" != "true" ]; then
+            echo "::warning::REGISTRY_APP_ID/REGISTRY_APP_PRIVATE_KEY secrets are not configured. Branch ${BRANCH} was force-pushed with the regenerated registry, but no PR can be opened from GITHUB_TOKEN under this repo's policy. A maintainer must open the PR manually, or wire up the discovery-registry-bot GitHub App."
             exit 0
           fi
 
