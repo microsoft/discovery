@@ -25,7 +25,7 @@
 # approve its own PRs (GitHub forbids self-approval), so this line is structural
 # prep for fully-automated registry merges; until a second identity is wired up,
 # a human codeowner from the list below still needs to approve.
-/.auto-registry/                        @mukesh-dua @charwen @leijgao @ffrachon @karthikananth @anzaman @surajmb @discovery-registry-bot
+/.auto-registry/                        @mukesh-dua @charwen @leijgao @ffrachon @karthikananth @anzaman @surajmb @prashney @discovery-registry-bot
 
 # Per-content area
 /agents/                                @mukesh-dua @charwen @leijgao @ffrachon @karthikananth @anzaman @surajmb
