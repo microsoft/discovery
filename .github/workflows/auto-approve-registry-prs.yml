@@ -49,8 +49,7 @@ jobs:
         github.event.pull_request.user.login == 'github-actions[bot]'
       ) &&
       (
-        startsWith(github.event.pull_request.head.ref, 'chore/registry-refresh') ||
-        startsWith(github.event.pull_request.head.ref, 'chore/starter-kit-registry-refresh')
+        startsWith(github.event.pull_request.head.ref, 'chore/registry-refresh')
       )
     steps:
       - name: Approve PR

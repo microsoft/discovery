@@ -24,7 +24,7 @@ concurrency:
 
 jobs:
   update-registry:
-    name: Rebuild .auto-registry/agent-registry.json
+    name: Rebuild .auto-registry/*-registry.json
     runs-on: ubuntu-latest
     timeout-minutes: 20
 
@@ -47,7 +47,7 @@ jobs:
       - name: Rebuild .auto-registry/agent-registry.json
         run: python .github/scripts/update_registry.py --repo-root . --output .auto-registry/agent-registry.json
 
-      - name: Validate generated registry against registry-schema.json
+      - name: Validate agent-registry.json against registry-schema.json
         run: |
           python -c "
           import json, sys, jsonschema
@@ -62,18 +62,55 @@ jobs:
                   path = ' -> '.join(str(p) for p in e.absolute_path) or '(root)'
                   print(f'  FAIL: registry at {path}: {e.message}', file=sys.stderr)
               sys.exit(1)
-          print('  OK: generated registry conforms to registry-schema.json')
+          print('  OK: agent-registry.json conforms to registry-schema.json')
+          "
+
+      # Starter-kit registry depends on the freshly-generated agent-registry
+      # (the script reads agent paths from it), so this MUST run after the
+      # agent-registry step. If there are no starter-kits in the repo the
+      # script produces no output and we just skip validation for that file.
+      - name: Rebuild .auto-registry/starter-kit-registry.json
+        run: python .github/scripts/update_starter_kits_registry.py --repo-root .
+
+      - name: Validate starter-kit-registry.json against starter-kit-registry-schema.json
+        run: |
+          python -c "
+          import json, sys, os
+          try:
+              import jsonschema
+              if not os.path.exists('.auto-registry/starter-kit-registry.json'):
+                  print('  SKIP: no starter-kit-registry.json produced (no kits in repo).')
+                  sys.exit(0)
+              with open('docs/schemas/starter-kit-registry-schema.json') as f:
+                  schema = json.load(f)
+              with open('.auto-registry/starter-kit-registry.json') as f:
+                  registry = json.load(f)
+              jsonschema.Draft7Validator.check_schema(schema)
+              validator = jsonschema.Draft7Validator(schema)
+              errors = sorted(validator.iter_errors(registry), key=lambda e: list(e.absolute_path))
+              if errors:
+                  for err in errors:
+                      path_str = ' -> '.join(str(p) for p in err.absolute_path) or '(root)'
+                      print(f'  FAIL at {path_str}: {err.message}', file=sys.stderr)
+                  sys.exit(1)
+              print(f'  OK: starter-kit-registry.json conforms ({len(registry.get(\"kits\", []))} kit(s)).')
+          except json.JSONDecodeError as e:
+              print(f'  FAIL: starter-kit-registry.json is not valid JSON: {e}', file=sys.stderr)
+              sys.exit(1)
           "
 
       - name: Check for changes
         id: diff
         run: |
           # `git diff` ignores untracked files, so we must `git add` first
-          # otherwise a brand-new .auto-registry/agent-registry.json (i.e. the
-          # very first time this workflow runs, or after the file is deleted)
-          # would be classified as "no change" and never committed.
+          # otherwise a brand-new .auto-registry/*.json (i.e. the very first
+          # time this workflow runs, or after the files are deleted) would
+          # be classified as "no change" and never committed.
           git add .auto-registry/agent-registry.json
-          if git diff --cached --quiet -- .auto-registry/agent-registry.json; then
+          if [ -f .auto-registry/starter-kit-registry.json ]; then
+            git add .auto-registry/starter-kit-registry.json
+          fi
+          if git diff --cached --quiet -- .auto-registry/; then
             echo "changed=false" >> "$GITHUB_OUTPUT"
           else
             echo "changed=true" >> "$GITHUB_OUTPUT"
@@ -116,13 +153,24 @@ jobs:
           git fetch origin "$BRANCH" --depth=1 2>/dev/null || true
           git checkout -B "$BRANCH"
 
-          # Already staged in the previous step.
-          # Use `|| true` inside a subshell so that grep exiting with 1 (no
-          # matches) does not abort the script under `set -euo pipefail`.
-          DIFF=$(git diff --cached .auto-registry/agent-registry.json)
-          ADDED=$(echo "$DIFF" | { grep '^\+.*"path"' || true; } | wc -l | tr -d ' ')
-          REMOVED=$(echo "$DIFF" | { grep '^\-.*"path"' || true; } | wc -l | tr -d ' ')
-          COMMIT_MSG="chore: update .auto-registry/agent-registry.json (+${ADDED}/-${REMOVED} entries) [skip ci]"
+          # Compose a commit message that reflects what actually changed.
+          # Both files are already staged in the previous step. `|| true`
+          # inside a subshell so grep exit 1 (no matches) doesn't abort
+          # the script under `set -euo pipefail`.
+          AGENT_DIFF=$(git diff --cached -- .auto-registry/agent-registry.json || true)
+          KIT_DIFF=$(git diff --cached -- .auto-registry/starter-kit-registry.json || true)
+          AGENT_ADDED=$(echo "$AGENT_DIFF" | { grep '^\+.*"path"' || true; } | wc -l | tr -d ' ')
+          AGENT_REMOVED=$(echo "$AGENT_DIFF" | { grep '^\-.*"path"' || true; } | wc -l | tr -d ' ')
+          PARTS=()
+          if [ -n "$AGENT_DIFF" ]; then
+            PARTS+=("agent-registry +${AGENT_ADDED}/-${AGENT_REMOVED}")
+          fi
+          if [ -n "$KIT_DIFF" ]; then
+            PARTS+=("starter-kit-registry updated")
+          fi
+          # Join PARTS with ", "
+          SUMMARY=$(IFS=', '; echo "${PARTS[*]}")
+          COMMIT_MSG="chore: update .auto-registry/ ($SUMMARY) [skip ci]"
           git commit -m "$COMMIT_MSG"
 
           # Force-push so the branch is always exactly "main + this commit".
@@ -133,7 +181,7 @@ jobs:
             "$BRANCH"
 
           if [ "$HAS_APP_TOKEN" != "true" ]; then
-            echo "::warning::REGISTRY_APP_ID/REGISTRY_APP_PRIVATE_KEY secrets are not configured. Branch ${BRANCH} was force-pushed with the regenerated registry, but no PR can be opened from GITHUB_TOKEN under this repo's policy. A maintainer must open the PR manually, or wire up the discovery-registry-bot GitHub App."
+            echo "::warning::REGISTRY_APP_ID/REGISTRY_APP_PRIVATE_KEY secrets are not configured. Branch ${BRANCH} was force-pushed with the regenerated registry files, but no PR can be opened from GITHUB_TOKEN under this repo's policy. A maintainer must open the PR manually, or wire up the discovery-registry-bot GitHub App."
             exit 0
           fi
 
@@ -144,7 +192,7 @@ jobs:
               --base main \
               --head "$BRANCH" \
               --title "$COMMIT_MSG" \
-              --body "Automated registry refresh triggered by changes under \`agents/**\` or \`starter-kits/**\`. Generated by the *Update Registry* workflow."
+              --body "Automated registry refresh triggered by changes under \`agents/**\` or \`starter-kits/**\`. Generated by the *Update Registry* workflow.\n\nContains both \`.auto-registry/agent-registry.json\` and \`.auto-registry/starter-kit-registry.json\` updates (whichever changed)."
           else
             echo "PR already exists for $BRANCH — force-push updated it in place."
           fi
