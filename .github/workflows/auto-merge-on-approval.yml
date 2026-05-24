@@ -149,19 +149,27 @@ jobs:
           fi
 
           # ── Gate 3: human_approved ─────────────────────────────────
+          # Trust GitHub's own reviewDecision instead of re-implementing the
+          # logic locally. GitHub already accounts for CODEOWNERS, dismissals,
+          # required_approving_review_count, etc. — and our previous local
+          # heuristic (just counting non-bot APPROVED reviews) could disagree
+          # with branch protection (e.g. on repos with require_code_owner_reviews=true),
+          # which led the script to attempt `gh pr merge --auto` on PRs that
+          # GitHub still considered REVIEW_REQUIRED and fail with
+          # "User is not authorized for this protected branch".
           HUMAN_APPROVALS=$(echo "$PR_JSON" | jq '
             [.reviews[]?
              | select(.state == "APPROVED")
              | select((.author.login // "") | endswith("[bot]") | not)
             ] | length')
-          if [ "$REVIEW_DECISION" = "CHANGES_REQUESTED" ] || [ "$HUMAN_APPROVALS" -lt 1 ]; then
-            HUMAN_APPROVED=false
-          else
+          if [ "$REVIEW_DECISION" = "APPROVED" ]; then
             HUMAN_APPROVED=true
+          else
+            HUMAN_APPROVED=false
           fi
 
           echo "Gates: checks_passed=$CHECKS_PASSED up_to_date=$UP_TO_DATE human_approved=$HUMAN_APPROVED"
-          echo "       (checks_failed=$CHECKS_FAILED pending=$CHECKS_PENDING human_approvals=$HUMAN_APPROVALS)"
+          echo "       (checks_failed=$CHECKS_FAILED pending=$CHECKS_PENDING human_approvals=$HUMAN_APPROVALS reviewDecision=$REVIEW_DECISION)"
 
           # ── Label management ───────────────────────────────────────
           add_label() {
@@ -187,7 +195,15 @@ jobs:
             fi
 
             echo "All gates green — enabling auto-merge (squash)."
-            gh pr merge "$PR_NUMBER" --repo "$REPO" --auto --squash --delete-branch
+            # IMPORTANT: enabling auto-merge can fail for many benign reasons
+            # (user not authorized to push to the protected branch, auto-merge
+            # not enabled in repo settings, PR not eligible, etc.). This
+            # workflow is a *required* status check, so a non-zero exit here
+            # would mark the check FAILED and block the PR forever — creating
+            # an approval/merge-retry loop. Treat the failure as advisory.
+            if ! gh pr merge "$PR_NUMBER" --repo "$REPO" --auto --squash --delete-branch; then
+              echo "::warning::Could not enable auto-merge on PR #$PR_NUMBER. A maintainer with admin/bypass rights will need to merge it manually."
+            fi
           else
             remove_label "ready-for-auto-merge"
             echo "Not ready for auto-merge yet."
