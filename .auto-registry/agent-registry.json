@@ -1,6 +1,6 @@
 {
   "version": "1.0",
-  "generated_at": "2026-05-24T18:47:15Z",
+  "generated_at": "2026-05-24T22:58:55Z",
   "entries": [
     {
       "name": "aizynthfinder",
@@ -98,7 +98,7 @@
     {
       "name": "boltztwo",
       "type": "agent",
-      "publisher_name": "Microsoft Discovery",
+      "publisher_name": "Microsoft",
       "path": "agents/boltztwo",
       "version": "1.0.0",
       "associated_tools": [
@@ -207,7 +207,7 @@
     {
       "name": "core-python-agent",
       "type": "agent",
-      "publisher_name": "Microsoft Discovery Studio",
+      "publisher_name": "Microsoft",
       "path": "agents/core-python-agent",
       "version": "1.0.0",
       "associated_tools": [
@@ -269,7 +269,7 @@
     {
       "name": "janus",
       "type": "agent",
-      "publisher_name": "Microsoft Discovery",
+      "publisher_name": "Microsoft",
       "path": "agents/janus",
       "version": "1.0.0",
       "associated_tools": [
@@ -308,7 +308,7 @@
     {
       "name": "mattergen",
       "type": "agent",
-      "publisher_name": "Microsoft Discovery",
+      "publisher_name": "Microsoft",
       "path": "agents/mattergen",
       "version": "1.0.0",
       "associated_tools": [
@@ -401,7 +401,7 @@
     {
       "name": "openfoam",
       "type": "agent",
-      "publisher_name": "Microsoft Discovery",
+      "publisher_name": "Microsoft",
       "path": "agents/openfoam",
       "version": "1.0.0",
       "associated_tools": [
@@ -439,7 +439,7 @@
     {
       "name": "opensta",
       "type": "agent",
-      "publisher_name": "Microsoft Discovery",
+      "publisher_name": "Microsoft",
       "path": "agents/opensta",
       "version": "1.0.0",
       "associated_tools": [
@@ -622,7 +622,7 @@
     {
       "name": "rtl-ivlg-linter",
       "type": "agent",
-      "publisher_name": "Microsoft Discovery",
+      "publisher_name": "Microsoft",
       "path": "agents/rtl-ivlg-linter",
       "version": "1.0.0",
       "associated_tools": [
@@ -644,7 +644,7 @@
     {
       "name": "rtl-yosys-syn",
       "type": "agent",
-      "publisher_name": "Microsoft Discovery",
+      "publisher_name": "Microsoft",
       "path": "agents/rtl-yosys-syn",
       "version": "1.0.0",
       "associated_tools": [
@@ -723,7 +723,7 @@
     {
       "name": "xyce",
       "type": "agent",
-      "publisher_name": "Microsoft Discovery",
+      "publisher_name": "Microsoft",
       "path": "agents/xyce",
       "version": "1.0.0",
       "associated_tools": [

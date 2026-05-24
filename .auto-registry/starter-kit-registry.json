@@ -1,7 +1,7 @@
 {
   "schemaVersion": "1.0.0",
-  "generatedAt": "2026-05-24T18:47:15Z",
-  "commitSha": "70fc7708e2edb69dbcab8f26c610b80be3cb4b4d",
+  "generatedAt": "2026-05-24T22:58:55Z",
+  "commitSha": "3d0d9496c9bf98de9e2d2687eb6ab50c107d4515",
   "kits": [
     {
       "$schema": "../../docs/schemas/starter-kit-schema.json",
@@ -78,7 +78,7 @@
       },
       "availability": "healthy",
       "missingAgents": [],
-      "computedAt": "2026-05-24T18:47:15Z",
+      "computedAt": "2026-05-24T22:58:55Z",
       "kitPath": "starter-kits/physics-cfd-sim"
     }
   ]
