@@ -1,7 +1,403 @@
 {
   "version": "1.0",
-  "generated_at": "2026-05-24T17:26:30Z",
+  "generated_at": "2026-05-24T18:47:15Z",
   "entries": [
+    {
+      "name": "aizynthfinder",
+      "type": "agent",
+      "publisher_name": "Microsoft",
+      "path": "agents/aizynthfinder",
+      "version": "1.0.0",
+      "associated_tools": [
+        "agents/aizynthfinder/tools/aizynthfinder"
+      ],
+      "foundry_tools": [],
+      "supported_regions": [],
+      "description": "Expert agent for retrosynthetic route planning using AiZynthFinder. Breaks down target drug-like molecules into purchasable precursors using neural-network-guided MCTS with USPTO reaction templates.\n",
+      "tags": [
+        "retrosynthesis",
+        "drug-discovery",
+        "trained-model"
+      ]
+    },
+    {
+      "name": "alphafold",
+      "type": "agent",
+      "publisher_name": "Microsoft",
+      "path": "agents/alphafold",
+      "version": "1.0.0",
+      "associated_tools": [
+        "agents/alphafold/tools/alphafold"
+      ],
+      "foundry_tools": [],
+      "supported_regions": [],
+      "description": "Agent for protein structure prediction using AlphaFold. Supports monomer and multimer folding, pLDDT and PAE quality assessment, FASTA input handling, and structure analysis for proteins and protein complexes.\n",
+      "tags": [
+        "structural-biology",
+        "protein-folding",
+        "alphafold",
+        "trained-model",
+        "structure-prediction"
+      ]
+    },
+    {
+      "name": "ambertools",
+      "type": "agent",
+      "publisher_name": "Microsoft",
+      "path": "agents/ambertools",
+      "version": "1.0.0",
+      "associated_tools": [
+        "agents/ambertools/tools/ambertools"
+      ],
+      "foundry_tools": [],
+      "supported_regions": [],
+      "description": "Expert agent for biomolecular simulations using AmberTools (sander, tleap, cpptraj, antechamber).\n",
+      "tags": [
+        "molecular-dynamics",
+        "biomolecular-simulation"
+      ]
+    },
+    {
+      "name": "autodock",
+      "type": "agent",
+      "publisher_name": "Microsoft",
+      "path": "agents/autodock",
+      "version": "1.0.0",
+      "associated_tools": [
+        "agents/autodock/tools/autodock"
+      ],
+      "foundry_tools": [],
+      "supported_regions": [],
+      "description": "Expert molecular docking agent using AutoDock Vina for protein-ligand binding affinity prediction, virtual screening, and structure-based drug design.\n",
+      "tags": [
+        "molecule-docking",
+        "drug-discovery",
+        "virtual-screening"
+      ]
+    },
+    {
+      "name": "boltzgen",
+      "type": "agent",
+      "publisher_name": "Microsoft",
+      "path": "agents/boltzgen",
+      "version": "1.0.0",
+      "associated_tools": [
+        "agents/boltzgen/tools/boltzgen"
+      ],
+      "foundry_tools": [],
+      "supported_regions": [],
+      "description": "Expert agent for protein binder design using the BoltzGen diffusion pipeline. Generates, folds, scores, and ranks binder designs using Boltz-2 for structure prediction and filtering.\n",
+      "tags": [
+        "protein-design",
+        "structure-prediction",
+        "trained-model",
+        "diffusion-model",
+        "generative-model"
+      ]
+    },
+    {
+      "name": "boltztwo",
+      "type": "agent",
+      "publisher_name": "Microsoft Discovery",
+      "path": "agents/boltztwo",
+      "version": "1.0.0",
+      "associated_tools": [
+        "agents/boltztwo/tools/boltztwo"
+      ],
+      "foundry_tools": [],
+      "supported_regions": [],
+      "description": "Expert agent for biomolecular structure prediction and binding affinity estimation using Boltz-2. Predicts 3D structures of proteins, nucleic acids, small molecules, and their complexes via co-folding. Features an affinity head that estimates binder probability and pIC50 for protein-ligand and protein-protein interactions. Outputs CIF structures with per-residue confidence (pLDDT), predicted aligned error (pAE), and interface metrics (pTM, iPTM).\n",
+      "tags": [
+        "structure-prediction",
+        "binding-affinity",
+        "protein-folding",
+        "drug-discovery",
+        "trained-model"
+      ]
+    },
+    {
+      "name": "bookshelf-researcher",
+      "type": "agent",
+      "publisher_name": "Microsoft",
+      "path": "agents/bookshelf-researcher",
+      "version": "1.0.0",
+      "associated_tools": [],
+      "foundry_tools": [],
+      "supported_regions": [],
+      "description": "Expert research agent for conducting literature reviews and research analyses using attached Knowledge Bases / Bookshelves as the evidence source. LLM-only agent with no attached computation tools.\n",
+      "tags": [
+        "literature-review",
+        "research",
+        "knowledge-base"
+      ]
+    },
+    {
+      "name": "chemberta",
+      "type": "agent",
+      "publisher_name": "Microsoft",
+      "path": "agents/chemberta",
+      "version": "1.0.0",
+      "associated_tools": [
+        "agents/chemberta/tools/chemberta"
+      ],
+      "foundry_tools": [],
+      "supported_regions": [],
+      "description": "Molecular property prediction agent using ChemBERTa-2 transformer. Provides SMILES-based molecular embeddings, classification and regression fine-tuning, SMILES augmentation, confidence scoring, similarity search, and clustering.\n",
+      "tags": [
+        "cheminformatics",
+        "molecular-property-prediction",
+        "trained-model",
+        "transformer"
+      ]
+    },
+    {
+      "name": "chemprop",
+      "type": "agent",
+      "publisher_name": "Microsoft",
+      "path": "agents/chemprop",
+      "version": "1.0.0",
+      "associated_tools": [
+        "agents/chemprop/tools/chemprop"
+      ],
+      "foundry_tools": [],
+      "supported_regions": [],
+      "description": "Expert agent for molecular property prediction using Chemprop v2 (D-MPNN). Trains, evaluates, and deploys message-passing neural networks for regression, classification, and multi-task molecular property prediction.\n",
+      "tags": [
+        "molecular-properties",
+        "trained-model",
+        "d-mpnn",
+        "property-prediction"
+      ]
+    },
+    {
+      "name": "clinical-trials",
+      "type": "agent",
+      "publisher_name": "Microsoft",
+      "path": "agents/clinical-trials",
+      "version": "1.0.0",
+      "associated_tools": [
+        "agents/clinical-trials/tools/ClinicalTrials"
+      ],
+      "foundry_tools": [],
+      "supported_regions": [],
+      "description": "Tool for accessing clinical trial data from ClinicalTrials.gov. Access over 400,000 clinical studies from around the world.\n",
+      "tags": [
+        "clinical-trials",
+        "database"
+      ]
+    },
+    {
+      "name": "coconut",
+      "type": "agent",
+      "publisher_name": "Microsoft",
+      "path": "agents/coconut",
+      "version": "1.0.0",
+      "associated_tools": [
+        "agents/coconut/tools/coconut"
+      ],
+      "foundry_tools": [],
+      "supported_regions": [],
+      "description": "Agent for searching and retrieving natural product structures from the COCONUT (Collection of Open Natural Products) database. Provides access to natural product chemical data, molecular properties, and taxonomic classifications.\n",
+      "tags": [
+        "cheminformatics",
+        "natural-products",
+        "database"
+      ]
+    },
+    {
+      "name": "core-python-agent",
+      "type": "agent",
+      "publisher_name": "Microsoft Discovery Studio",
+      "path": "agents/core-python-agent",
+      "version": "1.0.0",
+      "associated_tools": [
+        "agents/core-python-agent/tools/corepython"
+      ],
+      "foundry_tools": [],
+      "supported_regions": [],
+      "description": "A reusable worker agent for RDKit cheminformatics and general Python execution. Writes and runs Python scripts for molecular manipulation, 2D/3D conformer generation, chemical property calculations, and scientific computing.\n",
+      "tags": [
+        "cheminformatics",
+        "python",
+        "rdkit",
+        "molecular-science"
+      ]
+    },
+    {
+      "name": "crest",
+      "type": "agent",
+      "publisher_name": "Microsoft",
+      "path": "agents/crest",
+      "version": "1.0.0",
+      "associated_tools": [
+        "agents/crest/tools/crest"
+      ],
+      "foundry_tools": [],
+      "supported_regions": [],
+      "description": "Expert agent for conformational sampling and molecular chemical space exploration using CREST 3.0 with GFN-xTB semiempirical methods.\n",
+      "tags": [
+        "conformational-search",
+        "semiempirical"
+      ]
+    },
+    {
+      "name": "esm-embed",
+      "type": "agent",
+      "publisher_name": "Microsoft",
+      "path": "agents/esm-embed",
+      "version": "1.0.0",
+      "associated_tools": [
+        "agents/esm-embed/tools/esm-embed"
+      ],
+      "foundry_tools": [],
+      "supported_regions": [],
+      "description": "Generate per-residue and per-sequence embeddings from protein sequences using Meta AI's ESM-2 transformer protein language models (8M to 650M parameters). Supports mean-pooled sequence embeddings, per-residue embeddings, and contact map predictions. GPU-accelerated via PyTorch + CUDA, with automatic CPU fallback.\n",
+      "tags": [
+        "protein",
+        "embeddings",
+        "language-model",
+        "esm2",
+        "transformer",
+        "bioinformatics",
+        "representation-learning",
+        "structure-prediction",
+        "gpu",
+        "trained-model",
+        "embedding-model"
+      ]
+    },
+    {
+      "name": "janus",
+      "type": "agent",
+      "publisher_name": "Microsoft Discovery",
+      "path": "agents/janus",
+      "version": "1.0.0",
+      "associated_tools": [
+        "agents/janus/tools/janus"
+      ],
+      "foundry_tools": [],
+      "supported_regions": [],
+      "description": "De novo molecule generator wrapping the JANUS algorithm (Nigam et al., Digital Discovery 2022): a parallel-tempered SELFIES-based genetic algorithm with a DNN classifier guiding exploitation. SELFIES encoding guarantees 100% chemical validity. Accepts user-supplied fitness functions and optional custom filters (e.g. `make_pfas_filter()` for PFAS-free runs, applied as a hard post-filter). CPU-only, no bundled weights, no runtime internet.\n",
+      "tags": [
+        "molecular-design",
+        "generative",
+        "de-novo",
+        "selfies",
+        "inverse-design",
+        "genetic-algorithm",
+        "materials-discovery"
+      ]
+    },
+    {
+      "name": "lammps",
+      "type": "agent",
+      "publisher_name": "Microsoft",
+      "path": "agents/lammps",
+      "version": "1.0.0",
+      "associated_tools": [
+        "agents/lammps/tools/lammps-cpu"
+      ],
+      "foundry_tools": [],
+      "supported_regions": [],
+      "description": "Agent for orchestrating LAMMPS CPU tool for molecular simulations. Includes MDAnalysis, ASE, freud, and pandas for self-sufficient trajectory analysis and structure manipulation.\n",
+      "tags": [
+        "molecular-dynamics",
+        "materials-science"
+      ]
+    },
+    {
+      "name": "mattergen",
+      "type": "agent",
+      "publisher_name": "Microsoft Discovery",
+      "path": "agents/mattergen",
+      "version": "1.0.0",
+      "associated_tools": [
+        "agents/mattergen/tools/mattergen"
+      ],
+      "foundry_tools": [],
+      "supported_regions": [],
+      "description": "Generative AI agent for inorganic crystal structure design using MatterGen (Zeni et al., Nature 2025). Generates novel, stable crystal structures unconditionally or conditioned on target properties including chemical composition, space group, band gap, magnetic density, and bulk modulus. Supports 9 pretrained models from the HuggingFace Hub.\n",
+      "tags": [
+        "materials-science",
+        "generative-model",
+        "crystal-structure",
+        "diffusion-model",
+        "computational-chemistry",
+        "trained-model"
+      ]
+    },
+    {
+      "name": "mol-toolkit",
+      "type": "agent",
+      "publisher_name": "Microsoft",
+      "path": "agents/mol-toolkit",
+      "version": "1.0.0",
+      "associated_tools": [
+        "agents/mol-toolkit/tools/mol-toolkit"
+      ],
+      "foundry_tools": [],
+      "supported_regions": [],
+      "description": "Agent dedicated to cheminformatics.\n",
+      "tags": [
+        "cheminformatics"
+      ]
+    },
+    {
+      "name": "molecular-groups",
+      "type": "agent",
+      "publisher_name": "Microsoft",
+      "path": "agents/molecular-groups",
+      "version": "1.0.0",
+      "associated_tools": [
+        "agents/molecular-groups/tools/molecular-groups"
+      ],
+      "foundry_tools": [],
+      "supported_regions": [],
+      "description": "Expert agent for identifying functional groups in molecular structures. Provides both general functional group analysis and safety screening for hazardous groups.\n",
+      "tags": [
+        "cheminformatics",
+        "functional-groups",
+        "safety-screening"
+      ]
+    },
+    {
+      "name": "nucleotide-tf",
+      "type": "agent",
+      "publisher_name": "Microsoft",
+      "path": "agents/nucleotide-tf",
+      "version": "1.0.0",
+      "associated_tools": [
+        "agents/nucleotide-tf/tools/nucleotide-tf"
+      ],
+      "foundry_tools": [],
+      "supported_regions": [],
+      "description": "Expert agent for DNA sequence analysis using InstaDeep's Nucleotide Transformer v2 foundation model. Extracts rich embeddings, predicts masked nucleotides for variant effect scoring, and supports similarity, clustering, and visualization.\n",
+      "tags": [
+        "bioinformatics",
+        "genomics",
+        "dna-analysis",
+        "embeddings",
+        "transformer",
+        "trained-model"
+      ]
+    },
+    {
+      "name": "online-researcher",
+      "type": "agent",
+      "publisher_name": "Microsoft",
+      "path": "agents/online-researcher",
+      "version": "1.0.0",
+      "associated_tools": [],
+      "foundry_tools": [
+        "web_search"
+      ],
+      "supported_regions": [],
+      "description": "Expert research agent for conducting state-of-the-art literature reviews and research analyses in scientific, engineering, and medical fields. LLM-only agent with no attached computation tools.\n",
+      "tags": [
+        "literature-review",
+        "research"
+      ]
+    },
     {
       "name": "openfoam",
       "type": "agent",
@@ -20,6 +416,350 @@
         "cfd",
         "engineering",
         "simulation"
+      ]
+    },
+    {
+      "name": "openmm",
+      "type": "agent",
+      "publisher_name": "Microsoft",
+      "path": "agents/openmm",
+      "version": "1.0.0",
+      "associated_tools": [
+        "agents/openmm/tools/openmm"
+      ],
+      "foundry_tools": [],
+      "supported_regions": [],
+      "description": "Expert agent for GPU-accelerated molecular dynamics simulations using OpenMM. Handles PDB preparation, system building, energy minimization, equilibration, production MD, and trajectory analysis.\n",
+      "tags": [
+        "molecular-dynamics",
+        "biomolecular-simulation",
+        "gpu"
+      ]
+    },
+    {
+      "name": "opensta",
+      "type": "agent",
+      "publisher_name": "Microsoft Discovery",
+      "path": "agents/opensta",
+      "version": "1.0.0",
+      "associated_tools": [
+        "agents/opensta/tools/opensta"
+      ],
+      "foundry_tools": [],
+      "supported_regions": [],
+      "description": "Static timing analysis for gate-level Verilog netlists using OpenSTA. Supports SKY130 and GF180MCU technology nodes with built-in liberty models. Auto-generates SDC constraints when not provided by the user.\n",
+      "tags": [
+        "static-timing-analysis",
+        "sta",
+        "verilog",
+        "netlist",
+        "sky130",
+        "gf180mcu",
+        "timing",
+        "asic"
+      ]
+    },
+    {
+      "name": "patent-prior-art",
+      "type": "agent",
+      "publisher_name": "Microsoft",
+      "path": "agents/patent-prior-art",
+      "version": "1.0.0",
+      "associated_tools": [],
+      "foundry_tools": [],
+      "supported_regions": [],
+      "description": "Expert agent for patent prior-art stress testing and claim analysis. Performs claim-centric prior art analysis with atomic element decomposition, evidence mapping, coverage ratings, and executive risk summaries.\n",
+      "tags": [
+        "patent-analysis",
+        "prior-art",
+        "legal-tech"
+      ]
+    },
+    {
+      "name": "pdb-insights",
+      "type": "agent",
+      "publisher_name": "Microsoft",
+      "path": "agents/pdb-insights",
+      "version": "1.0.0",
+      "associated_tools": [
+        "agents/pdb-insights/tools/PDBInsights"
+      ],
+      "foundry_tools": [],
+      "supported_regions": [],
+      "description": "Advanced agent for comprehensive PDB structure analysis. Uses modern API to search RCSB PDB by UniProt ID, analyze quality metrics, biological assemblies, domain coverage, and binding partners.\n",
+      "tags": [
+        "protein-structure",
+        "structural-biology"
+      ]
+    },
+    {
+      "name": "pdb-search",
+      "type": "agent",
+      "publisher_name": "Microsoft",
+      "path": "agents/pdb-search",
+      "version": "1.0.0",
+      "associated_tools": [
+        "agents/pdb-search/tools/PDBSearch"
+      ],
+      "foundry_tools": [],
+      "supported_regions": [],
+      "description": "Tool for managing and analyzing protein structure data from the RCSB PDB. Search, download, and process protein structures.\n",
+      "tags": [
+        "protein-structure",
+        "database"
+      ]
+    },
+    {
+      "name": "pubchem",
+      "type": "agent",
+      "publisher_name": "Microsoft",
+      "path": "agents/pubchem",
+      "version": "1.0.0",
+      "associated_tools": [
+        "agents/pubchem/tools/PubChem"
+      ],
+      "foundry_tools": [],
+      "supported_regions": [],
+      "description": "Tool for accessing chemical information from the PubChem database using the PubChem API.\n",
+      "tags": [
+        "cheminformatics",
+        "database"
+      ]
+    },
+    {
+      "name": "pubmed",
+      "type": "agent",
+      "publisher_name": "Microsoft",
+      "path": "agents/pubmed",
+      "version": "1.0.0",
+      "associated_tools": [
+        "agents/pubmed/tools/PubMed"
+      ],
+      "foundry_tools": [],
+      "supported_regions": [],
+      "description": "Tool for accessing biomedical literature from PubMed. Search and download articles, citations, and full-text content using PubMed/NCBI API. Includes PMC integration for open access articles.\n",
+      "tags": [
+        "literature-search",
+        "biomedical"
+      ]
+    },
+    {
+      "name": "quantum-espresso",
+      "type": "agent",
+      "publisher_name": "Microsoft",
+      "path": "agents/quantum-espresso",
+      "version": "1.0.0",
+      "associated_tools": [
+        "agents/quantum-espresso/tools/qe"
+      ],
+      "foundry_tools": [],
+      "supported_regions": [],
+      "description": "Python code environment with Quantum ESPRESSO for first-principles electronic structure calculations and materials modeling. Includes pymatgen, phonopy, seekpath, and ASE.\n",
+      "tags": [
+        "quantum-chemistry",
+        "materials-science",
+        "dft"
+      ]
+    },
+    {
+      "name": "retrochimera",
+      "type": "agent",
+      "publisher_name": "Microsoft",
+      "path": "agents/retrochimera",
+      "version": "1.0.0",
+      "associated_tools": [
+        "agents/retrochimera/tools/retrochimera"
+      ],
+      "foundry_tools": [],
+      "supported_regions": [],
+      "description": "Expert agent for retrosynthetic analysis using the RetroChimera model (Maziarz et al., 2025). Ensembles template-based and de novo models with complementary inductive biases to predict single-step retrosynthetic disconnections and multi-step synthesis routes. Pre-loaded with the Pistachio-trained checkpoint (strongest model).\n",
+      "tags": [
+        "retrosynthesis",
+        "computational-chemistry",
+        "drug-discovery",
+        "reaction-prediction",
+        "trained-model",
+        "gnn"
+      ]
+    },
+    {
+      "name": "rfdiffusion",
+      "type": "agent",
+      "publisher_name": "Microsoft",
+      "path": "agents/rfdiffusion",
+      "version": "1.0.0",
+      "associated_tools": [
+        "agents/rfdiffusion/tools/rfdiffusion"
+      ],
+      "foundry_tools": [],
+      "supported_regions": [],
+      "description": "Expert agent for protein backbone design using the RFDiffusion denoising diffusion model. Supports unconditional generation, binder design, motif scaffolding, and symmetric oligomers.\n",
+      "tags": [
+        "protein-design",
+        "trained-model",
+        "diffusion-model",
+        "generative-model"
+      ]
+    },
+    {
+      "name": "rnaseq",
+      "type": "agent",
+      "publisher_name": "Microsoft",
+      "path": "agents/rnaseq",
+      "version": "1.0.0",
+      "associated_tools": [
+        "agents/rnaseq/tools/rnaseq"
+      ],
+      "foundry_tools": [],
+      "supported_regions": [],
+      "description": "Agent for RNA-seq differential expression analysis. Supports count matrix processing, statistical testing, volcano plot generation, gene ontology enrichment, and pathway analysis for transcriptomics experiments.\n",
+      "tags": [
+        "bioinformatics",
+        "transcriptomics",
+        "rna-seq"
+      ]
+    },
+    {
+      "name": "rtl-ivlg-linter",
+      "type": "agent",
+      "publisher_name": "Microsoft Discovery",
+      "path": "agents/rtl-ivlg-linter",
+      "version": "1.0.0",
+      "associated_tools": [
+        "agents/rtl-ivlg-linter/tools/iverilog-tool"
+      ],
+      "foundry_tools": [],
+      "supported_regions": [],
+      "description": "Agent that checks Verilog RTL syntax with the iverilog tool and, when errors are found, automatically fixes them while preserving design intent. Powered by Icarus Verilog (iverilog v12).\n",
+      "tags": [
+        "rtl",
+        "verilog",
+        "systemverilog",
+        "eda",
+        "linting",
+        "hardware-design",
+        "iverilog"
+      ]
+    },
+    {
+      "name": "rtl-yosys-syn",
+      "type": "agent",
+      "publisher_name": "Microsoft Discovery",
+      "path": "agents/rtl-yosys-syn",
+      "version": "1.0.0",
+      "associated_tools": [
+        "agents/rtl-yosys-syn/tools/yosys"
+      ],
+      "foundry_tools": [],
+      "supported_regions": [],
+      "description": "Open-source Verilog RTL synthesis agent powered by Yosys. Synthesizes Verilog designs to gate-level netlists targeting SKY130 or GF180MCU ASIC technology nodes. Produces netlists and synthesis reports with cell count and area statistics.\n",
+      "tags": [
+        "rtl",
+        "synthesis",
+        "verilog",
+        "asic",
+        "digital-design"
+      ]
+    },
+    {
+      "name": "stat-agent",
+      "type": "agent",
+      "publisher_name": "Microsoft",
+      "path": "agents/stat-agent",
+      "version": "1.0.0",
+      "associated_tools": [
+        "agents/stat-agent/tools/stat-agent"
+      ],
+      "foundry_tools": [],
+      "supported_regions": [],
+      "description": "Statistical validation agent for experimental data analysis. Provides hypothesis testing, power analysis, effect size estimation, multiple comparison correction, and distribution fitting for scientific datasets.\n",
+      "tags": [
+        "statistics",
+        "data-analysis",
+        "hypothesis-testing"
+      ]
+    },
+    {
+      "name": "tamgen",
+      "type": "agent",
+      "publisher_name": "Microsoft",
+      "path": "agents/tamgen",
+      "version": "1.0.0",
+      "associated_tools": [
+        "agents/tamgen/tools/tamgen"
+      ],
+      "foundry_tools": [],
+      "supported_regions": [],
+      "description": "Target-aware molecular generation agent. Generates drug-like molecules conditioned on protein pocket structures using deep generative models with GPU acceleration.\n",
+      "tags": [
+        "drug-discovery",
+        "molecular-generation",
+        "trained-model",
+        "generative-model",
+        "language-model"
+      ]
+    },
+    {
+      "name": "toxpred",
+      "type": "agent",
+      "publisher_name": "Microsoft",
+      "path": "agents/toxpred",
+      "version": "1.0.0",
+      "associated_tools": [
+        "agents/toxpred/tools/toxpred"
+      ],
+      "foundry_tools": [],
+      "supported_regions": [],
+      "description": "Toxicity prediction agent for chemical compounds. Predicts multiple toxicity endpoints including acute toxicity, mutagenicity, carcinogenicity, and organ-specific effects from molecular structures.\n",
+      "tags": [
+        "toxicology",
+        "safety-assessment",
+        "cheminformatics",
+        "trained-model",
+        "d-mpnn",
+        "property-prediction"
+      ]
+    },
+    {
+      "name": "xyce",
+      "type": "agent",
+      "publisher_name": "Microsoft Discovery",
+      "path": "agents/xyce",
+      "version": "1.0.0",
+      "associated_tools": [
+        "agents/xyce/tools/xyce"
+      ],
+      "foundry_tools": [],
+      "supported_regions": [],
+      "description": "SPICE circuit simulation using the Xyce parallel electronic simulator. Supports transient, DC, AC, and noise analyses. Includes SKY130 and GF180MCU transistor PDK models. Auto-generates testbenches when not provided by the user.\n",
+      "tags": [
+        "spice",
+        "circuit-simulation",
+        "transient",
+        "analog",
+        "sky130",
+        "gf180mcu",
+        "xyce",
+        "asic"
+      ]
+    },
+    {
+      "name": "zinc",
+      "type": "agent",
+      "publisher_name": "Microsoft",
+      "path": "agents/zinc",
+      "version": "2.0.0",
+      "associated_tools": [
+        "agents/zinc/tools/zinc"
+      ],
+      "foundry_tools": [],
+      "supported_regions": [],
+      "description": "Agent for searching and retrieving molecular structures from the ZINC22 / CartBlanche database of commercially available compounds. Provides access to 37B+ substances with vendor availability, molecular properties, and SMILES-based exact/similarity search.\n",
+      "tags": [
+        "cheminformatics",
+        "database",
+        "compound-search",
+        "virtual-screening"
       ]
     }
   ]
