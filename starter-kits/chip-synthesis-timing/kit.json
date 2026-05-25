@@ -1,0 +1,76 @@
+{
+  "$schema": "../../docs/schemas/starter-kit-schema.json",
+  "name": "chip-synthesis-timing",
+  "version": "1.0.0",
+  "description": "Synthesize Verilog RTL and analyze timing.",
+  "displayName": "Chip Synthesis & STA",
+  "longDescription": "# Chip Synthesis and Timing\n\nThis starter kit allows users to synthesize Verilog RTL and analyze timing with the SKY130 or GF180MCU nodes.\n\n**What you can do:**\n- Synthesize Verilog RTL to gate-level netlist\n- Perform static timing analysis (STA)\n- Generate Synopsys Design Constraints (SDC) files\n\n**Ideal for:** digital design and timing optimization.",
+  "author": {
+    "name": "Microsoft",
+    "email": "discovery-catalog@microsoft.com",
+    "url": "https://github.com/microsoft/discovery"
+  },
+  "license": "MIT",
+  "category": "Silicon",
+  "homepage": "https://github.com/microsoft/discovery/tree/main/starter-kits/microsoft/chip-synthesis-timing",
+  "party": "1p",
+  "lifecycle": "active",
+  "keywords": ["chip", "synthesis", "timing", "verilog", "rtl", "sta", "asic", "sdc"],
+  "agentRefs": [
+    {
+      "ref": "agents/rtl-yosys-syn",
+      "role": "primary",
+      "required": true,
+      "description": "Runs RTL synthesis based on user-supplied Verilog RTL."
+    },
+    {
+      "ref": "agents/opensta",
+      "role": "supporting",
+      "required": true,
+      "description": "Performs static timing analysis on synthesized netlists."
+    }
+  ],
+
+  "samplePrompts": [
+    {
+      "id": "sp-1",
+      "title": "Synthesize an RTL block",
+      "prompt": "Synthesize this Verilog design for SKY130 and report area, cell count, and estimated max frequency.",
+      "difficulty": "beginner",
+      "expectedOutput": "Gate-level netlist, synthesis area and cell summary, and estimated timing/Fmax report."
+    },
+    {
+      "id": "sp-2",
+      "title": "Run STA on a synthesized design, with auto-generated SDC",
+      "prompt": "Run static timing analysis on my synthesized netlist with a 10 ns clock and show setup and hold slack for all endpoints.",
+      "difficulty": "beginner",
+      "expectedOutput": "STA report with setup and hold checks, worst negative slack (WNS), and total negative slack (TNS)."
+    },
+    {
+      "id": "sp-3",
+      "title": "Synthesis plus timing with user's SDC",
+      "prompt": "Synthesize this Verilog design for GF180MCU using my SDC constraints, then run STA and summarize the top 10 critical timing paths.",
+      "difficulty": "intermediate",
+      "expectedOutput": "Synthesized netlist plus timing summary with critical paths, slack, and path delay breakdown."
+    },
+    {
+      "id": "sp-4",
+      "title": "Compare timing at two clock targets",
+      "prompt": "Synthesize this design once at 5 ns and once at 3.3 ns clock constraints, then compare area and timing closure results.",
+      "difficulty": "intermediate",
+      "expectedOutput": "Two-run comparison table including area, cell count, WNS, TNS, and timing pass/fail status."
+    },
+    {
+      "id": "sp-5",
+      "title": "Diagnose setup timing violations",
+      "prompt": "After synthesis, run STA at 200 MHz and identify the worst setup violations with suggested RTL or constraint fixes.",
+      "difficulty": "advanced",
+      "expectedOutput": "Violation-focused STA report with worst offending paths and concrete optimization recommendations."
+    }
+  ],
+
+  "riskProfile": {
+    "requiresExternalCompute": true,
+    "dataResidency": "user-managed Azure subscription"
+  }
+}
