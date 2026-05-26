@@ -1,0 +1,51 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "outLocation": {
+            "type": "String"
+        },
+        "outDataContainerName": {
+            "type": "String"
+        },
+        "outApiVersion": {
+            "defaultValue": "2025-07-01-preview",
+            "type": "String"
+        },
+        "outDiscoveryStorageId": {
+            "type": "String",
+            "metadata": {
+                "description": "Full resource ID of a Microsoft.Discovery/storages (ANF) resource to wrap."
+            }
+        },
+        "outCredentialIdentityId": {
+            "type": "String",
+            "metadata": {
+                "description": "User-assigned managed identity resource ID Discovery should use to access the wrapped storage."
+            }
+        }
+    },
+    "variables": {},
+    "resources": [
+        {
+            "type": "Microsoft.Discovery/dataContainers",
+            "apiVersion": "[parameters('outApiVersion')]",
+            "name": "[parameters('outDataContainerName')]",
+            "location": "[parameters('outLocation')]",
+            "properties": {
+                "dataStore": {
+                    "kind": "DiscoveryStorage",
+                    "discoveryStorageId": "[parameters('outDiscoveryStorageId')]"
+                },
+                "credentials": [
+                    {
+                        "name": "uami",
+                        "kind": "ManagedIdentity",
+                        "description": "UAMI for Discovery storage access",
+                        "identityId": "[parameters('outCredentialIdentityId')]"
+                    }
+                ]
+            }
+        }
+    ]
+}

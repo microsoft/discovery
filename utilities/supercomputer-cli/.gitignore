@@ -1,0 +1,95 @@
+# Top-level git ignore for aifsp
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.egg-info/
+.eggs/
+.dist-info/
+build/
+dist/
+wheelhouse/
+.env
+.env.*
+.venv/
+venv/
+ENV/
+Pipfile.lock
+pip-wheel-metadata/
+
+# Virtual environment folders (common names)
+.python-version
+
+# Logs & temp files
+*.log
+*.tmp
+*.swp
+*.swo
+*.pid
+
+# Coverage / testing artifacts
+.coverage
+.coverage.*
+coverage.xml
+htmlcov/
+.pytest_cache/
+.cache/
+report.xml
+report.log
+
+# Node / JS
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log
+package-lock.json
+
+# Editor / IDE
+.vscode/
+.idea/
+*.code-workspace
+*.sublime-project
+*.sublime-workspace
+.history/
+
+# Docker / container
+*.tar
+
+# Generated or transient data directories
+.tmp/
+**/tmp/
+
+# Secrets / credentials (keep examples)
+*.secret
+*.key
+*.pem
+*.pfx
+autorxn/image/deploy-config.env
+deploy-config.env
+!**/deploy-config.env.example
+
+# Azure CLI locally generated (avoid accidentally adding if copied in)
+azurite_db*.
+
+# OS / archive
+*.bak
+*.orig
+*.retry
+*.gz
+*.zip
+*.tgz
+
+# Misc
+Thumbs.db
+
+# Project
+DevTunnels/
+upstream_examples/

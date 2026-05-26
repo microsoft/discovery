@@ -1,0 +1,47 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "outLocation": {"type": "String"},
+        "outDataContainerName": {"type": "String"},
+        "outApiVersion": {
+            "defaultValue": "2025-07-01-preview",
+            "type": "String"
+        },
+        "outStorageAccountId": {
+            "type": "String",
+            "metadata": {
+                "description": "Full resource ID of a Microsoft.Storage/storageAccounts resource."
+            }
+        },
+        "outCredentialIdentityId": {
+            "type": "String",
+            "metadata": {
+                "description": "User-assigned managed identity resource ID with RBAC for the storage account."
+            }
+        }
+    },
+    "variables": {},
+    "resources": [
+        {
+            "type": "Microsoft.Discovery/dataContainers",
+            "apiVersion": "[parameters('outApiVersion')]",
+            "name": "[parameters('outDataContainerName')]",
+            "location": "[parameters('outLocation')]",
+            "properties": {
+                "dataStore": {
+                    "kind": "AzureStorageBlob",
+                    "storageAccountId": "[parameters('outStorageAccountId')]"
+                },
+                "credentials": [
+                    {
+                        "name": "uami",
+                        "kind": "ManagedIdentity",
+                        "description": "UAMI for blob access",
+                        "identityId": "[parameters('outCredentialIdentityId')]"
+                    }
+                ]
+            }
+        }
+    ]
+}

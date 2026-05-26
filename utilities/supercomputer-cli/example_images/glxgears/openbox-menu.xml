@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Openbox root menu for glxgears container -->
+<openbox_menu xmlns="http://openbox.org/3.4/menu">
+	<menu id="root-menu" label="glxgears">
+		<separator label="Apps"/>
+		<item label="Terminal (xterm)"><action name="Execute"><command>xterm</command></action></item>
+		<item label="Run GLXGears"><action name="Execute"><command>glxgears</command></action></item>
+		<separator />
+		<menu id="tools" label="Tools">
+			<item label="List Processes"><action name="Execute"><command>xterm -e 'ps -ef | less'</command></action></item>
+			<item label="Environment Vars"><action name="Execute"><command>xterm -e 'printenv | sort | less'</command></action></item>
+			<item label="glxinfo (short)"><action name="Execute"><command>xterm -e 'glxinfo | head -n 60; echo; read -p "Press Enter"'</command></action></item>
+		</menu>
+		<separator />
+		<item label="Reload Openbox (Super+R)"><action name="Reconfigure" /></item>
+		<item label="Exit Openbox"><action name="Exit" /></item>
+	</menu>
+</openbox_menu>
