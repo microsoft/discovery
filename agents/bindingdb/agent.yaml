@@ -102,9 +102,7 @@ instructions: |
   5. **SINGLE SCRIPT REQUIREMENT**: Create ONE comprehensive script that handles ALL retrieval and enrichment steps
 
   ## Implementation Priority:
-  1. **FIRST**: Use high-level convenience functions (`binding_affinity_analysis()`)
-  2. **SECOND**: Use utility class methods for custom workflows
-  3. **LAST**: Direct API calls (only if utility functions don't cover the use case)
+  Always use `BindingDBUtils.*_sqlite()` methods documented below. No other convenience functions exist in this container.
 
   ## API REFERENCE:
 
@@ -559,19 +557,11 @@ instructions: |
      from bindingdb_utils import BindingDBUtils
      ```
 
-  2. **Wrong database path**: Always use absolute path
-     ```python
-     #  WRONG - Relative path
-     utils = BindingDBUtils(sqlite_db_path="bindingdb.db")
-     
-     #  CORRECT - Absolute path
-     utils = BindingDBUtils(sqlite_db_path="/app/bindingdb.db")
-     ```
+  2. **Wrong database path**: Always use the absolute path `/app/bindingdb.db` (see CRITICAL: DATABASE PATH CONFIGURATION at the top).
 
   3. **Confusing BindingDB with ChEMBL data structures**: 
      - BindingDB uses `uniprot_id` for targets (not `chembl_id`)
-     - BindingDB uses `bindingdb_id` for entries (not `activity_id`)
-     - SQLite provides: `Ki (nM)`, `Kd (nM)`, `IC50 (nM)` (with units and spaces)
+     - SQLite columns include units and spaces: `Ki (nM)`, `Kd (nM)`, `IC50 (nM)`, `EC50 (nM)` (not lowercase `ki`/`kd`/`ic50`)
 
   4. **Type conversion - NO LONGER NEEDED!**:  The utility functions now **automatically convert numeric fields to proper types** (float). You can use DataFrame operations directly:
      ```python
@@ -612,7 +602,7 @@ instructions: |
      ```python
      # BindingDB typically reports in nM
      import numpy as np
-     df['pkd'] = -np.log10(df['kd'] * 1e-9)  # Convert nM to M, then -log10
+     df['pKd'] = -np.log10(df['Kd (nM)'] * 1e-9)  # Convert nM to M, then -log10
      ```
 
   9. **Accessing columns on empty or incomplete DataFrames**: Always check DataFrame state before filtering:
@@ -627,25 +617,6 @@ instructions: |
          high_affinity = pd.DataFrame()
          print("Warning: No data returned or 'Ki (nM)' column not available")
      ```
-
-  ## AVAILABLE LIBRARIES (for data retrieval and structuring):
-
-  - **Pandas**: Data structuring and filtering
-    - `pd.DataFrame(data)`: Create dataframe from API results
-    - `df.to_csv(filename)`: Export data to CSV
-    - `df.to_json(filename, orient='records')`: Export to JSON (handles NaN)
-    - `df[df['column'] > value]`: Filter data
-    - `df.groupby('column').size()`: Count records by group
-    - `df['column'].unique()`: Get unique values
-    - `df.sort_values('column')`: Sort by column
-
-  - **NumPy**: Numerical operations for affinity conversions
-    - `np.log10()`: Logarithm for pKd calculations
-    - `np.mean()`, `np.median()`: Statistics
-
-  - **JSON**: Save structured results
-    - `json.dump(data, file)`: Save dictionary to JSON file
-    - **WARNING**: Use `BindingDBUtils.safe_json_serialize()` or `utils.save_json()` for DataFrame data
 
   ## Usage Examples:
 
@@ -679,148 +650,10 @@ instructions: |
           results = {'error': 'Ki measurements not available'}
 
   utils.save_json(results, f'{OUTPUT_DIR}/final_results.json')
-  ```
-      print(f"Analysis complete! Found {len(binding_data)} measurements")
-  ```
-
-  **Example 2: Using convenience function (handles errors internally)**
-  ```python
-  from bindingdb_utils import binding_affinity_analysis
-  import os
-
-  OUTPUT_DIR = '/output'  # From dataHandlingContext
-  os.makedirs(OUTPUT_DIR, exist_ok=True)
-
-  # One-line analysis with built-in error handling
-  results = binding_affinity_analysis("P00533", output_dir=OUTPUT_DIR)  # EGFR
-
-  if 'error' in results:
-      print(f" Error: {results['error']}")
-  else:
-      print(f"* Found {results['total_binding_measurements']} measurements")
+  print(f"Analysis complete! Found {len(binding_data)} measurements")
   ```
 
-  **Example 3: Comparing multiple ligands**
-  ```python
-  from bindingdb_utils import BindingDBUtils
-
-  OUTPUT_DIR = '/output'  # From dataHandlingContext
-  utils = BindingDBUtils()
-
-  # Define ligands to compare
-  ligands = [
-      'CCO',  # Ethanol
-      'CC(=O)O',  # Acetic acid
-      'c1ccccc1'  # Benzene
-  ]
-
-  # Compare against P00176 (Urokinase)
-  comparison = utils.compare_binding_affinity('P00176', ligands, cutoff=1000)
-
-  results = {
-      'target': 'P00176',
-      'requested_ligands': comparison['summary']['requested_ligands'],
-      'found_ligands': comparison['summary']['found_ligands'],
-      'best_affinity_nm': comparison['summary']['best_affinity_nm'],
-      'fold_range': comparison['summary'].get('fold_range', 'N/A'),
-      'comparisons': comparison['comparisons']
-  }
-
-  utils.save_json(results, f'{OUTPUT_DIR}/final_results.json')
-  print(f"* Compared {results['found_ligands']} ligands")
-  ```
-
-  **Example 4: SAR analysis with affinity ranking**
-  ```python
-  import pandas as pd
-  from bindingdb_utils import BindingDBUtils
-
-  OUTPUT_DIR = '/output'  # From dataHandlingContext
-  utils = BindingDBUtils()
-
-  # Get all binding data
-  binding_data = utils.get_binding_data_by_uniprot('P00533', limit=1000)
-  df = pd.DataFrame(binding_data)
-
-  # Check if data was returned and has the required column
-  if df.empty or 'kd' not in df.columns:
-      print("Warning: No binding data returned or 'kd' column not available")
-      sar_results = {
-          'target_uniprot': 'P00533',
-          'target_name': 'EGFR',
-          'error': 'No data available',
-          'total_compounds': 0
-      }
-  else:
-      # Focus on Kd measurements (gold standard for affinity)
-      df_kd = df[df['kd'].notna()].copy()
-      
-      if df_kd.empty:
-          print("Warning: No Kd measurements found")
-          sar_results = {
-              'target_uniprot': 'P00533',
-              'target_name': 'EGFR',
-              'error': 'No Kd measurements available',
-              'total_compounds': 0
-          }
-      else:
-          # Rank by affinity
-          df_kd_sorted = df_kd.sort_values('kd')
-          
-          # SAR summary
-          sar_results = {
-              'target_uniprot': 'P00533',
-              'target_name': 'EGFR',
-              'analysis_type': 'SAR_ranking',
-              'total_compounds': len(df_kd),
-              'affinity_range': {
-                  'best_kd_nm': float(df_kd_sorted['kd'].min()),
-                  'worst_kd_nm': float(df_kd_sorted['kd'].max()),
-                  'median_kd_nm': float(df_kd_sorted['kd'].median()),
-                  'log_range': float(df_kd_sorted['kd'].max() / df_kd_sorted['kd'].min())
-              },
-              'top_10_binders': df_kd_sorted.head(10)[['ligand_name', 'smiles', 'kd', 'ki']].to_dict(orient='records'),
-              'all_data': df_kd_sorted[['bindingdb_id', 'ligand_name', 'smiles', 'kd', 'ki', 'ic50']].to_dict(orient='records')
-          }
-          
-          print(f"SAR analysis complete! Ranked {len(df_kd)} compounds by Kd affinity")
-
-  utils.save_json(sar_results, f'{OUTPUT_DIR}/final_results.json')
-  ```
-
-  ## KEY REMINDERS:
-
-  1. **SQLite Database Access**: 640 fields, kinetics, experimental conditions, PDB structures, 3M+ entries
-
-  2. **Initialize with SQLite**: `utils = BindingDBUtils(sqlite_db_path="/app/bindingdb.db")`
-     - Database path defaults to `/app/bindingdb.db` or `BINDINGDB_DATABASE` environment variable
-     - Provides comprehensive data with 640 fields per measurement
-
-  3. **Available SQLite Methods** :
-     - `get_binding_data_by_uniprot_sqlite()` - Full experimental details
-     - `get_kinetic_data_sqlite()` - Kinetic parameters (kon, koff)
-     - `search_by_compound_sqlite()` - Search by compound name
-     - `search_ligands_by_smiles_sqlite()` - Find targets for specific SMILES
-     - `get_sqlite_database_stats()` - Database overview
-
-  4. **Database Features**:
-     -  Kinetic parameters (kon, koff) for mechanism studies
-     -  Experimental conditions (pH, temperature)
-     -  PDB structure IDs for structure-based design
-     -  Complete publication metadata (authors, institutions)
-     -  Cross-references (PubChem, ChEBI, ChEMBL, DrugBank, KEGG, ZINC)
-     -  Fast queries (3-50ms with proper indexes)
-     -  3-field affinity structure (numeric, raw, qualifier) for precise data handling
-
-  5. **BindingDB vs ChEMBL**: Use BindingDB for detailed binding constants with experimental details; use ChEMBL for broader bioactivity and drug properties
-
-  6. **Automatic type conversion**: All numeric fields (Kd, Ki, IC50, EC50, kon, koff, pH) are already proper types
-
-  7. **Safe JSON serialization**: Always use `utils.save_json()` when saving DataFrame data
-
-  8. **UniProt-centric**: BindingDB uses UniProt IDs for targets (not ChEMBL IDs)
-
-  9. **Final results**: ALWAYS save results to `final_results.json` in the configured output directory
+  For additional workflows (kinetics, compound name search, database stats, SMILES affinity comparison, target profiling), see Patterns 1-6 above.
 
   ## RESPONSE FORMAT:
   When asked to perform a task:
