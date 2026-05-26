@@ -1,18 +1,19 @@
 # GWP & Atmospheric Lifetime Predictor
 
+> **Reference implementation — not for regulatory or policy use.**
+> This agent is provided as a **methodological illustration** of how a graph-neural-network ensemble can be applied to GWP prediction. Predictions are approximate, have not been independently validated against experimental measurements beyond the holdout set described below, and must not be treated as substitutes for peer-reviewed radiative-efficiency calculations or IPCC-endorsed values. Users are responsible for verifying all outputs against authoritative sources before citing them in publications, environmental impact assessments, or regulatory filings.
+
 Predicts 100-year Global Warming Potential (GWP100) and atmospheric lifetime for novel molecules from a SMILES string. Multi-task Chemprop D-MPNN ensemble trained on IPCC AR6 + Hodnebrog 2020 data with applicability-domain flagging and calibrated 95% confidence intervals.
 
-**Headline metric: Holdout MAE = 0.342 in log10(GWP100), R^2 = 0.929 (N=31, Tanimoto-clustered novel molecules)**
+**Headline metric: Holdout MAE = 0.342 in log10(GWP100), R² = 0.929 (N=31, Tanimoto-clustered novel molecules)**
 
 ## Overview
 
-This agent solves the problem of rapidly screening candidate molecules for their climate impact. Given a SMILES string, it returns:
+This agent demonstrates a reference workflow for rapidly screening candidate molecules for their climate impact using a learned QSAR model. It is intended as a starting point for researchers building GWP prediction pipelines; the architecture, training methodology, and evaluation protocol are fully documented to facilitate reproduction and independent validation. Given a SMILES string, it returns:
 - **GWP-100**: 100-year global warming potential (CO2-equivalent) with 95% CI
 - **Atmospheric lifetime**: in years with 95% CI
 - **Applicability flag**: in-distribution / edge / out-of-distribution based on Tanimoto similarity to training set
 - **Model confidence**: ensemble standard deviation
-
-The primary use case is the Syensqo HTF discovery campaign, where `GWP < 10` is a hard filter on novel heat-transfer fluid candidates.
 
 ## Architecture
 
@@ -158,11 +159,12 @@ Issues: https://github.com/microsoft/microsoft-discovery-samples/issues
 
 ## Known Limitations
 
-1. **OPERA AOH cross-check**: Not bundled in v1.0.0 (returns null). Planned for v1.1.0.
-2. **Training set size**: 226 molecules -- small by ML standards; honest CIs compensate.
-3. **CI width**: Conservative (factor ~50x on raw GWP at 95% coverage) due to small ensemble disagreement.
-4. **Atmospheric lifetime**: Predicted jointly with GWP; accuracy lower for very short-lived (<0.01 yr) species.
-5. **Data scarcity ceiling**: Only ~500 molecules worldwide have experimentally measured GWP100 values (see training/README.md for explanation).
+1. **Reference implementation only**: This agent is a methodological demonstration. Predictions have not been externally validated and should be independently verified against experimental data or higher-fidelity radiative transfer calculations before use in any decision-making context.
+2. **OPERA AOH cross-check**: Not bundled in v1.0.0 (returns null). Planned for v1.1.0.
+3. **Training set size**: 226 molecules — small by ML standards; calibrated confidence intervals partially compensate but do not eliminate epistemic uncertainty for chemotypes absent from the training distribution.
+4. **CI width**: Conservative (factor ~50× on raw GWP at 95% coverage) due to limited ensemble disagreement; users should not interpret narrow CIs as high absolute accuracy.
+5. **Atmospheric lifetime**: Predicted jointly with GWP; accuracy lower for very short-lived (<0.01 yr) species where tropospheric OH kinetics dominate.
+6. **Data scarcity ceiling**: Only ~500 molecules worldwide have experimentally measured GWP100 values (see training/README.md for explanation). This fundamental constraint limits any QSAR model's generalisability.
 
 ## v1.1 Roadmap
 
