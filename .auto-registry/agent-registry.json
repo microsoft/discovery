@@ -1,6 +1,6 @@
 {
   "version": "1.0",
-  "generated_at": "2026-05-26T14:09:23Z",
+  "generated_at": "2026-05-26T17:17:22Z",
   "entries": [
     {
       "name": "aizynthfinder",
@@ -264,6 +264,30 @@
         "gpu",
         "trained-model",
         "embedding-model"
+      ]
+    },
+    {
+      "name": "gwp-predictor",
+      "type": "agent",
+      "publisher_name": "Microsoft Discovery",
+      "path": "agents/gwp-predictor",
+      "version": "1.0.0",
+      "associated_tools": [
+        "agents/gwp-predictor/tools/gwp-predictor"
+      ],
+      "foundry_tools": [],
+      "supported_regions": [],
+      "description": "Predicts 100-year Global Warming Potential (GWP100) and atmospheric lifetime (years) for novel molecules from SMILES. Multi-task Chemprop ensemble trained on IPCC AR6 + Hodnebrog 2020 + WMO 2022 with applicability-domain flagging (Tanimoto NN to training set) and OPERA AOH lifetime cross-check. Returns calibrated 95% confidence intervals.\n",
+      "tags": [
+        "property-prediction",
+        "gwp",
+        "climate",
+        "atmospheric-lifetime",
+        "chemprop",
+        "heat-transfer-fluid",
+        "chemistry",
+        "trained-model",
+        "d-mpnn"
       ]
     },
     {
