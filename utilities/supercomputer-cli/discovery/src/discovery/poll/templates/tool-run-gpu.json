@@ -1,0 +1,16 @@
+{
+    "toolId": "",
+    "command": "",
+    "inlineFiles": [],
+    "inputData": [],
+    "outputData": [],
+    "nodePoolIds": [],
+    "storageId": "",
+    "infraOverrides": {
+        "minResources": {
+            "cpu": 24,
+            "ram": "220Gi",
+            "gpu": 1
+        }
+    }
+}

@@ -11,6 +11,7 @@ This directory contains standalone helper scripts for operators standing up or m
 | [`resource-provider-registration/`](resource-provider-registration/) | Registers every Azure resource provider Microsoft Discovery (and its dependencies) needs in a target subscription. Cross-platform PowerShell, auto-installs `Az.Accounts` / `Az.Resources`. | **First step when onboarding a new subscription** to Discovery services. |
 | [`rbac-roles-assignment/`](rbac-roles-assignment/) | Assigns the complete set of Azure RBAC roles required for a Discovery persona (Platform Administrator or Scientist) to one or more users. Validates the executor's permissions, supports batch assignment, handles guest users. | After resource-provider registration, when granting users access to a Discovery services environment. |
 | [`dataasset-migration/`](dataasset-migration/) | Migrates a Discovery v1 `DataContainer` + child `DataAssets` to the v2 `StorageContainer` + `StorageAssets` shape (API `2025-07-01-preview` → `2026-02-01-preview`). Control-plane metadata only — does **not** move blobs. | One-time migration for tenants that onboarded before the v2 storage model. |
+| [`Supercomputer CLI/`](supercomputer-cli/) | Toolkit provides basic access to the Discovery Supercomputer API for submitting and running jobs directly on Supercomputer | Submit jobs directly to the supercomputer |
 
 ## Common prerequisites
 

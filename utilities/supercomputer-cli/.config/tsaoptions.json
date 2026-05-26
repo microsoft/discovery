@@ -1,0 +1,10 @@
+{
+    "instanceUrl":  "https://msazuredev.visualstudio.com",
+    "TSADocumentation": "https://aka.ms/OBTSA",
+    "projectName":  "AIforSciencePlatform",
+    "areaPath":  "AIforSciencePlatform\\<Example>\\<Team>\\<AreaPath>",
+    "notificationAliases": [""],
+    "ppe":  "false",
+    "template":  "TFSMSAzure",
+    "codebaseName":  "TFSMSAzure_tool-examples"
+}

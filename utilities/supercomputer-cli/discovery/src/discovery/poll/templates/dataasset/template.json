@@ -1,0 +1,39 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "outLocation": {
+            "type": "String"
+        },
+        "outDataContainerName": {
+            "type": "String"
+        },
+        "outDataAssetName": {
+            "type": "String"
+        },
+        "outApiVersion": {
+            "defaultValue": "2025-07-01-preview",
+            "type": "String"
+        },
+        "outDataAssetDescription": {
+            "type": "String"
+        },
+        "outDataAssetPath": {
+            "type": "String"
+        }
+    },
+    "variables": {},
+    "resources": [
+        {
+            "type": "Microsoft.Discovery/dataContainers/dataAssets",
+            "apiVersion": "[parameters('outApiVersion')]",
+            "name": "[concat(parameters('outDataContainerName'), '/', parameters('outDataAssetName'))]",
+            "location": "[parameters('outLocation')]",
+            "dependsOn": [],
+            "properties": {
+                "description": "[parameters('outDataAssetDescription')]",
+                "path": "[parameters('outDataAssetPath')]"
+            }
+        }
+    ]
+}

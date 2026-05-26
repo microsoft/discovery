@@ -4,7 +4,7 @@ version: 1.0.0
 associated_tools:
   - agents/boltztwo/tools/boltztwo
 publisher:
-  name: Microsoft Discovery
+  name: Microsoft
   contact: discovery-catalog@microsoft.com
   support_url: https://github.com/microsoft/discovery/discussions/categories/bugs
   party: 1p
