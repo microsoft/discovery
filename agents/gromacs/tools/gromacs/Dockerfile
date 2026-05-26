@@ -99,6 +99,14 @@ RUN sed -i 's/Amber14sb_parmbsc1/Amber14sb/g' ${GMX_PREFIX}/share/gromacs/top/am
 ENV PATH="${GMX_PREFIX}/bin:${PATH}"
 ENV LD_LIBRARY_PATH="${GMX_PREFIX}/lib:${LD_LIBRARY_PATH}"
 
+# Install the GROMACS utilities library (importable as `gromacs_utils`).
+# Encodes the POSRES/MDP-dep rules, MPI fallback + SETTLE recovery, analysis
+# group selections, and final_results.json schema so the agent does not have
+# to re-derive them from prose on every run.
+RUN mkdir -p /opt/gromacs_utils
+COPY gromacs_utils.py /opt/gromacs_utils/gromacs_utils.py
+ENV PYTHONPATH="/opt/gromacs_utils:${PYTHONPATH}"
+
 # Create workspace
 RUN mkdir -p /app/workdir /input /output
 WORKDIR /app/workdir
