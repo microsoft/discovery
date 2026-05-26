@@ -58,6 +58,23 @@ RUN set -eux; \
 # Provides amber14sb with parmbsc1 DNA corrections (superset, works for protein-only too)
 RUN git clone --depth 1 https://github.com/intbio/gromacs_ff.git /opt/src/gromacs_ff
 
+# Download CHARMM36m force field for GROMACS (MacKerell lab)
+# Current release: February 2026, CGenFF 5.0 (default per MacKerell lab page).
+# C36m protein parameters are the documented default; `define = -DUSE_OLD_C36`
+# in an MDP toggles back to plain C36.
+# License: free for academic use. Commercial use of CGenFF parameters may
+# require a separate CHARMM license (see http://mackerell.umaryland.edu/charmm_ff.shtml).
+# Pinned tarball name makes URL drift surface as an explicit build failure.
+ARG CHARMM36M_TARBALL=charmm36-feb2026_cgenff-5.0.ff.tgz
+ARG CHARMM36M_URL=http://mackerell.umaryland.edu/download.php?filename=CHARMM_ff_params_files/charmm36-feb2026_cgenff-5.0.ff.tgz
+RUN set -eux; \
+    mkdir -p /opt/src/charmm36m; \
+    cd /opt/src/charmm36m; \
+    wget -q -O ${CHARMM36M_TARBALL} "${CHARMM36M_URL}"; \
+    tar -xzf ${CHARMM36M_TARBALL}; \
+    mv charmm36-feb2026_cgenff-5.0.ff charmm36m.ff; \
+    rm ${CHARMM36M_TARBALL}
+
 # ============================================================================
 # Stage 2: Runtime - Minimal image with only runtime dependencies
 # ============================================================================
@@ -94,6 +111,11 @@ COPY --from=builder /opt/src/gromacs_ff/amber14sb_parmbsc1.ff ${GMX_PREFIX}/shar
 COPY --from=builder /opt/src/gromacs_ff/amber14sb_parmbsc1.ff ${GMX_PREFIX}/share/gromacs/top/amber14sb.ff
 # Rename the display name inside amber14sb.ff so pdb2gmx shows "AMBER14sb"
 RUN sed -i 's/Amber14sb_parmbsc1/Amber14sb/g' ${GMX_PREFIX}/share/gromacs/top/amber14sb.ff/forcefield.doc 2>/dev/null || true
+
+# Install CHARMM36m force field from builder
+# Provides modern protein FF (C36m, Huang et al. 2017, Nat Methods 14:71) plus
+# CGenFF v5.0 for organic small molecules. Invoked via `gmx pdb2gmx -ff charmm36m`.
+COPY --from=builder /opt/src/charmm36m/charmm36m.ff ${GMX_PREFIX}/share/gromacs/top/charmm36m.ff
 
 # Set up runtime environment
 ENV PATH="${GMX_PREFIX}/bin:${PATH}"

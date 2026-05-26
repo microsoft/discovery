@@ -62,8 +62,24 @@ gromacs/
 ├── gromacs-tool-definition.yaml  # Tool configuration (YAML)
 ├── gromacs-agent-definition.yaml # Agent configuration (YAML)
 ├── example-input-files/          # Sample input files for testing (if present)
+├── THIRD_PARTY_NOTICES.md        # Bundled OSS components and force-field licenses
 └── README.md
 ```
+
+## Force fields shipped
+
+The container image installs the following protein/biomolecule force fields in
+addition to the GROMACS-bundled set (`charmm27`, `oplsaa`, `gromos54a7`,
+`amber99sb-ildn`, etc.):
+
+| `-ff` name | Origin | Notes |
+|---|---|---|
+| `amber14sb` / `amber14sb_parmbsc1` | https://github.com/intbio/gromacs_ff | AMBER ff14SB protein parameters with parmbsc1 DNA corrections. Same files installed under both names; `amber14sb` is the protein-only display alias. |
+| `charmm36m` | http://mackerell.umaryland.edu/charmm_ff.shtml (February 2026 release, CGenFF v5.0) | Modern CHARMM protein FF (C36m, Huang et al. 2017). `define = -DUSE_OLD_C36` in the MDP reverts to plain C36. |
+
+See [THIRD_PARTY_NOTICES.md](./THIRD_PARTY_NOTICES.md) for licensing details —
+notably that **commercial use of CHARMM/CGenFF parameters may require a separate
+license** beyond the academic-free terms.
 
 ### Test Prompts
 

@@ -290,6 +290,9 @@ def run_command(
     """Run a subprocess command with logging and error capture.
 
     Raises subprocess.CalledProcessError on non-zero exit, with stderr logged.
+    On known GROMACS failure modes (pdb2gmx residue mismatches, grompp atom
+    ordering issues, mdrun LINCS warnings) an extra translated hint is logged
+    to spare the agent from parsing cryptic GROMACS stderr.
     """
     label = description or " ".join(cmd)
     logging.info("Executing: %s", label)
@@ -309,7 +312,92 @@ def run_command(
         logging.error("FAILED: %s", label)
         if e.stderr:
             logging.error("STDERR: %s", e.stderr.strip())
+        hint = _translate_gromacs_error(cmd, e.stderr or "")
+        if hint:
+            logging.error("HINT: %s", hint)
         raise
+
+
+# Known GROMACS failure patterns -> human-readable hint. Order matters: the
+# first match wins, so more specific patterns must come before generic ones.
+# Each entry is (regex, gmx-subcommand-or-None, hint-template). Templates may
+# reference one named group: {match}. Keep this list short -- only add
+# patterns that have actually bitten a real job.
+_GMX_ERROR_PATTERNS: list[tuple[re.Pattern, Optional[str], str]] = [
+    (
+        re.compile(r"Residue '(?P<match>[A-Z0-9]{2,4})' not found in residue topology database", re.IGNORECASE),
+        "pdb2gmx",
+        "Residue '{match}' is missing from the selected force field's .rtp database. "
+        "If it's a ligand, supply an .itp and skip prepare_protein(). "
+        "If it's a cap residue (ACE/NME/NHE) or non-standard amino acid, you may need a different force field.",
+    ),
+    (
+        re.compile(r"Atom (?P<match>\S+) in residue (?:ACE|NME|NHE|NH2)", re.IGNORECASE),
+        "pdb2gmx",
+        "Cap residue atom '{match}' name does not match the force field's .rtp entry. "
+        "Check your PDB's terminal residue naming conventions -- ACE/NME often have FF-specific atom names.",
+    ),
+    (
+        re.compile(r"(?:Sort error|sort error|atoms .* not sorted|atom .* not found in residue)", re.IGNORECASE),
+        "pdb2gmx",
+        "pdb2gmx atom-sort failure usually means a residue's atom names in the PDB don't match the force field's .rtp entry. "
+        "Most common cause: cap residues (ACE/NME), non-standard protonation states (HIE/HID/HIP), or hydrogen names. "
+        "Try `gmx pdb2gmx -ignh` to let GROMACS rebuild hydrogens.",
+    ),
+    (
+        re.compile(r"Long bonds, possibly due to wrong PDB or GRO file", re.IGNORECASE),
+        "grompp",
+        "Atom ordering in the structure file does not match the topology. "
+        "Common causes: edited PDB out of pdb2gmx's expected order, or topology was generated from a different structure.",
+    ),
+    (
+        re.compile(r"number of coordinates in coordinate file .* does not match topology", re.IGNORECASE),
+        "grompp",
+        "Coordinate file and topology disagree on atom count -- usually a stale .gro vs. .top mismatch. "
+        "Re-run the previous step (solvate/genion) and ensure you pass the matching .top.",
+    ),
+    (
+        re.compile(r"Water molecule .* can not be settled", re.IGNORECASE),
+        "mdrun",
+        "SETTLE failure on a water molecule means an atom moved too far in one step -- the system is unstable. "
+        "If this happens in NVT/NPT after EM, re-run EM with tighter convergence; "
+        "if during EM, your starting geometry has overlapping atoms (check pdb2gmx output and box size).",
+    ),
+    (
+        re.compile(r"(?:1 particles communicated to PME rank|domain decomposition does not work)", re.IGNORECASE),
+        "mdrun",
+        "Domain-decomposition / PME mismatch -- the system is too small for the requested rank count. "
+        "Try fewer MPI ranks or `mdrun -dd 1 1 1` for a serial run.",
+    ),
+]
+
+
+def _translate_gromacs_error(cmd: list[str], stderr: str) -> Optional[str]:
+    """Map a GROMACS stderr blob to a human-readable hint string, or None.
+
+    Robust to FF / GROMACS version drift -- we match on stable error phrases,
+    not on internal data structures.
+    """
+    if not stderr:
+        return None
+    # Identify the gmx subcommand (e.g. 'pdb2gmx') so we can scope patterns.
+    gmx_sub: Optional[str] = None
+    try:
+        gmx_idx = cmd.index("gmx")
+        if gmx_idx + 1 < len(cmd):
+            gmx_sub = cmd[gmx_idx + 1]
+    except ValueError:
+        pass
+    for pat, scope, template in _GMX_ERROR_PATTERNS:
+        if scope is not None and scope != gmx_sub:
+            continue
+        m = pat.search(stderr)
+        if m:
+            try:
+                return template.format(match=m.group("match"))
+            except IndexError:
+                return template
+    return None
 
 
 # =============================================================================
@@ -736,7 +824,21 @@ def prepare_protein(
         ],
         description=f"solvate -> {basename}_solv.gro",
     )
-    # Ions: grompp then genion
+    # Ions: grompp then genion.
+    # If the caller left ions_mdp at its default and no file is present, write
+    # a minimal MDP. genion only needs a valid TPR -- the four lines below are
+    # standard GROMACS-tutorial boilerplate with no scientific content. We
+    # ONLY auto-generate when the default name is in use: if the caller passed
+    # a custom path that doesn't exist, that's a real error and must surface.
+    if ions_mdp == "ions.mdp" and not Path(ions_mdp).exists():
+        Path(ions_mdp).write_text(
+            "; Auto-generated by prepare_protein() -- preflight for genion only.\n"
+            "integrator    = steep\n"
+            "emtol         = 1000.0\n"
+            "nsteps        = 0\n"
+            "cutoff-scheme = Verlet\n"
+        )
+        logging.info("Wrote default ions.mdp (genion preflight; no scientific impact)")
     grompp(
         mdp=ions_mdp, structure=f"{basename}_solv.gro",
         topology=f"{basename}.top", output_tpr=f"{basename}_ions.tpr",
