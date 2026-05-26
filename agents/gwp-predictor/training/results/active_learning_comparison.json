@@ -1,0 +1,21 @@
+{
+  "before_al": {
+    "n_train": 206,
+    "n_holdout": 51,
+    "mae_log10_gwp": 0.576,
+    "r2_log10_gwp": 0.779,
+    "mae_log10_lifetime": 0.465
+  },
+  "after_al": {
+    "n_train": 226,
+    "n_holdout": 31,
+    "mae_log10_gwp": 0.34241940211488775,
+    "r2_log10_gwp": 0.929174599866669,
+    "mae_log10_lifetime": 0.31985159637168015
+  },
+  "improvement": {
+    "mae_gwp_delta": 0.2335805978851122,
+    "mae_gwp_pct": 40.55218713283198,
+    "r2_gwp_delta": 0.15017459986666892
+  }
+}

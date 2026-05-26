@@ -43,7 +43,7 @@ curl -LsSf https://astral.sh/uv/install.sh | sh
 Install the `discovery` command globally using uv:
 
 ```bash
-uv tool install discovery --from git+https://github.com/microsoft/discovery.git#subdirectory=utils/supercomputer-cli/discovery
+uv tool install discovery --from git+https://github.com/microsoft/discovery.git#subdirectory=utilities/supercomputer-cli/discovery
 ```
 
 This installs the CLI in an isolated environment and makes it available system-wide.

@@ -1,0 +1,2 @@
+agents/gwp-predictor/tools/gwp-predictor/models/*.pt filter=lfs diff=lfs merge=lfs -text
+agents/gwp-predictor/tools/gwp-predictor/models/*.npz filter=lfs diff=lfs merge=lfs -text
