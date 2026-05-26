@@ -1,0 +1,24 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentParameters.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "outToolName": {
+            "value": "test"
+        },
+        "outDefinitionContent": {
+            "value": "{\n  \"name\": \"NAME_PLACEHOLDER\",\n  \"version\": \"1.0\",\n  \"description\": \"DESC_PLACEHOLDER\",\n  \"category\": \"test\",\n  \"infra\": [\n    {\n      \"name\": \"NAME_PLACEHOLDER\",\n      \"infra_type\": \"container\",\n      \"image\": { \"acr\": \"ACR_IMAGE_PLACEHOLDER\" },\n      \"compute\": {\n        \"min_resources\": { \"cpu\": 2, \"ram\": \"4Gi\", \"gpu\": 0 },\n        \"max_resources\": { \"cpu\": 10, \"ram\": \"8Gi\", \"gpu\": 0 },\n        \"pool_size\": 1,\n        \"pool_type\": \"static\",\n        \"recommended_sku\": [\"Standard_D2s_v4\"]\n      }\n    }\n  ]\n}\n"
+        },
+        "OutEnvironmentVariables": {
+            "value": ""
+        },
+        "outToolVersion": {
+            "value": "1.0"
+        },
+        "outLocation": {
+            "value": "eastus"
+        },
+        "outTagsByResource": {
+            "value": {}
+        }
+    }
+}

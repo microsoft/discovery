@@ -1,0 +1,46 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "outLocation": {
+            "type": "string"
+        },
+        "outTagsByResource": {
+            "type": "object"
+        },
+        "outToolName": {
+            "type": "string"
+        },
+        "outDefinitionContent": {
+            "type": "string"
+        },
+        "outApiVersion": {
+            "type": "string",
+            "defaultValue": "2025-07-01-preview"
+        },
+        "outToolVersion": {
+            "type": "string"
+        },
+        "OutEnvironmentVariables": {
+            "type": "string"
+        }
+    },
+    "variables": {
+        "apiVersion": "[parameters('outApiVersion')]",
+        "tagsByResource": "[parameters('outTagsByResource')]"
+    },
+    "resources": [
+        {
+            "apiVersion": "[variables('apiVersion')]",
+            "name": "[parameters('outToolName')]",
+            "location": "[parameters('outLocation')]",
+            "type": "Microsoft.Discovery/tools",
+            "tags": "[ if(contains(variables('tagsByResource'), 'Microsoft.Discovery/tools'), variables('tagsByResource')['Microsoft.Discovery/tools'], json('{}')) ]",
+            "properties": {
+                "definitionContent": "[json(parameters('outDefinitionContent'))]",
+                "version": "[parameters('outToolVersion')]",
+                "environmentVariables": "[if(not(empty(parameters('OutEnvironmentVariables'))), json(parameters('OutEnvironmentVariables')), json('{}'))]"
+            }
+        }
+    ]
+}
