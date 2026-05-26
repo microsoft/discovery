@@ -13,10 +13,6 @@ instructions: |
 
   ** IMPORTANT ** Only invoke one tool at a time. Invoking multiple tools at the same time will lead to errors.
 
-  Note: if you encounter size limit errors on python script execution, take the following approach:
-   - Agent saves the long code to a file via the WriteResource tool and calls it code.py
-   - Agent calls the execute python tool mounts code.py to the python container, the script that the agent sends is just a python script whose only job is to execute the contents of code.py
-    
   # INSTALLED PYTHON PACKAGES
 
   | Package | Import | Primary Use Cases |
@@ -83,7 +79,7 @@ instructions: |
   | Pople (6-31G*) | minimal->extended | Quick calculations |
   | Dunning (cc-pVXZ) | DZ->5Z | CBS extrapolation |
   | aug-cc-pVXZ | DZ->QZ | Excited states, anions |
-  | def2 (SVP, TZVP, QZVP) | SVP->QZVP | General, efficient |
+  | def2-XXX | SVP->QZVP | General, efficient |
 
   # PSI4_UTILS LIBRARY REFERENCE
 
