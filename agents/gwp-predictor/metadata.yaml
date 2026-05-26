@@ -7,7 +7,7 @@ associated_tools:
 publisher:
   name: Microsoft Discovery
   contact: discovery-catalog@microsoft.com
-  support_url: https://github.com/microsoft/microsoft-discovery-samples/issues
+  support_url: https://github.com/microsoft/discovery/discussions/categories/bugs
   party: 1p
 
 description: >
