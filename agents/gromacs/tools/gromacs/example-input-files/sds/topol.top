@@ -1,0 +1,26 @@
+#include "oplsaa.ff/forcefield.itp"
+
+#include "./SDS.itp"
+
+; Include water topology
+#include "oplsaa.ff/spce.itp"
+
+#ifdef POSRES_WATER
+; Position restraint for each water oxygen
+[ position_restraints ]
+;  i funct       fcx        fcy        fcz
+   1    1       1000       1000       1000
+#endif
+
+; Include topology for ions
+#include "oplsaa.ff/ions.itp"
+
+[ system ]
+; Name
+S  C  A  M  O  R  G in water
+
+[ molecules ]
+; Compound          #mols
+SDS                 120
+NA                  120
+SOL                 10000
