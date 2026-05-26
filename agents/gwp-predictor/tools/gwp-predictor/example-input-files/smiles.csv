@@ -1,0 +1,11 @@
+name,smiles,published_gwp100,published_lifetime_years,source
+Novec 649,CCC(=O)C(F)(F)C(F)(F)F,1,0.014,3M_safety_data_sheet
+HFC-134a,CC(F)(F)F,1530,14.0,IPCC_AR6
+HFC-23,FC(F)F,14600,228.0,IPCC_AR6
+Methane,C,29.8,11.8,IPCC_AR6
+Ethanol,CCO,,0.014,short_lived_VOC
+Perfluorohexane,FC(F)(F)C(F)(F)C(F)(F)C(F)(F)C(F)(F)C(F)(F)F,7910,3100.0,IPCC_AR6
+Sulfur hexafluoride,FS(F)(F)(F)(F)F,24300,3200.0,IPCC_AR6
+HFE-7100,COC(F)(F)C(F)(F)C(F)(F)F,460,4.7,Hodnebrog_2020
+HFC-152a,CC(F)F,164,1.6,IPCC_AR6
+HFO-1234yf,FC(=C)C(F)(F)F,0.501,0.029,Hodnebrog_2020

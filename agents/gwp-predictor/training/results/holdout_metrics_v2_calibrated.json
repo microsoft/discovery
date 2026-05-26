@@ -1,0 +1,133 @@
+{
+  "version": "v2_calibrated",
+  "n_train": 206,
+  "n_calibration_carve": 30,
+  "n_holdout": 51,
+  "ensemble_size": 5,
+  "best_config": {
+    "hidden_dim": 500,
+    "depth": 5,
+    "dropout": 0.1,
+    "cv_mae_log10_gwp": 0.49034572445558955,
+    "cv_rmse_log10_gwp": 0.7447476604957739,
+    "cv_r2_log10_gwp": 0.7949734557297209,
+    "cv_mae_log10_lifetime": 0.4585000168441095
+  },
+  "holdout_metrics": {
+    "mae_log10_gwp": 0.5760081647906181,
+    "rmse_log10_gwp": 0.7983729837519461,
+    "r2_log10_gwp": 0.7793551610465651,
+    "mae_log10_lifetime": 0.464827406902714,
+    "factor_error_gwp": 3.7671088112905218
+  },
+  "calibration": {
+    "calibration_method_recommended": "global_scalar",
+    "calibration_n": 30,
+    "calibration_method_comparison": {
+      "global_scalar": {
+        "gwp": {
+          "coverage": 0.9607843137254902,
+          "mean_halfwidth": 1.9898279041856426,
+          "median_halfwidth": 1.762300897715993
+        },
+        "lifetime": {
+          "coverage": 0.7647058823529411,
+          "mean_halfwidth": 0.8347283302876544,
+          "median_halfwidth": 0.6527874142959381
+        }
+      },
+      "isotonic": {
+        "gwp": {
+          "coverage": 0.5098039215686274,
+          "mean_halfwidth": 0.4633085190845662,
+          "median_halfwidth": 0.5037533591046609
+        },
+        "lifetime": {
+          "coverage": 0.7058823529411765,
+          "mean_halfwidth": 0.5409259776905841,
+          "median_halfwidth": 0.5275282337216063
+        }
+      },
+      "conformal_fixed": {
+        "gwp": {
+          "coverage": 0.6078431372549019,
+          "mean_halfwidth": 0.5231767295925982,
+          "median_halfwidth": 0.5231767295925982
+        },
+        "lifetime": {
+          "coverage": 0.6862745098039216,
+          "mean_halfwidth": 0.537877924346799,
+          "median_halfwidth": 0.537877924346799
+        }
+      },
+      "conformal_normalized": {
+        "gwp": {
+          "coverage": 1.0,
+          "mean_halfwidth": 4.757911576318997,
+          "median_halfwidth": 4.213867854884605
+        },
+        "lifetime": {
+          "coverage": 0.9019607843137255,
+          "mean_halfwidth": 1.2543516388213611,
+          "median_halfwidth": 0.980947852389166
+        }
+      }
+    },
+    "global_scale": {
+      "gwp": 11.9,
+      "lifetime": 5.6
+    },
+    "isotonic_q95_factor": {
+      "gwp": 2.2647394813966018,
+      "lifetime": 2.1401009223699097
+    },
+    "conformal": {
+      "alpha": 0.05,
+      "n_calibration": 30,
+      "fixed_width": {
+        "gwp": 0.5231767295925982,
+        "lifetime": 0.537877924346799
+      },
+      "normalized": {
+        "gwp": 55.77041580964326,
+        "lifetime": 16.493705901845665
+      },
+      "leakage_warning": "Calibration set was carved AFTER v2 training; not strictly leakage-free."
+    },
+    "v2_holdout_metrics_unchanged": {
+      "mae_log10_gwp": 0.5760081647906181,
+      "rmse_log10_gwp": 0.7983729837519461,
+      "r2_log10_gwp": 0.7793551610465651,
+      "mae_log10_lifetime": 0.464827406902714
+    },
+    "leakage_note": "Calibration set was carved AFTER v2 was trained on the full 206-row train set; numbers are slightly optimistic. v1.1 fix: re-train with proper calibration carve-out before fitting weights."
+  },
+  "applicability_domain": {
+    "thresholds": {
+      "in_distribution_min": 0.5,
+      "edge_min": 0.3
+    },
+    "counts": {
+      "edge": 33,
+      "out-of-distribution": 13,
+      "in-distribution": 5
+    },
+    "mae_by_ad": {
+      "in-distribution": {
+        "n": 5,
+        "mae_log10_gwp": 0.31665406287756487
+      },
+      "edge": {
+        "n": 33,
+        "mae_log10_gwp": 0.531346455189327
+      },
+      "out-of-distribution": {
+        "n": 13,
+        "mae_log10_gwp": 0.7891317745143005
+      }
+    }
+  },
+  "v1_baseline_cv_mae": 0.57,
+  "v2_holdout_mae": 0.5760081647906181,
+  "improvement_over_v1": -1.054063998354064
+}

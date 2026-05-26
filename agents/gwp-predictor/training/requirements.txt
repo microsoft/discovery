@@ -1,0 +1,16 @@
+# Requirements for running gwp-predictor training scripts locally.
+# Install with: pip install -r requirements.txt
+# Note: rdkit requires conda or rdkit-pypi wheel; torch is CPU-only.
+chemprop==2.2.2
+torch>=2.2.0
+lightning>=2.4.0
+rdkit>=2024.3.0
+astartes[molecules]>=1.3.0
+numpy>=1.24
+pandas>=2.0
+scikit-learn>=1.4
+scipy>=1.10
+matplotlib>=3.8
+seaborn>=0.13
+requests>=2.31
+pdfplumber>=0.11

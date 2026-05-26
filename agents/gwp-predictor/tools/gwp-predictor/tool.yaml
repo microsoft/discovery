@@ -1,0 +1,42 @@
+name: gwpPredictor
+description: >
+  Predicts 100-year Global Warming Potential (GWP100) and atmospheric lifetime
+  for molecules from SMILES using a Chemprop multi-task ensemble trained on
+  IPCC AR6 + Hodnebrog 2020 data. Returns calibrated 95% confidence intervals
+  and applicability-domain flagging (in-distribution / edge / out-of-distribution).
+version: 1.0.0
+category: "Property Prediction"
+license: MIT
+
+infra:
+  - name: worker
+    infra_type: container
+    image:
+      acr: "{name}.azurecr.io/gwp-predictor:latest"
+    compute:
+      min_resources:
+        cpu: 2
+        ram: "4Gi"
+        gpu: 0
+        storage: "0Gi"
+      max_resources:
+        cpu: 8
+        ram: "16Gi"
+        gpu: 0
+        storage: "0Gi"
+      recommended_sku:
+        - Standard_D4s_v6
+        - Standard_D8s_v6
+      pool_type: static
+      pool_size: 1
+
+code_environments:
+  - language: python3
+    command: 'python3 -u "/{{scriptName}}" > {{output_directory}}/logs.out 2>&1; cp -r /workdir/* {{output_directory}}/ 2>/dev/null || true; tail -n 100 {{output_directory}}/logs.out'
+    description: |
+      Python code environment for GWP100 and atmospheric lifetime prediction.
+      Packages: gwp_predictor_utils, chemprop 2.2.2, torch, rdkit, numpy,
+      pandas, scikit-learn, matplotlib, scipy, seaborn.
+      5-model Chemprop D-MPNN ensemble with 27 physicochemical features.
+      Holdout MAE on log10(GWP100) = 0.342, R^2 = 0.929 (N=31).
+    infra_node: worker
