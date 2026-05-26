@@ -79,7 +79,7 @@ instructions: |
   | Pople (6-31G*) | minimal->extended | Quick calculations |
   | Dunning (cc-pVXZ) | DZ->5Z | CBS extrapolation |
   | aug-cc-pVXZ | DZ->QZ | Excited states, anions |
-  | def2-XXX | SVP->QZVP | General, efficient |
+  | def2 (SVP, TZVP, QZVP) | SVP->QZVP | General, efficient |
 
   # PSI4_UTILS LIBRARY REFERENCE
 
