@@ -35,6 +35,7 @@ For an app-specific 15-minute hands-on tour, see [`docs/discovery-app/quickstart
 | --- | --- | --- |
 | 📥 **[Releases](https://github.com/microsoft/discovery/releases)** | Signed Windows installers (`DiscoveryExpressSetup-x.y.z.exe`) and release notes for the Discovery app. | Downloading the latest build of the app. |
 | 🤖 **`agents/`** | Catalog of AI research agents (1P and 3P) surfaced in Discovery. Each entry contains a `metadata.yaml`, `agent.yaml`, `README.md`, and optional `tools/`. | Browsing what's available, or contributing a new agent. |
+| 📑 **`docs/`** | Documentation and pointers for both Microsoft Discovery and the Discovery app, including documentation for authoring guides and schemas. | Learning more about Discovery experiences and best practices. |
 | 🧰 **`starter-kits/`** | Catalog of starter kits — `kit.json` manifests that bundle one or more catalog agents into a launchable scenario. | Browsing pre-built workflows, or publishing a new kit. |
 | 🗃️ **`.auto-registry/`** | Auto-generated registry snapshots built from `agents/` and `starter-kits/`. Contains `agent-registry.json` and `starter-kit-registry.json`; do not edit these files manually. | Programmatic catalog consumers and automated publishing pipelines. |
 | 💬 **[Discussions](https://github.com/microsoft/discovery/discussions)** | Q&A, Ideas, Bugs, and Show-and-tell — the single place for everything from "how do I…?" to bug reports, ideas, and sharing what you've built. | Asking questions, suggesting ideas, sharing what you've built, and reporting bugs. |
