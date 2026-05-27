@@ -1,6 +1,6 @@
 {
   "version": "1.0",
-  "generated_at": "2026-05-26T17:17:22Z",
+  "generated_at": "2026-05-27T00:20:30Z",
   "entries": [
     {
       "name": "aizynthfinder",
@@ -73,6 +73,24 @@
         "molecule-docking",
         "drug-discovery",
         "virtual-screening"
+      ]
+    },
+    {
+      "name": "bindingdb",
+      "type": "agent",
+      "publisher_name": "Microsoft",
+      "path": "agents/bindingdb",
+      "version": "1.0.0",
+      "associated_tools": [
+        "agents/bindingdb/tools/BindingDB"
+      ],
+      "foundry_tools": [],
+      "supported_regions": [],
+      "description": "BindingDB agent for retrieving comprehensive binding affinity data for protein-ligand interactions. Provides access to local SQLite database with sub-millisecond query performance.\n",
+      "tags": [
+        "binding-affinity",
+        "drug-discovery",
+        "database"
       ]
     },
     {
@@ -151,6 +169,24 @@
       ]
     },
     {
+      "name": "chembl",
+      "type": "agent",
+      "publisher_name": "Microsoft",
+      "path": "agents/chembl",
+      "version": "1.0.0",
+      "associated_tools": [
+        "agents/chembl/tools/ChEMBL"
+      ],
+      "foundry_tools": [],
+      "supported_regions": [],
+      "description": "ChEMBL agent for retrieving chemical and bioactivity data from the ChEMBL database. Provides access to compound information, target data, bioactivity measurements, and cross-references with PDB structures.\n",
+      "tags": [
+        "cheminformatics",
+        "bioactivity",
+        "database"
+      ]
+    },
+    {
       "name": "chemprop",
       "type": "agent",
       "publisher_name": "Microsoft",
@@ -224,6 +260,24 @@
       ]
     },
     {
+      "name": "cp2k",
+      "type": "agent",
+      "publisher_name": "Microsoft",
+      "path": "agents/cp2k",
+      "version": "1.0.0",
+      "associated_tools": [
+        "agents/cp2k/tools/cp2k"
+      ],
+      "foundry_tools": [],
+      "supported_regions": [],
+      "description": "Expert agent for atomistic simulations using CP2K. Designs and executes DFT calculations with geometry optimization, ab initio MD, vibrational analysis, band structure, NEB, and semi-empirical methods.\n",
+      "tags": [
+        "quantum-chemistry",
+        "materials-science",
+        "dft"
+      ]
+    },
+    {
       "name": "crest",
       "type": "agent",
       "publisher_name": "Microsoft",
@@ -264,6 +318,22 @@
         "gpu",
         "trained-model",
         "embedding-model"
+      ]
+    },
+    {
+      "name": "gromacs",
+      "type": "agent",
+      "publisher_name": "Microsoft",
+      "path": "agents/gromacs",
+      "version": "1.0.0",
+      "associated_tools": [
+        "agents/gromacs/tools/gromacs"
+      ],
+      "foundry_tools": [],
+      "supported_regions": [],
+      "description": "Python code environment with Gromacs tool for high-performance molecular dynamics (MD) simulations.\n",
+      "tags": [
+        "molecular-dynamics"
       ]
     },
     {
@@ -531,6 +601,24 @@
       "tags": [
         "protein-structure",
         "database"
+      ]
+    },
+    {
+      "name": "psi4",
+      "type": "agent",
+      "publisher_name": "Microsoft",
+      "path": "agents/psi4",
+      "version": "1.0.0",
+      "associated_tools": [
+        "agents/psi4/tools/psi4"
+      ],
+      "foundry_tools": [],
+      "supported_regions": [],
+      "description": "Python code environment with Psi4 for ab initio quantum chemistry calculations. HF, DFT, post-HF methods, SAPT, excited states, geometry optimization, frequency analysis, and thermochemistry.\n",
+      "tags": [
+        "quantum-chemistry",
+        "dft",
+        "ab-initio"
       ]
     },
     {

@@ -1,7 +1,7 @@
 {
   "schemaVersion": "1.0.0",
-  "generatedAt": "2026-05-26T17:17:22Z",
-  "commitSha": "a4fcbc92fee31ee3eee9eb3a03756b2f03a21165",
+  "generatedAt": "2026-05-27T00:20:30Z",
+  "commitSha": "ddecc27bba4e3dec2a47f7f9a3c4f143a0c89b6d",
   "kits": [
     {
       "$schema": "../../docs/schemas/starter-kit-schema.json",
@@ -116,7 +116,7 @@
       },
       "availability": "healthy",
       "missingAgents": [],
-      "computedAt": "2026-05-26T17:17:22Z",
+      "computedAt": "2026-05-27T00:20:30Z",
       "kitPath": "starter-kits/chip-synthesis-timing"
     },
     {
@@ -194,7 +194,7 @@
       },
       "availability": "healthy",
       "missingAgents": [],
-      "computedAt": "2026-05-26T17:17:22Z",
+      "computedAt": "2026-05-27T00:20:30Z",
       "kitPath": "starter-kits/physics-cfd-sim"
     }
   ]
