@@ -655,7 +655,11 @@ def check_policy(repo: Path, folders: set[Path], changed_files: list[str]) -> li
     failures += check_model_weights(repo, changed_files)
 
     # POL-010: hidden / OS-artefact files are never allowed in any PR.
+    # Skip files that no longer exist in the PR checkout — those are deletions,
+    # and deleting a forbidden file is exactly the cleanup we want to allow.
     for f in changed_files:
+        if not (repo / f).exists():
+            continue
         name = Path(f).name
         rel_posix = f.replace("\\", "/")
         is_blocked = (
