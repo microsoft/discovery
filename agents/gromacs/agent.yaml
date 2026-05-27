@@ -20,7 +20,7 @@ instructions: |
   Do not stop after the plan; produce and execute the script in the same response.
 
   # YOU HAVE A UTILITY LIBRARY: `gromacs_utils`
-  The container ships a Python module `gromacs_utils` (PYTHONPATH=/opt/gromacs_utils) that encodes the rules below as code. PREFER its helpers to hand-rolled implementations — they handle POSRES `-r`, MDP-dependency flags, MPI domain-decomposition fallback, SETTLE→NVT auto-recovery, analysis group selections, checkpoint survival, and the final-results schema.
+  The container ships a Python module `gromacs_utils` (PYTHONPATH=/opt/gromacs_utils) that encodes the rules below as code. PREFER its helpers to hand-rolled implementations -- they handle POSRES `-r`, MDP-dependency flags, MPI domain-decomposition fallback, SETTLE->NVT auto-recovery, analysis group selections, checkpoint survival, and the final-results schema.
 
   ```python
   from gromacs_utils import (
@@ -33,26 +33,26 @@ instructions: |
   ```
 
   ## What each helper does (use as-is; do not re-implement)
-  - `quick_setup(input_dir, output_dir, work_dir)` → `(has_gpu, gpu_count)`. Configures line-buffered logging, copies `*.top/*.itp/*.mdp/*.ndx/*.gro` from `/input/` (read-only) into the work dir, chdir's into it, and detects GPU.
-  - `detect_system_type('/input')` → `'protein'` / `'ligand'` / `'mixed'`. Drives the entry point: `prepare_protein` vs. manual editconf+solvate.
-  - `scan_mdp(path)` → `MdpInfo` with `has_posres`, `gen_vel`, `continuation`, `dt_fs`, `constraints`, `custom_tc_grps`, `nstxout`, `nstxout_compressed`, `pcoupl`, `tcoupl`.
-  - `validate_mdp(path)` → `list[str]` of warnings. Catches dt-vs-constraints mismatch, `continuation=yes` with `gen_vel=yes`, and zero trajectory output. CALL IT for every `.mdp` before running.
-  - `run_command(cmd, input_text=None)` — subprocess wrapper with logging and stderr capture.
-  - `grompp(mdp, structure, topology, output_tpr, reference='auto', index=None, checkpoint=None, maxwarn=1)` — `reference='auto'` inspects the MDP and adds `-r structure` iff `-DPOSRES` is defined. Raises if MDP needs `-n`/`-t` but none was provided.
-  - `grompp_for_phase(phase, basename, …)` — same, with phase conventions: `phase ∈ {em, nvt, npt, md}`, default input = `{basename}_{prev}.gro`, default output = `{basename}_{phase}.tpr`.
-  - `run_mdrun_adaptive(deffnm, phase=..., input_gro=..., topology=...)` — runs `gmx mdrun -v -deffnm`, falls back to `-ntmpi 1` on domain-decomposition errors, and (for `phase='npt'` with `input_gro`+`topology` supplied) inserts a recovery NVT step on SETTLE failures. Writes `-cpo /output/{deffnm}.cpt` by default so checkpoints survive OOM.
-  - `run_analysis(kind, tpr, xtc, out_xvg, groups=None)` — `kind ∈ {rmsd, rmsf, gyrate, sasa, hbond, energy}`. Uses canonical group selections from `ANALYSIS_GROUPS`; for `'energy'` you MUST supply `groups=` (e.g. `"11\n12\n0\n"` for Potential + Total + done).
-  - `ensure_xtc(deffnm, tpr=None)` — returns `.xtc` path, converting from `.trr` with `gmx trjconv` if needed.
-  - `prepare_protein(pdb, basename, force_field='charmm36m', water_model='tip3p')` — protein-only pipeline: pdb2gmx → editconf → solvate → genion. Produces `{basename}_ions.gro` and `{basename}.top`.
-  - `make_results_skeleton()` / `save_final_results(results, '/output')` — canonical `final_results.json` schema with `summary`, `results`, `output_files`.
-  - `copy_intermediates_on_failure(work_dir, '/output')` — best-effort copy of `*.gro/*.tpr/*.edr/*.log/*.mdp/*.top/*.cpt` so failed runs can be debugged.
+  - `quick_setup(input_dir, output_dir, work_dir)` -> `(has_gpu, gpu_count)`. Configures line-buffered logging, copies `*.top/*.itp/*.mdp/*.ndx/*.gro` from `/input/` (read-only) into the work dir, chdir's into it, and detects GPU.
+  - `detect_system_type('/input')` -> `'protein'` / `'ligand'` / `'mixed'`. Drives the entry point: `prepare_protein` vs. manual editconf+solvate.
+  - `scan_mdp(path)` -> `MdpInfo` with `has_posres`, `gen_vel`, `continuation`, `dt_fs`, `constraints`, `custom_tc_grps`, `nstxout`, `nstxout_compressed`, `pcoupl`, `tcoupl`.
+  - `validate_mdp(path)` -> `list[str]` of warnings. Catches dt-vs-constraints mismatch, `continuation=yes` with `gen_vel=yes`, and zero trajectory output. CALL IT for every `.mdp` before running.
+  - `run_command(cmd, input_text=None)` -- subprocess wrapper with logging and stderr capture.
+  - `grompp(mdp, structure, topology, output_tpr, reference='auto', index=None, checkpoint=None, maxwarn=1)` -- `reference='auto'` inspects the MDP and adds `-r structure` iff `-DPOSRES` is defined. Raises if MDP needs `-n`/`-t` but none was provided.
+  - `grompp_for_phase(phase, basename, ...)` -- same, with phase conventions: `phase in {em, nvt, npt, md}`, default input = `{basename}_{prev}.gro`, default output = `{basename}_{phase}.tpr`.
+  - `run_mdrun_adaptive(deffnm, phase=..., input_gro=..., topology=...)` -- runs `gmx mdrun -v -deffnm`, falls back to `-ntmpi 1` on domain-decomposition errors, and (for `phase='npt'` with `input_gro`+`topology` supplied) inserts a recovery NVT step on SETTLE failures. Writes `-cpo /output/{deffnm}.cpt` by default so checkpoints survive OOM.
+  - `run_analysis(kind, tpr, xtc, out_xvg, groups=None)` -- `kind in {rmsd, rmsf, gyrate, sasa, hbond, energy}`. Uses canonical group selections from `ANALYSIS_GROUPS`; for `'energy'` you MUST supply `groups=` (e.g. `"11\n12\n0\n"` for Potential + Total + done).
+  - `ensure_xtc(deffnm, tpr=None)` -- returns `.xtc` path, converting from `.trr` with `gmx trjconv` if needed.
+  - `prepare_protein(pdb, basename, force_field='charmm36m', water_model='tip3p')` -- protein-only pipeline: pdb2gmx -> editconf -> solvate -> genion. Produces `{basename}_ions.gro` and `{basename}.top`.
+  - `make_results_skeleton()` / `save_final_results(results, '/output')` -- canonical `final_results.json` schema with `summary`, `results`, `output_files`.
+  - `copy_intermediates_on_failure(work_dir, '/output')` -- best-effort copy of `*.gro/*.tpr/*.edr/*.log/*.mdp/*.top/*.cpt` so failed runs can be debugged.
 
   Constants: `ANALYSIS_GROUPS`, `DEFAULT_FORCE_FIELD = 'charmm36m'`, `DEFAULT_WATER_MODEL = 'tip3p'`.
 
   # SYSTEM TYPE DETERMINES THE PIPELINE
-  - **protein** (only `.pdb` in `/input/`): call `prepare_protein(pdb, name)` → `em → nvt → npt → md`.
-  - **ligand / surfactant** (any `.itp` present): SKIP `pdb2gmx` (it only handles standard amino/nucleic acids); copy the provided `.top`/`.itp` to the work dir (already done by `quick_setup`); use the provided `.gro`/`.pdb` as starting structure; build the box and solvate manually with `gmx editconf` + `gmx solvate` (via `run_command`), then `em → nvt → npt → md`.
-  - **mixed** (protein–ligand complex): treat as ligand path — topology is provided; `pdb2gmx` will fail on heteroatoms.
+  - **protein** (only `.pdb` in `/input/`): call `prepare_protein(pdb, name)` -> `em -> nvt -> npt -> md`.
+  - **ligand / surfactant** (any `.itp` present): SKIP `pdb2gmx` (it only handles standard amino/nucleic acids); copy the provided `.top`/`.itp` to the work dir (already done by `quick_setup`); use the provided `.gro`/`.pdb` as starting structure; build the box and solvate manually with `gmx editconf` + `gmx solvate` (via `run_command`), then `em -> nvt -> npt -> md`.
+  - **mixed** (protein-ligand complex): treat as ligand path -- topology is provided; `pdb2gmx` will fail on heteroatoms.
 
   # FORCE FIELD AND WATER MODEL
   - Proteins: `charmm36m` (recommended) or `amber14sb`. The container ships both.
@@ -61,8 +61,8 @@ instructions: |
   - Water: `tip3p` with charmm/amber; `spc/e` with gromos.
 
   # EQUILIBRATION RULES
-  - Order: **EM** (steepest descent until `Fmax < 1000 kJ/mol/nm`) → **NVT** (100–500 ps) → **NPT** (100–500 ps) → **production MD**.
-  - **NEVER skip NVT** for surfactants, membranes, or ligand systems. Jumping EM → NPT introduces pressure coupling before temperature equilibrates and produces "One or more water molecules cannot be settled" SETTLE errors. `run_mdrun_adaptive` will attempt to insert an NVT step automatically on SETTLE in NPT, but it is far cheaper to schedule NVT explicitly.
+  - Order: **EM** (steepest descent until `Fmax < 1000 kJ/mol/nm`) -> **NVT** (100-500 ps) -> **NPT** (100-500 ps) -> **production MD**.
+  - **NEVER skip NVT** for surfactants, membranes, or ligand systems. Jumping EM -> NPT introduces pressure coupling before temperature equilibrates and produces "One or more water molecules cannot be settled" SETTLE errors. `run_mdrun_adaptive` will attempt to insert an NVT step automatically on SETTLE in NPT, but it is far cheaper to schedule NVT explicitly.
   - Use a smaller timestep (`dt = 1 fs` or `0.5 fs`) for the NVT step of fragile systems.
   - **Thermostat**: `V-rescale` for production; `Berendsen` only for early equilibration (does not produce a correct canonical ensemble).
   - **Barostat**: `Parrinello-Rahman` for production; `Berendsen` only for early NPT equilibration.
@@ -83,7 +83,7 @@ instructions: |
   | `tc-grps = <custom names>`      | `-n <index.ndx>` (pass `index=` to `grompp`) |
   | `continuation = yes`            | `-t state.cpt` (pass `checkpoint=` to `grompp`) |
   | `gen_vel = yes`                 | Fresh start; do **not** supply a checkpoint  |
-  | `nstxout=0` AND `nstxout-compressed=0` | No trajectory will be written — fix the MDP or call `ensure_xtc` later |
+  | `nstxout=0` AND `nstxout-compressed=0` | No trajectory will be written -- fix the MDP or call `ensure_xtc` later |
   | `pcoupl = Berendsen`            | Equilibration only; switch to Parrinello-Rahman for production |
   | `tcoupl = Berendsen`            | Equilibration only; switch to V-rescale for production |
 
@@ -95,12 +95,12 @@ instructions: |
   | `gyrate` | `"1\n"`                        | Protein                   |
   | `sasa`   | `"1\n"`                        | Protein                   |
   | `hbond`  | `"1\n1\n"`                     | Protein donor + acceptor  |
-  | `energy` | *(none — caller supplies)*     | e.g. `"11\n12\n0\n"` = Potential + Total + end |
+  | `energy` | *(none -- caller supplies)*     | e.g. `"11\n12\n0\n"` = Potential + Total + end |
 
   Override with `groups=` when the system has custom index groups (`gmx make_ndx -f structure.gro -o index.ndx` then `index='index.ndx'` to `grompp`).
 
   # SANITY CHECKS AFTER PRODUCTION MD
-  - Temperature should fluctuate around the target (e.g. 300 ± 5 K); large deviations indicate thermostat failure.
+  - Temperature should fluctuate around the target (e.g. 300 +/- 5 K); large deviations indicate thermostat failure.
   - Pressure for NPT should average ~1 bar (fluctuations of tens of bar are normal).
   - Total energy should be stable (no drift > 0.1 % over the trajectory).
   - RMSD should plateau; continuously increasing RMSD suggests unfolding (may or may not be expected).
@@ -146,7 +146,7 @@ instructions: |
 
           # Step 1: preparation
           if system_type == "protein":
-              prepare_protein(pdb, name)            # → {name}_ions.gro + {name}.top
+              prepare_protein(pdb, name)            # -> {name}_ions.gro + {name}.top
               em_input = f"{name}_ions.gro"
           else:
               # Ligand / mixed: caller supplies {name}.top and a starting .gro.
@@ -161,7 +161,7 @@ instructions: |
               )
               run_mdrun_adaptive(
                   f"{name}_{phase}", phase=phase,
-                  # SETTLE→NVT auto-recovery needs these for NPT:
+                  # SETTLE->NVT auto-recovery needs these for NPT:
                   input_gro=(f"{name}_nvt.gro" if phase == "npt" else None),
                   topology=(f"{name}.top"      if phase == "npt" else None),
               )
@@ -197,7 +197,7 @@ instructions: |
       save_final_results(results, OUTPUT_DIR)
   ```
 
-  Adapt the skeleton for the user's request — drop steps you don't need, add analyses they asked for, swap the preparation block for the ligand/membrane path. Do not re-implement helpers; do not bypass `grompp_for_phase` / `run_mdrun_adaptive` / `run_analysis`.
+  Adapt the skeleton for the user's request -- drop steps you don't need, add analyses they asked for, swap the preparation block for the ligand/membrane path. Do not re-implement helpers; do not bypass `grompp_for_phase` / `run_mdrun_adaptive` / `run_analysis`.
 
   # PRE-SUBMIT CHECKLIST
   - [ ] System type detected; correct preparation entry point chosen.
