@@ -16,29 +16,29 @@ instructions: |
   **NOT available:** rdkit, matplotlib, scipy, biopython. Do NOT import these.
 
   ## AGENT SCOPE
-  **IN SCOPE**: Data retrieval and enrichment from ChEMBL — compounds, targets, bioactivities, PDB cross-references, congeneric series.
+  **IN SCOPE**: Data retrieval and enrichment from ChEMBL -- compounds, targets, bioactivities, PDB cross-references, congeneric series.
   **OUT OF SCOPE**: Visualization, statistical analysis, ML. Focus on retrieving and structuring data.
 
-  **ALWAYS use `from chembl_utils import ChEMBLUtils`** — this is the ONLY supported way to access ChEMBL data. It handles pagination, rate limiting, parallel fetching, and NaN-safe JSON serialization.
+  **ALWAYS use `from chembl_utils import ChEMBLUtils`** -- this is the ONLY supported way to access ChEMBL data. It handles pagination, rate limiting, parallel fetching, and NaN-safe JSON serialization.
 
   ## CRITICAL RULES
 
   1. **Store final results in `final_results.json`** with a `metadata` section containing: `query`, `total_*_available`, `*_retrieved`, `retrieval_limits`, `timestamp`.
-  2. **ALL search/bioactivity methods return tuples** `(results, total_count)` — you MUST unpack both values.
-  3. **Methods documented with `*` use keyword-only arguments** — pass those parameters by name, not position.
+  2. **ALL search/bioactivity methods return tuples** `(results, total_count)` -- you MUST unpack both values.
+  3. **Methods documented with `*` use keyword-only arguments** -- pass those parameters by name, not position.
   4. **Use `utils.save_json()`** for all JSON output (handles NaN values safely).
-  5. **Only use documented functions** — no invented/placeholder functions.
+  5. **Only use documented functions** -- no invented/placeholder functions.
   6. **Single comprehensive script** for all retrieval and enrichment steps.
   7. **For large datasets (>100 items)**, use incremental processing and batch methods.
 
   ```python
-  # CORRECT — keyword args + tuple unpacking
+  # CORRECT -- keyword args + tuple unpacking
   compounds, total = utils.search_compounds(query="aspirin", limit=100)
 
-  # WRONG — positional arg for a keyword-only method (TypeError!)
+  # WRONG -- positional arg for a keyword-only method (TypeError!)
   compounds, total = utils.search_compounds("aspirin", limit=100)
 
-  # WRONG — missing unpacking (compounds becomes a tuple!)
+  # WRONG -- missing unpacking (compounds becomes a tuple!)
   compounds = utils.search_compounds(query="aspirin", limit=100)
   ```
 
@@ -48,30 +48,30 @@ instructions: |
 
   Create the utility with `utils = ChEMBLUtils()`; optionally pass `max_workers=10` to tune parallel batch fetching.
 
-  **Search methods** — all return `(results_list, total_count)`, all use keyword-only args:
-  - `search_compounds(*, query, limit=500, filters=None)` — multi-word = AND logic; many results have `pref_name=None` (matched via synonyms)
+  **Search methods** -- all return `(results_list, total_count)`, all use keyword-only args:
+  - `search_compounds(*, query, limit=500, filters=None)` -- multi-word = AND logic; many results have `pref_name=None` (matched via synonyms)
   - `search_targets(*, query, limit=500)`
   - `get_bioactivities_for_compound(*, molecule_chembl_id, limit=1000)`
   - `get_bioactivities_for_target(*, target_chembl_id, limit=1000)`
-  - `search_bioactivities(*, filters, limit=5000)` — `filters` is a dict of ChEMBL activity API params with Django-style lookups (`__gt`, `__gte`, `__lt`, `__lte`, `__in`, `__isnull`, etc.)
+  - `search_bioactivities(*, filters, limit=5000)` -- `filters` is a dict of ChEMBL activity API params with Django-style lookups (`__gt`, `__gte`, `__lt`, `__lte`, `__in`, `__isnull`, etc.)
     Examples: `{'assay_type': 'A', 'standard_value__isnull': 'false'}` (ADME data), `{'standard_type': 'IC50', 'pchembl_value__isnull': 'false'}` (high-quality IC50s)
 
   **Single-item retrieval:**
-  - `get_compound_by_chembl_id(*, chembl_id)` — returns detailed compound dict
-  - `get_target_by_chembl_id(*, chembl_id)` — returns detailed target dict
+  - `get_compound_by_chembl_id(*, chembl_id)` -- returns detailed compound dict
+  - `get_target_by_chembl_id(*, chembl_id)` -- returns detailed target dict
 
-  **Batch retrieval** (parallel by default, 1.5–3× faster):
-  - `get_compounds_by_chembl_ids(*, chembl_ids, parallel=True)` — returns list of compound dicts
-  - `get_targets_by_chembl_ids(*, chembl_ids, parallel=True)` — returns list of target dicts
+  **Batch retrieval** (parallel by default, 1.5-3x faster):
+  - `get_compounds_by_chembl_ids(*, chembl_ids, parallel=True)` -- returns list of compound dicts
+  - `get_targets_by_chembl_ids(*, chembl_ids, parallel=True)` -- returns list of target dicts
 
   **Enrichment & analysis:**
-  - `enrich_bioactivities_with_compound_info(bioactivities, max_compounds=None, parallel=True)` — memory-efficient; adds `compound_name`, `compound_smiles`, `compound_max_phase`, `compound_molecular_weight`, `compound_alogp`, `compound_psa`, `compound_hba`, `compound_hbd` to each record
-  - `cross_reference_with_pdb(*, target_name)` — cross-reference target with PDB structures
-  - `cross_reference_ligands_with_pdb(*, target_name, output_dir)` — complete ligand-PDB workflow
-  - `analyze_congeneric_series(*, target_chembl_id, output_dir, limit=5000)` — identifies congeneric series; increase limit for large targets (e.g., EGFR has 57,722 bioactivities)
+  - `enrich_bioactivities_with_compound_info(bioactivities, max_compounds=None, parallel=True)` -- memory-efficient; adds `compound_name`, `compound_smiles`, `compound_max_phase`, `compound_molecular_weight`, `compound_alogp`, `compound_psa`, `compound_hba`, `compound_hbd` to each record
+  - `cross_reference_with_pdb(*, target_name)` -- cross-reference target with PDB structures
+  - `cross_reference_ligands_with_pdb(*, target_name, output_dir)` -- complete ligand-PDB workflow
+  - `analyze_congeneric_series(*, target_chembl_id, output_dir, limit=5000)` -- identifies congeneric series; increase limit for large targets (e.g., EGFR has 57,722 bioactivities)
 
   **PDB parsing:**
-  - `ChEMBLUtils.parse_pdb_header(pdb_file_path)` — static method; extracts classification, molecule name, organism, EC number, UniProt IDs, ligands
+  - `ChEMBLUtils.parse_pdb_header(pdb_file_path)` -- static method; extracts classification, molecule name, organism, EC number, UniProt IDs, ligands
   - For all PDB files in a directory, either loop over files and call `ChEMBLUtils.parse_pdb_header(...)`, or use the top-level convenience function `parse_pdb_files(input_dir)` from `chembl_utils`.
 
   **Top-level convenience functions (ad-hoc use only; agent scripts should prefer `ChEMBLUtils`):**
@@ -81,8 +81,8 @@ instructions: |
   - `parse_pdb_files(input_dir)` parses every `*.pdb` in a directory
 
   **JSON utilities:**
-  - `save_json(data, filepath, indent=2, chunk_size=None)` — instance method; handles NaN; `chunk_size` splits into numbered files
-  - `safe_json_serialize(obj, max_depth=100)` — static method; converts to JSON-safe format
+  - `save_json(data, filepath, indent=2, chunk_size=None)` -- instance method; handles NaN; `chunk_size` splits into numbered files
+  - `safe_json_serialize(obj, max_depth=100)` -- static method; converts to JSON-safe format
 
   ### Data Structures
 
@@ -91,7 +91,7 @@ instructions: |
   Detailed compound retrieval (`get_compound_by_chembl_id` and batch retrieval) auto-converts numeric fields to Python floats/ints. Search results may contain raw API strings for some numeric properties; fetch details before numeric analysis if needed.
 
   **Target fields** (from `search_targets`):
-  `chembl_id` (use this, NOT `target_chembl_id`), `pref_name`, `target_type` (uses SPACES: `"SINGLE PROTEIN"`, `"PROTEIN COMPLEX"`, etc. — NOT underscores), `organism`, `tax_id`, `target_components`.
+  `chembl_id` (use this, NOT `target_chembl_id`), `pref_name`, `target_type` (uses SPACES: `"SINGLE PROTEIN"`, `"PROTEIN COMPLEX"`, etc. -- NOT underscores), `organism`, `tax_id`, `target_components`.
 
   **Bioactivity fields** (from `get_bioactivities_for_target/compound`):
   `activity_id`, `molecule_chembl_id`, `canonical_smiles`, `target_chembl_id`, `target_pref_name` (from `search_bioactivities`), `target_organism` (from `search_bioactivities`), `assay_chembl_id`, `assay_type` (F/B/A/T/P/U), `assay_description`, `standard_type` (IC50/Ki/Kd/EC50/etc.), `standard_value` (float), `standard_units`, `standard_relation`, `pchembl_value` (float), `activity_comment`, `data_validity_comment`, `bao_format`, `bao_label`, `type` (target/compound bioactivity methods).
@@ -99,21 +99,21 @@ instructions: |
 
   **`analyze_congeneric_series()` returns:**
   `status`, `target_chembl_id`, `bioactivities_retrieved`, `bioactivities_available`, `total_ligands`, `total_congeneric_groups`, `congeneric_series` (list of `{connectivity_key, series_size, ligands}`).
-  Access via `results['congeneric_series']` — NOT `congeneric_groups`.
+  Access via `results['congeneric_series']` -- NOT `congeneric_groups`.
 
   ### Filter Operators
   `field` (exact), `field__isnull`, `field__contains`, `field__icontains`, `field__in`, `field__gt/gte/lt/lte`, `order_by`.
 
   ### Query Parsing
   Remove generic descriptors (peptide, protein, drug, compound, molecule, chemical, etc.) from user queries:
-  - "TAT peptide" → `query="TAT"`; "aspirin drug" → `query="aspirin"`
+  - "TAT peptide" -> `query="TAT"`; "aspirin drug" -> `query="aspirin"`
   Keep multi-word terms that are distinct entities: "EGFR kinase", "BRAF V600E", "PI3K mTOR".
 
   Apply filters based on intent:
-  - "approved" → `filters={'max_phase': '4'}`
-  - "clinical" → `filters={'max_phase__isnull': 'false'}`
-  - "small molecule" → `filters={'molecule_type': 'Small molecule'}`
-  - Exploratory → no filters
+  - "approved" -> `filters={'max_phase': '4'}`
+  - "clinical" -> `filters={'max_phase__isnull': 'false'}`
+  - "small molecule" -> `filters={'molecule_type': 'Small molecule'}`
+  - Exploratory -> no filters
 
   ### Key Patterns
 
@@ -172,7 +172,7 @@ instructions: |
 
   ### Workflow Patterns
 
-  **Pattern 1 — Filtering bioactivities by compound properties (e.g., approved drugs):**
+  **Pattern 1 -- Filtering bioactivities by compound properties (e.g., approved drugs):**
   Bioactivity records do NOT contain `max_phase`. Trying `df['max_phase']` on a bioactivity DataFrame will raise a KeyError. You must fetch compound details separately:
   ```python
   # Get bioactivities for a target
@@ -183,14 +183,14 @@ instructions: |
   # Batch fetch compound details
   compound_details = utils.get_compounds_by_chembl_ids(chembl_ids=unique_ligands[:100])
 
-  # Filter by max_phase — format can be '4', '4.0', etc.
+  # Filter by max_phase -- format can be '4', '4.0', etc.
   approved_drugs = [c for c in compound_details
                     if 'error' not in c
                     and c.get('max_phase', '').startswith('4')]
   print(f"Found {len(approved_drugs)} approved drugs")
   ```
 
-  **Pattern 2 — DataFrame merge for SAR analysis (use only for small datasets):**
+  **Pattern 2 -- DataFrame merge for SAR analysis (use only for small datasets):**
   For large datasets, prefer `enrich_bioactivities_with_compound_info()` (Pattern in Key Patterns above). Use this DataFrame merge approach only when you need full DataFrame control on small datasets (<200 bioactivities):
   ```python
   bioactivities, total = utils.get_bioactivities_for_target(target_chembl_id=target_id, limit=200)
@@ -209,7 +209,7 @@ instructions: |
       # Now you can access: alogp, molecular_weight, psa alongside pchembl_value
   ```
 
-  **Pattern 3 — Diversity analysis (numeric fields are auto-converted):**
+  **Pattern 3 -- Diversity analysis (numeric fields are auto-converted):**
   ```python
   bioactivities, total = utils.get_bioactivities_for_target(target_chembl_id=target_id, limit=500)
   df_bioact = pd.DataFrame(bioactivities)
@@ -220,7 +220,7 @@ instructions: |
 
   if ligand_details:
       df_ligands = pd.DataFrame(ligand_details)
-      # Numeric fields are already proper types — no pd.to_numeric() needed:
+      # Numeric fields are already proper types -- no pd.to_numeric() needed:
       diversity_summary = {
           'total_ligands': len(df_ligands),
           'unique_smiles': df_ligands['smiles'].nunique(),
@@ -231,9 +231,9 @@ instructions: |
       }
   ```
 
-  **Pattern 4 — Multi-target analysis (watch for API call explosion):**
+  **Pattern 4 -- Multi-target analysis (watch for API call explosion):**
   ```python
-  # Be strategic — don't fetch 100 targets × 1000 bioactivities
+  # Be strategic -- don't fetch 100 targets x 1000 bioactivities
   targets, total = utils.search_targets(query="EGFR", limit=5)
   for target in targets[:3]:  # Limit to top matches
       bioactivities, bio_total = utils.get_bioactivities_for_target(
@@ -241,7 +241,7 @@ instructions: |
       print(f"{target['pref_name']}: {len(bioactivities)}/{bio_total} bioactivities")
   ```
 
-  **Pattern 5 — Handling pref_name=None (very common):**
+  **Pattern 5 -- Handling pref_name=None (very common):**
   Many compounds have `pref_name=None` because they matched via synonyms, not preferred names. To resolve names:
   ```python
   for compound in compounds:
@@ -257,11 +257,11 @@ instructions: |
   ### Common Pitfalls
   1. Use batch methods, not loops for individual fetches
   2. Check `if ligand_details:` before creating DataFrames
-  3. Bioactivity uses `molecule_chembl_id`; compound details use `chembl_id` — merge on these
+  3. Bioactivity uses `molecule_chembl_id`; compound details use `chembl_id` -- merge on these
   4. Detailed compound and bioactivity numeric fields are auto-converted; for numeric analysis of broad search results, batch-fetch detailed compounds first
   5. Filter `pchembl_value` for NaN: `df[df['pchembl_value'].notna()]`
   6. Check for `None` before accessing properties: `if compound.get('smiles'):`
-  7. `max_phase` format varies ('4' or '4.0') — use `str.startswith('4')` or `df['max_phase'].str.startswith('4', na=False)`
+  7. `max_phase` format varies ('4' or '4.0') -- use `str.startswith('4')` or `df['max_phase'].str.startswith('4', na=False)`
   8. Always use `utils.save_json()` for JSON output (handles NaN from DataFrames)
   9. Always check field existence: `if 'standard_type' in df.columns:`
 
