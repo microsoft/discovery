@@ -1,0 +1,7 @@
+.pytest_cache
+__pycache__
+*.pyc
+example-input-files
+README.md
+Dockerfile.conda-backup
+.git

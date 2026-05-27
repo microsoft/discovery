@@ -1,0 +1,33 @@
+{
+  "n_selected": 20,
+  "by_strategy": {
+    "novelty": 7,
+    "error": 7,
+    "uncertainty": 6
+  },
+  "by_ad_flag": {
+    "edge": 11,
+    "out-of-distribution": 9
+  },
+  "by_nodepool": {
+    "d48sv6small": 13,
+    "d128sv6med": 4,
+    "h100": 3
+  },
+  "n_heavy_stats": {
+    "min": 2,
+    "max": 31,
+    "mean": 13.3,
+    "median": 12.0
+  },
+  "tanimoto_stats": {
+    "min": 0.1209477124183006,
+    "max": 0.4464646464646464,
+    "median": 0.3171916318975142
+  },
+  "abs_err_stats": {
+    "min": 0.0307992265182854,
+    "max": 2.253607013169863,
+    "median": 0.8934625899883526
+  }
+}

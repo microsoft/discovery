@@ -1,0 +1,16 @@
+name: chembl
+type: agent
+version: 1.0.0
+associated_tools:
+  - agents/chembl/tools/ChEMBL
+publisher:
+  name: Microsoft
+  contact: discovery-catalog@microsoft.com
+  support_url: https://github.com/microsoft/discovery/discussions/categories/bugs
+  party: 1p
+description: >
+  ChEMBL agent for retrieving chemical and bioactivity data from the ChEMBL database. Provides access to compound information, target data, bioactivity measurements, and cross-references with PDB structures.
+tags:
+  - cheminformatics
+  - bioactivity
+  - database

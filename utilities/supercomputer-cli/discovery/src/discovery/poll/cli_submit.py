@@ -208,7 +208,7 @@ def normalize_memory(memory: str | None) -> str | None:
 # ---------------------------------------------------------------------------
 
 _DEVICE_FLOW_POLL_INTERVAL = 5  # seconds between log checks
-_DEVICE_FLOW_POLL_TIMEOUT = 300  # give up after 5 minutes
+_DEVICE_FLOW_POLL_TIMEOUT = 1800  # give up after 30 minutes (jobs can queue for a while)
 
 
 _VALID_PROVIDERS = ("github", "microsoft")
