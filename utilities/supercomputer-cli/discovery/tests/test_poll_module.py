@@ -480,3 +480,139 @@ class TestOperationsListDualKey:
         dumped = result.model_dump(by_alias=True)
         assert "values" in dumped
         assert "value" not in dumped
+# -------- connect_debug_container contract --------
+
+
+class _ConnectStubResponse:
+    def __init__(
+        self,
+        status_code: int = 200,
+        payload: dict[str, Any] | None = None,
+    ) -> None:
+        self.status_code = status_code
+        self.ok = 200 <= status_code < 300
+        self.headers = {"content-type": "application/json"}
+        body = json.dumps(payload or {})
+        self.text = body
+        self.content = body.encode("utf-8")
+        self._payload = payload or {}
+
+    def raise_for_status(self) -> None:
+        if self.status_code >= 400:
+            msg = "stub http error"
+            raise dataplane_api.httpx.HTTPStatusError(
+                msg, request=None, response=None  # type: ignore[arg-type]
+            )
+
+    def json(self) -> dict[str, Any]:
+        return self._payload
+
+
+def _install_connect_stub(
+    monkeypatch: pytest.MonkeyPatch,
+    *,
+    response_payload: dict[str, Any] | None = None,
+    status_code: int = 200,
+    captured: dict[str, Any] | None = None,
+) -> None:
+    monkeypatch.setattr(
+        dataplane_api, "get_access_token", lambda scope=dataplane_api.DEFAULT_SCOPE: "tok"
+    )
+
+    class StubClient:
+        def __enter__(self) -> StubClient:
+            return self
+
+        def __exit__(self, exc_type, exc, tb) -> None:  # type: ignore[override]
+            return None
+
+        def post(self, url: str, **kwargs: Any) -> _ConnectStubResponse:
+            if captured is not None:
+                captured["url"] = url
+                captured["kwargs"] = kwargs
+            return _ConnectStubResponse(status_code=status_code, payload=response_payload)
+
+        def get(self, url: str, **kwargs: Any) -> _ConnectStubResponse:
+            if captured is not None:
+                captured["url"] = url
+                captured["kwargs"] = kwargs
+            return _ConnectStubResponse(status_code=status_code, payload=response_payload)
+
+    monkeypatch.setattr(dataplane_api.httpx, "Client", lambda **kwargs: StubClient())
+
+
+def test_connect_debug_container_default_pod_omits_query(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    captured: dict[str, Any] = {}
+    _install_connect_stub(
+        monkeypatch,
+        response_payload={"tunnelId": "t1", "tunnelName": "name-1"},
+        captured=captured,
+    )
+
+    result = dataplane_api.connect_debug_container(
+        project_name="proj",
+        operation_id="op1",
+        workspace_url="https://ws",
+    )
+
+    assert captured["url"] == "https://ws/tools/projects/proj/operations/op1:connect"
+    # No JSON body
+    assert "content" not in captured["kwargs"]
+    assert "data" not in captured["kwargs"]
+    assert "json" not in captured["kwargs"]
+    # Bearer header
+    assert captured["kwargs"]["headers"]["Authorization"] == "Bearer tok"
+    assert result["tunnelName"] == "name-1"
+
+
+def test_connect_debug_container_nonzero_pod_adds_query(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    captured: dict[str, Any] = {}
+    _install_connect_stub(monkeypatch, response_payload={}, captured=captured)
+
+    dataplane_api.connect_debug_container(
+        project_name="proj",
+        operation_id="op1",
+        workspace_url="https://ws/",
+        pod_index=3,
+    )
+
+    assert captured["url"] == "https://ws/tools/projects/proj/operations/op1:connect?pod=3"
+
+
+# -------- get_operation_pods contract --------
+
+
+def test_get_operation_pods_success(monkeypatch: pytest.MonkeyPatch) -> None:
+    captured: dict[str, Any] = {}
+    payload = {
+        "pods": [
+            {"index": 0, "role": "leader", "phase": "Running"},
+            {"index": 1, "role": "worker", "phase": "Pending"},
+        ]
+    }
+    _install_connect_stub(monkeypatch, response_payload=payload, captured=captured)
+
+    pods = dataplane_api.get_operation_pods("proj", "op1", "https://ws")
+
+    assert captured["url"] == "https://ws/tools/projects/proj/preview/operations/op1/pods"
+    assert captured["kwargs"]["headers"]["Authorization"] == "Bearer tok"
+    assert [p.index for p in pods] == [0, 1]
+    assert pods[0].role == "leader"
+    assert pods[1].phase == "Pending"
+
+
+def test_get_operation_pods_empty(monkeypatch: pytest.MonkeyPatch) -> None:
+    _install_connect_stub(monkeypatch, response_payload={"pods": []})
+    assert dataplane_api.get_operation_pods("proj", "op1", "https://ws") == []
+
+
+def test_get_operation_pods_404_raises_not_found(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    _install_connect_stub(monkeypatch, response_payload={}, status_code=404)
+    with pytest.raises(dataplane_api.OperationNotFoundError):
+        dataplane_api.get_operation_pods("proj", "op1", "https://ws")
