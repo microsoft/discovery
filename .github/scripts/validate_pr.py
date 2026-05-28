@@ -62,6 +62,7 @@ EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
 HTTPS_URL_RE = re.compile(r"^https://")
 TAG_RE = re.compile(r"^[a-z0-9]+(-[a-z0-9]+)*$")
 AGENT_NAME_RE = re.compile(r"^[A-Za-z][A-Za-z0-9_-]*$")
+TOOL_ACR_IMAGE_RE = re.compile(r"^\{name\}\.azurecr\.io/[^:\s]+(?::[^:\s]+)?$")
 
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
@@ -156,7 +157,8 @@ def validate_against_schema(data: Any, schema: dict) -> list[str]:
 
 
 def is_agent_path(rel: str) -> bool:
-    return rel.startswith("agents/")
+    rel_posix = rel.replace("\\", "/")
+    return rel_posix.startswith("agents/") and not rel_posix.startswith("agents/tmp/")
 
 
 def agent_folder_of(rel: str) -> Path | None:
@@ -166,7 +168,7 @@ def agent_folder_of(rel: str) -> Path | None:
     """
     parts = Path(rel).parts
     # Layout: agents/<name>/
-    if len(parts) >= 2 and parts[0] == "agents":
+    if len(parts) >= 2 and parts[0] == "agents" and parts[1] != "tmp":
         return Path(*parts[:2])
     return None
 
@@ -545,6 +547,24 @@ def check_schema(repo: Path, folders: set[Path], agent_schema: dict | None, tool
                             "'version' must follow Semantic Versioning (e.g., '1.0.0')."
                         ))
 
+                    # SCH-037: tool image registry must be deployment-time substituted.
+                    # The deployer replaces only the {name}.azurecr.io prefix with the
+                    # configured ACR. Hardcoded registries silently point at the wrong ACR.
+                    for infra in (data.get("infra") or []):
+                        if not isinstance(infra, dict):
+                            continue
+                        image = infra.get("image") or {}
+                        if not isinstance(image, dict):
+                            continue
+                        acr = image.get("acr")
+                        if isinstance(acr, str) and not TOOL_ACR_IMAGE_RE.match(acr.strip()):
+                            failures.append(Failure(
+                                "SCH-037", tool_rel,
+                                "tool.yaml: infra[].image.acr must use the deployer placeholder "
+                                "`{name}.azurecr.io/<image>:<tag>` instead of a hardcoded ACR name. "
+                                "Example: `{name}.azurecr.io/alphafold:latest`."
+                            ))
+
                     # SCH-034: uniqueness within tool.yaml.
                     def _dupes(items: list[str]) -> list[str]:
                         seen: set[str] = set()
@@ -699,6 +719,17 @@ def check_policy(repo: Path, folders: set[Path], changed_files: list[str]) -> li
                     "update-registry.yml workflow. Remove your changes to "
                     f"'{f}'; the registry will be rebuilt automatically after merge."
                 ))
+
+    # POL-012: deployer scratch directories are local-only run artifacts.
+    for f in changed_files:
+        rel_posix = f.replace("\\", "/")
+        if rel_posix.startswith("agents/tmp/") or rel_posix.startswith("starter-kits/tmp/"):
+            failures.append(Failure(
+                "POL-012", f,
+                "Files under agents/tmp/ and starter-kits/tmp/ are local deployer "
+                "scratch artifacts and must never be committed. Remove them from "
+                "the PR; these paths are covered by .gitignore."
+            ))
 
     return failures
 

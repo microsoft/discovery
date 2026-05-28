@@ -92,7 +92,7 @@
         "acr": {
           "type": "string",
           "minLength": 1,
-          "description": "Fully-qualified Azure Container Registry image reference (e.g. 'myregistry.azurecr.io/myimage:latest')."
+          "description": "Azure Container Registry image reference using the deployer-substituted registry placeholder (e.g. '{name}.azurecr.io/myimage:latest'). Do not hardcode a registry name."
         }
       }
     },
