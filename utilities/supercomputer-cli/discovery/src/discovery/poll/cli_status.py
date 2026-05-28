@@ -25,7 +25,9 @@ from .cli_helpers import (
     render_error_with_details,
 )
 from .dataplane_api import (
+    OperationNotFoundError,
     get_compute_status,
+    get_operation_pods,
     get_operation_status,
     list_operations,
     list_operations_page,
@@ -462,6 +464,40 @@ def status_cmd(
             table.add_row(formatted_time, completed_time, runtime_str, result.status, runtime_details)
 
             console.print(table)
+
+            # Display pods table for Running operations (preview endpoint).
+            # Best-effort: silently skip on 404/transport errors so CLIs
+            # running against servers without the pods endpoint still work.
+            if result.status == AzureCoreOperationState.RUNNING:
+                try:
+                    pods = get_operation_pods(
+                        env_cfg.project_name,
+                        operation_id,
+                        env_cfg.workspace_url,
+                    )
+                except OperationNotFoundError as ex:
+                    debug(f"Pods endpoint returned 404 for {operation_id}: {ex}")
+                    pods = None
+                except Exception as ex:  # pragma: no cover - defensive
+                    debug(f"Failed to fetch pods for {operation_id}: {ex}")
+                    pods = None
+
+                if pods:
+                    pods_table = Table(
+                        title="Pods",
+                        show_header=True,
+                        header_style="bold cyan",
+                    )
+                    pods_table.add_column("Index", style="cyan", justify="right")
+                    pods_table.add_column("Role", style="magenta")
+                    pods_table.add_column("Phase", style="green")
+                    for pod in pods:
+                        pods_table.add_row(str(pod.index), pod.role, pod.phase)
+                    console.print(pods_table)
+                elif pods == []:
+                    console.print(
+                        "[dim]No pods reported yet for this running operation.[/dim]"
+                    )
 
             is_failed = result.status in ("Failed", "Canceled")
 
