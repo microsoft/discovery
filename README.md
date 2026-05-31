@@ -1,4 +1,4 @@
-# Microsoft Discovery
+# Microsoft Discovery Community Repository
 
 Welcome to the **Microsoft Discovery community** — the public home for the Discovery platform, where users, partners, and the product team build together. Share what you've built, ask questions, file bugs, suggest ideas, and see what other Discovery users are doing across disciplines.
 
