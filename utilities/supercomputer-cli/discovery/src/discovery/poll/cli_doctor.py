@@ -24,6 +24,12 @@ from rich.console import Console
 from rich.table import Table
 
 from discovery._version import get_build_commit, get_version_string
+from discovery.common.auto_update import (
+    CHECK_INTERVAL_HOURS,
+    cache_is_stale,
+    is_opted_out,
+    load_cache,
+)
 from discovery.common.paths import get_config_file_path
 from discovery.poll.az_extensions import check_required_extensions
 
@@ -36,6 +42,7 @@ console = Console()
 _EXPECTED_MODULES = [
     "discovery",
     "discovery.common",
+    "discovery.common.auto_update",
     "discovery.common.config",
     "discovery.common.logging",
     "discovery.poll",
@@ -53,6 +60,7 @@ _EXPECTED_MODULES = [
     "discovery.poll.cli_status",
     "discovery.poll.cli_storage",
     "discovery.poll.cli_submit",
+    "discovery.poll.cli_update",
     "discovery.poll.dataplane_api",
     "discovery.poll.deploy_dataasset",
     "discovery.poll.deploy_tooldef",
@@ -218,6 +226,39 @@ def _render_az_extensions_section() -> bool:
     return True
 
 
+def _render_update_check_section() -> None:
+    """Render the auto-update checker status.
+
+    Informational only — never fails the doctor exit code. Surfaces
+    whether checks are enabled, when the cache was last refreshed, and
+    whether a newer release is currently pending.
+    """
+    state = load_cache()
+    if is_opted_out(state):
+        console.print(
+            "  [yellow]![/yellow] Update checks: [yellow]disabled[/yellow] "
+            "(use `discovery update --enable`)"
+        )
+        return
+
+    last = state.last_checked or "never"
+    if state.last_checked and cache_is_stale(state):
+        last = f"{last} [yellow](stale; >{CHECK_INTERVAL_HOURS}h ago)[/yellow]"
+    console.print(f"  Update checks last refreshed: {last}")
+
+    current = get_build_commit()
+    if state.latest_commit and state.latest_commit != current:
+        console.print(
+            f"  [yellow]![/yellow] Update available: "
+            f"[green]{state.latest_commit}[/green] "
+            f"(run `discovery update` to install)"
+        )
+    elif state.latest_commit:
+        console.print(
+            f"  [green]✓[/green] CLI is up to date ({current})"
+        )
+
+
 @app.command(name="doctor")
 def doctor_command() -> None:
     """Check installation health and report diagnostics."""
@@ -280,6 +321,11 @@ def doctor_command() -> None:
     # surfaces the situation early with an actionable hint.
     if not _render_az_extensions_section():
         all_ok = False
+
+    # Update-checker status: surface the cached state so users can see
+    # whether automatic update notifications will fire and when the
+    # cache was last refreshed.
+    _render_update_check_section()
 
     console.print()
     if all_ok:

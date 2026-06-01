@@ -18,9 +18,12 @@ Note: Azure CLI (`az`) must be authenticated; token acquisition uses `az account
 
 from __future__ import annotations
 
+import atexit
+
 import typer
 
 from discovery._version import get_version_string
+from discovery.common.auto_update import maybe_notify, schedule_check
 from discovery.common.logging import set_level
 
 # Re-export from build_acr_task for tests
@@ -45,6 +48,7 @@ from .cli_smoke import app as smoke_test_app
 from .cli_status import app as status_app
 from .cli_storage import app as storage_app
 from .cli_submit import app as submit_app
+from .cli_update import app as update_app
 
 # Re-export API functions for tests
 from .dataplane_api import (  # noqa: F401
@@ -74,9 +78,23 @@ app.add_typer(smoke_app, name="smoke")
 set_level("INFO")
 
 
+def _arm_auto_update() -> None:
+    """Schedule a background update check and queue an at-exit notice.
+
+    Extracted so it can be invoked from both the root callback and the
+    eager ``--version`` handler — Typer raises ``typer.Exit`` from eager
+    callbacks before the main callback body has a chance to run, which
+    would otherwise suppress notifications for users who only run
+    ``discovery --version``.
+    """
+    schedule_check()
+    atexit.register(maybe_notify)
+
+
 def _version_callback(value: bool) -> None:
     """Print version and exit when --version is passed."""
     if value:
+        _arm_auto_update()
         typer.echo(f"discovery {get_version_string()}")
         raise typer.Exit()
 
@@ -100,12 +118,20 @@ def _root_callback(
     """Global options applied before any subcommand executes."""
     if verbose:
         set_level("DEBUG")
+    # Auto-update: spawn a daemon thread to refresh the cache when stale
+    # and queue a notification for after the command finishes. Both are
+    # no-ops when opted out, when not installed via ``uv tool``, or when
+    # the cache is already fresh.
+    _arm_auto_update()
 
 # Register configure command
 app.command(name="configure")(configure_app.registered_commands[0].callback)
 
 # Register doctor command
 app.command(name="doctor")(doctor_app.registered_commands[0].callback)
+
+# Register update command
+app.command(name="update")(update_app.registered_commands[0].callback)
 
 # ---------------------------------------------------------------------------
 # Command groups (alternative organization)

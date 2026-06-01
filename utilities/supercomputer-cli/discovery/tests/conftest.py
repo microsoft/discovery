@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import pytest
 
+from discovery.common import auto_update
 from discovery.common import logging as disc_logging
 
 
@@ -24,3 +25,15 @@ def reset_logging_console():
     yield
     disc_logging._STATE.console = None
     disc_logging._STATE.file_logger = None
+
+
+@pytest.fixture(autouse=True)
+def disable_auto_update_network(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Disable real network update checks during tests.
+
+    Tests that exercise the auto-update code paths should mock the
+    relevant helpers explicitly. This autouse fixture guarantees that
+    no test accidentally hits ``api.github.com`` simply because it
+    invokes the CLI through Typer's ``CliRunner``.
+    """
+    monkeypatch.setenv(auto_update.ENV_OPT_OUT, "1")
