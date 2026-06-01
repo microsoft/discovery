@@ -205,7 +205,7 @@ class TestDefaultMineBehavior:
 
         captured = {}
 
-        async def fake_paginated(*, env_cfg, filter_fn, limit=0, page_size=0):
+        async def fake_paginated(*, env_cfg, filter_fn, limit=0, page_size=0, target_ids=None, not_before=None):
             captured["filter_fn"] = filter_fn
 
         monkeypatch.setattr(
@@ -252,7 +252,7 @@ class TestDefaultMineBehavior:
 
         captured = {}
 
-        async def fake_paginated(*, env_cfg, filter_fn, limit=0, page_size=0):
+        async def fake_paginated(*, env_cfg, filter_fn, limit=0, page_size=0, target_ids=None, not_before=None):
             captured["filter_fn"] = filter_fn
 
         monkeypatch.setattr(
@@ -301,7 +301,7 @@ class TestDefaultMineBehavior:
 
         captured = {}
 
-        async def fake_paginated(*, env_cfg, filter_fn, limit=0, page_size=0):
+        async def fake_paginated(*, env_cfg, filter_fn, limit=0, page_size=0, target_ids=None, not_before=None):
             captured["filter_fn"] = filter_fn
 
         monkeypatch.setattr(
@@ -348,7 +348,7 @@ class TestDefaultMineBehavior:
 
         captured = {}
 
-        async def fake_paginated(*, env_cfg, filter_fn, limit=0, page_size=0):
+        async def fake_paginated(*, env_cfg, filter_fn, limit=0, page_size=0, target_ids=None, not_before=None):
             captured["filter_fn"] = filter_fn
 
         monkeypatch.setattr(
@@ -394,7 +394,7 @@ class TestDefaultMineBehavior:
 
         captured = {}
 
-        async def fake_paginated(*, env_cfg, filter_fn, limit=0, page_size=0):
+        async def fake_paginated(*, env_cfg, filter_fn, limit=0, page_size=0, target_ids=None, not_before=None):
             captured["filter_fn"] = filter_fn
 
         monkeypatch.setattr(
@@ -419,6 +419,179 @@ class TestDefaultMineBehavior:
 # ---------------------------------------------------------------------------
 # Submit-site integration
 # ---------------------------------------------------------------------------
+
+
+# ---------------------------------------------------------------------------
+# Paginator early-exit (target_ids + not_before)
+# ---------------------------------------------------------------------------
+
+
+class TestPaginatorEarlyExit:
+    """When the local-history filter is in effect the paginator should
+    stop pulling pages as soon as it has matched every locally-known
+    ID, and also stop when it scans past the oldest known submission."""
+
+    def _make_op(self, op_id: str, *, age_seconds: int = 0):
+        """Build a minimal OperationsResultModel-shaped mock."""
+        op = MagicMock()
+        op.id = op_id
+        op.created_at = datetime.now(tz=timezone.utc) - timedelta(seconds=age_seconds)
+        op.completed_at = None
+        op.created_by = "someone"
+        op.nodepool_id = "x"
+        op.status = "Running"
+        return op
+
+    def _make_page(self, ops, next_link=None):
+        page = MagicMock()
+        page.values = ops
+        page.next_link = next_link
+        return page
+
+    def test_stops_after_matching_all_target_ids(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Two ops on the first page match the local-history set; no
+        further API pages should be fetched even though next_link is
+        present."""
+        _seed_history(workspace="https://ws.example")
+
+        fake_cfg = MagicMock()
+        fake_cfg.workspace_url = "https://ws.example"
+        fake_cfg.project_name = "demo"
+        fake_cfg.api_version = "x"
+        fake_cfg.nodepools = []
+        monkeypatch.setattr(
+            "discovery.poll.cli_status.load_project_config",
+            lambda *_a, **_k: fake_cfg,
+        )
+        monkeypatch.setattr(
+            "discovery.poll.cli_status.get_config_file_path",
+            lambda: Path("/tmp/ignored"),
+        )
+        monkeypatch.setattr(
+            "discovery.poll.cli_status.emit_env", lambda *_a, **_k: None
+        )
+        # Force the display batch size to be large enough that fill-up
+        # isn't the reason for the stop.
+        monkeypatch.setattr(
+            "discovery.poll.cli_status.shutil.get_terminal_size",
+            lambda: MagicMock(lines=100),
+        )
+
+        first_page = self._make_page(
+            [
+                self._make_op("op-1"),
+                self._make_op("op-2"),
+                self._make_op("op-other"),
+            ],
+            next_link="https://api.example/next",
+        )
+
+        list_calls: list = []
+        page_calls: list = []
+
+        def fake_list_operations(*a, **kw):
+            list_calls.append((a, kw))
+            return first_page
+
+        def fake_list_operations_page(link):
+            page_calls.append(link)
+            return self._make_page(
+                [self._make_op("op-also-not-mine")], next_link=None
+            )
+
+        monkeypatch.setattr(
+            "discovery.poll.cli_status.list_operations",
+            fake_list_operations,
+        )
+        monkeypatch.setattr(
+            "discovery.poll.cli_status.list_operations_page",
+            fake_list_operations_page,
+        )
+
+        result = runner.invoke(app, ["job", "list"])
+        assert result.exit_code == 0
+        # Both seeded mine-IDs in the workspace are on the first page,
+        # so list_operations_page should NEVER have been called.
+        assert len(list_calls) == 1
+        assert page_calls == [], (
+            f"Expected no follow-up pages but got {page_calls!r}"
+        )
+
+    def test_stops_when_op_predates_oldest_mine_submission(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """The single mine-id isn't on the first page, but the page
+        crosses into ops older than our oldest local submission;
+        the paginator should stop without fetching more."""
+        # History: a single recent submission; the cutoff will be ~1h
+        # before this timestamp.
+        job_history.record_submission(
+            "needle-op",
+            workspace_url="https://ws.example",
+            project_name="proj-1",
+            submitted_at=(
+                datetime.now(tz=timezone.utc) - timedelta(seconds=30)
+            ).isoformat().replace("+00:00", "Z"),
+        )
+
+        fake_cfg = MagicMock()
+        fake_cfg.workspace_url = "https://ws.example"
+        fake_cfg.project_name = "demo"
+        fake_cfg.api_version = "x"
+        fake_cfg.nodepools = []
+        monkeypatch.setattr(
+            "discovery.poll.cli_status.load_project_config",
+            lambda *_a, **_k: fake_cfg,
+        )
+        monkeypatch.setattr(
+            "discovery.poll.cli_status.get_config_file_path",
+            lambda: Path("/tmp/ignored"),
+        )
+        monkeypatch.setattr(
+            "discovery.poll.cli_status.emit_env", lambda *_a, **_k: None
+        )
+        monkeypatch.setattr(
+            "discovery.poll.cli_status.shutil.get_terminal_size",
+            lambda: MagicMock(lines=100),
+        )
+
+        # First page: 3 ops, all far older (~2 days) than the local
+        # submission cutoff. None match by ID either.
+        old_ops = [
+            self._make_op(f"unrelated-{i}", age_seconds=2 * 86400)
+            for i in range(3)
+        ]
+        first_page = self._make_page(old_ops, next_link="https://api.example/next")
+
+        list_calls: list = []
+        page_calls: list = []
+
+        def fake_list_operations(*a, **kw):
+            list_calls.append((a, kw))
+            return first_page
+
+        def fake_list_operations_page(link):
+            page_calls.append(link)
+            return self._make_page([], next_link=None)
+
+        monkeypatch.setattr(
+            "discovery.poll.cli_status.list_operations",
+            fake_list_operations,
+        )
+        monkeypatch.setattr(
+            "discovery.poll.cli_status.list_operations_page",
+            fake_list_operations_page,
+        )
+
+        result = runner.invoke(app, ["job", "list"])
+        assert result.exit_code == 0
+        # First op already predates the cutoff (~1h ago, ops are ~2d old),
+        # so the not_before guard should fire on op #1 — no follow-up
+        # pages and only one op actually scanned.
+        assert len(list_calls) == 1
+        assert page_calls == []
 
 
 class TestRecorderIntegration:

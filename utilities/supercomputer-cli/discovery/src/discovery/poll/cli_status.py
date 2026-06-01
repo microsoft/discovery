@@ -15,6 +15,7 @@ from rich.status import Status
 from rich.table import Table
 
 from discovery.common.job_history import (
+    load_history,
     local_operation_ids,
 )
 from discovery.common.logging import debug, error, info
@@ -88,6 +89,34 @@ def _mine_ids_or_hint(env_cfg) -> set[str] | None:
         )
         return None
     return ids
+
+
+def _oldest_mine_submission(env_cfg, *, slack: timedelta = timedelta(hours=1)) -> datetime | None:
+    """Return ``min(submitted_at)`` across local history for this workspace.
+
+    Used as a ``not_before`` cutoff for the paginator: operations older
+    than this are guaranteed not to be in the local history (since they
+    would have to predate the very first job we ever recorded here).
+
+    A small ``slack`` is subtracted to account for clock skew between
+    the local machine and the Discovery service — better to scan one
+    extra op than to incorrectly skip a match.
+    """
+    entries = load_history(workspace_url=env_cfg.workspace_url)
+    timestamps: list[datetime] = []
+    for entry in entries:
+        if not entry.submitted_at:
+            continue
+        try:
+            ts = datetime.fromisoformat(entry.submitted_at.replace("Z", "+00:00"))
+        except ValueError:
+            continue
+        if ts.tzinfo is None:
+            ts = ts.replace(tzinfo=timezone.utc)
+        timestamps.append(ts)
+    if not timestamps:
+        return None
+    return min(timestamps) - slack
 
 
 @app.command("running")
@@ -268,6 +297,8 @@ def list_cmd(
             env_cfg=env_cfg,
             filter_fn=matches_filters,
             limit=limit,
+            target_ids=mine_ids,
+            not_before=_oldest_mine_submission(env_cfg) if mine_ids else None,
         )
     )
 
@@ -296,6 +327,10 @@ def _list_helper(
             filter_fn=matches_status,
             limit=limit,
             page_size=page_size,
+            target_ids=mine_ids,
+            not_before=(
+                _oldest_mine_submission(env_cfg) if mine_ids else None
+            ),
         )
     )
 
@@ -305,12 +340,25 @@ async def _paginated_list(
     filter_fn,
     limit: int = 0,
     page_size: int = 0,
+    target_ids: set[str] | None = None,
+    not_before: datetime | None = None,
 ) -> None:
     """Async implementation of paginated list.
 
     Fetches pages until page_size matching results are collected, then displays
     and asks user if they want to continue. Prefetches next page while waiting
     for user input to reduce perceived latency.
+
+    Args:
+        target_ids: When set, stop paginating as soon as every ID in
+            this set has been matched. Caps the scan when the caller
+            knows in advance the maximum possible result count (e.g.
+            the local-history default filter, where mine_ids is the
+            only thing that can match).
+        not_before: When set, stop paginating as soon as we encounter
+            an operation older than this timestamp. Listings come back
+            newest-first, so anything past this point can't be a
+            match. Naive datetimes are treated as UTC.
     """
     # Auto-detect page size from terminal height if not specified
     if page_size <= 0:
@@ -336,6 +384,16 @@ async def _paginated_list(
         display = np.qualified_name if np.supercomputer_name else np.name
         pool_display[np.id] = display
         pool_display[np.name] = display
+
+    # Normalize ``not_before`` to UTC for safe comparison with op.created_at
+    # (which is timezone-aware per the API model).
+    if not_before is not None and not_before.tzinfo is None:
+        not_before = not_before.replace(tzinfo=timezone.utc)
+
+    # Track which target_ids we've already matched so we can stop paginating
+    # the moment every locally-known ID has been seen.
+    matches_seen: set[str] = set()
+    early_exit = False
 
     def update_spinner() -> None:
         if spinner:
@@ -378,8 +436,20 @@ async def _paginated_list(
                 if latest_time is None or op.created_at > latest_time:
                     latest_time = op.created_at
 
+                # Time-based early-exit: results are newest-first, so once
+                # we cross ``not_before`` no later op can match.
+                if not_before is not None and op.created_at < not_before:
+                    early_exit = True
+                    debug(
+                        f"early-exit: op {op.id} is older than "
+                        f"{not_before.isoformat()}; stopping scan"
+                    )
+                    break
+
                 if filter_fn(op):
                     total_matches += 1
+                    if target_ids is not None:
+                        matches_seen.add(op.id)
                     local_time = op.created_at.astimezone()
                     formatted_time = local_time.strftime("%m-%d %H:%M")
                     completed_time = ""
@@ -397,8 +467,21 @@ async def _paginated_list(
                     raw_pool = op.nodepool_id or ""
                     pool_name = pool_display.get(raw_pool) or pool_display.get(raw_pool.split("/")[-1], raw_pool.split("/")[-1])
                     batch.append((op.id, formatted_time, completed_time, runtime_str, op.created_by, pool_name, op.status))
+
+                    # ID-based early-exit: every target accounted for.
+                    if target_ids is not None and matches_seen >= target_ids:
+                        early_exit = True
+                        debug(
+                            f"early-exit: matched all {len(target_ids)} "
+                            "target ids; stopping scan"
+                        )
+                        break
+
                     if len(batch) >= page_size:
                         break
+
+            if early_exit:
+                break
 
             # Need more results? Fetch next API page
             if len(batch) < page_size and result.next_link and (limit <= 0 or total_api_results < limit):
@@ -462,6 +545,13 @@ async def _paginated_list(
         # Check if we hit the search limit
         if total_api_results >= limit:
             debug(f"Reached search limit of {limit} results.")
+            break
+
+        # Early-exit triggered inside the batch loop (all target ids
+        # matched, or we crossed not_before): stop after displaying
+        # whatever we've collected.
+        if early_exit:
+            debug("Early-exit triggered; stopping pagination loop.")
             break
 
         # Check for more data (either remaining items on current page, or more API pages)
