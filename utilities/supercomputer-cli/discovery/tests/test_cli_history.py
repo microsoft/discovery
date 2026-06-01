@@ -6,7 +6,9 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from unittest.mock import MagicMock
 
+import httpx
 import pytest
+from rich.console import Console as _RichConsole
 from typer.testing import CliRunner
 
 from discovery.common import job_history
@@ -151,6 +153,186 @@ class TestHistoryCommand:
         result = runner.invoke(app, ["job", "history", "--clear"], input="y\n")
         assert result.exit_code == 0
         assert not job_history.history_path().exists()
+
+
+# ---------------------------------------------------------------------------
+# `discovery job history --status`
+# ---------------------------------------------------------------------------
+
+
+class TestHistoryStatusFlag:
+    """``--status`` enriches the table with live status + runtime."""
+
+    @pytest.fixture(autouse=True)
+    def _wide_console(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """Force a wide console so Rich doesn't truncate the table.
+
+        Without this, ``CliRunner``'s captured stdout reports an 80-col
+        terminal and Rich wraps / hides cells we want to assert on.
+        """
+        monkeypatch.setattr(
+            "discovery.poll.cli_history.console",
+            _RichConsole(width=200, highlight=False, soft_wrap=False),
+        )
+
+    def _setup_env(self, monkeypatch: pytest.MonkeyPatch, workspace: str) -> None:
+        fake_cfg = MagicMock()
+        fake_cfg.workspace_url = workspace
+        fake_cfg.project_name = "demo"
+        fake_cfg.api_version = "x"
+        monkeypatch.setattr(
+            "discovery.poll.cli_history.load_project_config",
+            lambda *_a, **_k: fake_cfg,
+        )
+        monkeypatch.setattr(
+            "discovery.poll.cli_history.get_config_file_path",
+            lambda: Path("/tmp/ignored"),
+        )
+
+    def _fake_get_status(self, mapping: dict):
+        """Build a fake get_operation_status that returns a stubbed response
+        per op-id from ``mapping`` (id -> (status, created_at, completed_at))."""
+        def _fn(project, op_id, workspace, *, api_version):
+            entry = mapping.get(op_id)
+            if entry is None:
+                # Simulate 404 with a real httpx.Response so the
+                # status_code attribute access goes through httpx's own
+                # logic rather than MagicMock's attribute autocreation.
+                req = httpx.Request("GET", "https://example/op")
+                resp = httpx.Response(404, request=req)
+                msg = "not found"
+                raise httpx.HTTPStatusError(
+                    msg, request=req, response=resp
+                )
+            status, created_at, completed_at = entry
+            r = MagicMock()
+            r.status = status
+            r.result = MagicMock()
+            r.result.created_at = created_at
+            r.result.completed_at = completed_at
+            return r
+        return _fn
+
+    def test_status_renders_runtime_for_completed_op(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        ws = "https://ws.example"
+        _seed_history(workspace=ws)
+        self._setup_env(monkeypatch, ws)
+
+        created = datetime(2026, 6, 1, 12, 0, tzinfo=timezone.utc)
+        completed = created + timedelta(minutes=42, seconds=15)
+        monkeypatch.setattr(
+            "discovery.poll.cli_history.get_operation_status",
+            self._fake_get_status({
+                "op-1": ("Succeeded", created, completed),
+                "op-2": ("Succeeded", created, completed),
+            }),
+        )
+
+        result = runner.invoke(
+            app, ["job", "history", "--status"]
+        )
+        assert result.exit_code == 0
+        # Both rows must appear with a status + runtime cell.
+        assert "Succeeded" in result.stdout
+        # Runtime should render as "42m 15s" (two most-significant units).
+        assert "42m 15s" in result.stdout
+
+    def test_status_handles_running_ops(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        ws = "https://ws.example"
+        job_history.record_submission(
+            "op-running",
+            workspace_url=ws,
+            project_name="demo",
+            command="long job",
+            submitted_at="2026-06-01T11:00:00Z",
+        )
+        self._setup_env(monkeypatch, ws)
+
+        # In-progress: created_at set, completed_at None.
+        created = datetime.now(tz=timezone.utc) - timedelta(minutes=5)
+        monkeypatch.setattr(
+            "discovery.poll.cli_history.get_operation_status",
+            self._fake_get_status({
+                "op-running": ("Running", created, None),
+            }),
+        )
+
+        result = runner.invoke(app, ["job", "history", "--status"])
+        assert result.exit_code == 0
+        assert "Running" in result.stdout
+        # In-progress runtime ends with the "+" suffix.
+        assert "+" in result.stdout
+
+    def test_status_handles_404_as_expired(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        ws = "https://ws.example"
+        job_history.record_submission(
+            "op-gone",
+            workspace_url=ws,
+            project_name="demo",
+            submitted_at="2026-01-01T00:00:00Z",
+        )
+        self._setup_env(monkeypatch, ws)
+        # Empty mapping → every lookup hits the simulated 404 path.
+        monkeypatch.setattr(
+            "discovery.poll.cli_history.get_operation_status",
+            self._fake_get_status({}),
+        )
+
+        result = runner.invoke(app, ["job", "history", "--status"])
+        assert result.exit_code == 0
+        assert "expired" in result.stdout
+
+    def test_status_handles_network_errors_gracefully(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        ws = "https://ws.example"
+        job_history.record_submission(
+            "op-offline",
+            workspace_url=ws,
+            project_name="demo",
+            submitted_at="2026-06-01T11:00:00Z",
+        )
+        self._setup_env(monkeypatch, ws)
+
+        def boom(*_a, **_kw):
+            msg = "no network"
+            raise httpx.ConnectError(msg)
+
+        monkeypatch.setattr(
+            "discovery.poll.cli_history.get_operation_status", boom
+        )
+        result = runner.invoke(app, ["job", "history", "--status"])
+        # Network errors do NOT fail the command — they just mark the row.
+        assert result.exit_code == 0
+        # The status column shows "?" when we can't reach the API.
+        assert "?" in result.stdout
+
+    def test_status_default_off_keeps_offline_behavior(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Without --status the command must not hit the API at all."""
+        ws = "https://ws.example"
+        _seed_history(workspace=ws)
+        self._setup_env(monkeypatch, ws)
+        called = []
+
+        def fail(*_a, **_kw):
+            called.append(_a)
+            msg = "get_operation_status must not be called"
+            raise AssertionError(msg)
+
+        monkeypatch.setattr(
+            "discovery.poll.cli_history.get_operation_status", fail
+        )
+        result = runner.invoke(app, ["job", "history"])
+        assert result.exit_code == 0
+        assert called == []
 
 
 # ---------------------------------------------------------------------------
@@ -869,8 +1051,6 @@ class TestCancelSince:
         """If the op is already in a terminal state the service returns
         404/409 — the user's goal ("make it stop") is already true, so
         don't fail the command."""
-        import httpx
-
         ws = "https://ws.example"
         now = datetime.now(tz=timezone.utc)
         job_history.record_submission(

@@ -241,6 +241,10 @@ discovery job history --limit 10
 discovery job history --since 7d
 discovery job history --all-workspaces --this-host
 
+# Add live status + computed runtime (one parallel API call per entry)
+discovery job history --status
+discovery job history --status --since 24h
+
 # Server-side listings default to jobs from this machine — pass --all
 # to widen the view (or --user X on `list` for a specific submitter)
 discovery job list                  # mine
