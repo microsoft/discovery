@@ -34,6 +34,14 @@ Opt-out
 * Set ``DISCOVERY_NO_UPDATE_CHECK=1`` (one-shot, e.g. CI).
 * Run ``discovery update --disable`` to persist the opt-out on disk.
 
+Following a non-default branch
+------------------------------
+Set ``DISCOVERY_UPDATE_REF=<ref>`` to compare against a branch, tag, or
+commit other than ``main``. Pair with ``DISCOVERY_UPDATE_REPO=owner/name``
+to compare against a different repository (e.g. a fork). Useful for
+following a release-candidate branch, validating a fork, or end-to-end
+testing this checker.
+
 Authentication
 --------------
 The ``microsoft/discovery`` repository is currently private, so the
@@ -79,14 +87,23 @@ REPO_OWNER = "microsoft"
 REPO_NAME = "discovery"
 CLI_SUBDIR = "utilities/supercomputer-cli/"
 DEFAULT_BRANCH = "main"
-GITHUB_COMPARE_URL = (
-    f"https://api.github.com/repos/{REPO_OWNER}/{REPO_NAME}/compare/{{base}}...{{head}}"
+GITHUB_COMPARE_URL_TEMPLATE = (
+    "https://api.github.com/repos/{owner_repo}/compare/{base}...{head}"
 )
 GITHUB_HEADERS = {
     "Accept": "application/vnd.github+json",
     "X-GitHub-Api-Version": "2022-11-28",
     "User-Agent": "discovery-cli-update-check",
 }
+
+# Override the upstream ref used for the compare. Useful for following
+# a pre-release branch, validating a fork, or end-to-end testing the
+# update flow without merging to main.
+ENV_UPDATE_REF = "DISCOVERY_UPDATE_REF"
+
+# Override the upstream repository (``owner/name``). Pairs with
+# ``DISCOVERY_UPDATE_REF`` for fork-based testing or alternate channels.
+ENV_UPDATE_REPO = "DISCOVERY_UPDATE_REPO"
 
 # The microsoft/discovery repo is currently private, so unauthenticated
 # requests return 404. We try these sources in order to get a token; if
@@ -353,7 +370,13 @@ def fetch_update_info(
     """
     if not current_commit or current_commit == DEV_COMMIT_SENTINEL:
         return None
-    url = GITHUB_COMPARE_URL.format(base=current_commit, head=DEFAULT_BRANCH)
+    upstream_ref = os.environ.get(ENV_UPDATE_REF) or DEFAULT_BRANCH
+    upstream_repo = (
+        os.environ.get(ENV_UPDATE_REPO) or f"{REPO_OWNER}/{REPO_NAME}"
+    )
+    url = GITHUB_COMPARE_URL_TEMPLATE.format(
+        owner_repo=upstream_repo, base=current_commit, head=upstream_ref
+    )
     try:
         with httpx.Client(timeout=timeout, follow_redirects=True) as client:
             resp = client.get(url, headers=_build_headers())
@@ -585,6 +608,8 @@ __all__ = [
     "CHECK_INTERVAL_HOURS",
     "DEV_COMMIT_SENTINEL",
     "ENV_OPT_OUT",
+    "ENV_UPDATE_REF",
+    "ENV_UPDATE_REPO",
     "UPGRADE_COMMAND",
     "UpdateCacheState",
     "UpdateInfo",

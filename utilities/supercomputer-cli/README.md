@@ -81,6 +81,11 @@ discovery update --enable    # turn them back on
 > authenticated). If no token is available, the check fails silently and
 > the CLI keeps working — you'll just never see the upgrade reminder.
 
+> **Following a non-default branch.** Set `DISCOVERY_UPDATE_REF=<ref>` to
+> compare against a branch, tag, or commit other than `main`. Pair with
+> `DISCOVERY_UPDATE_REPO=owner/name` for fork-based or RC-channel
+> testing.
+
 ### 4. Verify your installation
 
 ```bash

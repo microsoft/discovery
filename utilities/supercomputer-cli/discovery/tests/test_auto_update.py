@@ -315,6 +315,66 @@ class TestFetchUpdateInfo:
         sent_headers = client_mock.get.call_args.kwargs["headers"]
         assert "Authorization" not in sent_headers
 
+    def test_uses_default_branch_when_env_unset(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.delenv(auto_update.ENV_UPDATE_REF, raising=False)
+        payload = _compare_response()
+        client_mock = MagicMock()
+        response = MagicMock()
+        response.json.return_value = payload
+        response.raise_for_status.return_value = None
+        client_mock.get.return_value = response
+        cm = MagicMock()
+        cm.__enter__.return_value = client_mock
+        cm.__exit__.return_value = False
+        monkeypatch.setattr(httpx, "Client", MagicMock(return_value=cm))
+
+        auto_update.fetch_update_info("deadbeef")
+        url = client_mock.get.call_args.args[0]
+        assert "...main" in url
+
+    def test_honors_update_ref_env_var(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.setenv(auto_update.ENV_UPDATE_REF, "release/rc-1")
+        payload = _compare_response()
+        client_mock = MagicMock()
+        response = MagicMock()
+        response.json.return_value = payload
+        response.raise_for_status.return_value = None
+        client_mock.get.return_value = response
+        cm = MagicMock()
+        cm.__enter__.return_value = client_mock
+        cm.__exit__.return_value = False
+        monkeypatch.setattr(httpx, "Client", MagicMock(return_value=cm))
+
+        auto_update.fetch_update_info("deadbeef")
+        url = client_mock.get.call_args.args[0]
+        assert "...release/rc-1" in url
+        assert "microsoft/discovery" in url
+
+    def test_honors_update_repo_env_var(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.setenv(auto_update.ENV_UPDATE_REPO, "fork-user/discovery")
+        monkeypatch.setenv(auto_update.ENV_UPDATE_REF, "feat/x")
+        payload = _compare_response()
+        client_mock = MagicMock()
+        response = MagicMock()
+        response.json.return_value = payload
+        response.raise_for_status.return_value = None
+        client_mock.get.return_value = response
+        cm = MagicMock()
+        cm.__enter__.return_value = client_mock
+        cm.__exit__.return_value = False
+        monkeypatch.setattr(httpx, "Client", MagicMock(return_value=cm))
+
+        auto_update.fetch_update_info("deadbeef")
+        url = client_mock.get.call_args.args[0]
+        assert "repos/fork-user/discovery/compare/" in url
+        assert "...feat/x" in url
+
     def test_reports_no_update_when_no_cli_changes(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
