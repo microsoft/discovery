@@ -405,7 +405,12 @@ class TestFetchUpdateInfo:
         cm.__enter__.return_value = client
         cm.__exit__.return_value = False
         monkeypatch.setattr(httpx, "Client", MagicMock(return_value=cm))
+        # Silent-failure wrapper returns None.
         assert auto_update.fetch_update_info("deadbeef") is None
+        # Typed wrapper raises the categorized error.
+        with pytest.raises(auto_update.UpdateCheckError) as ei:
+            auto_update.check_for_update("deadbeef")
+        assert ei.value.reason == "network"
 
     def test_returns_none_on_http_error(
         self, monkeypatch: pytest.MonkeyPatch
@@ -414,12 +419,80 @@ class TestFetchUpdateInfo:
             httpx, "Client", _patch_httpx_get({}, status=500)
         )
         assert auto_update.fetch_update_info("deadbeef") is None
+        with pytest.raises(auto_update.UpdateCheckError) as ei:
+            auto_update.check_for_update("deadbeef")
+        assert ei.value.reason == "http_error"
+
+    def test_classifies_rate_limit(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        response = MagicMock()
+        response.status_code = 403
+        response.headers = {"x-ratelimit-remaining": "0"}
+        response.text = (
+            '{"message": "API rate limit exceeded for 1.2.3.4."}'
+        )
+        response.raise_for_status.side_effect = httpx.HTTPStatusError(
+            "rate", request=MagicMock(), response=response
+        )
+        client = MagicMock()
+        client.get.return_value = response
+        cm = MagicMock()
+        cm.__enter__.return_value = client
+        cm.__exit__.return_value = False
+        monkeypatch.setattr(httpx, "Client", MagicMock(return_value=cm))
+        with pytest.raises(auto_update.UpdateCheckError) as ei:
+            auto_update.check_for_update("deadbeef")
+        assert ei.value.reason == "rate_limited"
+
+    def test_classifies_unauthorized(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        response = MagicMock()
+        response.status_code = 401
+        response.headers = {}
+        response.text = '{"message": "Bad credentials"}'
+        response.raise_for_status.side_effect = httpx.HTTPStatusError(
+            "auth", request=MagicMock(), response=response
+        )
+        client = MagicMock()
+        client.get.return_value = response
+        cm = MagicMock()
+        cm.__enter__.return_value = client
+        cm.__exit__.return_value = False
+        monkeypatch.setattr(httpx, "Client", MagicMock(return_value=cm))
+        with pytest.raises(auto_update.UpdateCheckError) as ei:
+            auto_update.check_for_update("deadbeef")
+        assert ei.value.reason == "unauthorized"
+
+    def test_classifies_not_found(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        response = MagicMock()
+        response.status_code = 404
+        response.headers = {}
+        response.text = '{"message": "Not Found"}'
+        response.raise_for_status.side_effect = httpx.HTTPStatusError(
+            "404", request=MagicMock(), response=response
+        )
+        client = MagicMock()
+        client.get.return_value = response
+        cm = MagicMock()
+        cm.__enter__.return_value = client
+        cm.__exit__.return_value = False
+        monkeypatch.setattr(httpx, "Client", MagicMock(return_value=cm))
+        with pytest.raises(auto_update.UpdateCheckError) as ei:
+            auto_update.check_for_update("deadbeef")
+        assert ei.value.reason == "not_found"
 
     def test_returns_none_on_invalid_json(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         monkeypatch.setattr(httpx, "Client", _patch_httpx_get(None))
         assert auto_update.fetch_update_info("deadbeef") is None
+        with pytest.raises(auto_update.UpdateCheckError) as ei:
+            auto_update.check_for_update("deadbeef")
+        assert ei.value.reason == "parse_error"
 
     def test_picks_newest_cli_commit_among_mixed(
         self, monkeypatch: pytest.MonkeyPatch

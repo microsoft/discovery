@@ -75,7 +75,7 @@ class TestUpdateCommandCheck:
             update_available=False,
         )
         monkeypatch.setattr(
-            "discovery.poll.cli_update.fetch_update_info",
+            "discovery.poll.cli_update.check_for_update",
             lambda *_a, **_k: info,
         )
         result = runner.invoke(app, ["update"])
@@ -95,7 +95,7 @@ class TestUpdateCommandCheck:
             update_available=True,
         )
         monkeypatch.setattr(
-            "discovery.poll.cli_update.fetch_update_info",
+            "discovery.poll.cli_update.check_for_update",
             lambda *_a, **_k: info,
         )
         result = runner.invoke(app, ["update", "--check"])
@@ -109,13 +109,41 @@ class TestUpdateCommandCheck:
         fake_home: Path,
         installed_build: str,
     ) -> None:
+        def raise_network(*_a: object, **_k: object) -> None:
+            msg = "DNS failure"
+            raise auto_update.UpdateCheckError(
+                auto_update.REASON_NETWORK, msg
+            )
+
         monkeypatch.setattr(
-            "discovery.poll.cli_update.fetch_update_info",
-            lambda *_a, **_k: None,
+            "discovery.poll.cli_update.check_for_update",
+            raise_network,
         )
         result = runner.invoke(app, ["update"])
         assert result.exit_code == 3
-        assert "Could not reach GitHub" in result.stdout
+        assert "Could not check for updates" in result.stdout
+        assert "network" in result.stdout
+
+    def test_rate_limit_message_offers_token_hint(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+        fake_home: Path,
+        installed_build: str,
+    ) -> None:
+        def raise_rate(*_a: object, **_k: object) -> None:
+            msg = "API rate limit exceeded"
+            raise auto_update.UpdateCheckError(
+                auto_update.REASON_RATE_LIMITED, msg
+            )
+
+        monkeypatch.setattr(
+            "discovery.poll.cli_update.check_for_update",
+            raise_rate,
+        )
+        result = runner.invoke(app, ["update"])
+        assert result.exit_code == 3
+        assert "GITHUB_TOKEN" in result.stdout
+        assert "gh auth login" in result.stdout
 
 
 class TestUpdateCommandInstall:
@@ -131,7 +159,7 @@ class TestUpdateCommandInstall:
             update_available=True,
         )
         monkeypatch.setattr(
-            "discovery.poll.cli_update.fetch_update_info",
+            "discovery.poll.cli_update.check_for_update",
             lambda *_a, **_k: info,
         )
         install = MagicMock(return_value=0)
@@ -158,7 +186,7 @@ class TestUpdateCommandInstall:
             update_available=True,
         )
         monkeypatch.setattr(
-            "discovery.poll.cli_update.fetch_update_info",
+            "discovery.poll.cli_update.check_for_update",
             lambda *_a, **_k: info,
         )
         monkeypatch.setattr(
@@ -180,7 +208,7 @@ class TestUpdateCommandInstall:
             update_available=True,
         )
         monkeypatch.setattr(
-            "discovery.poll.cli_update.fetch_update_info",
+            "discovery.poll.cli_update.check_for_update",
             lambda *_a, **_k: info,
         )
 
@@ -208,7 +236,7 @@ class TestRootCallbackHooks:
         monkeypatch.setattr("discovery.poll.cli.atexit.register", register)
 
         with patch(
-            "discovery.poll.cli_update.fetch_update_info",
+            "discovery.poll.cli_update.check_for_update",
             return_value=None,
         ):
             runner.invoke(app, ["update", "--check"])

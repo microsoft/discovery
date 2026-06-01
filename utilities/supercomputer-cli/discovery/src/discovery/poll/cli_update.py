@@ -19,9 +19,10 @@ from rich.console import Console
 from discovery._version import get_build_commit, get_version_string
 from discovery.common.auto_update import (
     UPGRADE_COMMAND,
+    UpdateCheckError,
     UpdateInfo,
     UpgradeError,
-    fetch_update_info,
+    check_for_update,
     install_update,
     is_opted_out,
     load_cache,
@@ -43,6 +44,45 @@ EXIT_NETWORK = 3
 def _emit_status_line() -> None:
     """Print the one-line "current version" header used by all subcommands."""
     console.print(f"Current version: [cyan]{get_version_string()}[/cyan]")
+
+
+_FAILURE_HINTS: dict[str, str] = {
+    "rate_limited": (
+        "GitHub's anonymous API rate limit (60/hour) was exhausted. "
+        "Set [bold]GITHUB_TOKEN[/bold] or run [bold]`gh auth login`[/bold] "
+        "to raise the limit to 5000/hour, then retry."
+    ),
+    "unauthorized": (
+        "GitHub rejected the request (401/403). If the repository is "
+        "private, run [bold]`gh auth login`[/bold] or set "
+        "[bold]GITHUB_TOKEN[/bold] to a token with `repo` scope."
+    ),
+    "not_found": (
+        "GitHub returned 404 — the installed commit may have been "
+        "force-pushed away from the upstream branch, or "
+        "[bold]DISCOVERY_UPDATE_REPO[/bold]/[bold]DISCOVERY_UPDATE_REF[/bold] "
+        "may point at a non-existent ref."
+    ),
+    "network": (
+        "Network error reaching api.github.com. Check connectivity, "
+        "proxy configuration, and DNS, then retry."
+    ),
+    "http_error": "GitHub returned an unexpected HTTP error.",
+    "parse_error": "GitHub returned an unexpected response shape.",
+    "ineligible": (
+        "This build does not report a commit SHA (likely a local-dev "
+        "install); update checks are skipped."
+    ),
+}
+
+
+def _emit_failure(exc: UpdateCheckError) -> None:
+    """Print a tailored, actionable error for ``exc`` and exit."""
+    hint = _FAILURE_HINTS.get(exc.reason, "Update check failed.")
+    console.print(f"[red]Could not check for updates ({exc.reason}).[/red]")
+    console.print(f"  {hint}")
+    if exc.detail:
+        console.print(f"  [dim]Detail: {exc.detail}[/dim]")
 
 
 def _handle_toggles(*, enable: bool, disable: bool) -> None:
@@ -150,15 +190,11 @@ def update_command(
 
     console.print("Checking for updates…")
     current = get_build_commit()
-    info = fetch_update_info(current)
-
-    if info is None:
-        console.print(
-            "[red]Could not reach GitHub.[/red] The `microsoft/discovery` "
-            "repository is private, so the update check requires a token. "
-            "Try [bold]`gh auth login`[/bold] or set `GITHUB_TOKEN` and rerun."
-        )
-        raise typer.Exit(code=EXIT_NETWORK)
+    try:
+        info = check_for_update(current)
+    except UpdateCheckError as exc:
+        _emit_failure(exc)
+        raise typer.Exit(code=EXIT_NETWORK) from exc
 
     if not info.update_available:
         _report_up_to_date(current, info)

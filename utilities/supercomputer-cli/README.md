@@ -74,12 +74,12 @@ discovery update --disable   # turn off background checks
 discovery update --enable    # turn them back on
 ```
 
-> **Authentication.** Because `microsoft/discovery` is currently a private
-> repository, the update check requires a GitHub token. It is discovered
-> automatically from (in order) `DISCOVERY_GITHUB_TOKEN`, `GITHUB_TOKEN`,
-> `GH_TOKEN`, or `gh auth token` (when the `gh` CLI is installed and
-> authenticated). If no token is available, the check fails silently and
-> the CLI keeps working — you'll just never see the upgrade reminder.
+> **Authentication is optional.** The update check works fully
+> unauthenticated against a public repo, but GitHub limits anonymous
+> traffic to 60 requests/hour per IP. To raise the limit to 5000/hour
+> the checker opportunistically uses `DISCOVERY_GITHUB_TOKEN`,
+> `GITHUB_TOKEN`, `GH_TOKEN`, or `gh auth token` (when the `gh` CLI is
+> installed and authenticated) — no setup required for most developers.
 
 > **Following a non-default branch.** Set `DISCOVERY_UPDATE_REF=<ref>` to
 > compare against a branch, tag, or commit other than `main`. Pair with

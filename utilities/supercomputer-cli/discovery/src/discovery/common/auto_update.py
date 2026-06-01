@@ -42,14 +42,15 @@ to compare against a different repository (e.g. a fork). Useful for
 following a release-candidate branch, validating a fork, or end-to-end
 testing this checker.
 
-Authentication
---------------
-The ``microsoft/discovery`` repository is currently private, so the
-GitHub compare API requires a token. The checker discovers one from
-(in order): ``DISCOVERY_GITHUB_TOKEN``, ``GITHUB_TOKEN``, ``GH_TOKEN``,
-or ``gh auth token`` (if the GitHub CLI is on ``PATH``). When no token
-is available the check fails silently — the foreground command is
-never affected.
+Authentication (optional)
+-------------------------
+The check works fully unauthenticated against a public repository, but
+GitHub limits anonymous traffic to 60 requests/hour per IP. The checker
+opportunistically discovers a token from (in order)
+``DISCOVERY_GITHUB_TOKEN``, ``GITHUB_TOKEN``, ``GH_TOKEN``, or
+``gh auth token`` (if the GitHub CLI is on ``PATH``) and uses it to
+raise that limit to 5000/hour. When the limit is exhausted the check
+fails silently — the foreground command is never affected.
 
 The check is silently skipped for editable / source installs (i.e. when
 :func:`discovery._version.get_build_commit` returns ``"dev"``) because
@@ -116,6 +117,17 @@ ENV_OPT_OUT_TRUTHY = {"1", "true", "True", "TRUE", "yes", "YES", "on", "ON"}
 
 UPGRADE_COMMAND = "uv tool upgrade discovery"
 DEV_COMMIT_SENTINEL = "dev"
+
+# Categorical reasons reported by :class:`UpdateCheckError`. Defined as
+# module constants so callers can match on them by symbol and so linters
+# do not treat them as inline error-message strings.
+REASON_INELIGIBLE = "ineligible"
+REASON_NETWORK = "network"
+REASON_PARSE_ERROR = "parse_error"
+REASON_RATE_LIMITED = "rate_limited"
+REASON_UNAUTHORIZED = "unauthorized"
+REASON_NOT_FOUND = "not_found"
+REASON_HTTP_ERROR = "http_error"
 
 
 # ---------------------------------------------------------------------------
@@ -352,9 +364,55 @@ def _build_headers() -> dict[str, str]:
     return headers
 
 
-def fetch_update_info(
+class UpdateCheckError(RuntimeError):
+    """Raised by :func:`check_for_update` on any check failure.
+
+    The :attr:`reason` attribute is a short machine-readable category
+    that callers can switch on to produce tailored user messages:
+
+    * ``"rate_limited"`` — GitHub's anonymous rate limit was exhausted.
+      Hint: set ``GITHUB_TOKEN`` or run ``gh auth login``.
+    * ``"unauthorized"`` — 401/403 without a rate-limit indicator
+      (e.g. the repo is private and no valid token was found).
+    * ``"not_found"`` — 404 from the compare endpoint, usually meaning
+      the installed commit is no longer reachable from the upstream
+      ref (force-push, deleted branch, wrong ``DISCOVERY_UPDATE_REPO``).
+    * ``"http_error"`` — Any other non-2xx response.
+    * ``"network"`` — Connection / DNS / TLS / timeout failure.
+    * ``"parse_error"`` — Successful HTTP but unexpected payload shape.
+    """
+
+    def __init__(self, reason: str, detail: str = "") -> None:
+        message = reason if not detail else f"{reason}: {detail}"
+        super().__init__(message)
+        self.reason = reason
+        self.detail = detail
+
+
+def _classify_http_error(exc: httpx.HTTPStatusError) -> UpdateCheckError:
+    """Translate an :class:`httpx.HTTPStatusError` into ``UpdateCheckError``."""
+    status = exc.response.status_code
+    body = ""
+    try:
+        body = exc.response.text or ""
+    except Exception:  # pragma: no cover - defensive
+        body = ""
+    body_lower = body.lower()
+    if status == 403 and (
+        "rate limit" in body_lower
+        or exc.response.headers.get("x-ratelimit-remaining") == "0"
+    ):
+        return UpdateCheckError(REASON_RATE_LIMITED, body[:200])
+    if status in (401, 403):
+        return UpdateCheckError(REASON_UNAUTHORIZED, body[:200])
+    if status == 404:
+        return UpdateCheckError(REASON_NOT_FOUND, body[:200])
+    return UpdateCheckError(REASON_HTTP_ERROR, f"HTTP {status}: {body[:160]}")
+
+
+def check_for_update(
     current_commit: str, *, timeout: float = REQUEST_TIMEOUT_SECONDS
-) -> UpdateInfo | None:
+) -> UpdateInfo:
     """Synchronously query GitHub for available updates.
 
     Args:
@@ -363,13 +421,16 @@ def fetch_update_info(
         timeout: HTTP timeout in seconds.
 
     Returns:
-        :class:`UpdateInfo` describing the comparison, or ``None`` on
-        any network / parsing / authentication error. Failures are
-        intentionally not raised so callers can implement "silent on
-        failure" semantics.
+        :class:`UpdateInfo` describing the comparison.
+
+    Raises:
+        UpdateCheckError: On any failure to obtain a usable answer.
+            Inspect :attr:`UpdateCheckError.reason` for the category.
     """
     if not current_commit or current_commit == DEV_COMMIT_SENTINEL:
-        return None
+        raise UpdateCheckError(
+            REASON_INELIGIBLE, "build commit is unknown or local-dev"
+        )
     upstream_ref = os.environ.get(ENV_UPDATE_REF) or DEFAULT_BRANCH
     upstream_repo = (
         os.environ.get(ENV_UPDATE_REPO) or f"{REPO_OWNER}/{REPO_NAME}"
@@ -382,9 +443,17 @@ def fetch_update_info(
             resp = client.get(url, headers=_build_headers())
             resp.raise_for_status()
             data = resp.json()
-    except (httpx.HTTPError, ValueError) as exc:
-        debug(f"auto-update: network check failed: {exc}")
-        return None
+    except httpx.HTTPStatusError as exc:
+        raise _classify_http_error(exc) from exc
+    except httpx.HTTPError as exc:
+        raise UpdateCheckError(REASON_NETWORK, str(exc)) from exc
+    except ValueError as exc:
+        raise UpdateCheckError(REASON_PARSE_ERROR, str(exc)) from exc
+
+    if not isinstance(data, dict):
+        raise UpdateCheckError(
+            REASON_PARSE_ERROR, "compare response is not an object"
+        )
 
     ahead_by = data.get("ahead_by", 0)
     if not isinstance(ahead_by, int) or ahead_by <= 0:
@@ -410,7 +479,9 @@ def fetch_update_info(
 
     commits = data.get("commits", [])
     if not isinstance(commits, list) or not commits:
-        return None
+        raise UpdateCheckError(
+            REASON_PARSE_ERROR, "compare response missing 'commits' list"
+        )
 
     newest = _newest_cli_commit(commits)
     if newest is None:
@@ -433,6 +504,22 @@ def fetch_update_info(
         update_available=latest_sha != current_commit,
         changed_files=cli_changes,
     )
+
+
+def fetch_update_info(
+    current_commit: str, *, timeout: float = REQUEST_TIMEOUT_SECONDS
+) -> UpdateInfo | None:
+    """Silent-failure wrapper around :func:`check_for_update`.
+
+    Returns ``None`` on any error. Use :func:`check_for_update` directly
+    when you need the failure category (e.g. to prompt for authentication
+    on rate-limit failures).
+    """
+    try:
+        return check_for_update(current_commit, timeout=timeout)
+    except UpdateCheckError as exc:
+        debug(f"auto-update: check failed [{exc.reason}]: {exc.detail}")
+        return None
 
 
 # ---------------------------------------------------------------------------
@@ -612,9 +699,11 @@ __all__ = [
     "ENV_UPDATE_REPO",
     "UPGRADE_COMMAND",
     "UpdateCacheState",
+    "UpdateCheckError",
     "UpdateInfo",
     "UpgradeError",
     "cache_is_stale",
+    "check_for_update",
     "fetch_update_info",
     "format_notification",
     "install_update",
