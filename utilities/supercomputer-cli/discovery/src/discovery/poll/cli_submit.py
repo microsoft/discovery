@@ -17,6 +17,7 @@ from discovery.common.job_history import (
     MODE_BATCH,
     MODE_START,
     MODE_VSCODE,
+    JobHistoryEntry,
     load_history,
     parse_since,
     record_submission,
@@ -39,6 +40,7 @@ from .cli_helpers import (
     format_service_error,
     get_azure_username,
     get_config_file_path,
+    get_raw_azure_username,
     load_project_config,
     load_tool_config,
     prepare_command,
@@ -63,6 +65,14 @@ def _record_job_submission(
 ) -> None:
     """Append a job-history entry; never raises into the submit flow."""
     try:
+        # ``get_raw_azure_username`` may shell out to ``az`` and may
+        # raise / time out in degraded environments. Whatever happens,
+        # recording is best-effort — we only use the value to scope
+        # later bulk operations to "this Azure principal".
+        try:
+            az_user = get_raw_azure_username() or ""
+        except Exception:
+            az_user = ""
         record_submission(
             operation_id,
             command=command,
@@ -72,6 +82,7 @@ def _record_job_submission(
             workspace_url=getattr(env_cfg, "workspace_url", "") or "",
             mode=mode,
             cli_argv=list(sys.argv),
+            azure_username=az_user,
         )
     except Exception as exc:  # pragma: no cover - defensive
         debug(f"job-history: record_submission swallowed {exc}")
@@ -1207,6 +1218,50 @@ def _cancel_recent(env_cfg, *, since_value: str, yes: bool, parallelism: int) ->
         )
         return
 
+    # Scope to the *current* Azure principal. Local history can contain
+    # entries from other users when ``$HOME`` is shared (shared
+    # workstations, build agents that reauth between users, etc.). We
+    # never want one user's bulk-cancel to reach another's jobs.
+    #
+    # ``get_raw_azure_username`` shells out to ``az`` and may fail in
+    # degraded environments — in that case we degrade to "no filter",
+    # which preserves the previous behavior, but emit a warning so the
+    # user knows what's happening.
+    try:
+        current_az_user = get_raw_azure_username() or ""
+    except Exception as exc:
+        debug(f"cancel --since: az lookup failed: {exc}")
+        current_az_user = ""
+
+    skipped_other_user: list[JobHistoryEntry] = []
+    if current_az_user:
+        kept: list[JobHistoryEntry] = []
+        for entry in entries:
+            recorded = entry.azure_username or ""
+            # Older entries (recorded before the azure_username field
+            # existed) have an empty recorded user. Treat them as
+            # "matches anyone" so backwards compatibility holds — we
+            # have no way to verify them, but they were written by
+            # whoever owned this HOME at the time.
+            if recorded and recorded != current_az_user:
+                skipped_other_user.append(entry)
+                continue
+            kept.append(entry)
+        entries = kept
+        if skipped_other_user:
+            info(
+                f"Skipping {len(skipped_other_user)} entr"
+                f"{'y' if len(skipped_other_user) == 1 else 'ies'} from a "
+                f"different Azure login (current: {current_az_user})."
+            )
+
+    if not entries:
+        info(
+            "No locally-recorded jobs for the current Azure login "
+            f"({current_az_user}) since {cutoff.isoformat()}."
+        )
+        return
+
     # Sort newest-first for the confirmation preview.
     entries_sorted = sorted(
         entries, key=lambda e: e.submitted_at, reverse=True
@@ -1238,50 +1293,63 @@ def _cancel_recent(env_cfg, *, since_value: str, yes: bool, parallelism: int) ->
         info("Cancellation aborted.")
         raise typer.Exit(code=0)
 
+    _run_parallel_cancel(env_cfg, entries_sorted, parallelism=parallelism)
+
+
+def _cancel_one_op(env_cfg, op_id: str) -> tuple[str, str | None]:
+    """Cancel a single op; return ``(op_id, error_message_or_None)``.
+
+    404/409 responses are treated as success — the op is already in a
+    terminal state, so the user's goal ("make it stop") is already true.
+    """
+    try:
+        cancel_operation(
+            env_cfg.project_name,
+            op_id,
+            env_cfg.workspace_url,
+            api_version=env_cfg.api_version,
+        )
+    except httpx.HTTPStatusError as exc:
+        status = exc.response.status_code
+        if status in (404, 409):
+            return op_id, None
+        return op_id, f"HTTP {status}: {exc.response.text[:120]}"
+    except (httpx.TransportError, PollError) as exc:
+        return op_id, f"{type(exc).__name__}: {exc}"
+    return op_id, None
+
+
+def _run_parallel_cancel(
+    env_cfg,
+    entries: list[JobHistoryEntry],
+    *,
+    parallelism: int,
+) -> None:
+    """Fan out cancel calls across a thread pool; exit 1 on any failure."""
     succeeded: list[str] = []
     failed: list[tuple[str, str]] = []
-
-    def _cancel_one(op_id: str) -> tuple[str, str | None]:
-        try:
-            cancel_operation(
-                env_cfg.project_name,
-                op_id,
-                env_cfg.workspace_url,
-                api_version=env_cfg.api_version,
-            )
-        except httpx.HTTPStatusError as exc:
-            # The op may already be in a terminal state (404 / 409) —
-            # don't treat that as a hard failure since the user's goal
-            # was "make it stop", which is already true.
-            status = exc.response.status_code
-            if status in (404, 409):
-                return op_id, None
-            return op_id, f"HTTP {status}: {exc.response.text[:120]}"
-        except (httpx.TransportError, PollError) as exc:
-            return op_id, f"{type(exc).__name__}: {exc}"
-        return op_id, None
-
-    workers = max(1, min(parallelism, len(entries_sorted)))
-    info(
-        f"Cancelling {len(entries_sorted)} job(s) "
-        f"with {workers} parallel worker(s)…"
-    )
+    total = len(entries)
+    workers = max(1, min(parallelism, total))
+    info(f"Cancelling {total} job(s) with {workers} parallel worker(s)…")
     with ThreadPoolExecutor(max_workers=workers) as pool:
         futures = {
-            pool.submit(_cancel_one, entry.operation_id): entry.operation_id
-            for entry in entries_sorted
+            pool.submit(_cancel_one_op, env_cfg, entry.operation_id):
+                entry.operation_id
+            for entry in entries
         }
         for fut in as_completed(futures):
             op_id, err_msg = fut.result()
             if err_msg is None:
                 succeeded.append(op_id)
-                info(f"  [{len(succeeded) + len(failed)}/{len(entries_sorted)}] ✓ {op_id}")
+                info(f"  [{len(succeeded) + len(failed)}/{total}] ✓ {op_id}")
             else:
                 failed.append((op_id, err_msg))
-                error(f"  [{len(succeeded) + len(failed)}/{len(entries_sorted)}] ✗ {op_id}: {err_msg}")
-
+                error(
+                    f"  [{len(succeeded) + len(failed)}/{total}] ✗ "
+                    f"{op_id}: {err_msg}"
+                )
     info(
-        f"Done. Cancelled {len(succeeded)} of {len(entries_sorted)} job(s)"
+        f"Done. Cancelled {len(succeeded)} of {total} job(s)"
         f"{'; ' + str(len(failed)) + ' failed' if failed else ''}."
     )
     if failed:

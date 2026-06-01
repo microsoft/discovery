@@ -120,6 +120,15 @@ class JobHistoryEntry:
     workspace_url: str = ""
     mode: str = MODE_START
     cli_argv: list[str] = field(default_factory=list)
+    # Azure principal that was logged in (``az account show --query
+    # user.name``) at submit time. Used by ``discovery job cancel
+    # --since`` to avoid cancelling jobs that were submitted from this
+    # machine but under a *different* Azure login (e.g., a shared
+    # workstation, a build agent that re-authenticates between users).
+    # Empty for entries written before this field was added — those
+    # are treated as "matches any user" so backwards compatibility is
+    # preserved.
+    azure_username: str = ""
     schema_version: int = SCHEMA_VERSION
 
     @classmethod
@@ -194,6 +203,7 @@ def record_submission(
     cli_argv: list[str] | None = None,
     hostname: str | None = None,
     submitted_at: str | None = None,
+    azure_username: str = "",
 ) -> JobHistoryEntry | None:
     """Append an entry to the local job-history file.
 
@@ -219,6 +229,7 @@ def record_submission(
         workspace_url=workspace_url,
         mode=mode,
         cli_argv=list(cli_argv) if cli_argv is not None else [],
+        azure_username=azure_username,
     )
 
     line = json.dumps(asdict(entry), separators=(",", ":")) + "\n"

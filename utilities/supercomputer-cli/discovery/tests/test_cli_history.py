@@ -614,7 +614,7 @@ class TestCancelSince:
         )
         return called
 
-    def _setup_env(self, monkeypatch: pytest.MonkeyPatch, workspace: str):
+    def _setup_env(self, monkeypatch: pytest.MonkeyPatch, workspace: str, *, az_user: str = "alice@example.com"):
         fake_cfg = MagicMock()
         fake_cfg.workspace_url = workspace
         fake_cfg.project_name = "demo"
@@ -630,6 +630,13 @@ class TestCancelSince:
         )
         monkeypatch.setattr(
             "discovery.poll.cli_submit.emit_env", lambda *_a, **_k: None
+        )
+        # The cancel path looks up the current Azure principal to scope
+        # the filter to "this user only". Tests must stub this to keep
+        # the behavior deterministic.
+        monkeypatch.setattr(
+            "discovery.poll.cli_submit.get_raw_azure_username",
+            lambda: az_user,
         )
 
     def test_requires_either_op_id_or_since(
@@ -668,7 +675,8 @@ class TestCancelSince:
     ) -> None:
         ws = "https://ws.example"
         # Two recent (within 5m) submissions, one old (an hour ago),
-        # and one from a different workspace.
+        # and one from a different workspace. All belong to the same
+        # current Azure user.
         now = datetime.now(tz=timezone.utc)
         recent_iso = (
             (now - timedelta(minutes=2)).isoformat().replace("+00:00", "Z")
@@ -682,6 +690,7 @@ class TestCancelSince:
             project_name="demo",
             submitted_at=recent_iso,
             command="recent 1",
+            azure_username="alice@example.com",
         )
         job_history.record_submission(
             "op-recent-2",
@@ -689,6 +698,7 @@ class TestCancelSince:
             project_name="demo",
             submitted_at=recent_iso,
             command="recent 2",
+            azure_username="alice@example.com",
         )
         job_history.record_submission(
             "op-old",
@@ -696,6 +706,7 @@ class TestCancelSince:
             project_name="demo",
             submitted_at=old_iso,
             command="too old",
+            azure_username="alice@example.com",
         )
         job_history.record_submission(
             "op-other-ws",
@@ -703,9 +714,10 @@ class TestCancelSince:
             project_name="demo",
             submitted_at=recent_iso,
             command="other workspace",
+            azure_username="alice@example.com",
         )
 
-        self._setup_env(monkeypatch, ws)
+        self._setup_env(monkeypatch, ws, az_user="alice@example.com")
         called = self._patch_cancel(monkeypatch)
 
         result = runner.invoke(
@@ -714,7 +726,118 @@ class TestCancelSince:
         )
         assert result.exit_code == 0
         assert sorted(called) == ["op-recent-1", "op-recent-2"]
-        assert "op-old" not in result.stdout or "✗ op-old" not in result.stdout
+
+    def test_skips_jobs_from_other_azure_user(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Shared $HOME, different az logins: cancel must skip any
+        entry recorded under a different Azure principal."""
+        ws = "https://ws.example"
+        now = datetime.now(tz=timezone.utc)
+        recent = (now - timedelta(minutes=2)).isoformat().replace("+00:00", "Z")
+
+        # alice's recent job
+        job_history.record_submission(
+            "op-alice",
+            workspace_url=ws,
+            project_name="demo",
+            submitted_at=recent,
+            command="alice's job",
+            azure_username="alice@example.com",
+        )
+        # bob's recent job, also recorded into this shared history file
+        job_history.record_submission(
+            "op-bob",
+            workspace_url=ws,
+            project_name="demo",
+            submitted_at=recent,
+            command="bob's job",
+            azure_username="bob@example.com",
+        )
+
+        # We're currently signed in as alice — bob's op must not be touched.
+        self._setup_env(monkeypatch, ws, az_user="alice@example.com")
+        called = self._patch_cancel(monkeypatch)
+
+        result = runner.invoke(
+            app, ["job", "cancel", "--since", "10m", "--yes"]
+        )
+        assert result.exit_code == 0
+        assert called == ["op-alice"]
+        assert "Skipping 1 entry" in result.stdout
+        assert "bob@example.com" not in result.stdout  # we don't leak other users' identities
+
+    def test_includes_legacy_entries_with_no_azure_username(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Entries written before the azure_username field existed
+        should still be eligible — we have no way to verify them so we
+        treat them as 'whoever owns this HOME'."""
+        ws = "https://ws.example"
+        now = datetime.now(tz=timezone.utc)
+        recent = (now - timedelta(minutes=2)).isoformat().replace("+00:00", "Z")
+
+        # Hand-written entry mimicking a pre-azure-username record:
+        # empty azure_username field.
+        job_history.record_submission(
+            "op-legacy",
+            workspace_url=ws,
+            project_name="demo",
+            submitted_at=recent,
+            command="legacy entry",
+            azure_username="",
+        )
+
+        self._setup_env(monkeypatch, ws, az_user="alice@example.com")
+        called = self._patch_cancel(monkeypatch)
+
+        result = runner.invoke(
+            app, ["job", "cancel", "--since", "10m", "--yes"]
+        )
+        assert result.exit_code == 0
+        assert called == ["op-legacy"]
+
+    def test_falls_back_when_az_lookup_fails(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """If we can't determine the current Azure user, degrade to
+        the previous behavior (cancel everything) rather than refusing
+        to do anything."""
+        ws = "https://ws.example"
+        now = datetime.now(tz=timezone.utc)
+        recent = (now - timedelta(minutes=2)).isoformat().replace("+00:00", "Z")
+        job_history.record_submission(
+            "op-alice",
+            workspace_url=ws,
+            project_name="demo",
+            submitted_at=recent,
+            azure_username="alice@example.com",
+        )
+        job_history.record_submission(
+            "op-bob",
+            workspace_url=ws,
+            project_name="demo",
+            submitted_at=recent,
+            azure_username="bob@example.com",
+        )
+
+        self._setup_env(monkeypatch, ws)
+        # Override the stub from _setup_env to simulate a failed az lookup.
+        def boom():
+            msg = "az missing"
+            raise RuntimeError(msg)
+
+        monkeypatch.setattr(
+            "discovery.poll.cli_submit.get_raw_azure_username", boom
+        )
+        called = self._patch_cancel(monkeypatch)
+
+        result = runner.invoke(
+            app, ["job", "cancel", "--since", "10m", "--yes"]
+        )
+        assert result.exit_code == 0
+        # No filter possible → both ops cancelled (previous behavior).
+        assert sorted(called) == ["op-alice", "op-bob"]
 
     def test_decline_confirmation_aborts(
         self, monkeypatch: pytest.MonkeyPatch
