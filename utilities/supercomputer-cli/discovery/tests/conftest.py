@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from pathlib import Path
+
 import pytest
 
 from discovery.common import logging as disc_logging
@@ -24,3 +26,18 @@ def reset_logging_console():
     yield
     disc_logging._STATE.console = None
     disc_logging._STATE.file_logger = None
+
+
+@pytest.fixture(autouse=True)
+def isolate_job_history(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    """Redirect ``~/.discovery`` writes to a per-test tmp directory.
+
+    Prevents tests from accidentally polluting the developer's real
+    job-history file when they exercise CLI commands that invoke the
+    submit / history paths.
+    """
+    fake_home = tmp_path / "fake-home"
+    fake_home.mkdir()
+    monkeypatch.setattr(
+        "discovery.common.job_history.get_home_dir", lambda: fake_home
+    )

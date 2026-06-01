@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import re
+import sys
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
@@ -12,6 +13,12 @@ import typer
 from rich.console import Console
 from rich.panel import Panel
 
+from discovery.common.job_history import (
+    MODE_BATCH,
+    MODE_START,
+    MODE_VSCODE,
+    record_submission,
+)
 from discovery.common.logging import debug, error, info, pretty_debug
 from discovery.poll.models.api_version import ApiVersion
 from discovery.poll.models.tool_run import (
@@ -39,9 +46,33 @@ from .dataplane_api import (
     PollError,
     cancel_operation,
     get_operation_status,
-    run_and_poll,
+    poll_operation,
     start_tool_run,
 )
+
+
+def _record_job_submission(
+    operation_id: str,
+    env_cfg,
+    *,
+    command: str,
+    nodepool_id: str,
+    mode: str,
+) -> None:
+    """Append a job-history entry; never raises into the submit flow."""
+    try:
+        record_submission(
+            operation_id,
+            command=command,
+            tool_id=getattr(env_cfg, "tool_id", "") or "",
+            nodepool_id=nodepool_id,
+            project_name=getattr(env_cfg, "project_name", "") or "",
+            workspace_url=getattr(env_cfg, "workspace_url", "") or "",
+            mode=mode,
+            cli_argv=list(sys.argv),
+        )
+    except Exception as exc:  # pragma: no cover - defensive
+        debug(f"job-history: record_submission swallowed {exc}")
 
 # Backward-compatibility re-exports: the canonical source of truth is
 # :class:`ApiVersion` in ``discovery.poll.models.api_version``. These sets exist so
@@ -525,15 +556,31 @@ def start(
     pretty_debug(payload, label="ToolRunRequest payload")
 
     try:
+        # Submit first, then record locally so the at-exit / list filters
+        # see the operation immediately. ``run_and_poll`` is inlined
+        # here as ``start_tool_run`` + ``poll_operation`` so we can
+        # record between the two calls — that way even Ctrl+C during
+        # polling leaves a usable history entry.
+        response = start_tool_run(
+            env_cfg.project_name,
+            payload,
+            env_cfg.workspace_url,
+            api_version=effective_api_version,
+        )
+        _record_job_submission(
+            response.id,
+            env_cfg,
+            command=command,
+            nodepool_id=effective_nodepool_id,
+            mode=MODE_START,
+        )
         if no_wait:
-            # Submit job and exit without polling
-            response = start_tool_run(env_cfg.project_name, payload, env_cfg.workspace_url, api_version=effective_api_version)
             info(f"Job submitted. Operation ID: {response.id}")
             return
 
-        result = run_and_poll(
+        result = poll_operation(
             env_cfg.project_name,
-            payload,
+            response.id,
             env_cfg.workspace_url,
             poll_interval=DEFAULT_INTERVAL,
             timeout_seconds=DEFAULT_TIMEOUT,
@@ -776,6 +823,13 @@ def batch(
                     outputData=output_mounts,
                 )
             response = start_tool_run(env_cfg.project_name, payload, env_cfg.workspace_url, api_version=effective_api_version)
+            _record_job_submission(
+                response.id,
+                env_cfg,
+                command=cmd,
+                nodepool_id=effective_nodepool_id,
+                mode=MODE_BATCH,
+            )
             return (idx, response.id, None)
         except Exception as e:
             return (idx, None, str(e))
@@ -997,6 +1051,13 @@ def vscode_cmd(
     # Submit job without polling
     try:
         response = start_tool_run(env_cfg.project_name, payload, env_cfg.workspace_url, api_version=effective_api_version)
+        _record_job_submission(
+            response.id,
+            env_cfg,
+            command=f"<vscode tunnel: {tunnel_name}>",
+            nodepool_id=effective_nodepool_id,
+            mode=MODE_VSCODE,
+        )
     except httpx.HTTPStatusError as exc:
         error(format_service_error(exc))
         raise typer.Exit(code=1) from exc

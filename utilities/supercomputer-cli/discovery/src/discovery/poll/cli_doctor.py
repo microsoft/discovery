@@ -24,6 +24,7 @@ from rich.console import Console
 from rich.table import Table
 
 from discovery._version import get_build_commit, get_version_string
+from discovery.common.job_history import history_path, is_disabled, load_history
 from discovery.common.paths import get_config_file_path
 from discovery.poll.az_extensions import check_required_extensions
 
@@ -37,6 +38,7 @@ _EXPECTED_MODULES = [
     "discovery",
     "discovery.common",
     "discovery.common.config",
+    "discovery.common.job_history",
     "discovery.common.logging",
     "discovery.poll",
     "discovery.poll.api",
@@ -49,6 +51,7 @@ _EXPECTED_MODULES = [
     "discovery.poll.cli_configure",
     "discovery.poll.cli_doctor",
     "discovery.poll.cli_helpers",
+    "discovery.poll.cli_history",
     "discovery.poll.cli_smoke",
     "discovery.poll.cli_status",
     "discovery.poll.cli_storage",
@@ -218,6 +221,27 @@ def _render_az_extensions_section() -> bool:
     return True
 
 
+def _render_job_history_section() -> None:
+    """Surface the local job-history state (informational, never fails)."""
+    path = history_path()
+    if is_disabled():
+        console.print(
+            "  [yellow]![/yellow] Job history: [yellow]disabled[/yellow] "
+            "(DISCOVERY_NO_JOB_HISTORY is set)"
+        )
+        return
+    if not path.is_file():
+        console.print(
+            f"  Job history: [dim]empty[/dim] ({path} will be created on first submit)"
+        )
+        return
+    entries = load_history()
+    console.print(
+        f"  [green]✓[/green] Job history: {len(entries)} entr"
+        f"{'y' if len(entries) == 1 else 'ies'} at {path}"
+    )
+
+
 @app.command(name="doctor")
 def doctor_command() -> None:
     """Check installation health and report diagnostics."""
@@ -280,6 +304,9 @@ def doctor_command() -> None:
     # surfaces the situation early with an actionable hint.
     if not _render_az_extensions_section():
         all_ok = False
+
+    # Local job-history status — informational only.
+    _render_job_history_section()
 
     console.print()
     if all_ok:

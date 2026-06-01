@@ -41,6 +41,7 @@ from .cli_doctor import app as doctor_app
 from .cli_helpers import (  # noqa: F401
     emit_env as _emit_env,
 )
+from .cli_history import app as history_app
 from .cli_smoke import app as smoke_test_app
 from .cli_status import app as status_app
 from .cli_storage import app as storage_app
@@ -135,6 +136,7 @@ job_app.command(name="list")(status_app.registered_commands[3].callback)
 job_app.command(name="status")(status_app.registered_commands[4].callback)
 job_app.command(name="pools")(status_app.registered_commands[5].callback)
 job_app.command(name="cleanup-anf")(cleanup_app.registered_commands[0].callback)
+job_app.command(name="history")(history_app.registered_commands[0].callback)
 
 # 'build' group - build commands
 build_group_app.command(name="image")(build_app.registered_commands[0].callback)

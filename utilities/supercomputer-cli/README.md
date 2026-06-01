@@ -200,6 +200,15 @@ Manage and monitor Discovery jobs:
 | `discovery job status [operation-id]` | Get compute usage, or status of a specific operation |
 | `discovery job pools` | List available nodepools from configuration |
 | `discovery job cleanup-anf` | List stale operations whose ANF scratch folders can be cleaned up |
+| `discovery job history` | List, locate, or wipe the local job-submit history |
+
+> **Local job history.** Every `discovery job start` / `batch` / `vscode`
+> records the operation ID + command + tool + nodepool + project + workspace
+> to `~/.discovery/job-history.jsonl` (one JSON-Lines record per submit).
+> Use `discovery job history` to browse it, or pass `--mine` to
+> `discovery job list / running / pending / done` to restrict the
+> server-side listing to jobs you submitted from this machine. Set
+> `DISCOVERY_NO_JOB_HISTORY=1` to disable recording for an invocation.
 
 **Examples:**
 
@@ -223,6 +232,17 @@ discovery job start --scratch "python train.py --workdir /scratch/run"
 # default). The Scratch lookup auto-routes to whichever SC the chosen
 # pool lives on.
 discovery job start --pool ibtest2/hbv4 --scratch "echo hi"
+
+# Browse jobs you've submitted from this machine (offline, no API call)
+discovery job history
+discovery job history --limit 10
+discovery job history --since 7d
+discovery job history --all-workspaces --this-host
+
+# Filter server-side listings to your local submissions
+discovery job list --mine
+discovery job running --mine
+discovery job done --mine
 
 # Submit several independent runs in one shot
 discovery job batch 4 "python -c 'print(\"hello\")'"
