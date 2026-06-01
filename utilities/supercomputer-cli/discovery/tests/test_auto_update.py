@@ -45,31 +45,21 @@ def enable_checks(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.delenv(auto_update.ENV_OPT_OUT, raising=False)
 
 
-def _compare_response(
+def _commits_response(
     *,
-    ahead_by: int = 1,
-    cli_filename: str = "utilities/supercomputer-cli/discovery/foo.py",
-    extra_filename: str | None = None,
     commit_sha: str = "1234567890abcdef1234567890abcdef12345678",
     commit_date: str = "2025-05-30T12:00:00Z",
-) -> dict:
-    """Build a minimal compare-API payload for use in tests."""
-    files = [{"filename": cli_filename, "status": "modified"}]
-    if extra_filename is not None:
-        files.append({"filename": extra_filename, "status": "modified"})
-    return {
-        "ahead_by": ahead_by,
-        "behind_by": 0,
-        "status": "behind" if ahead_by else "identical",
-        "files": files,
-        "commits": [
-            {
-                "sha": commit_sha,
-                "commit": {"committer": {"date": commit_date}},
-                "files": files,
-            }
-        ],
-    }
+) -> list:
+    """Build a minimal ``GET /commits?path=...&per_page=1`` payload."""
+    return [
+        {
+            "sha": commit_sha,
+            "commit": {
+                "committer": {"date": commit_date},
+                "message": "feat: thing",
+            },
+        }
+    ]
 
 
 # ---------------------------------------------------------------------------
@@ -222,10 +212,21 @@ class TestShouldCheck:
 # ---------------------------------------------------------------------------
 
 
-def _patch_httpx_get(payload: dict | None, *, status: int = 200) -> MagicMock:
-    """Return a context-manager mock that yields a client whose .get(...) returns ``payload``."""
+
+def _patch_httpx_get(
+    payload: object,
+    *,
+    status: int = 200,
+    response_headers: dict | None = None,
+) -> MagicMock:
+    """Return a context-manager mock that yields a client whose ``.get()``
+    returns the configured response.
+
+    ``payload`` may be a dict, list, or ``None`` (to simulate invalid JSON).
+    """
     response = MagicMock()
     response.status_code = status
+    response.headers = response_headers or {}
     if payload is None:
         response.json.side_effect = ValueError("no body")
     else:
@@ -245,6 +246,31 @@ def _patch_httpx_get(payload: dict | None, *, status: int = 200) -> MagicMock:
     return MagicMock(return_value=cm)
 
 
+def _patch_client_capture(monkeypatch, *, payload=None, headers=None, status=200):
+    """Install an httpx.Client mock and return the inner client mock so the
+    test can inspect what was sent."""
+    response = MagicMock()
+    response.status_code = status
+    response.headers = headers or {}
+    if payload is None:
+        response.json.side_effect = ValueError("no body")
+    else:
+        response.json.return_value = payload
+    if status >= 400:
+        response.raise_for_status.side_effect = httpx.HTTPStatusError(
+            "boom", request=MagicMock(), response=response
+        )
+    else:
+        response.raise_for_status.return_value = None
+    client = MagicMock()
+    client.get.return_value = response
+    cm = MagicMock()
+    cm.__enter__.return_value = client
+    cm.__exit__.return_value = False
+    monkeypatch.setattr(httpx, "Client", MagicMock(return_value=cm))
+    return client
+
+
 class TestFetchUpdateInfo:
     def test_returns_none_for_dev_commit(self) -> None:
         assert (
@@ -255,10 +281,10 @@ class TestFetchUpdateInfo:
     def test_returns_none_for_empty_commit(self) -> None:
         assert auto_update.fetch_update_info("") is None
 
-    def test_reports_update_when_cli_dir_changed(
+    def test_reports_update_when_latest_sha_differs(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        payload = _compare_response(
+        payload = _commits_response(
             commit_sha="abcdef1234567890abcdef1234567890abcdef12",
             commit_date="2025-06-01T08:00:00Z",
         )
@@ -270,116 +296,12 @@ class TestFetchUpdateInfo:
         assert info.latest_commit_date == "2025-06-01T08:00:00Z"
         assert info.current_commit == "deadbeef"
 
-    def test_sends_authorization_header_when_token_present(
+    def test_reports_no_update_when_latest_sha_matches(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        payload = _compare_response()
-        client_mock = MagicMock()
-        response = MagicMock()
-        response.json.return_value = payload
-        response.raise_for_status.return_value = None
-        client_mock.get.return_value = response
-        cm = MagicMock()
-        cm.__enter__.return_value = client_mock
-        cm.__exit__.return_value = False
-        monkeypatch.setattr(httpx, "Client", MagicMock(return_value=cm))
-        monkeypatch.setenv("DISCOVERY_GITHUB_TOKEN", "secret-token")
-
-        auto_update.fetch_update_info("deadbeef")
-
-        sent_headers = client_mock.get.call_args.kwargs["headers"]
-        assert sent_headers["Authorization"] == "Bearer secret-token"
-
-    def test_no_authorization_header_when_no_token(
-        self, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
-        for var in auto_update.TOKEN_ENV_VARS:
-            monkeypatch.delenv(var, raising=False)
-        # Stub out gh CLI lookup so the test doesn't depend on the
-        # developer's local `gh auth` state.
-        monkeypatch.setattr(
-            "discovery.common.auto_update.shutil.which", lambda _: None
-        )
-        payload = _compare_response()
-        client_mock = MagicMock()
-        response = MagicMock()
-        response.json.return_value = payload
-        response.raise_for_status.return_value = None
-        client_mock.get.return_value = response
-        cm = MagicMock()
-        cm.__enter__.return_value = client_mock
-        cm.__exit__.return_value = False
-        monkeypatch.setattr(httpx, "Client", MagicMock(return_value=cm))
-
-        auto_update.fetch_update_info("deadbeef")
-        sent_headers = client_mock.get.call_args.kwargs["headers"]
-        assert "Authorization" not in sent_headers
-
-    def test_uses_default_branch_when_env_unset(
-        self, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
-        monkeypatch.delenv(auto_update.ENV_UPDATE_REF, raising=False)
-        payload = _compare_response()
-        client_mock = MagicMock()
-        response = MagicMock()
-        response.json.return_value = payload
-        response.raise_for_status.return_value = None
-        client_mock.get.return_value = response
-        cm = MagicMock()
-        cm.__enter__.return_value = client_mock
-        cm.__exit__.return_value = False
-        monkeypatch.setattr(httpx, "Client", MagicMock(return_value=cm))
-
-        auto_update.fetch_update_info("deadbeef")
-        url = client_mock.get.call_args.args[0]
-        assert "...main" in url
-
-    def test_honors_update_ref_env_var(
-        self, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
-        monkeypatch.setenv(auto_update.ENV_UPDATE_REF, "release/rc-1")
-        payload = _compare_response()
-        client_mock = MagicMock()
-        response = MagicMock()
-        response.json.return_value = payload
-        response.raise_for_status.return_value = None
-        client_mock.get.return_value = response
-        cm = MagicMock()
-        cm.__enter__.return_value = client_mock
-        cm.__exit__.return_value = False
-        monkeypatch.setattr(httpx, "Client", MagicMock(return_value=cm))
-
-        auto_update.fetch_update_info("deadbeef")
-        url = client_mock.get.call_args.args[0]
-        assert "...release/rc-1" in url
-        assert "microsoft/discovery" in url
-
-    def test_honors_update_repo_env_var(
-        self, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
-        monkeypatch.setenv(auto_update.ENV_UPDATE_REPO, "fork-user/discovery")
-        monkeypatch.setenv(auto_update.ENV_UPDATE_REF, "feat/x")
-        payload = _compare_response()
-        client_mock = MagicMock()
-        response = MagicMock()
-        response.json.return_value = payload
-        response.raise_for_status.return_value = None
-        client_mock.get.return_value = response
-        cm = MagicMock()
-        cm.__enter__.return_value = client_mock
-        cm.__exit__.return_value = False
-        monkeypatch.setattr(httpx, "Client", MagicMock(return_value=cm))
-
-        auto_update.fetch_update_info("deadbeef")
-        url = client_mock.get.call_args.args[0]
-        assert "repos/fork-user/discovery/compare/" in url
-        assert "...feat/x" in url
-
-    def test_reports_no_update_when_no_cli_changes(
-        self, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
-        payload = _compare_response(
-            cli_filename="agents/some-agent/metadata.yaml",
+        # Latest commit's short SHA equals "deadbeef" (first 8 chars).
+        payload = _commits_response(
+            commit_sha="deadbeef000000000000000000000000",
         )
         monkeypatch.setattr(httpx, "Client", _patch_httpx_get(payload))
         info = auto_update.fetch_update_info("deadbeef")
@@ -387,14 +309,72 @@ class TestFetchUpdateInfo:
         assert info.update_available is False
         assert info.latest_commit == "deadbeef"
 
-    def test_reports_no_update_when_ahead_by_zero(
+    def test_uses_commits_endpoint_with_path_filter(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        payload = _compare_response(ahead_by=0)
-        monkeypatch.setattr(httpx, "Client", _patch_httpx_get(payload))
-        info = auto_update.fetch_update_info("deadbeef")
-        assert info is not None
-        assert info.update_available is False
+        """The fetcher must hit ``/commits?path=…&per_page=1`` — the
+        light endpoint that returns only commit metadata (no per-file
+        diffs)."""
+        client = _patch_client_capture(monkeypatch, payload=_commits_response())
+        auto_update.fetch_update_info("deadbeef")
+        url = client.get.call_args.args[0]
+        assert "/commits?" in url
+        assert "path=utilities/supercomputer-cli/" in url
+        assert "per_page=1" in url
+        # And NOT the heavy compare endpoint
+        assert "/compare/" not in url
+
+    def test_sends_authorization_header_when_token_present(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.setenv("DISCOVERY_GITHUB_TOKEN", "secret-token")
+        client = _patch_client_capture(monkeypatch, payload=_commits_response())
+        auto_update.fetch_update_info("deadbeef")
+        sent_headers = client.get.call_args.kwargs["headers"]
+        assert sent_headers["Authorization"] == "Bearer secret-token"
+
+    def test_no_authorization_header_when_no_token(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        for var in auto_update.TOKEN_ENV_VARS:
+            monkeypatch.delenv(var, raising=False)
+        monkeypatch.setattr(
+            "discovery.common.auto_update.shutil.which", lambda _: None
+        )
+        client = _patch_client_capture(monkeypatch, payload=_commits_response())
+        auto_update.fetch_update_info("deadbeef")
+        sent_headers = client.get.call_args.kwargs["headers"]
+        assert "Authorization" not in sent_headers
+
+    def test_uses_default_branch_when_env_unset(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.delenv(auto_update.ENV_UPDATE_REF, raising=False)
+        client = _patch_client_capture(monkeypatch, payload=_commits_response())
+        auto_update.fetch_update_info("deadbeef")
+        url = client.get.call_args.args[0]
+        assert "sha=main&" in url
+
+    def test_honors_update_ref_env_var(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.setenv(auto_update.ENV_UPDATE_REF, "release/rc-1")
+        client = _patch_client_capture(monkeypatch, payload=_commits_response())
+        auto_update.fetch_update_info("deadbeef")
+        url = client.get.call_args.args[0]
+        assert "sha=release/rc-1" in url
+        assert "microsoft/discovery" in url
+
+    def test_honors_update_repo_env_var(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.setenv(auto_update.ENV_UPDATE_REPO, "fork-user/discovery")
+        monkeypatch.setenv(auto_update.ENV_UPDATE_REF, "feat/x")
+        client = _patch_client_capture(monkeypatch, payload=_commits_response())
+        auto_update.fetch_update_info("deadbeef")
+        url = client.get.call_args.args[0]
+        assert "repos/fork-user/discovery/commits" in url
+        assert "sha=feat/x" in url
 
     def test_returns_none_on_network_error(
         self, monkeypatch: pytest.MonkeyPatch
@@ -405,9 +385,7 @@ class TestFetchUpdateInfo:
         cm.__enter__.return_value = client
         cm.__exit__.return_value = False
         monkeypatch.setattr(httpx, "Client", MagicMock(return_value=cm))
-        # Silent-failure wrapper returns None.
         assert auto_update.fetch_update_info("deadbeef") is None
-        # Typed wrapper raises the categorized error.
         with pytest.raises(auto_update.UpdateCheckError) as ei:
             auto_update.check_for_update("deadbeef")
         assert ei.value.reason == "network"
@@ -494,64 +472,125 @@ class TestFetchUpdateInfo:
             auto_update.check_for_update("deadbeef")
         assert ei.value.reason == "parse_error"
 
-    def test_picks_newest_cli_commit_among_mixed(
+    def test_raises_when_response_is_not_a_list(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        # 3 commits: oldest CLI, middle unrelated, newest unrelated.
-        # Newest CLI-touching should win even though it's not the tip.
-        payload = {
-            "ahead_by": 3,
-            "files": [
-                {"filename": "utilities/supercomputer-cli/discovery/x.py"},
-                {"filename": "agents/other/README.md"},
-            ],
-            "commits": [
-                {
-                    "sha": "111111111111111111",
-                    "commit": {"committer": {"date": "2025-01-01T00:00:00Z"}},
-                    "files": [
-                        {"filename": "utilities/supercomputer-cli/discovery/x.py"}
-                    ],
-                },
-                {
-                    "sha": "222222222222222222",
-                    "commit": {"committer": {"date": "2025-02-01T00:00:00Z"}},
-                    "files": [
-                        {"filename": "utilities/supercomputer-cli/discovery/y.py"}
-                    ],
-                },
-                {
-                    "sha": "333333333333333333",
-                    "commit": {"committer": {"date": "2025-03-01T00:00:00Z"}},
-                    "files": [{"filename": "agents/other/README.md"}],
-                },
-            ],
-        }
-        monkeypatch.setattr(httpx, "Client", _patch_httpx_get(payload))
-        info = auto_update.fetch_update_info("deadbeef")
-        assert info is not None
-        assert info.latest_commit == "22222222"
+        monkeypatch.setattr(httpx, "Client", _patch_httpx_get({"oops": True}))
+        with pytest.raises(auto_update.UpdateCheckError) as ei:
+            auto_update.check_for_update("deadbeef")
+        assert ei.value.reason == "parse_error"
 
-    def test_falls_back_to_tip_when_per_commit_files_missing(
+    def test_empty_commits_list_is_no_update(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        payload = {
-            "ahead_by": 1,
-            "files": [
-                {"filename": "utilities/supercomputer-cli/discovery/x.py"}
-            ],
-            "commits": [
-                {
-                    "sha": "abcdef1234567890",
-                    "commit": {"committer": {"date": "2025-06-01T00:00:00Z"}},
-                }
-            ],
-        }
-        monkeypatch.setattr(httpx, "Client", _patch_httpx_get(payload))
-        info = auto_update.fetch_update_info("deadbeef")
-        assert info is not None
-        assert info.latest_commit == "abcdef12"
+        monkeypatch.setattr(httpx, "Client", _patch_httpx_get([]))
+        info, _ = auto_update.check_for_update("deadbeef")
+        assert info.update_available is False
+
+
+class TestEtagConditionalGet:
+    """The fetcher must use If-None-Match / 304 to avoid bandwidth and
+    rate-limit waste in the steady-state-unchanged case."""
+
+    def test_sends_if_none_match_when_cached_etag_matches_url(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        client = _patch_client_capture(
+            monkeypatch,
+            payload=_commits_response(),
+            headers={"ETag": 'W/"new-etag-123"'},
+        )
+        url = auto_update._build_commits_url(
+            owner_repo="microsoft/discovery", ref="main"
+        )
+        info, new_etag = auto_update.check_for_update(
+            "deadbeef",
+            cached_etag='W/"prev-etag"',
+            cached_etag_url=url,
+        )
+        sent_headers = client.get.call_args.kwargs["headers"]
+        assert sent_headers["If-None-Match"] == 'W/"prev-etag"'
+        assert new_etag == 'W/"new-etag-123"'
         assert info.update_available is True
+
+    def test_skips_if_none_match_when_url_mismatch(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        client = _patch_client_capture(monkeypatch, payload=_commits_response())
+        # cached_etag_url points at a stale URL (e.g. user changed
+        # DISCOVERY_UPDATE_REF). Fetcher should NOT send the stale etag.
+        auto_update.check_for_update(
+            "deadbeef",
+            cached_etag='W/"stale-etag"',
+            cached_etag_url="https://api.github.com/elsewhere",
+        )
+        sent_headers = client.get.call_args.kwargs["headers"]
+        assert "If-None-Match" not in sent_headers
+
+    def test_304_reports_no_update_and_preserves_etag(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        response = MagicMock()
+        response.status_code = 304
+        response.headers = {}
+        client = MagicMock()
+        client.get.return_value = response
+        cm = MagicMock()
+        cm.__enter__.return_value = client
+        cm.__exit__.return_value = False
+        monkeypatch.setattr(httpx, "Client", MagicMock(return_value=cm))
+
+        url = auto_update._build_commits_url(
+            owner_repo="microsoft/discovery", ref="main"
+        )
+        info, new_etag = auto_update.check_for_update(
+            "deadbeef",
+            cached_etag='W/"unchanged"',
+            cached_etag_url=url,
+        )
+        assert info.update_available is False
+        assert info.latest_commit == "deadbeef"
+        # 304: server didn't send a new etag, we keep the cached one
+        # so subsequent requests can keep using it.
+        assert new_etag == 'W/"unchanged"'
+
+    def test_background_worker_uses_etag_protocol(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+        fake_home: Path,
+        installed_build: str,
+    ) -> None:
+        """End-to-end: cache an etag, run worker, confirm If-None-Match
+        is sent and the etag persists across the round-trip."""
+        url = auto_update._build_commits_url(
+            owner_repo="microsoft/discovery", ref="main"
+        )
+        auto_update.save_cache(
+            auto_update.UpdateCacheState(
+                etag='W/"prev"',
+                etag_url=url,
+            )
+        )
+
+        response = MagicMock()
+        response.status_code = 304
+        response.headers = {}
+        client = MagicMock()
+        client.get.return_value = response
+        cm = MagicMock()
+        cm.__enter__.return_value = client
+        cm.__exit__.return_value = False
+        monkeypatch.setattr(httpx, "Client", MagicMock(return_value=cm))
+
+        auto_update._refresh_cache_worker()
+        sent_headers = client.get.call_args.kwargs["headers"]
+        assert sent_headers["If-None-Match"] == 'W/"prev"'
+
+        state = auto_update.load_cache()
+        assert state.etag == 'W/"prev"'
+        assert state.etag_url == url
+        # 304 still updated last_checked so the freshness window resets.
+        assert state.last_checked is not None
 
 
 class TestTokenResolution:
@@ -700,8 +739,8 @@ class TestRefreshCacheWorker:
         )
         now = datetime(2025, 6, 1, 9, 0, tzinfo=timezone.utc)
         monkeypatch.setattr(
-            "discovery.common.auto_update.fetch_update_info",
-            lambda *_args, **_kw: info,
+            "discovery.common.auto_update.check_for_update",
+            lambda *_args, **_kw: (info, 'W/"fresh-etag"'),
         )
         monkeypatch.setattr("discovery.common.auto_update._now", lambda: now)
         auto_update._refresh_cache_worker()
@@ -711,6 +750,10 @@ class TestRefreshCacheWorker:
         assert state.latest_commit_date == "2025-06-01T00:00:00Z"
         assert state.current_at_check == installed_build
         assert state.last_checked == now.isoformat()
+        # New etag should be persisted, bound to the URL the worker hit.
+        assert state.etag == 'W/"fresh-etag"'
+        assert state.etag_url is not None
+        assert "/commits?" in state.etag_url
 
     def test_resets_notified_on_upgrade(
         self,
@@ -734,8 +777,8 @@ class TestRefreshCacheWorker:
             update_available=True,
         )
         monkeypatch.setattr(
-            "discovery.common.auto_update.fetch_update_info",
-            lambda *_a, **_k: info,
+            "discovery.common.auto_update.check_for_update",
+            lambda *_a, **_k: (info, None),
         )
         auto_update._refresh_cache_worker()
         state = auto_update.load_cache()
@@ -748,9 +791,13 @@ class TestRefreshCacheWorker:
         fake_home: Path,
         installed_build: str,
     ) -> None:
+        def explode(*_a, **_k):
+            raise auto_update.UpdateCheckError(
+                auto_update.REASON_NETWORK, "down"
+            )
+
         monkeypatch.setattr(
-            "discovery.common.auto_update.fetch_update_info",
-            lambda *_a, **_k: None,
+            "discovery.common.auto_update.check_for_update", explode
         )
         auto_update._refresh_cache_worker()
         assert not auto_update._cache_path().exists()

@@ -76,7 +76,7 @@ class TestUpdateCommandCheck:
         )
         monkeypatch.setattr(
             "discovery.poll.cli_update.check_for_update",
-            lambda *_a, **_k: info,
+            lambda *_a, **_k: (info, None),
         )
         result = runner.invoke(app, ["update"])
         assert result.exit_code == 0
@@ -96,7 +96,7 @@ class TestUpdateCommandCheck:
         )
         monkeypatch.setattr(
             "discovery.poll.cli_update.check_for_update",
-            lambda *_a, **_k: info,
+            lambda *_a, **_k: (info, None),
         )
         result = runner.invoke(app, ["update", "--check"])
         assert result.exit_code == 0
@@ -160,7 +160,7 @@ class TestUpdateCommandInstall:
         )
         monkeypatch.setattr(
             "discovery.poll.cli_update.check_for_update",
-            lambda *_a, **_k: info,
+            lambda *_a, **_k: (info, None),
         )
         install = MagicMock(return_value=0)
         monkeypatch.setattr(
@@ -187,7 +187,7 @@ class TestUpdateCommandInstall:
         )
         monkeypatch.setattr(
             "discovery.poll.cli_update.check_for_update",
-            lambda *_a, **_k: info,
+            lambda *_a, **_k: (info, None),
         )
         monkeypatch.setattr(
             "discovery.poll.cli_update.install_update",
@@ -209,7 +209,7 @@ class TestUpdateCommandInstall:
         )
         monkeypatch.setattr(
             "discovery.poll.cli_update.check_for_update",
-            lambda *_a, **_k: info,
+            lambda *_a, **_k: (info, None),
         )
 
         def explode(*_a: object, **_k: object) -> int:

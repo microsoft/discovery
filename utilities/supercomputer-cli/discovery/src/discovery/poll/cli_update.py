@@ -173,10 +173,10 @@ def update_command(
 ) -> None:
     """Check for a newer Discovery CLI release and optionally install it.
 
-    The check hits the GitHub compare API for the
-    ``microsoft/discovery`` repository's ``main`` branch and reports an
-    update only when the CLI subdirectory has actually changed since the
-    installed build.
+    The check queries the GitHub commits API for the
+    ``microsoft/discovery`` repository's ``main`` branch (filtered to
+    the CLI subdirectory) and reports an update only when the CLI
+    itself has new commits since the installed build.
     """
     _handle_toggles(enable=enable, disable=disable)
 
@@ -190,8 +190,12 @@ def update_command(
 
     console.print("Checking for updates…")
     current = get_build_commit()
+    # Manual `discovery update` invocations always bypass the etag
+    # cache: the user explicitly asked, so we want a fresh answer
+    # rather than a "304 — same as last time" reply that depends on a
+    # potentially-out-of-date local cache.
     try:
-        info = check_for_update(current)
+        info, _ = check_for_update(current)
     except UpdateCheckError as exc:
         _emit_failure(exc)
         raise typer.Exit(code=EXIT_NETWORK) from exc

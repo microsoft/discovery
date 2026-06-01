@@ -23,11 +23,16 @@ Subdirectory-aware version comparison
 The CLI ships as a subdirectory of the ``microsoft/discovery`` monorepo,
 so the repository's main branch advances for many reasons (catalog
 edits, doc updates, other utilities) that do not change the CLI itself.
-We therefore query the GitHub *compare* API with
-``compare/{current_sha}...main`` and only flag an update when at least
-one of the changed files lives under ``utilities/supercomputer-cli/``.
-This keeps notifications meaningful and avoids the "upgrade did
-nothing" foot-gun that a naive HEAD-vs-HEAD comparison would produce.
+We therefore query the GitHub *commits* API with
+``commits?sha=main&path=utilities/supercomputer-cli/&per_page=1``,
+which returns just the single most-recent commit that touched the CLI
+subdirectory (no per-file diffs). The response is ~1-3 KB regardless
+of how many commits the user is behind by, vs. the 100 KB - 1+ MB the
+``/compare`` endpoint would return for the same query.
+
+We also honour HTTP ``ETag`` / ``If-None-Match``: a 304 response in the
+steady-state-unchanged case is ~200 bytes and (per GitHub's docs) does
+*not* count against the rate limit.
 
 Opt-out
 -------
@@ -88,8 +93,14 @@ REPO_OWNER = "microsoft"
 REPO_NAME = "discovery"
 CLI_SUBDIR = "utilities/supercomputer-cli/"
 DEFAULT_BRANCH = "main"
-GITHUB_COMPARE_URL_TEMPLATE = (
-    "https://api.github.com/repos/{owner_repo}/compare/{base}...{head}"
+# The commits endpoint returns just commit metadata (no per-file diffs).
+# With ``path=`` it returns only commits that touched the CLI subdirectory,
+# and ``per_page=1`` gives us just the newest one — the only thing we
+# actually need. Total response: ~1 KB instead of the ~100 KB - 1.3 MB
+# the compare endpoint produced.
+GITHUB_COMMITS_URL_TEMPLATE = (
+    "https://api.github.com/repos/{owner_repo}/commits"
+    "?sha={ref}&path={path}&per_page=1"
 )
 GITHUB_HEADERS = {
     "Accept": "application/vnd.github+json",
@@ -157,6 +168,14 @@ class UpdateCacheState:
             fresh notice when a newer release appears.
         disabled: Persistent opt-out flag. When ``True`` no checks or
             notifications are performed regardless of cache freshness.
+        etag: HTTP ``ETag`` header from the last successful 200/304
+            response. Sent as ``If-None-Match`` on the next request so
+            GitHub can answer with 304 Not Modified (~200 bytes, no
+            rate-limit cost) when nothing has changed.
+        etag_url: The full request URL the ``etag`` was issued for.
+            Etags are URL-specific, so we discard the cached etag when
+            the URL changes (e.g. user switched ``DISCOVERY_UPDATE_REF``
+            or ``DISCOVERY_UPDATE_REPO``).
     """
 
     last_checked: str | None = None
@@ -165,6 +184,8 @@ class UpdateCacheState:
     current_at_check: str | None = None
     notified_commit: str | None = None
     disabled: bool = False
+    etag: str | None = None
+    etag_url: str | None = None
 
     @classmethod
     def from_mapping(cls, data: dict[str, Any]) -> UpdateCacheState:
@@ -296,32 +317,14 @@ def set_disabled(value: bool) -> None:
 
 
 def _is_cli_path(filename: str) -> bool:
-    """Return ``True`` when ``filename`` lives under the CLI subdirectory."""
-    return filename.startswith(CLI_SUBDIR)
+    """Return ``True`` when ``filename`` lives under the CLI subdirectory.
 
-
-def _newest_cli_commit(commits: list[dict[str, Any]]) -> tuple[str, str] | None:
-    """Return ``(short_sha, iso_date)`` of the newest CLI-touching commit.
-
-    ``commits`` is the list returned by the GitHub compare endpoint,
-    ordered from oldest to newest. We iterate from the end so the first
-    match is the newest.
+    Kept as a helper for forward-compatibility — currently unused by the
+    fetcher itself (the ``commits?path=`` endpoint already filters
+    server-side) but useful for any callers that want to apply the same
+    classification.
     """
-    for entry in reversed(commits):
-        files = entry.get("files")
-        sha = entry.get("sha", "")
-        if not sha:
-            continue
-        if isinstance(files, list) and any(
-            _is_cli_path(str(f.get("filename", ""))) for f in files
-        ):
-            iso = (
-                entry.get("commit", {})
-                .get("committer", {})
-                .get("date", "")
-            )
-            return sha[:8], iso
-    return None
+    return filename.startswith(CLI_SUBDIR)
 
 
 def _gh_cli_token(*, timeout: float = 3.0) -> str | None:
@@ -410,22 +413,53 @@ def _classify_http_error(exc: httpx.HTTPStatusError) -> UpdateCheckError:
     return UpdateCheckError(REASON_HTTP_ERROR, f"HTTP {status}: {body[:160]}")
 
 
+def _build_commits_url(*, owner_repo: str, ref: str) -> str:
+    """Return the commits-with-path URL for the CLI subdir on ``ref``."""
+    return GITHUB_COMMITS_URL_TEMPLATE.format(
+        owner_repo=owner_repo,
+        ref=ref,
+        path=CLI_SUBDIR,
+    )
+
+
 def check_for_update(
-    current_commit: str, *, timeout: float = REQUEST_TIMEOUT_SECONDS
-) -> UpdateInfo:
+    current_commit: str,
+    *,
+    timeout: float = REQUEST_TIMEOUT_SECONDS,
+    cached_etag: str | None = None,
+    cached_etag_url: str | None = None,
+) -> tuple[UpdateInfo, str | None]:
     """Synchronously query GitHub for available updates.
 
+    Uses ``/repos/{owner}/{repo}/commits?path=…&per_page=1`` to retrieve
+    only the newest commit that touched the CLI subdirectory. This is
+    typically a ~1 KB JSON document instead of the 100 KB - 1 MB
+    full-diff payload that ``/compare`` would return.
+
+    Also supports HTTP ``ETag`` conditional GET: when
+    ``cached_etag`` / ``cached_etag_url`` are provided and the request
+    URL matches, ``If-None-Match`` is sent. GitHub answers with
+    ``304 Not Modified`` (zero body, no rate-limit cost) when nothing
+    has changed since the cached check.
+
     Args:
-        current_commit: The short SHA of the currently installed build
-            (typically :func:`discovery._version.get_build_commit`).
+        current_commit: Short SHA of the currently installed build.
         timeout: HTTP timeout in seconds.
+        cached_etag: ``ETag`` from a previous successful response, if
+            any. Pass ``None`` to skip the conditional request.
+        cached_etag_url: URL the ``cached_etag`` was originally issued
+            for. The etag is only sent when it matches the current
+            request URL — etags are URL-specific.
 
     Returns:
-        :class:`UpdateInfo` describing the comparison.
+        ``(UpdateInfo, new_etag)``. When the server returns 304 the
+        :class:`UpdateInfo` is built from the caller's perspective
+        (``latest_commit == current_commit``, no update); otherwise it
+        reflects the freshly-fetched commit. ``new_etag`` may be
+        ``None`` when the server didn't return one.
 
     Raises:
         UpdateCheckError: On any failure to obtain a usable answer.
-            Inspect :attr:`UpdateCheckError.reason` for the category.
     """
     if not current_commit or current_commit == DEV_COMMIT_SENTINEL:
         raise UpdateCheckError(
@@ -435,14 +469,28 @@ def check_for_update(
     upstream_repo = (
         os.environ.get(ENV_UPDATE_REPO) or f"{REPO_OWNER}/{REPO_NAME}"
     )
-    url = GITHUB_COMPARE_URL_TEMPLATE.format(
-        owner_repo=upstream_repo, base=current_commit, head=upstream_ref
-    )
+    url = _build_commits_url(owner_repo=upstream_repo, ref=upstream_ref)
+
+    headers = _build_headers()
+    if cached_etag and cached_etag_url == url:
+        headers["If-None-Match"] = cached_etag
+
     try:
         with httpx.Client(timeout=timeout, follow_redirects=True) as client:
-            resp = client.get(url, headers=_build_headers())
+            resp = client.get(url, headers=headers)
+            if resp.status_code == 304:
+                debug("auto-update: 304 Not Modified (etag cache hit)")
+                return (
+                    UpdateInfo(
+                        current_commit=current_commit,
+                        latest_commit=current_commit,
+                        update_available=False,
+                    ),
+                    cached_etag,
+                )
             resp.raise_for_status()
             data = resp.json()
+            new_etag = resp.headers.get("etag") or resp.headers.get("ETag")
     except httpx.HTTPStatusError as exc:
         raise _classify_http_error(exc) from exc
     except httpx.HTTPError as exc:
@@ -450,59 +498,45 @@ def check_for_update(
     except ValueError as exc:
         raise UpdateCheckError(REASON_PARSE_ERROR, str(exc)) from exc
 
-    if not isinstance(data, dict):
+    if not isinstance(data, list):
         raise UpdateCheckError(
-            REASON_PARSE_ERROR, "compare response is not an object"
+            REASON_PARSE_ERROR, "commits response is not a list"
+        )
+    if not data:
+        # Should never happen for a real repo with files under CLI_SUBDIR,
+        # but handle it defensively rather than raising.
+        return (
+            UpdateInfo(
+                current_commit=current_commit,
+                latest_commit=current_commit,
+                update_available=False,
+            ),
+            new_etag,
         )
 
-    ahead_by = data.get("ahead_by", 0)
-    if not isinstance(ahead_by, int) or ahead_by <= 0:
-        return UpdateInfo(
-            current_commit=current_commit,
-            latest_commit=current_commit,
-            update_available=False,
-        )
-
-    changed_files = [
-        str(f.get("filename", ""))
-        for f in data.get("files", [])
-        if isinstance(f, dict)
-    ]
-    cli_changes = [f for f in changed_files if _is_cli_path(f)]
-    if not cli_changes:
-        return UpdateInfo(
-            current_commit=current_commit,
-            latest_commit=current_commit,
-            update_available=False,
-            changed_files=changed_files,
-        )
-
-    commits = data.get("commits", [])
-    if not isinstance(commits, list) or not commits:
+    head = data[0]
+    if not isinstance(head, dict):
         raise UpdateCheckError(
-            REASON_PARSE_ERROR, "compare response missing 'commits' list"
+            REASON_PARSE_ERROR, "commits[0] is not an object"
         )
-
-    newest = _newest_cli_commit(commits)
-    if newest is None:
-        # ``ahead_by`` and ``files`` disagreed with the per-commit view
-        # (rare: GitHub may omit per-commit ``files`` for very large
-        # diffs). Fall back to the tip of ``head`` so the user still
-        # learns that *something* has changed.
-        tip = commits[-1]
-        latest_sha = str(tip.get("sha", ""))[:8]
-        latest_date = (
-            tip.get("commit", {}).get("committer", {}).get("date", "")
+    sha = head.get("sha", "")
+    if not isinstance(sha, str) or not sha:
+        raise UpdateCheckError(
+            REASON_PARSE_ERROR, "commits[0].sha missing or invalid"
         )
-    else:
-        latest_sha, latest_date = newest
+    latest_sha = sha[:8]
+    latest_date = (
+        head.get("commit", {}).get("committer", {}).get("date", "")
+    )
 
-    return UpdateInfo(
-        current_commit=current_commit,
-        latest_commit=latest_sha,
-        latest_commit_date=latest_date or "",
-        update_available=latest_sha != current_commit,
-        changed_files=cli_changes,
+    return (
+        UpdateInfo(
+            current_commit=current_commit,
+            latest_commit=latest_sha,
+            latest_commit_date=str(latest_date) if latest_date else "",
+            update_available=latest_sha != current_commit,
+        ),
+        new_etag,
     )
 
 
@@ -513,13 +547,15 @@ def fetch_update_info(
 
     Returns ``None`` on any error. Use :func:`check_for_update` directly
     when you need the failure category (e.g. to prompt for authentication
-    on rate-limit failures).
+    on rate-limit failures) or want to participate in the etag-cache
+    protocol.
     """
     try:
-        return check_for_update(current_commit, timeout=timeout)
+        info, _ = check_for_update(current_commit, timeout=timeout)
     except UpdateCheckError as exc:
         debug(f"auto-update: check failed [{exc.reason}]: {exc.detail}")
         return None
+    return info
 
 
 # ---------------------------------------------------------------------------
@@ -528,13 +564,31 @@ def fetch_update_info(
 
 
 def _refresh_cache_worker() -> None:
-    """Daemon-thread worker: refresh the cache and never raise."""
+    """Daemon-thread worker: refresh the cache and never raise.
+
+    Participates in the etag protocol so subsequent refreshes can use
+    ``If-None-Match`` and exchange ~200-byte 304 responses with the
+    server when nothing has changed.
+    """
     try:
         current = get_build_commit()
-        info = fetch_update_info(current)
-        if info is None:
-            return
         state = load_cache()
+        upstream_ref = os.environ.get(ENV_UPDATE_REF) or DEFAULT_BRANCH
+        upstream_repo = (
+            os.environ.get(ENV_UPDATE_REPO) or f"{REPO_OWNER}/{REPO_NAME}"
+        )
+        url_for_etag = _build_commits_url(
+            owner_repo=upstream_repo, ref=upstream_ref
+        )
+        try:
+            info, new_etag = check_for_update(
+                current,
+                cached_etag=state.etag,
+                cached_etag_url=state.etag_url,
+            )
+        except UpdateCheckError as exc:
+            debug(f"auto-update: background check failed [{exc.reason}]")
+            return
         # Invalidate the "already-notified" memo when the user has
         # upgraded since the last check, so we don't suppress new
         # legitimate notifications for the *next* release.
@@ -544,6 +598,9 @@ def _refresh_cache_worker() -> None:
         state.latest_commit = info.latest_commit
         state.latest_commit_date = info.latest_commit_date or None
         state.current_at_check = current
+        if new_etag:
+            state.etag = new_etag
+            state.etag_url = url_for_etag
         save_cache(state)
     except Exception as exc:  # pragma: no cover - defensive
         debug(f"auto-update: background refresh crashed: {exc}")
