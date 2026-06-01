@@ -193,6 +193,7 @@ Manage and monitor Discovery jobs:
 | `discovery job batch <command>` | Submit multiple independent tool runs (no polling) |
 | `discovery job vscode [--tunnel-name <name>]` | Start a job that hosts a VS Code tunnel (default name: `discovery-<username>`) |
 | `discovery job cancel <operation-id>` | Cancel a running operation |
+| `discovery job cancel --since 10m` | Bulk-cancel every locally-recorded job submitted in the last 10 minutes |
 | `discovery job running` | List your running operations (this machine); `--all` to see everyone's |
 | `discovery job pending` | List your queued operations (this machine); `--all` to see everyone's |
 | `discovery job done` | List your completed operations (this machine); `--all` to see everyone's |
@@ -247,6 +248,11 @@ discovery job list --all            # everyone's
 discovery job list --user alice     # alice's (implies --all)
 discovery job running                # mine, running now
 discovery job running --all          # everyone's running
+
+# Bulk-cancel everything you submitted from this machine in the last 10
+# minutes (current workspace only; --yes skips the interactive confirm).
+discovery job cancel --since 10m
+discovery job cancel --since 1h --yes
 
 # Submit several independent runs in one shot
 discovery job batch 4 "python -c 'print(\"hello\")'"

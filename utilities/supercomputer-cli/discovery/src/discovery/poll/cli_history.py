@@ -20,6 +20,7 @@ from discovery.common.job_history import (
     clear,
     history_path,
     load_history,
+    parse_since,
 )
 from discovery.common.logging import info
 from discovery.poll.cli_helpers import get_config_file_path, load_project_config
@@ -39,26 +40,11 @@ MODE_STYLES = {
 
 
 def _parse_since(value: str) -> datetime:
-    """Parse ``--since`` value: either ``YYYY-MM-DD`` or ``<N><unit>`` shorthand.
-
-    Supported shorthand units: ``h`` (hours), ``d`` (days), ``w`` (weeks).
-    Examples: ``24h``, ``7d``, ``2w``.
-    """
-    value = value.strip()
-    now = datetime.now(tz=timezone.utc)
-    if len(value) >= 2 and value[:-1].isdigit() and value[-1] in {"h", "d", "w"}:
-        n = int(value[:-1])
-        unit = value[-1]
-        if unit == "h":
-            return now - timedelta(hours=n)
-        if unit == "d":
-            return now - timedelta(days=n)
-        return now - timedelta(weeks=n)
+    """Wrapper that converts :class:`ValueError` to ``typer.BadParameter``."""
     try:
-        return datetime.strptime(value, "%Y-%m-%d").replace(tzinfo=timezone.utc)
+        return parse_since(value)
     except ValueError as exc:
-        msg = f"Invalid --since value: {value!r}. Expected YYYY-MM-DD, '24h', '7d', or '2w'."
-        raise typer.BadParameter(msg) from exc
+        raise typer.BadParameter(str(exc)) from exc
 
 
 def _truncate(value: str, *, width: int) -> str:

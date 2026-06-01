@@ -594,6 +594,202 @@ class TestPaginatorEarlyExit:
         assert page_calls == []
 
 
+# ---------------------------------------------------------------------------
+# `discovery job cancel --since`
+# ---------------------------------------------------------------------------
+
+
+class TestCancelSince:
+    """Bulk-cancel mode: ``discovery job cancel --since DURATION``."""
+
+    def _patch_cancel(self, monkeypatch: pytest.MonkeyPatch):
+        """Install a no-op cancel_operation that records the IDs it was called with."""
+        called: list[str] = []
+
+        def fake_cancel(project, op_id, workspace_url, *, api_version):
+            called.append(op_id)
+
+        monkeypatch.setattr(
+            "discovery.poll.cli_submit.cancel_operation", fake_cancel
+        )
+        return called
+
+    def _setup_env(self, monkeypatch: pytest.MonkeyPatch, workspace: str):
+        fake_cfg = MagicMock()
+        fake_cfg.workspace_url = workspace
+        fake_cfg.project_name = "demo"
+        fake_cfg.api_version = "x"
+        fake_cfg.nodepools = []
+        monkeypatch.setattr(
+            "discovery.poll.cli_submit.load_project_config",
+            lambda *_a, **_k: fake_cfg,
+        )
+        monkeypatch.setattr(
+            "discovery.poll.cli_submit.get_config_file_path",
+            lambda: Path("/tmp/ignored"),
+        )
+        monkeypatch.setattr(
+            "discovery.poll.cli_submit.emit_env", lambda *_a, **_k: None
+        )
+
+    def test_requires_either_op_id_or_since(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        self._setup_env(monkeypatch, "https://ws.example")
+        result = runner.invoke(app, ["job", "cancel"])
+        assert result.exit_code == 2
+
+    def test_op_id_and_since_are_mutually_exclusive(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        self._setup_env(monkeypatch, "https://ws.example")
+        result = runner.invoke(
+            app, ["job", "cancel", "op-abc", "--since", "10m"]
+        )
+        assert result.exit_code == 2
+
+    def test_no_matches_exits_zero_with_message(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        # History exists, but cutoff makes nothing match.
+        _seed_history(workspace="https://ws.example")
+        self._setup_env(monkeypatch, "https://ws.example")
+        called = self._patch_cancel(monkeypatch)
+
+        result = runner.invoke(
+            app, ["job", "cancel", "--since", "1s", "--yes"]
+        )
+        assert result.exit_code == 0
+        assert "No locally-recorded jobs" in result.stdout
+        assert called == []
+
+    def test_cancels_only_recent_local_history(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        ws = "https://ws.example"
+        # Two recent (within 5m) submissions, one old (an hour ago),
+        # and one from a different workspace.
+        now = datetime.now(tz=timezone.utc)
+        recent_iso = (
+            (now - timedelta(minutes=2)).isoformat().replace("+00:00", "Z")
+        )
+        old_iso = (
+            (now - timedelta(hours=1)).isoformat().replace("+00:00", "Z")
+        )
+        job_history.record_submission(
+            "op-recent-1",
+            workspace_url=ws,
+            project_name="demo",
+            submitted_at=recent_iso,
+            command="recent 1",
+        )
+        job_history.record_submission(
+            "op-recent-2",
+            workspace_url=ws,
+            project_name="demo",
+            submitted_at=recent_iso,
+            command="recent 2",
+        )
+        job_history.record_submission(
+            "op-old",
+            workspace_url=ws,
+            project_name="demo",
+            submitted_at=old_iso,
+            command="too old",
+        )
+        job_history.record_submission(
+            "op-other-ws",
+            workspace_url="https://other.example",
+            project_name="demo",
+            submitted_at=recent_iso,
+            command="other workspace",
+        )
+
+        self._setup_env(monkeypatch, ws)
+        called = self._patch_cancel(monkeypatch)
+
+        result = runner.invoke(
+            app,
+            ["job", "cancel", "--since", "10m", "--yes"],
+        )
+        assert result.exit_code == 0
+        assert sorted(called) == ["op-recent-1", "op-recent-2"]
+        assert "op-old" not in result.stdout or "✗ op-old" not in result.stdout
+
+    def test_decline_confirmation_aborts(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        ws = "https://ws.example"
+        now = datetime.now(tz=timezone.utc)
+        job_history.record_submission(
+            "op-recent",
+            workspace_url=ws,
+            project_name="demo",
+            submitted_at=(now - timedelta(minutes=2))
+            .isoformat()
+            .replace("+00:00", "Z"),
+        )
+        self._setup_env(monkeypatch, ws)
+        called = self._patch_cancel(monkeypatch)
+
+        # Pipe 'n' to the confirm prompt.
+        result = runner.invoke(
+            app, ["job", "cancel", "--since", "10m"], input="n\n"
+        )
+        assert result.exit_code == 0
+        assert "aborted" in result.stdout.lower()
+        assert called == []
+
+    def test_treats_404_as_success(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """If the op is already in a terminal state the service returns
+        404/409 — the user's goal ("make it stop") is already true, so
+        don't fail the command."""
+        import httpx
+
+        ws = "https://ws.example"
+        now = datetime.now(tz=timezone.utc)
+        job_history.record_submission(
+            "op-already-done",
+            workspace_url=ws,
+            project_name="demo",
+            submitted_at=(now - timedelta(minutes=1))
+            .isoformat()
+            .replace("+00:00", "Z"),
+        )
+        self._setup_env(monkeypatch, ws)
+
+        def fake_cancel(*_a, **_kw):
+            resp = MagicMock()
+            resp.status_code = 404
+            resp.text = "not found"
+            msg = "404"
+            raise httpx.HTTPStatusError(
+                msg, request=MagicMock(), response=resp
+            )
+
+        monkeypatch.setattr(
+            "discovery.poll.cli_submit.cancel_operation", fake_cancel
+        )
+        result = runner.invoke(
+            app, ["job", "cancel", "--since", "10m", "--yes"]
+        )
+        assert result.exit_code == 0
+        # The op shows in the succeeded summary, not failed.
+        assert "1 of 1" in result.stdout
+        assert "failed" not in result.stdout.lower()
+
+    def test_invalid_since_value_exits_2(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        self._setup_env(monkeypatch, "https://ws.example")
+        result = runner.invoke(
+            app, ["job", "cancel", "--since", "not-a-duration"]
+        )
+        assert result.exit_code == 2
+
+
 class TestRecorderIntegration:
     """Verify the recorder helper writes a usable record on a fake submit."""
 

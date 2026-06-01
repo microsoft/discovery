@@ -304,3 +304,50 @@ class TestIsDisabled:
     ) -> None:
         monkeypatch.setenv(job_history.ENV_OPT_OUT, "0")
         assert job_history.is_disabled() is False
+
+
+# ---------------------------------------------------------------------------
+# parse_since (used by --since shorthand on history and cancel)
+# ---------------------------------------------------------------------------
+
+
+class TestParseSince:
+    def test_supports_seconds(self) -> None:
+        result = job_history.parse_since("30s")
+        # Should be ~30 seconds in the past, within a generous tolerance
+        # to absorb test-runner latency.
+        delta = (datetime.now(tz=timezone.utc) - result).total_seconds()
+        assert 25 <= delta <= 60
+
+    def test_supports_minutes(self) -> None:
+        result = job_history.parse_since("10m")
+        delta = (datetime.now(tz=timezone.utc) - result).total_seconds()
+        # 10 minutes = 600s; allow ±60s slack
+        assert 540 <= delta <= 660
+
+    def test_supports_hours(self) -> None:
+        result = job_history.parse_since("24h")
+        delta = (datetime.now(tz=timezone.utc) - result).total_seconds()
+        # 24h = 86400s; allow ±300s
+        assert 86100 <= delta <= 86700
+
+    def test_supports_days_and_weeks(self) -> None:
+        a = job_history.parse_since("7d")
+        b = job_history.parse_since("1w")
+        # 7d and 1w are identical
+        assert abs((a - b).total_seconds()) < 5
+
+    def test_absolute_date(self) -> None:
+        result = job_history.parse_since("2026-01-15")
+        assert result.year == 2026
+        assert result.month == 1
+        assert result.day == 15
+        assert result.tzinfo is not None
+
+    @pytest.mark.parametrize(
+        "bad",
+        ["", "   ", "10x", "abc", "10", "min", "2026-13-99"],
+    )
+    def test_raises_on_empty_or_garbage(self, bad: str) -> None:
+        with pytest.raises(ValueError, match=r"(Invalid|empty)"):
+            job_history.parse_since(bad)

@@ -38,7 +38,7 @@ import socket
 import threading
 from collections.abc import Iterable
 from dataclasses import asdict, dataclass, field, fields
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any
 
@@ -364,6 +364,48 @@ def _parse_iso(value: str) -> datetime | None:
         return None
 
 
+# Supported time-unit suffixes for :func:`parse_since`. Order matters
+# only for documentation — the parser looks up by character.
+_SINCE_UNITS: dict[str, timedelta] = {
+    "s": timedelta(seconds=1),
+    "m": timedelta(minutes=1),
+    "h": timedelta(hours=1),
+    "d": timedelta(days=1),
+    "w": timedelta(weeks=1),
+}
+
+
+def parse_since(value: str) -> datetime:
+    """Parse a ``--since`` value into a UTC ``datetime`` cutoff.
+
+    Accepts:
+      * Absolute date: ``YYYY-MM-DD`` (UTC midnight).
+      * Relative shorthand: ``<N><unit>`` where unit is one of
+        ``s``/``m``/``h``/``d``/``w`` (seconds / minutes / hours /
+        days / weeks). Examples: ``30s``, ``10m``, ``24h``, ``7d``,
+        ``2w``.
+
+    Raises:
+        ValueError: If ``value`` does not match either format.
+    """
+    text = (value or "").strip()
+    if not text:
+        msg = "empty --since value"
+        raise ValueError(msg)
+    now = datetime.now(tz=timezone.utc)
+    if len(text) >= 2 and text[:-1].isdigit() and text[-1] in _SINCE_UNITS:
+        n = int(text[:-1])
+        return now - n * _SINCE_UNITS[text[-1]]
+    try:
+        return datetime.strptime(text, "%Y-%m-%d").replace(tzinfo=timezone.utc)
+    except ValueError as exc:
+        msg = (
+            f"Invalid --since value: {value!r}. Expected YYYY-MM-DD or a "
+            "duration like '30s', '10m', '24h', '7d', '2w'."
+        )
+        raise ValueError(msg) from exc
+
+
 # ---------------------------------------------------------------------------
 # Maintenance
 # ---------------------------------------------------------------------------
@@ -453,6 +495,7 @@ __all__ = [
     "is_disabled",
     "load_history",
     "local_operation_ids",
+    "parse_since",
     "prune",
     "record_submission",
 ]
