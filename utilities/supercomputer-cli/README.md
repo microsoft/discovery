@@ -193,10 +193,10 @@ Manage and monitor Discovery jobs:
 | `discovery job batch <command>` | Submit multiple independent tool runs (no polling) |
 | `discovery job vscode [--tunnel-name <name>]` | Start a job that hosts a VS Code tunnel (default name: `discovery-<username>`) |
 | `discovery job cancel <operation-id>` | Cancel a running operation |
-| `discovery job running` | List running operations (filtered to current user) |
-| `discovery job pending` | List queued operations (filtered to current user) |
-| `discovery job done` | List completed operations (succeeded/failed/canceled) |
-| `discovery job list` | List recent operations with filters |
+| `discovery job running` | List your running operations (this machine); `--all` to see everyone's |
+| `discovery job pending` | List your queued operations (this machine); `--all` to see everyone's |
+| `discovery job done` | List your completed operations (this machine); `--all` to see everyone's |
+| `discovery job list` | List your recent operations (this machine); `--all` or `--user X` to widen |
 | `discovery job status [operation-id]` | Get compute usage, or status of a specific operation |
 | `discovery job pools` | List available nodepools from configuration |
 | `discovery job cleanup-anf` | List stale operations whose ANF scratch folders can be cleaned up |
@@ -205,9 +205,10 @@ Manage and monitor Discovery jobs:
 > **Local job history.** Every `discovery job start` / `batch` / `vscode`
 > records the operation ID + command + tool + nodepool + project + workspace
 > to `~/.discovery/job-history.jsonl` (one JSON-Lines record per submit).
-> Use `discovery job history` to browse it, or pass `--mine` to
-> `discovery job list / running / pending / done` to restrict the
-> server-side listing to jobs you submitted from this machine. Set
+> `discovery job list / running / pending / done` filter to this machine's
+> history by default — pass `--all` (or `--user X` on `list`) to widen the
+> view to other people / other machines. Use `discovery job history` to
+> browse the local store directly without hitting the service. Set
 > `DISCOVERY_NO_JOB_HISTORY=1` to disable recording for an invocation.
 
 **Examples:**
@@ -239,10 +240,13 @@ discovery job history --limit 10
 discovery job history --since 7d
 discovery job history --all-workspaces --this-host
 
-# Filter server-side listings to your local submissions
-discovery job list --mine
-discovery job running --mine
-discovery job done --mine
+# Server-side listings default to jobs from this machine — pass --all
+# to widen the view (or --user X on `list` for a specific submitter)
+discovery job list                  # mine
+discovery job list --all            # everyone's
+discovery job list --user alice     # alice's (implies --all)
+discovery job running                # mine, running now
+discovery job running --all          # everyone's running
 
 # Submit several independent runs in one shot
 discovery job batch 4 "python -c 'print(\"hello\")'"

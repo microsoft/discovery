@@ -23,7 +23,6 @@ from discovery.poll.models.tool_response import AzureCoreOperationState
 from .cli_helpers import (
     emit_env,
     get_config_file_path,
-    get_raw_azure_username,
     load_project_config,
     render_error_with_details,
 )
@@ -71,45 +70,53 @@ def _format_duration(td: timedelta, in_progress: bool = False) -> str:
     return result
 
 
-def _mine_ids_or_exit(env_cfg) -> set[str]:
-    """Return the local-history operation IDs for the current env, or exit gracefully.
+def _mine_ids_or_hint(env_cfg) -> set[str] | None:
+    """Return the local-history operation IDs for the current workspace.
 
-    Scopes by ``workspace_url`` so a user pointing at a different
-    Discovery environment doesn't accidentally see unrelated entries.
-    Exits with code 0 (after a friendly message) when the history is
-    empty for this workspace, so scripts don't have to differentiate
-    "no matches" from "history not yet populated".
+    Returns ``None`` (and prints a one-line hint) when the local
+    history is empty, so callers can degrade to "no matches" without
+    error-exiting. ``None`` means "no filter possible" — the caller
+    typically converts that to a no-results outcome with guidance to
+    pass ``--all``.
     """
     ids = local_operation_ids(workspace_url=env_cfg.workspace_url)
     if not ids:
         info(
             "No locally-recorded jobs found for this workspace yet. "
-            "Submit a job with `discovery job start` (or run with "
-            "DISCOVERY_NO_JOB_HISTORY unset) and try again."
+            "Submit a job with `discovery job start` first, or pass "
+            "[bold]--all[/bold] to see everyone's jobs."
         )
-        raise typer.Exit(code=0)
+        return None
     return ids
 
 
 @app.command("running")
 def list_running(
     limit: int = typer.Option(1000, "--limit", "-n", help="Limit results to search"),
-    all_users: bool = typer.Option(False, "--all", "-a", help="Show jobs from all users"),
-    mine: bool = typer.Option(
+    all_jobs: bool = typer.Option(
         False,
-        "--mine",
-        "-m",
-        help="Only show jobs recorded in this machine's local history",
+        "--all",
+        "-a",
+        help=(
+            "Show every running operation in the workspace, not just those "
+            "submitted from this machine."
+        ),
     ),
 ) -> None:
-    """List running operations (filtered to current user by default)."""
+    """List running operations.
+
+    By default only lists operations recorded in this machine's local
+    job history (see ``discovery job history``). Pass ``--all`` to
+    include jobs submitted by other people or from other machines.
+    """
     env_cfg = load_project_config(get_config_file_path())
     emit_env(env_cfg)
-    mine_ids = _mine_ids_or_exit(env_cfg) if mine else None
+    mine_ids = None if all_jobs else _mine_ids_or_hint(env_cfg)
+    if not all_jobs and mine_ids is None:
+        raise typer.Exit(code=0)
     _list_helper(
         status=(AzureCoreOperationState.RUNNING, AzureCoreOperationState.ACTIVE),
         limit=limit,
-        user_filter=None if all_users else get_raw_azure_username(),
         env_cfg=env_cfg,
         mine_ids=mine_ids,
     )
@@ -118,18 +125,27 @@ def list_running(
 @app.command("pending")
 def list_queued(
     limit: int = typer.Option(1000, "--limit", "-n", help="Limit results to search"),
-    all_users: bool = typer.Option(False, "--all", "-a", help="Show jobs from all users"),
-    mine: bool = typer.Option(
+    all_jobs: bool = typer.Option(
         False,
-        "--mine",
-        "-m",
-        help="Only show jobs recorded in this machine's local history",
+        "--all",
+        "-a",
+        help=(
+            "Show every queued operation in the workspace, not just those "
+            "submitted from this machine."
+        ),
     ),
 ) -> None:
-    """List queued operations (filtered to current user by default)."""
+    """List queued operations.
+
+    By default only lists operations recorded in this machine's local
+    job history (see ``discovery job history``). Pass ``--all`` to
+    include jobs submitted by other people or from other machines.
+    """
     env_cfg = load_project_config(get_config_file_path())
     emit_env(env_cfg)
-    mine_ids = _mine_ids_or_exit(env_cfg) if mine else None
+    mine_ids = None if all_jobs else _mine_ids_or_hint(env_cfg)
+    if not all_jobs and mine_ids is None:
+        raise typer.Exit(code=0)
     _list_helper(
         status=(
             AzureCoreOperationState.NOT_STARTED,
@@ -137,7 +153,6 @@ def list_queued(
             AzureCoreOperationState.ACCEPTED,
         ),
         limit=limit,
-        user_filter=None if all_users else get_raw_azure_username(),
         env_cfg=env_cfg,
         mine_ids=mine_ids,
     )
@@ -146,17 +161,27 @@ def list_queued(
 @app.command("done")
 def list_done(
     limit: int = typer.Option(200, "--limit", "-n", help="Limit results to search"),
-    mine: bool = typer.Option(
+    all_jobs: bool = typer.Option(
         False,
-        "--mine",
-        "-m",
-        help="Only show jobs recorded in this machine's local history",
+        "--all",
+        "-a",
+        help=(
+            "Show every completed operation in the workspace, not just those "
+            "submitted from this machine."
+        ),
     ),
 ) -> None:
-    """List successful and failed operations."""
+    """List successful and failed operations.
+
+    By default only lists operations recorded in this machine's local
+    job history. Pass ``--all`` to include jobs submitted by other
+    people or from other machines.
+    """
     env_cfg = load_project_config(get_config_file_path())
     emit_env(env_cfg)
-    mine_ids = _mine_ids_or_exit(env_cfg) if mine else None
+    mine_ids = None if all_jobs else _mine_ids_or_hint(env_cfg)
+    if not all_jobs and mine_ids is None:
+        raise typer.Exit(code=0)
     _list_helper(
         status=(
             AzureCoreOperationState.FAILED,
@@ -172,22 +197,35 @@ def list_done(
 @app.command("list")
 def list_cmd(
     nodepool: str = typer.Option("", "--pool", help="Filter by nodepool"),
-    user: str = typer.Option("", "--user", help="Filter by user"),
+    user: str = typer.Option("", "--user", help="Filter by user (implies --all)"),
     date: str = typer.Option("", "--date", help="Filter by date (YYYY-MM-DD format)"),
     limit: int = typer.Option(200, "--limit", "-n", help="Limit results to search"),
-    mine: bool = typer.Option(
+    all_jobs: bool = typer.Option(
         False,
-        "--mine",
-        "-m",
-        help="Only show jobs recorded in this machine's local history",
+        "--all",
+        "-a",
+        help=(
+            "Show every operation in the workspace, not just those submitted "
+            "from this machine."
+        ),
     ),
 ) -> None:
-    """List recent operations."""
+    """List recent operations.
+
+    By default only lists operations recorded in this machine's local
+    job history. Pass ``--all`` (or ``--user X`` to filter by a specific
+    user) to see jobs from other people or other machines.
+    """
     debug("list(): entering")
     env_cfg = load_project_config(get_config_file_path())
     emit_env(env_cfg)
 
-    mine_ids = _mine_ids_or_exit(env_cfg) if mine else None
+    # ``--user X`` is an explicit cross-user query; implicitly skip the
+    # local-history default so the user actually sees something.
+    skip_mine = all_jobs or bool(user)
+    mine_ids = None if skip_mine else _mine_ids_or_hint(env_cfg)
+    if not skip_mine and mine_ids is None:
+        raise typer.Exit(code=0)
 
     # Resolve --pool to a full resource ID so the filter matches op.nodepool_id
     resolved_pool = ""
@@ -239,7 +277,6 @@ def _list_helper(
     *,
     limit: int = 0,
     page_size: int = 0,
-    user_filter: str | None = None,
     env_cfg=None,
     mine_ids: set[str] | None = None,
 ) -> None:
@@ -250,8 +287,6 @@ def _list_helper(
 
     def matches_status(op):
         if op.status not in status:
-            return False
-        if user_filter and op.created_by != user_filter:
             return False
         return not (mine_ids is not None and op.id not in mine_ids)
 

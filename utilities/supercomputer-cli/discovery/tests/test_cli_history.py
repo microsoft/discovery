@@ -158,8 +158,12 @@ class TestHistoryCommand:
 # ---------------------------------------------------------------------------
 
 
-class TestMineFilter:
-    def test_mine_exits_friendly_when_history_empty(
+class TestDefaultMineBehavior:
+    """`discovery job list / running / pending / done` should default to
+    showing only this machine's locally-recorded jobs, and `--all`
+    should opt out of that filter."""
+
+    def test_running_default_hints_when_history_empty(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         fake_cfg = MagicMock()
@@ -175,14 +179,14 @@ class TestMineFilter:
         monkeypatch.setattr(
             "discovery.poll.cli_status.emit_env", lambda *_a, **_k: None
         )
-        result = runner.invoke(app, ["job", "running", "--mine"])
+        result = runner.invoke(app, ["job", "running"])
         assert result.exit_code == 0
         assert "No locally-recorded jobs" in result.stdout
+        assert "--all" in result.stdout
 
-    def test_list_mine_invokes_paginator_with_mine_filter(
+    def test_list_default_filters_to_local_history(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        # Seed history for the configured workspace.
         _seed_history(workspace="https://ws.example")
         fake_cfg = MagicMock()
         fake_cfg.workspace_url = "https://ws.example"
@@ -207,27 +211,124 @@ class TestMineFilter:
         monkeypatch.setattr(
             "discovery.poll.cli_status._paginated_list", fake_paginated
         )
-        result = runner.invoke(app, ["job", "list", "--mine"])
+        # No --all => default to local history.
+        result = runner.invoke(app, ["job", "list"])
         assert result.exit_code == 0
 
         fn = captured["filter_fn"]
-        # op-1 and op-2 are in history; op-3 (other workspace) is not.
-        op_known = MagicMock(
+        op_in_history = MagicMock(
             id="op-1",
             created_by="someone",
             nodepool_id="x",
             created_at=datetime(2026, 6, 1, tzinfo=timezone.utc),
         )
-        op_unknown = MagicMock(
-            id="op-3",
+        op_outside_history = MagicMock(
+            id="op-99",
             created_by="someone",
             nodepool_id="x",
             created_at=datetime(2026, 6, 1, tzinfo=timezone.utc),
         )
-        assert fn(op_known) is True
-        assert fn(op_unknown) is False
+        assert fn(op_in_history) is True
+        assert fn(op_outside_history) is False
 
-    def test_running_mine_invokes_paginator_with_mine_filter(
+    def test_list_all_skips_local_history_filter(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        _seed_history(workspace="https://ws.example")
+        fake_cfg = MagicMock()
+        fake_cfg.workspace_url = "https://ws.example"
+        fake_cfg.nodepools = []
+        monkeypatch.setattr(
+            "discovery.poll.cli_status.load_project_config",
+            lambda *_a, **_k: fake_cfg,
+        )
+        monkeypatch.setattr(
+            "discovery.poll.cli_status.get_config_file_path",
+            lambda: Path("/tmp/ignored"),
+        )
+        monkeypatch.setattr(
+            "discovery.poll.cli_status.emit_env", lambda *_a, **_k: None
+        )
+
+        captured = {}
+
+        async def fake_paginated(*, env_cfg, filter_fn, limit=0, page_size=0):
+            captured["filter_fn"] = filter_fn
+
+        monkeypatch.setattr(
+            "discovery.poll.cli_status._paginated_list", fake_paginated
+        )
+        result = runner.invoke(app, ["job", "list", "--all"])
+        assert result.exit_code == 0
+
+        fn = captured["filter_fn"]
+        # Both ops match — local-history filter is disabled.
+        op_in = MagicMock(
+            id="op-1",
+            created_by="x",
+            nodepool_id="x",
+            created_at=datetime(2026, 6, 1, tzinfo=timezone.utc),
+        )
+        op_out = MagicMock(
+            id="op-99",
+            created_by="x",
+            nodepool_id="x",
+            created_at=datetime(2026, 6, 1, tzinfo=timezone.utc),
+        )
+        assert fn(op_in) is True
+        assert fn(op_out) is True
+
+    def test_list_user_flag_implies_all(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """``--user X`` is a cross-user query, so the local-history
+        default should be skipped automatically."""
+        _seed_history(workspace="https://ws.example")
+        fake_cfg = MagicMock()
+        fake_cfg.workspace_url = "https://ws.example"
+        fake_cfg.nodepools = []
+        monkeypatch.setattr(
+            "discovery.poll.cli_status.load_project_config",
+            lambda *_a, **_k: fake_cfg,
+        )
+        monkeypatch.setattr(
+            "discovery.poll.cli_status.get_config_file_path",
+            lambda: Path("/tmp/ignored"),
+        )
+        monkeypatch.setattr(
+            "discovery.poll.cli_status.emit_env", lambda *_a, **_k: None
+        )
+
+        captured = {}
+
+        async def fake_paginated(*, env_cfg, filter_fn, limit=0, page_size=0):
+            captured["filter_fn"] = filter_fn
+
+        monkeypatch.setattr(
+            "discovery.poll.cli_status._paginated_list", fake_paginated
+        )
+        result = runner.invoke(app, ["job", "list", "--user", "someone"])
+        assert result.exit_code == 0
+
+        fn = captured["filter_fn"]
+        # op-99 is NOT in local history, but --user implies --all so the
+        # only effective filter is created_by="someone".
+        op_match = MagicMock(
+            id="op-99",
+            created_by="someone",
+            nodepool_id="x",
+            created_at=datetime(2026, 6, 1, tzinfo=timezone.utc),
+        )
+        op_no_match = MagicMock(
+            id="op-99",
+            created_by="other",
+            nodepool_id="x",
+            created_at=datetime(2026, 6, 1, tzinfo=timezone.utc),
+        )
+        assert fn(op_match) is True
+        assert fn(op_no_match) is False
+
+    def test_running_default_filters_to_local_history(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         _seed_history(workspace="https://ws.example")
@@ -253,24 +354,66 @@ class TestMineFilter:
         monkeypatch.setattr(
             "discovery.poll.cli_status._paginated_list", fake_paginated
         )
-        # ``--all`` disables the per-user filter so the only thing the
-        # filter_fn ends up applying is the mine_ids set we care about.
-        result = runner.invoke(app, ["job", "running", "--mine", "--all"])
+        # No --all => default to local history (no Azure-user filter).
+        result = runner.invoke(app, ["job", "running"])
         assert result.exit_code == 0
 
         fn = captured["filter_fn"]
         op = MagicMock(
             id="op-1",
-            created_by="me",
+            created_by="someone-else",  # not the current Azure user
             status=AzureCoreOperationState.RUNNING,
         )
+        # Should match — default no longer filters by Azure user, only
+        # by local history.
         assert fn(op) is True
         op_other = MagicMock(
             id="not-in-history",
-            created_by="me",
+            created_by="someone-else",
             status=AzureCoreOperationState.RUNNING,
         )
         assert fn(op_other) is False
+
+    def test_running_all_includes_other_machines_jobs(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        _seed_history(workspace="https://ws.example")
+        fake_cfg = MagicMock()
+        fake_cfg.workspace_url = "https://ws.example"
+        monkeypatch.setattr(
+            "discovery.poll.cli_status.load_project_config",
+            lambda *_a, **_k: fake_cfg,
+        )
+        monkeypatch.setattr(
+            "discovery.poll.cli_status.get_config_file_path",
+            lambda: Path("/tmp/ignored"),
+        )
+        monkeypatch.setattr(
+            "discovery.poll.cli_status.emit_env", lambda *_a, **_k: None
+        )
+
+        captured = {}
+
+        async def fake_paginated(*, env_cfg, filter_fn, limit=0, page_size=0):
+            captured["filter_fn"] = filter_fn
+
+        monkeypatch.setattr(
+            "discovery.poll.cli_status._paginated_list", fake_paginated
+        )
+        result = runner.invoke(app, ["job", "running", "--all"])
+        assert result.exit_code == 0
+
+        fn = captured["filter_fn"]
+        op_local = MagicMock(
+            id="op-1",
+            status=AzureCoreOperationState.RUNNING,
+        )
+        op_remote = MagicMock(
+            id="not-in-history",
+            status=AzureCoreOperationState.RUNNING,
+        )
+        assert fn(op_local) is True
+        assert fn(op_remote) is True
 
 
 # ---------------------------------------------------------------------------

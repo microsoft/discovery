@@ -101,8 +101,8 @@ class JobHistoryEntry:
         nodepool_id: Effective nodepool ID (after ``--pool`` resolution).
         project_name: ``env_cfg.project_name`` at submit time.
         workspace_url: ``env_cfg.workspace_url`` at submit time. Used to
-            avoid showing entries from a different Discovery
-            environment when the user later runs ``--mine``.
+            scope queries by workspace so the user doesn't see entries
+            from a different Discovery environment.
         mode: One of :data:`MODE_START`, :data:`MODE_BATCH`,
             :data:`MODE_VSCODE`.
         cli_argv: The full ``sys.argv`` at submit time. Useful for
