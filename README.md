@@ -33,7 +33,7 @@ For an app-specific 15-minute hands-on tour, see [`docs/discovery-app/quickstart
 
 | Surface | What it is | Best for |
 | --- | --- | --- |
-| 📥 **[Releases](https://github.com/microsoft/discovery/releases)** | Signed Windows installers (`DiscoveryExpressSetup-x.y.z.exe`) and release notes for the Discovery app. | Downloading the latest build of the app. |
+| 📥 **[Releases](https://github.com/microsoft/discovery/releases)** | Signed Windows installers and release notes for the Discovery app. | Downloading the latest build of the app. |
 | 🤖 **[`agents/`](/agents/)** | Catalog of AI research agents (1P and 3P) surfaced in Discovery. Each entry contains a `metadata.yaml`, `agent.yaml`, `README.md`, and optional `tools/`. | Browsing what's available, or contributing a new agent. |
 | 📑 **[`docs/`](/docs/)** | Documentation and pointers for both Microsoft Discovery and the Discovery app, including documentation for authoring guides and schemas. | Learning more about Discovery experiences and best practices. |
 | 🎥 **[How to videos](/docs/how-to-videos/README.md)** | Curated how-to video content for Discovery workflows and onboarding. | Watching guided walkthroughs and quick task demos. |
