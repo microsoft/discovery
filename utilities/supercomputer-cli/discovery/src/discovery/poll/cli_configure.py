@@ -59,7 +59,7 @@ def configure(
     api_version: str = typer.Option(
         None,
         "--api-version",
-        help="API version to use for data plane calls (e.g. 2026-02-01-preview). Saved to config. Skips the interactive picker when provided.",
+        help="API version to use for data plane calls (e.g. 2026-06-01). Saved to config. Skips the interactive picker when provided.",
     ),
 ) -> None:
     """Interactively select related resources and tool, and optionally persist to env file.

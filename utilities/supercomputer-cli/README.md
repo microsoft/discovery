@@ -117,7 +117,7 @@ Set or change the API version (persisted to your config) with
 `--api-version`:
 
 ```bash
-discovery configure --api-version 2026-02-01-preview
+discovery configure --api-version 2026-06-01
 ```
 
 If you don't pass `--api-version`, the full `configure` flow prompts you to

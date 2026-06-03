@@ -13,9 +13,15 @@ The boundaries encoded here mirror the server contracts in the upstream service
     2025-07-01-preview     ``uri`` → dataassets       required     nested (resources/poolSize/imageUri)
     2025-12-01-preview     ``uri`` → dataassets       required     flat (cpu/ram/gpu/replicaCount/imageUri)
     2026-02-01-preview     ``storageUri`` → storageassets  omitted      flat (+ maxCpu/maxRam/maxGpu)
+    2026-06-01 (GA)        ``storageUri`` → storageassets  omitted      flat (same as 2026-02-01-preview)
     =====================  =========================  ===========  =====================
 
-Unknown / future versions fall through to the latest known member so that new preview
+The 2026-06-01 GA contract is a strict superset of 2026-02-01-preview: the only wire
+delta is an optional ``mountProtocol`` enum field on ``InputDataMount`` / ``OutputDataMount``
+(values: ``NFS`` | ``BlobfuseCaching``). The CLI does not surface ``mountProtocol``
+as a user-facing argument today; both versions therefore share the same capability flags.
+
+Unknown / future versions fall through to the latest known member so that new
 api versions do not immediately break the CLI between releases.
 """
 
@@ -26,18 +32,25 @@ from typing import Iterator
 
 
 class ApiVersion(str, Enum):
-    """Known Discovery data-plane preview API versions."""
+    """Known Discovery data-plane API versions (previews and GA)."""
 
     V2025_07_01_PREVIEW = "2025-07-01-preview"
     V2025_12_01_PREVIEW = "2025-12-01-preview"
     V2026_02_01_PREVIEW = "2026-02-01-preview"
+    V2026_06_01 = "2026-06-01"
 
     # ---- parsing / defaults -------------------------------------------------
 
     @classmethod
     def latest(cls) -> "ApiVersion":
-        """Return the newest known API version (forward-compat fallback)."""
-        return cls.V2026_02_01_PREVIEW
+        """Return the newest known API version (forward-compat fallback).
+
+        Returning the GA version (rather than a later preview) is safe as a
+        fallback target because GA accepts every payload the prior preview
+        (2026-02-01-preview) accepted — the only wire delta is an optional
+        ``mountProtocol`` field on data mounts, which the CLI does not send.
+        """
+        return cls.V2026_06_01
 
     @classmethod
     def parse(cls, value: str | "ApiVersion" | None) -> "ApiVersion":

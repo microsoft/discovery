@@ -445,7 +445,7 @@ def start(
     api_version: str = typer.Option(
         None,
         "--api-version",
-        help="Override API version (e.g. 2026-02-01-preview). Defaults to configured version.",
+        help="Override API version (e.g. 2026-06-01). Defaults to configured version.",
     ),
     scratch: bool = typer.Option(
         False,
@@ -675,7 +675,7 @@ def batch(
     api_version: str = typer.Option(
         None,
         "--api-version",
-        help="Override API version (e.g. 2026-02-01-preview). Defaults to configured version.",
+        help="Override API version (e.g. 2026-06-01). Defaults to configured version.",
     ),
     use_entire_node: bool = typer.Option(
         False,
@@ -924,7 +924,7 @@ def vscode_cmd(
     api_version: str = typer.Option(
         None,
         "--api-version",
-        help="Override API version (e.g. 2026-02-01-preview). Defaults to configured version.",
+        help="Override API version (e.g. 2026-06-01). Defaults to configured version.",
     ),
     scratch: bool = typer.Option(
         False,

@@ -392,10 +392,12 @@ def test_api_version_enum_uses_storage_id():
 
 
 def test_api_version_enum_modern_omits_storage_id():
-    """2026-02-01-preview uses storageUri on the data mounts, not top-level storageId."""
+    """2026-02-01-preview and 2026-06-01 (GA) use storageUri on the data mounts, not top-level storageId."""
     from discovery.poll.models.api_version import ApiVersion
     assert not ApiVersion.parse("2026-02-01-preview").uses_storage_id
     assert not ApiVersion.parse("2026-02-01-preview").uses_dataassets_uri
+    assert not ApiVersion.parse("2026-06-01").uses_storage_id
+    assert not ApiVersion.parse("2026-06-01").uses_dataassets_uri
 
 
 def test_api_version_enum_nested_infra_overrides():
@@ -404,6 +406,20 @@ def test_api_version_enum_nested_infra_overrides():
     assert ApiVersion.parse("2025-07-01-preview").uses_nested_infra_overrides
     assert not ApiVersion.parse("2025-12-01-preview").uses_nested_infra_overrides
     assert not ApiVersion.parse("2026-02-01-preview").uses_nested_infra_overrides
+    assert not ApiVersion.parse("2026-06-01").uses_nested_infra_overrides
+
+
+def test_api_version_enum_ga_is_latest():
+    """The GA version (2026-06-01) is the newest known member and the fallback target."""
+    from discovery.poll.models.api_version import ApiVersion
+    assert ApiVersion.latest() is ApiVersion.V2026_06_01
+    assert ApiVersion.parse("2026-06-01") is ApiVersion.V2026_06_01
+    # GA shares the modern (V2) capability flags with 2026-02-01-preview:
+    # no storageId, storageassets URIs, flat infraOverrides.
+    ga = ApiVersion.V2026_06_01
+    assert not ga.uses_storage_id
+    assert not ga.uses_dataassets_uri
+    assert not ga.uses_nested_infra_overrides
 
 
 def test_api_version_enum_unknown_falls_back_to_latest():
@@ -424,6 +440,7 @@ def test_legacy_api_versions_backcompat_shim():
     assert "2025-07-01-preview" in _LEGACY_API_VERSIONS
     assert "2025-12-01-preview" in _LEGACY_API_VERSIONS
     assert "2026-02-01-preview" not in _LEGACY_API_VERSIONS
+    assert "2026-06-01" not in _LEGACY_API_VERSIONS
     assert _NESTED_INFRA_OVERRIDES_API_VERSIONS == frozenset({"2025-07-01-preview"})
 
 
