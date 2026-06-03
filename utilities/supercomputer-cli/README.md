@@ -50,11 +50,41 @@ This installs the CLI in an isolated environment and makes it available system-w
 
 ### 3. Upgrade the Discovery CLI
 
-To upgrade to the latest version:
+The CLI checks for new releases once per day in the background and prints a
+one-line reminder when a newer version of the `utilities/supercomputer-cli/`
+subdirectory has landed on `main`. Apply an update in one of two ways:
+
+```bash
+discovery update            # interactive: check + prompt + install via uv
+discovery update --check    # check only
+discovery update -y         # install without confirmation
+```
+
+You can also upgrade directly:
 
 ```bash
 uv tool upgrade discovery
 ```
+
+The automatic background check can be disabled either per-invocation
+(`DISCOVERY_NO_UPDATE_CHECK=1`) or persistently:
+
+```bash
+discovery update --disable   # turn off background checks
+discovery update --enable    # turn them back on
+```
+
+> **Authentication is optional.** The update check works fully
+> unauthenticated against a public repo, but GitHub limits anonymous
+> traffic to 60 requests/hour per IP. To raise the limit to 5000/hour
+> the checker opportunistically uses `DISCOVERY_GITHUB_TOKEN`,
+> `GITHUB_TOKEN`, `GH_TOKEN`, or `gh auth token` (when the `gh` CLI is
+> installed and authenticated) — no setup required for most developers.
+
+> **Following a non-default branch.** Set `DISCOVERY_UPDATE_REF=<ref>` to
+> compare against a branch, tag, or commit other than `main`. Pair with
+> `DISCOVERY_UPDATE_REPO=owner/name` for fork-based or RC-channel
+> testing.
 
 ### 4. Verify your installation
 
