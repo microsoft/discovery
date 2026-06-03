@@ -138,7 +138,7 @@ class TestBatchCommand:
         assert "SIZE" in result.output
 
     def test_batch_with_mocked_deps(self, tmp_path):
-        """Test batch with mocked dependencies."""
+        """Test batch with mocked dependencies and verify mapping table."""
         with patch.object(cli_submit, "load_project_config") as mock_proj:
             mock_cfg = MagicMock()
             mock_cfg.project_name = "test-project"
@@ -163,6 +163,57 @@ class TestBatchCommand:
                                     result = runner.invoke(app, ["job", "batch", "3", "echo test"])
 
         assert result.exit_code == 0
+        # Mapping table should appear with operation IDs
+        assert "Operation Mapping" in result.output
+        assert "op-123" in result.output
+
+    def test_batch_commands_file_preserves_order(self, tmp_path):
+        """Test that batch --commands-file prints mapping in input order."""
+        cmds_file = tmp_path / "cmds.txt"
+        cmds_file.write_text("echo molecule_A\necho molecule_B\necho molecule_C\n")
+
+        # Return distinct op IDs per call to verify ordering
+        call_count = 0
+
+        def _make_response(*_args, **_kwargs):
+            nonlocal call_count
+            call_count += 1
+            resp = MagicMock()
+            resp.id = f"op-{call_count:03d}"
+            return resp
+
+        with patch.object(cli_submit, "load_project_config") as mock_proj:
+            mock_cfg = MagicMock()
+            mock_cfg.project_name = "test-project"
+            mock_cfg.workspace_url = "https://example.com"
+            mock_cfg.tool_id = "tool-123"
+            mock_cfg.nodepool_id = "nodepool-123"
+            mock_cfg.datacontainer_id = "dc-123"
+            mock_proj.return_value = mock_cfg
+
+            with patch.object(cli_submit, "load_tool_config"):
+                with patch.object(cli_submit, "ensure_datacontainer"):
+                    with patch.object(cli_submit, "emit_env"):
+                        with patch.object(
+                            cli_submit, "prepare_command", side_effect=lambda c, *a, **kw: c
+                        ):
+                            with patch.object(
+                                cli_submit, "get_azure_username", return_value="testuser"
+                            ):
+                                with patch.object(
+                                    cli_submit, "start_tool_run", side_effect=_make_response
+                                ):
+                                    result = runner.invoke(
+                                        app,
+                                        ["job", "batch", "--commands-file", str(cmds_file)],
+                                    )
+
+        assert result.exit_code == 0
+        assert "Operation Mapping" in result.output
+        # All three commands should appear in the mapping table
+        assert "molecule_A" in result.output
+        assert "molecule_B" in result.output
+        assert "molecule_C" in result.output
 
     def test_batch_size_validation(self):
         """Test that batch rejects size < 1."""

@@ -12,6 +12,7 @@ import httpx
 import typer
 from rich.console import Console
 from rich.panel import Panel
+from rich.table import Table
 
 from discovery.common.job_history import (
     MODE_BATCH,
@@ -902,8 +903,10 @@ def batch(
 
     # Submit jobs in parallel
     total = len(command_list)
-    operation_ids: list[str] = []
+    # Collect (index, operation_id, command) so we can print in input order
+    successful_jobs: list[tuple[int, str, str]] = []
     failed_jobs: list[tuple[int, str]] = []
+    completed_count = 0
 
     info(f"Submitting {total} operations using {max_workers} parallel workers...")
 
@@ -916,16 +919,32 @@ def batch(
         # Collect results as they complete
         for future in as_completed(futures):
             idx, op_id, err = future.result()
+            completed_count += 1
             if op_id:
-                operation_ids.append(op_id)
-                info(f"  [{len(operation_ids)}/{total}] Operation ID: {op_id}")
+                cmd_preview = command_list[idx][:80]
+                successful_jobs.append((idx, op_id, command_list[idx]))
+                info(f"  [{completed_count}/{total}] {op_id}  {cmd_preview}")
             else:
                 failed_jobs.append((idx, err or "Unknown error"))
                 error(f"  [FAILED] Job {idx + 1}: {err}")
 
-    info(f"Batch complete. Submitted {len(operation_ids)} operations.")
+    info(f"Batch complete. Submitted {len(successful_jobs)} operations.")
     if failed_jobs:
         error(f"Failed to submit {len(failed_jobs)} jobs.")
+
+    # Print ordered mapping table so users can correlate operation IDs to commands
+    if successful_jobs:
+        successful_jobs.sort(key=lambda t: t[0])
+        table = Table(title="Operation Mapping (input order)")
+        table.add_column("#", justify="right", style="cyan")
+        table.add_column("Operation ID", style="green")
+        table.add_column("Command", style="white")
+        for idx, op_id, cmd in successful_jobs:
+            table.add_row(str(idx + 1), op_id, cmd[:80])
+        Console().print(table)
+
+    # Keep operation_ids list for any downstream callers
+    operation_ids: list[str] = [op_id for _, op_id, _ in successful_jobs]
 
 
 @app.command("vscode")
