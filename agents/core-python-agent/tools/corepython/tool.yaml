@@ -10,7 +10,7 @@ infra:
   - name: corepython-container
     infra_type: container
     image:
-      acr: "{ACR-NAME}.azurecr.io/corepython:latest"
+      acr: "{name}.azurecr.io/corepython:latest"
     compute:
       min_resources:
         cpu: 1

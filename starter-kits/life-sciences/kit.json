@@ -1,0 +1,184 @@
+{
+  "$schema": "../../docs/schemas/starter-kit-schema.json",
+  "name": "life-sciences",
+  "version": "1.0.0",
+  "description": "End-to-end life sciences workbench spanning protein structure, drug discovery, molecular simulation, omics, and literature mining.",
+  "displayName": "Life Sciences",
+  "longDescription": "# Life Sciences\n\nA comprehensive starter kit for life sciences research that combines structural biology, drug discovery, molecular dynamics, cheminformatics, omics, clinical evidence, and scientific literature mining.\n\n**What you can do:**\n- Predict protein structures and design novel binders\n- Search chemical, biological, and patent databases\n- Dock small molecules and run molecular dynamics simulations\n- Train and apply ML models for molecular property prediction\n- Analyze RNA-seq experiments and nucleotide motifs\n- Mine PubMed, clinical trials, and the scientific literature\n\n**Ideal for:** computational biologists, medicinal chemists, structural biologists, and translational research teams.",
+  "author": {
+    "name": "Microsoft",
+    "email": "discovery-catalog@microsoft.com",
+    "url": "https://github.com/microsoft/discovery"
+  },
+  "license": "MIT",
+  "keywords": [
+    "life sciences",
+    "biology",
+    "drug discovery",
+    "structural biology",
+    "cheminformatics",
+    "molecular dynamics",
+    "omics",
+    "literature"
+  ],
+  "category": "Biology",
+  "homepage": "https://github.com/microsoft/discovery/tree/main/starter-kits/life-sciences",
+  "party": "1p",
+  "lifecycle": "active",
+  "agentRefs": [
+    {
+      "ref": "agents/alphafold",
+      "role": "primary",
+      "required": true,
+      "description": "Predicts 3D protein structures from amino acid sequences."
+    },
+    {
+      "ref": "agents/ambertools",
+      "role": "supporting",
+      "required": false,
+      "description": "Biomolecular preparation and analysis with AmberTools."
+    },
+    {
+      "ref": "agents/autodock",
+      "role": "supporting",
+      "required": false,
+      "description": "Molecular docking of small-molecule ligands to protein targets."
+    },
+    {
+      "ref": "agents/bindingdb",
+      "role": "supporting",
+      "required": false,
+      "description": "Search BindingDB for measured protein-ligand binding affinities."
+    },
+    {
+      "ref": "agents/boltzgen",
+      "role": "supporting",
+      "required": false,
+      "description": "Generative biomolecular design with Boltz."
+    },
+    {
+      "ref": "agents/boltztwo",
+      "role": "supporting",
+      "required": false,
+      "description": "Boltz-2 structure and affinity predictions."
+    },
+    {
+      "ref": "agents/chembl",
+      "role": "supporting",
+      "required": false,
+      "description": "Query ChEMBL for bioactivity, targets, and assays."
+    },
+    {
+      "ref": "agents/clinical-trials",
+      "role": "supporting",
+      "required": false,
+      "description": "Search ClinicalTrials.gov for study metadata and outcomes."
+    },
+    {
+      "ref": "agents/core-python-agent",
+      "role": "supporting",
+      "required": false,
+      "description": "General-purpose Python execution for custom analyses."
+    },
+    {
+      "ref": "agents/esm-embed",
+      "role": "supporting",
+      "required": false,
+      "description": "Generate protein embeddings with ESM models."
+    },
+    {
+      "ref": "agents/gromacs",
+      "role": "supporting",
+      "required": false,
+      "description": "Run GROMACS molecular dynamics simulations."
+    },
+    {
+      "ref": "agents/mol-toolkit",
+      "role": "supporting",
+      "required": false,
+      "description": "Cheminformatics utilities for molecule manipulation and conversion."
+    },
+    {
+      "ref": "agents/molecular-groups",
+      "role": "supporting",
+      "required": false,
+      "description": "Identify and analyze functional groups in molecules."
+    },
+    {
+      "ref": "agents/openmm",
+      "role": "supporting",
+      "required": false,
+      "description": "Run OpenMM molecular dynamics simulations."
+    },
+    {
+      "ref": "agents/pdb-insights",
+      "role": "supporting",
+      "required": false,
+      "description": "Extract structural insights from PDB entries."
+    },
+    {
+      "ref": "agents/pdb-search",
+      "role": "supporting",
+      "required": false,
+      "description": "Search the Protein Data Bank for structures."
+    },
+    {
+      "ref": "agents/pubchem",
+      "role": "supporting",
+      "required": false,
+      "description": "Query PubChem for compounds, properties, and bioassays."
+    },
+    {
+      "ref": "agents/pubmed",
+      "role": "supporting",
+      "required": false,
+      "description": "Search PubMed for biomedical literature."
+    },
+    {
+      "ref": "agents/rfdiffusion",
+      "role": "supporting",
+      "required": false,
+      "description": "De novo protein design with RFdiffusion."
+    },
+    {
+      "ref": "agents/toxpred",
+      "role": "supporting",
+      "required": false,
+      "description": "Predict toxicity endpoints for small molecules."
+    }
+  ],
+  "samplePrompts": [
+    {
+      "id": "sp-1",
+      "title": "Predict a protein structure",
+      "prompt": "Predict the 3D structure of human lysozyme from its amino acid sequence and summarize the predicted domains and confidence.",
+      "difficulty": "beginner",
+      "expectedOutput": "Predicted PDB structure, per-residue confidence scores, and a summary of structural features."
+    },
+    {
+      "id": "sp-2",
+      "title": "Dock a ligand to a target",
+      "prompt": "Dock ibuprofen against COX-2 (PDB 5KIR) and report the top binding poses with predicted affinity.",
+      "difficulty": "intermediate",
+      "expectedOutput": "Ranked poses, docking scores, and key interacting residues."
+    },
+    {
+      "id": "sp-3",
+      "title": "Find bioactive analogs",
+      "prompt": "Search ChEMBL and PubChem for analogs of imatinib with measured activity against BCR-ABL and summarize potency.",
+      "difficulty": "intermediate",
+      "expectedOutput": "Table of analogs with structures, IC50/Ki values, and source assays."
+    },
+    {
+      "id": "sp-4",
+      "title": "Mine the literature",
+      "prompt": "Summarize recent PubMed publications on GLP-1 receptor agonists for cardiovascular outcomes and list ongoing clinical trials.",
+      "difficulty": "beginner",
+      "expectedOutput": "Literature summary with citations and a list of relevant clinical trials."
+    }
+  ],
+  "riskProfile": {
+    "requiresExternalCompute": true,
+    "dataResidency": "user-managed Azure subscription"
+  }
+}

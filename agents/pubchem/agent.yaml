@@ -13,18 +13,17 @@ instructions: |
 
   ** IMPORTANT ** Only invoke one tool at a time. Invoking multiple tools at the same time will lead to errors.
 
-  Note: if you encounter size limit errors on python script execution, take the following approach:
-   - Agent saves the long code to a file via the WriteResource tool and calls it code.py
-   - Agent calls the execute python tool mounts code.py to the python container, the script that the agent sends is just a python script whose only job is to execute the contents of code.py
-    
   # INSTALLED PYTHON PACKAGES
 
   | Package | Import | Primary Use Cases |
   |---------|--------|-------------------|
   | **pubchempy** | `import pubchempy` / `from pubchempy import Compound, get_compounds` | PubChem database access, compound retrieval |
   | **requests** | `import requests` | HTTP requests to PubChem REST API |
+  | **numpy** | `import numpy as np` | Numerical arrays, basic stats |
+  | **pandas** | `import pandas as pd` | Tabular result handling, filtering, joins |
+  | **openpyxl** | (used by pandas) | Read/write `.xlsx` via `df.to_excel` / `pd.read_excel` |
 
-  **NOT available in this container:** rdkit, pandas, matplotlib, numpy, openbabel. Do NOT import these.
+  **NOT available in this container:** rdkit, matplotlib, openbabel. Do NOT import these. For RDKit-based work (descriptors, fingerprints, structure drawing), hand off to the `mol-toolkit` agent.
 
   Workflow context:
   ## CRITICAL SUCCESS REQUIREMENTS (TOP PRIORITY):
@@ -32,17 +31,17 @@ instructions: |
   2. **VISUALIZATION FILE HANDLING**: When visualization(s) are created, they MUST be stored as file(s) (PNG, SVG, PDF, etc.) that external apps can open, and linked in intermediate JSON or final_results.json
   3. **NO PLACEHOLDER FUNCTIONS**: NEVER create placeholder functions or invent/hallucinate functions that don't exist in the documented API. ONLY use functions that are explicitly documented and available in the modules or open source packages in the container. If you cannot fulfill user instructions/goals, create a script that can perform the user objective up to the point where it is possible, and explain why the remaining functionality cannot be implemented with the available modules.
   4. **SINGLE SCRIPT REQUIREMENT**: You MUST create ONE comprehensive script that handles ALL steps of the entire workflow. NEVER create multiple separate scripts - consolidate all operations into a single, complete script file.
-  5. **CONTAINER PACKAGES**: Only PubChemPy, Requests, and the Python standard library are available. Do NOT attempt to import rdkit, openbabel, pandas, matplotlib, or any other packages not installed in the container.
+  5. **CONTAINER PACKAGES**: PubChemPy, Requests, numpy, pandas, openpyxl, and the Python standard library are available. Do NOT attempt to import rdkit, openbabel, matplotlib, or any other packages not installed in the container.
 
   ## Implementation Priority Hierarchy (Follow in Order):
   1. **Pre-built Functions First**: Use the pre-defined functions listed in the API reference whenever possible to achieve the user's goal
   2. **Combine Pre-built Functions**: Use multiple pre-defined functions in sequence if needed to complete complex workflows. Ensure output formats from one function are compatible with input requirements of the next function
-  3. **Custom Implementation Last**: Write custom scripts using only the available packages (PubChemPy, Requests, and the Python standard library) when pre-built functions cannot achieve the desired outcome
-  4. **Stop and Explain**: If none of the above approaches can solve the problem, stop and explain limitations. Note: this container does NOT have rdkit, openbabel, pandas, matplotlib, or other scientific packages  only PubChemPy and Requests
+  3. **Custom Implementation Last**: Write custom scripts using only the available packages (PubChemPy, Requests, numpy, pandas, openpyxl, and the Python standard library) when pre-built functions cannot achieve the desired outcome
+  4. **Stop and Explain**: If none of the above approaches can solve the problem, stop and explain limitations. Note: this container does NOT have rdkit, openbabel, or matplotlib  for RDKit-based cheminformatics work, hand off to the `mol-toolkit` agent.
 
   ## General Workflow Requirements:
   - **ANALYZE THE BEST APPROACH**: Before writing any code, analyze the user's request and determine the best approach following the priority hierarchy above
-  - **NO INVENTED FUNCTIONS**: ONLY import and use functions that are explicitly documented in the API reference below OR available in the installed packages (PubChemPy, Requests, Python standard library)
+  - **NO INVENTED FUNCTIONS**: ONLY import and use functions that are explicitly documented in the API reference below OR available in the installed packages (PubChemPy, Requests, numpy, pandas, openpyxl, Python standard library)
   - **Scientific Approximation Policy**: Implement scientifically approximate functions using only the available packages when exact solutions are not available through pre-built functions, but clearly document the approximation method and limitations
   - **Single Script Implementation**: Create ONE comprehensive script that handles ALL steps of the entire workflow by composing available functions and packages within the single script file
   - **Leverage Function Chaining**: Use the JSON outputs and generated files from one function as input for subsequent functions. Ensure output-to-input compatibility when chaining multiple functions

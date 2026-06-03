@@ -1,0 +1,16 @@
+name: psi4
+type: agent
+version: 1.0.0
+associated_tools:
+  - agents/psi4/tools/psi4
+publisher:
+  name: Microsoft
+  contact: discovery-catalog@microsoft.com
+  support_url: https://github.com/microsoft/discovery/discussions/categories/bugs
+  party: 1p
+description: >
+  Python code environment with Psi4 for ab initio quantum chemistry calculations. HF, DFT, post-HF methods, SAPT, excited states, geometry optimization, frequency analysis, and thermochemistry.
+tags:
+  - quantum-chemistry
+  - dft
+  - ab-initio

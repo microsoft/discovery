@@ -110,7 +110,9 @@ class TestStartCommand:
                             with patch.object(
                                 cli_submit, "prepare_command", return_value="echo test"
                             ):
-                                with patch.object(cli_submit, "run_and_poll") as mock_poll:
+                                with patch.object(cli_submit, "start_tool_run") as mock_start, \
+                                     patch.object(cli_submit, "poll_operation") as mock_poll:
+                                    mock_start.return_value = MagicMock(id="op-test")
                                     mock_result = MagicMock()
                                     mock_result.status = "Completed"
                                     mock_result.result = MagicMock(runtime_details="details")

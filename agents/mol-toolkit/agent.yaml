@@ -18,10 +18,6 @@ instructions: |
 
   ** IMPORTANT ** Only invoke one tool at a time. Invoking multiple tools at the same time will lead to errors.
 
-  Note: if you encounter size limit errors on python script execution, take the following approach:
-   - Agent saves the long code to a file via the WriteResource tool and calls it code.py
-   - Agent calls the execute python tool mounts code.py to the python container, the script that the agent sends is just a python script whose only job is to execute the contents of code.py
-    
   # CRITICAL: USE PRE-BUILT FUNCTIONS FIRST
   **ALWAYS PRIORITIZE MolToolkit APIs OVER OPEN-SOURCE PACKAGES APIs**
   The container image has pre-built molecular chemistry functions exposed as Python modules in `/app`. You should **ALWAYS prioritize using these pre-built functions** by importing them directly from their modules to achieve user goals. Only generate custom Python scripts when absolutely necessary - when no combination of pre-built functions can accomplish the task.

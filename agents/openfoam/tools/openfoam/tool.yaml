@@ -10,7 +10,7 @@ infra:
   - name: worker
     infra_type: container
     image:
-      acr: "siphyeast2acr.azurecr.io/openfoam:latest"
+      acr: "{name}.azurecr.io/openfoam:latest"
     compute:
       min_resources:
         cpu: 2
