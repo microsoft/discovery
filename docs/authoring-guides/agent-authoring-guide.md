@@ -200,7 +200,7 @@ infra:
   - name: ehr-lookup-container
     infra_type: container
     image:
-      acr: "{ACR-NAME}.azurecr.io/ehr-lookup:1.0.0"
+      acr: "{name}.azurecr.io/ehr-lookup:1.0.0"
     compute:
       min_resources: { cpu: 1, ram: 2 }
       max_resources: { cpu: 4, ram: 8 }
@@ -226,6 +226,7 @@ actions:
 - `infra[].name`, `actions[].name`, `actions[].output_mount_configurations[].output_name`, and `actions[].inline_files[].mount_path` must all be unique within a single `tool.yaml`.
 - Every name listed in `actions[].input_schema.required` must appear in `properties`.
 - Each `actions[].infra_node` must reference an entry in `infra[].name`.
+- Container image references must use the deployer-substituted ACR placeholder format `{name}.azurecr.io/<image>:<tag>`; do not hardcode a registry name such as `myregistry.azurecr.io`.
 - Every tool subfolder must contain both `tool.yaml` and `Dockerfile`.
 - If a `tools/` directory exists, `agent.yaml.discoveryExtensions` must declare the corresponding tools so they are wired up at deploy time.
 

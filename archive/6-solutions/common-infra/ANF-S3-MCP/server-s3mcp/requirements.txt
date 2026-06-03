@@ -1,4 +1,0 @@
-boto3
-fastmcp
-python-dotenv
-uv

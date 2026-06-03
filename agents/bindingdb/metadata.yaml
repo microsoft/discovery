@@ -1,0 +1,16 @@
+name: bindingdb
+type: agent
+version: 1.0.0
+associated_tools:
+  - agents/bindingdb/tools/BindingDB
+publisher:
+  name: Microsoft
+  contact: discovery-catalog@microsoft.com
+  support_url: https://github.com/microsoft/discovery/discussions/categories/bugs
+  party: 1p
+description: >
+  BindingDB agent for retrieving comprehensive binding affinity data for protein-ligand interactions. Provides access to local SQLite database with sub-millisecond query performance.
+tags:
+  - binding-affinity
+  - drug-discovery
+  - database

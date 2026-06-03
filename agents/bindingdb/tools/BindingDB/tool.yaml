@@ -1,0 +1,31 @@
+name: bindingDB
+description: BindingDB is a tool for accessing detailed binding affinity and thermodynamic data from the BindingDB database, specializing in Kd, Ki, IC50 measurements and thermodynamic parameters (DeltaG, DeltaH, DeltaS) for protein-ligand interactions.
+version: 1.0.0
+category: "Scientific Computing"
+license: MIT
+infra:
+  - name: worker
+    infra_type: container
+    image:
+      acr: "{name}.azurecr.io/bindingdb-image:latest"
+    compute:
+      min_resources:
+        cpu: 2
+        ram: 8Gi
+        storage: 16Gi
+        gpu: 0
+      max_resources:
+        cpu: 4
+        ram: 16Gi
+        storage: 32Gi
+        gpu: 0
+      infiniband: false
+      recommended_sku:
+        - Standard_D4s_v6
+      pool_type: static
+      pool_size: 1
+code_environments:
+  - language: python
+    command: "python \"/{{scriptName}}\""
+    description: "Python code environment on BindingDB container image."
+    infra_node: worker

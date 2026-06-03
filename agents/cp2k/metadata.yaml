@@ -1,0 +1,16 @@
+name: cp2k
+type: agent
+version: 1.0.0
+associated_tools:
+  - agents/cp2k/tools/cp2k
+publisher:
+  name: Microsoft
+  contact: discovery-catalog@microsoft.com
+  support_url: https://github.com/microsoft/discovery/discussions/categories/bugs
+  party: 1p
+description: >
+  Expert agent for atomistic simulations using CP2K. Designs and executes DFT calculations with geometry optimization, ab initio MD, vibrational analysis, band structure, NEB, and semi-empirical methods.
+tags:
+  - quantum-chemistry
+  - materials-science
+  - dft

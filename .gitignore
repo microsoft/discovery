@@ -432,6 +432,9 @@ FodyWeavers.xsd
 # config.template.json is the safe-to-commit template; config.json is local only.
 config.json
 
+# Discovery deployer scratch folders
+agents/tmp/
+starter-kits/tmp/
 
 # Pytest cache directory
 .pytest_cache/

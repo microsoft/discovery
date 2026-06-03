@@ -1,0 +1,184 @@
+{
+  "$schema": "../../docs/schemas/starter-kit-schema.json",
+  "name": "chemistry-and-materials",
+  "version": "1.0.0",
+  "description": "Chemistry and materials science workbench spanning cheminformatics, retrosynthesis, docking, quantum chemistry, molecular dynamics, and generative materials design.",
+  "displayName": "Chemistry and Materials",
+  "longDescription": "# Chemistry and Materials\n\nA comprehensive starter kit for chemistry and materials science research that combines cheminformatics, retrosynthetic planning, molecular docking, quantum chemistry, classical and ab-initio molecular dynamics, and generative materials design.\n\n**What you can do:**\n- Plan retrosynthetic routes for organic molecules\n- Search chemical and natural-product databases\n- Dock small molecules against protein targets\n- Run DFT, ab-initio MD, and conformer searches\n- Run classical molecular dynamics with GROMACS, LAMMPS, and OpenMM\n- Generate novel inorganic materials and analyze functional groups\n\n**Ideal for:** computational chemists, medicinal chemists, materials scientists, and catalysis researchers.",
+  "author": {
+    "name": "Microsoft",
+    "email": "discovery-catalog@microsoft.com",
+    "url": "https://github.com/microsoft/discovery"
+  },
+  "license": "MIT",
+  "keywords": [
+    "chemistry",
+    "materials science",
+    "cheminformatics",
+    "retrosynthesis",
+    "quantum chemistry",
+    "molecular dynamics",
+    "drug discovery",
+    "generative design"
+  ],
+  "category": "Chemistry",
+  "homepage": "https://github.com/microsoft/discovery/tree/main/starter-kits/chemistry-and-materials",
+  "party": "1p",
+  "lifecycle": "active",
+  "agentRefs": [
+    {
+      "ref": "agents/aizynthfinder",
+      "role": "primary",
+      "required": true,
+      "description": "Retrosynthetic planning for organic molecules."
+    },
+    {
+      "ref": "agents/autodock",
+      "role": "supporting",
+      "required": false,
+      "description": "Molecular docking of small-molecule ligands to protein targets."
+    },
+    {
+      "ref": "agents/bindingdb",
+      "role": "supporting",
+      "required": false,
+      "description": "Search BindingDB for measured protein-ligand binding affinities."
+    },
+    {
+      "ref": "agents/chemberta",
+      "role": "supporting",
+      "required": false,
+      "description": "ChemBERTa embeddings and predictions for molecules."
+    },
+    {
+      "ref": "agents/chembl",
+      "role": "supporting",
+      "required": false,
+      "description": "Query ChEMBL for bioactivity, targets, and assays."
+    },
+    {
+      "ref": "agents/chemprop",
+      "role": "supporting",
+      "required": false,
+      "description": "Train and apply Chemprop message-passing neural networks."
+    },
+    {
+      "ref": "agents/coconut",
+      "role": "supporting",
+      "required": false,
+      "description": "Search the COCONUT natural products database."
+    },
+    {
+      "ref": "agents/cp2k",
+      "role": "supporting",
+      "required": false,
+      "description": "Run CP2K DFT and ab-initio molecular dynamics calculations."
+    },
+    {
+      "ref": "agents/crest",
+      "role": "supporting",
+      "required": false,
+      "description": "Conformer-rotamer sampling with CREST."
+    },
+    {
+      "ref": "agents/gromacs",
+      "role": "supporting",
+      "required": false,
+      "description": "Run GROMACS molecular dynamics simulations."
+    },
+    {
+      "ref": "agents/lammps",
+      "role": "supporting",
+      "required": false,
+      "description": "Run LAMMPS classical molecular dynamics simulations."
+    },
+    {
+      "ref": "agents/janus",
+      "role": "supporting",
+      "required": false,
+      "description": "Janus generative molecular design."
+    },
+    {
+      "ref": "agents/mattergen",
+      "role": "supporting",
+      "required": false,
+      "description": "Generative design of novel inorganic materials with MatterGen."
+    },
+    {
+      "ref": "agents/mol-toolkit",
+      "role": "supporting",
+      "required": false,
+      "description": "Cheminformatics utilities for molecule manipulation and conversion."
+    },
+    {
+      "ref": "agents/molecular-groups",
+      "role": "supporting",
+      "required": false,
+      "description": "Identify and analyze functional groups in molecules."
+    },
+    {
+      "ref": "agents/openmm",
+      "role": "supporting",
+      "required": false,
+      "description": "Run OpenMM molecular dynamics simulations."
+    },
+    {
+      "ref": "agents/psi4",
+      "role": "supporting",
+      "required": false,
+      "description": "Run Psi4 ab-initio quantum chemistry calculations."
+    },
+    {
+      "ref": "agents/pubchem",
+      "role": "supporting",
+      "required": false,
+      "description": "Query PubChem for compounds, properties, and bioassays."
+    },
+    {
+      "ref": "agents/quantum-espresso",
+      "role": "supporting",
+      "required": false,
+      "description": "Run Quantum ESPRESSO plane-wave DFT calculations."
+    },
+    {
+      "ref": "agents/retrochimera",
+      "role": "supporting",
+      "required": false,
+      "description": "Retrosynthesis planning with RetroChimera."
+    }
+  ],
+  "samplePrompts": [
+    {
+      "id": "sp-1",
+      "title": "Plan a retrosynthetic route",
+      "prompt": "Propose a retrosynthetic route to ibuprofen using AiZynthFinder and rank the routes by estimated feasibility.",
+      "difficulty": "beginner",
+      "expectedOutput": "Ranked retrosynthetic routes with intermediates and disconnection logic."
+    },
+    {
+      "id": "sp-2",
+      "title": "Dock a ligand to a target",
+      "prompt": "Dock ibuprofen against COX-2 (PDB 5KIR) with AutoDock and report the top binding poses with predicted affinity.",
+      "difficulty": "intermediate",
+      "expectedOutput": "Ranked poses, docking scores, and key interacting residues."
+    },
+    {
+      "id": "sp-3",
+      "title": "Quantum chemistry geometry optimization",
+      "prompt": "Optimize the geometry of caffeine at the B3LYP/6-31G* level using Psi4 and report the final energy and key bond lengths.",
+      "difficulty": "intermediate",
+      "expectedOutput": "Optimized geometry, total energy, and selected geometric parameters."
+    },
+    {
+      "id": "sp-4",
+      "title": "Generate a novel inorganic material",
+      "prompt": "Use MatterGen to propose 5 candidate crystal structures for a stable Li-ion conductor and summarize their compositions.",
+      "difficulty": "advanced",
+      "expectedOutput": "Candidate compositions, predicted structures, and stability estimates."
+    }
+  ],
+  "riskProfile": {
+    "requiresExternalCompute": true,
+    "dataResidency": "user-managed Azure subscription"
+  }
+}
