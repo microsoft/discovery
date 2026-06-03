@@ -444,3 +444,104 @@ class TestLargeWorkspacePagination:
         # Should show actionable guidance
         error_msg = mock_error.call_args[0][0]
         assert "--limit" in error_msg or "--pool" in error_msg
+
+# -------- Pods rendering in `discovery job status <id>` --------
+
+from typer.testing import CliRunner  # noqa: E402
+
+from discovery.poll.cli_status import app as status_app  # noqa: E402
+from discovery.poll.dataplane_api import OperationNotFoundError  # noqa: E402
+from discovery.poll.models.tool_response import (  # noqa: E402
+    AzureCoreOperationState,
+    PodInfo,
+)
+
+
+def _fake_op_status(status: str) -> MagicMock:
+    """Build a stub ToolExecutionResponse-like object for status_cmd."""
+    result = MagicMock()
+    result.created_at = datetime(2026, 3, 30, 0, 0, 0, tzinfo=timezone.utc)
+    result.completed_at = None
+    result.runtime_details = "runtime"
+    result.tool_report = None
+    result.debug_info = ""
+    result.output_data = []
+
+    op = MagicMock()
+    op.id = "op-xyz"
+    op.status = AzureCoreOperationState(status)
+    op.result = result
+    op.error = None
+    return op
+
+
+@pytest.fixture
+def _stub_status_env():
+    cfg = MagicMock(project_name="proj", workspace_url="https://ws")
+    with (
+        patch("discovery.poll.cli_status.load_project_config", return_value=cfg),
+        patch("discovery.poll.cli_status.get_config_file_path"),
+        patch("discovery.poll.cli_status.emit_env"),
+    ):
+        yield
+
+
+@pytest.mark.usefixtures("_stub_status_env")
+def test_running_op_renders_pods_table() -> None:
+    with (
+        patch(
+            "discovery.poll.cli_status.get_operation_status",
+            return_value=_fake_op_status("Running"),
+        ),
+        patch(
+            "discovery.poll.cli_status.get_operation_pods",
+            return_value=[
+                PodInfo(index=0, role="leader", phase="Running"),
+                PodInfo(index=1, role="worker", phase="Pending"),
+            ],
+        ) as mock_get_pods,
+    ):
+        runner = CliRunner()
+        result = runner.invoke(status_app, ["status", "op-xyz"])
+
+    assert result.exit_code == 0, result.output
+    assert mock_get_pods.called
+    assert "leader" in result.output
+    assert "worker" in result.output
+    assert "Pending" in result.output
+
+
+@pytest.mark.usefixtures("_stub_status_env")
+def test_non_running_op_does_not_query_pods() -> None:
+    with (
+        patch(
+            "discovery.poll.cli_status.get_operation_status",
+            return_value=_fake_op_status("Succeeded"),
+        ),
+        patch("discovery.poll.cli_status.get_operation_pods") as mock_get_pods,
+    ):
+        runner = CliRunner()
+        result = runner.invoke(status_app, ["status", "op-xyz"])
+
+    assert result.exit_code == 0, result.output
+    mock_get_pods.assert_not_called()
+
+
+@pytest.mark.usefixtures("_stub_status_env")
+def test_pods_fetch_failure_does_not_break_status() -> None:
+    with (
+        patch(
+            "discovery.poll.cli_status.get_operation_status",
+            return_value=_fake_op_status("Running"),
+        ),
+        patch(
+            "discovery.poll.cli_status.get_operation_pods",
+            side_effect=OperationNotFoundError("not found"),
+        ),
+    ):
+        runner = CliRunner()
+        result = runner.invoke(status_app, ["status", "op-xyz"])
+
+    assert result.exit_code == 0, result.output
+    # Status output is still produced (table title contains the op id)
+    assert "op-xyz" in result.output

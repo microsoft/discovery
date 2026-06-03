@@ -49,8 +49,10 @@ from discovery.poll.models.auth import AuthHeaders
 from discovery.poll.models.compute import ComputeUsageModel
 from discovery.poll.models.tool_response import (
     OperationsListResponse,
+    PodInfo,
     ToolExecutionResponse,
     ToolReport,
+    ToolRunPodsResponse,
 )
 from discovery.poll.models.tool_run import ToolRunRequest
 
@@ -790,3 +792,97 @@ def _extract_tool_report_logs(data: ToolReport) -> list[str]:
     else:
         raw_lines = str(logs_field).splitlines()
     return [line for line in (entry.strip() for entry in raw_lines) if line]
+
+
+def connect_debug_container(
+    project_name: str,
+    operation_id: str,
+    workspace_url: str,
+    pod_index: int = 0,
+) -> dict[str, Any]:
+    """Start a debug session on a running operation.
+
+    Calls the :connect endpoint which auto-resolves the container name.
+    The service creates a Dev Tunnel on behalf of the user and provisions an
+    ephemeral debug container.
+
+    Args:
+        project_name: The project name
+        operation_id: The operation ID of a running tool execution
+        workspace_url: The workspace URL
+        pod_index: Pod index (0=leader/main, 1+=workers)
+
+    Returns:
+        Dict with tunnelId, tunnelName, debugSessionId, status, message, etc.
+    """
+    if not project_name or not operation_id:
+        msg = "project_name and operation_id required"
+        raise PollError(msg)
+    token = get_access_token()
+
+    pod_query = f"?pod={pod_index}" if pod_index != 0 else ""
+    url = (
+        f"{workspace_url.rstrip('/')}/tools/projects/{project_name}"
+        f"/operations/{operation_id}:connect{pod_query}"
+    )
+    debug(f"POST {url}")
+
+    with _create_client() as client:
+        resp = client.post(
+            url,
+            headers=AuthHeaders(Authorization=f"Bearer {token}").model_dump(),  # type: ignore
+        )
+    resp.raise_for_status()
+    return resp.json() if resp.content else {}
+
+
+class OperationNotFoundError(PollError):
+    """Raised when the pods preview endpoint returns 404 for an operation id."""
+
+
+def get_operation_pods(
+    project_name: str,
+    operation_id: str,
+    workspace_url: str,
+) -> list[PodInfo]:
+    """Fetch the pod list for a running tool execution (preview endpoint).
+
+    Calls ``GET /tools/projects/{project}/preview/operations/{operationId}/pods``.
+    Returns an empty list if the operation isn't Running or if the server
+    couldn't query the cluster. Raises :class:`OperationNotFoundError` if the
+    server returns 404 (unknown operation id). Other HTTP errors propagate as
+    :class:`httpx.HTTPStatusError`.
+
+    Args:
+        project_name: The project name
+        operation_id: The operation ID of the tool execution
+        workspace_url: The workspace URL
+
+    Returns:
+        List of :class:`PodInfo` entries, sorted leader/main first then workers.
+    """
+    if not project_name or not operation_id:
+        msg = "project_name and operation_id required"
+        raise PollError(msg)
+
+    token = get_access_token()
+    url = (
+        f"{workspace_url.rstrip('/')}/tools/projects/{project_name}"
+        f"/preview/operations/{operation_id}/pods"
+    )
+    debug(f"GET {url}")
+
+    with _create_client() as client:
+        resp = client.get(
+            url,
+            headers=AuthHeaders(Authorization=f"Bearer {token}").model_dump(),  # type: ignore
+        )
+
+    if resp.status_code == 404:
+        msg = f"Operation '{operation_id}' not found in project '{project_name}'"
+        raise OperationNotFoundError(msg)
+    resp.raise_for_status()
+
+    if not resp.content or not resp.content.strip():
+        return []
+    return ToolRunPodsResponse.model_validate(resp.json()).pods

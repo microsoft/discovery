@@ -1,8 +1,421 @@
 {
   "schemaVersion": "1.0.0",
-  "generatedAt": "2026-05-26T14:09:23Z",
-  "commitSha": "e26dc74248efb871ae28b338b9f8158f676a4926",
+  "generatedAt": "2026-06-01T21:28:53Z",
+  "commitSha": "d2ff53289094dfe60841dbfecdf412ee2495036c",
   "kits": [
+    {
+      "$schema": "../../docs/schemas/starter-kit-schema.json",
+      "name": "chemistry-and-materials",
+      "version": "1.0.0",
+      "description": "Chemistry and materials science workbench spanning cheminformatics, retrosynthesis, docking, quantum chemistry, molecular dynamics, and generative materials design.",
+      "displayName": "Chemistry and Materials",
+      "longDescription": "# Chemistry and Materials\n\nA comprehensive starter kit for chemistry and materials science research that combines cheminformatics, retrosynthetic planning, molecular docking, quantum chemistry, classical and ab-initio molecular dynamics, and generative materials design.\n\n**What you can do:**\n- Plan retrosynthetic routes for organic molecules\n- Search chemical and natural-product databases\n- Dock small molecules against protein targets\n- Run DFT, ab-initio MD, and conformer searches\n- Run classical molecular dynamics with GROMACS, LAMMPS, and OpenMM\n- Generate novel inorganic materials and analyze functional groups\n\n**Ideal for:** computational chemists, medicinal chemists, materials scientists, and catalysis researchers.",
+      "author": {
+        "name": "Microsoft",
+        "email": "discovery-catalog@microsoft.com",
+        "url": "https://github.com/microsoft/discovery"
+      },
+      "license": "MIT",
+      "keywords": [
+        "chemistry",
+        "materials science",
+        "cheminformatics",
+        "retrosynthesis",
+        "quantum chemistry",
+        "molecular dynamics",
+        "drug discovery",
+        "generative design"
+      ],
+      "category": "Chemistry",
+      "homepage": "https://github.com/microsoft/discovery/tree/main/starter-kits/chemistry-and-materials",
+      "party": "1p",
+      "lifecycle": "active",
+      "agentRefs": [
+        {
+          "ref": "agents/aizynthfinder",
+          "role": "primary",
+          "required": true,
+          "description": "Retrosynthetic planning for organic molecules.",
+          "agentMeta": {
+            "name": "aizynthfinder",
+            "displayName": "AiZynthFinder",
+            "version": "1.0.0",
+            "tags": [
+              "retrosynthesis",
+              "drug-discovery",
+              "trained-model"
+            ],
+            "description": "Expert agent for retrosynthetic route planning using AiZynthFinder. Breaks down target drug-like molecules into purchasable precursors using neural-network-guided MCTS with USPTO reaction templates.\n"
+          }
+        },
+        {
+          "ref": "agents/autodock",
+          "role": "supporting",
+          "required": false,
+          "description": "Molecular docking of small-molecule ligands to protein targets.",
+          "agentMeta": {
+            "name": "autodock",
+            "displayName": "AutoDock Vina",
+            "version": "1.0.0",
+            "tags": [
+              "molecule-docking",
+              "drug-discovery",
+              "virtual-screening"
+            ],
+            "description": "Expert molecular docking agent using AutoDock Vina for protein-ligand binding affinity prediction, virtual screening, and structure-based drug design.\n"
+          }
+        },
+        {
+          "ref": "agents/bindingdb",
+          "role": "supporting",
+          "required": false,
+          "description": "Search BindingDB for measured protein-ligand binding affinities.",
+          "agentMeta": {
+            "name": "bindingdb",
+            "displayName": "BindingDB",
+            "version": "1.0.0",
+            "tags": [
+              "binding-affinity",
+              "drug-discovery",
+              "database"
+            ],
+            "description": "BindingDB agent for retrieving comprehensive binding affinity data for protein-ligand interactions. Provides access to local SQLite database with sub-millisecond query performance.\n"
+          }
+        },
+        {
+          "ref": "agents/chemberta",
+          "role": "supporting",
+          "required": false,
+          "description": "ChemBERTa embeddings and predictions for molecules.",
+          "agentMeta": {
+            "name": "chemberta",
+            "displayName": "ChemBERTa",
+            "version": "1.0.0",
+            "tags": [
+              "cheminformatics",
+              "molecular-property-prediction",
+              "trained-model",
+              "transformer"
+            ],
+            "description": "Molecular property prediction agent using ChemBERTa-2 transformer. Provides SMILES-based molecular embeddings, classification and regression fine-tuning, SMILES augmentation, confidence scoring, similarity search, and clustering.\n"
+          }
+        },
+        {
+          "ref": "agents/chembl",
+          "role": "supporting",
+          "required": false,
+          "description": "Query ChEMBL for bioactivity, targets, and assays.",
+          "agentMeta": {
+            "name": "chembl",
+            "displayName": "ChEMBL",
+            "version": "1.0.0",
+            "tags": [
+              "cheminformatics",
+              "bioactivity",
+              "database"
+            ],
+            "description": "ChEMBL agent for retrieving chemical and bioactivity data from the ChEMBL database. Provides access to compound information, target data, bioactivity measurements, and cross-references with PDB structures.\n"
+          }
+        },
+        {
+          "ref": "agents/chemprop",
+          "role": "supporting",
+          "required": false,
+          "description": "Train and apply Chemprop message-passing neural networks.",
+          "agentMeta": {
+            "name": "chemprop",
+            "displayName": "Chemprop",
+            "version": "1.0.0",
+            "tags": [
+              "molecular-properties",
+              "trained-model",
+              "d-mpnn",
+              "property-prediction"
+            ],
+            "description": "Expert agent for molecular property prediction using Chemprop v2 (D-MPNN). Trains, evaluates, and deploys message-passing neural networks for regression, classification, and multi-task molecular property prediction.\n"
+          }
+        },
+        {
+          "ref": "agents/coconut",
+          "role": "supporting",
+          "required": false,
+          "description": "Search the COCONUT natural products database.",
+          "agentMeta": {
+            "name": "coconut",
+            "displayName": "COCONUT",
+            "version": "1.0.0",
+            "tags": [
+              "cheminformatics",
+              "natural-products",
+              "database"
+            ],
+            "description": "Agent for searching and retrieving natural product structures from the COCONUT (Collection of Open Natural Products) database. Provides access to natural product chemical data, molecular properties, and taxonomic classifications.\n"
+          }
+        },
+        {
+          "ref": "agents/cp2k",
+          "role": "supporting",
+          "required": false,
+          "description": "Run CP2K DFT and ab-initio molecular dynamics calculations.",
+          "agentMeta": {
+            "name": "cp2k",
+            "displayName": "CP2K",
+            "version": "1.0.0",
+            "tags": [
+              "quantum-chemistry",
+              "materials-science",
+              "dft"
+            ],
+            "description": "Expert agent for atomistic simulations using CP2K. Designs and executes DFT calculations with geometry optimization, ab initio MD, vibrational analysis, band structure, NEB, and semi-empirical methods.\n"
+          }
+        },
+        {
+          "ref": "agents/crest",
+          "role": "supporting",
+          "required": false,
+          "description": "Conformer-rotamer sampling with CREST.",
+          "agentMeta": {
+            "name": "crest",
+            "displayName": "CREST",
+            "version": "1.0.0",
+            "tags": [
+              "conformational-search",
+              "semiempirical"
+            ],
+            "description": "Expert agent for conformational sampling and molecular chemical space exploration using CREST 3.0 with GFN-xTB semiempirical methods.\n"
+          }
+        },
+        {
+          "ref": "agents/gromacs",
+          "role": "supporting",
+          "required": false,
+          "description": "Run GROMACS molecular dynamics simulations.",
+          "agentMeta": {
+            "name": "gromacs",
+            "displayName": "GROMACS",
+            "version": "1.0.0",
+            "tags": [
+              "molecular-dynamics"
+            ],
+            "description": "Python code environment with Gromacs tool for high-performance molecular dynamics (MD) simulations.\n"
+          }
+        },
+        {
+          "ref": "agents/lammps",
+          "role": "supporting",
+          "required": false,
+          "description": "Run LAMMPS classical molecular dynamics simulations.",
+          "agentMeta": {
+            "name": "lammps",
+            "displayName": "LAMMPS CPU",
+            "version": "1.0.0",
+            "tags": [
+              "molecular-dynamics",
+              "materials-science"
+            ],
+            "description": "Agent for orchestrating LAMMPS CPU tool for molecular simulations. Includes MDAnalysis, ASE, freud, and pandas for self-sufficient trajectory analysis and structure manipulation.\n"
+          }
+        },
+        {
+          "ref": "agents/janus",
+          "role": "supporting",
+          "required": false,
+          "description": "Janus generative molecular design.",
+          "agentMeta": {
+            "name": "janus",
+            "displayName": "De Novo Molecule Generator (powered by JANUS)",
+            "version": "1.0.0",
+            "tags": [
+              "molecular-design",
+              "generative",
+              "de-novo",
+              "selfies",
+              "inverse-design",
+              "genetic-algorithm",
+              "materials-discovery"
+            ],
+            "description": "De novo molecule generator wrapping the JANUS algorithm (Nigam et al., Digital Discovery 2022): a parallel-tempered SELFIES-based genetic algorithm with a DNN classifier guiding exploitation. SELFIES encoding guarantees 100% chemical validity. Accepts user-supplied fitness functions and optional custom filters (e.g. `make_pfas_filter()` for PFAS-free runs, applied as a hard post-filter). CPU-only, no bundled weights, no runtime internet.\n"
+          }
+        },
+        {
+          "ref": "agents/mattergen",
+          "role": "supporting",
+          "required": false,
+          "description": "Generative design of novel inorganic materials with MatterGen.",
+          "agentMeta": {
+            "name": "mattergen",
+            "displayName": "MatterGen Crystal Generator",
+            "version": "1.0.0",
+            "tags": [
+              "materials-science",
+              "generative-model",
+              "crystal-structure",
+              "diffusion-model",
+              "computational-chemistry",
+              "trained-model"
+            ],
+            "description": "Generative AI agent for inorganic crystal structure design using MatterGen (Zeni et al., Nature 2025). Generates novel, stable crystal structures unconditionally or conditioned on target properties including chemical composition, space group, band gap, magnetic density, and bulk modulus. Supports 9 pretrained models from the HuggingFace Hub.\n"
+          }
+        },
+        {
+          "ref": "agents/mol-toolkit",
+          "role": "supporting",
+          "required": false,
+          "description": "Cheminformatics utilities for molecule manipulation and conversion.",
+          "agentMeta": {
+            "name": "mol-toolkit",
+            "displayName": "MolToolkit",
+            "version": "1.0.0",
+            "tags": [
+              "cheminformatics"
+            ],
+            "description": "Agent dedicated to cheminformatics.\n"
+          }
+        },
+        {
+          "ref": "agents/molecular-groups",
+          "role": "supporting",
+          "required": false,
+          "description": "Identify and analyze functional groups in molecules.",
+          "agentMeta": {
+            "name": "molecular-groups",
+            "displayName": "Molecular Groups",
+            "version": "1.0.0",
+            "tags": [
+              "cheminformatics",
+              "functional-groups",
+              "safety-screening"
+            ],
+            "description": "Expert agent for identifying functional groups in molecular structures. Provides both general functional group analysis and safety screening for hazardous groups.\n"
+          }
+        },
+        {
+          "ref": "agents/openmm",
+          "role": "supporting",
+          "required": false,
+          "description": "Run OpenMM molecular dynamics simulations.",
+          "agentMeta": {
+            "name": "openmm",
+            "displayName": "OpenMM",
+            "version": "1.0.0",
+            "tags": [
+              "molecular-dynamics",
+              "biomolecular-simulation",
+              "gpu"
+            ],
+            "description": "Expert agent for GPU-accelerated molecular dynamics simulations using OpenMM. Handles PDB preparation, system building, energy minimization, equilibration, production MD, and trajectory analysis.\n"
+          }
+        },
+        {
+          "ref": "agents/psi4",
+          "role": "supporting",
+          "required": false,
+          "description": "Run Psi4 ab-initio quantum chemistry calculations.",
+          "agentMeta": {
+            "name": "psi4",
+            "displayName": "Psi4",
+            "version": "1.0.0",
+            "tags": [
+              "quantum-chemistry",
+              "dft",
+              "ab-initio"
+            ],
+            "description": "Python code environment with Psi4 for ab initio quantum chemistry calculations. HF, DFT, post-HF methods, SAPT, excited states, geometry optimization, frequency analysis, and thermochemistry.\n"
+          }
+        },
+        {
+          "ref": "agents/pubchem",
+          "role": "supporting",
+          "required": false,
+          "description": "Query PubChem for compounds, properties, and bioassays.",
+          "agentMeta": {
+            "name": "pubchem",
+            "displayName": "PubChem",
+            "version": "1.0.0",
+            "tags": [
+              "cheminformatics",
+              "database"
+            ],
+            "description": "Tool for accessing chemical information from the PubChem database using the PubChem API.\n"
+          }
+        },
+        {
+          "ref": "agents/quantum-espresso",
+          "role": "supporting",
+          "required": false,
+          "description": "Run Quantum ESPRESSO plane-wave DFT calculations.",
+          "agentMeta": {
+            "name": "quantum-espresso",
+            "displayName": "Quantum ESPRESSO",
+            "version": "1.0.0",
+            "tags": [
+              "quantum-chemistry",
+              "materials-science",
+              "dft"
+            ],
+            "description": "Python code environment with Quantum ESPRESSO for first-principles electronic structure calculations and materials modeling. Includes pymatgen, phonopy, seekpath, and ASE.\n"
+          }
+        },
+        {
+          "ref": "agents/retrochimera",
+          "role": "supporting",
+          "required": false,
+          "description": "Retrosynthesis planning with RetroChimera.",
+          "agentMeta": {
+            "name": "retrochimera",
+            "displayName": "Retrosynthesis Predictor (powered by RetroChimera)",
+            "version": "1.0.0",
+            "tags": [
+              "retrosynthesis",
+              "computational-chemistry",
+              "drug-discovery",
+              "reaction-prediction",
+              "trained-model",
+              "gnn"
+            ],
+            "description": "Expert agent for retrosynthetic analysis using the RetroChimera model (Maziarz et al., 2025). Ensembles template-based and de novo models with complementary inductive biases to predict single-step retrosynthetic disconnections and multi-step synthesis routes. Pre-loaded with the Pistachio-trained checkpoint (strongest model).\n"
+          }
+        }
+      ],
+      "samplePrompts": [
+        {
+          "id": "sp-1",
+          "title": "Plan a retrosynthetic route",
+          "prompt": "Propose a retrosynthetic route to ibuprofen using AiZynthFinder and rank the routes by estimated feasibility.",
+          "difficulty": "beginner",
+          "expectedOutput": "Ranked retrosynthetic routes with intermediates and disconnection logic."
+        },
+        {
+          "id": "sp-2",
+          "title": "Dock a ligand to a target",
+          "prompt": "Dock ibuprofen against COX-2 (PDB 5KIR) with AutoDock and report the top binding poses with predicted affinity.",
+          "difficulty": "intermediate",
+          "expectedOutput": "Ranked poses, docking scores, and key interacting residues."
+        },
+        {
+          "id": "sp-3",
+          "title": "Quantum chemistry geometry optimization",
+          "prompt": "Optimize the geometry of caffeine at the B3LYP/6-31G* level using Psi4 and report the final energy and key bond lengths.",
+          "difficulty": "intermediate",
+          "expectedOutput": "Optimized geometry, total energy, and selected geometric parameters."
+        },
+        {
+          "id": "sp-4",
+          "title": "Generate a novel inorganic material",
+          "prompt": "Use MatterGen to propose 5 candidate crystal structures for a stable Li-ion conductor and summarize their compositions.",
+          "difficulty": "advanced",
+          "expectedOutput": "Candidate compositions, predicted structures, and stability estimates."
+        }
+      ],
+      "riskProfile": {
+        "requiresExternalCompute": true,
+        "dataResidency": "user-managed Azure subscription"
+      },
+      "availability": "healthy",
+      "missingAgents": [],
+      "computedAt": "2026-06-01T21:28:53Z",
+      "kitPath": "starter-kits/chemistry-and-materials"
+    },
     {
       "$schema": "../../docs/schemas/starter-kit-schema.json",
       "name": "chip-synthesis-timing",
@@ -116,8 +529,425 @@
       },
       "availability": "healthy",
       "missingAgents": [],
-      "computedAt": "2026-05-26T14:09:23Z",
+      "computedAt": "2026-06-01T21:28:53Z",
       "kitPath": "starter-kits/chip-synthesis-timing"
+    },
+    {
+      "$schema": "../../docs/schemas/starter-kit-schema.json",
+      "name": "life-sciences",
+      "version": "1.0.0",
+      "description": "End-to-end life sciences workbench spanning protein structure, drug discovery, molecular simulation, omics, and literature mining.",
+      "displayName": "Life Sciences",
+      "longDescription": "# Life Sciences\n\nA comprehensive starter kit for life sciences research that combines structural biology, drug discovery, molecular dynamics, cheminformatics, omics, clinical evidence, and scientific literature mining.\n\n**What you can do:**\n- Predict protein structures and design novel binders\n- Search chemical, biological, and patent databases\n- Dock small molecules and run molecular dynamics simulations\n- Train and apply ML models for molecular property prediction\n- Analyze RNA-seq experiments and nucleotide motifs\n- Mine PubMed, clinical trials, and the scientific literature\n\n**Ideal for:** computational biologists, medicinal chemists, structural biologists, and translational research teams.",
+      "author": {
+        "name": "Microsoft",
+        "email": "discovery-catalog@microsoft.com",
+        "url": "https://github.com/microsoft/discovery"
+      },
+      "license": "MIT",
+      "keywords": [
+        "life sciences",
+        "biology",
+        "drug discovery",
+        "structural biology",
+        "cheminformatics",
+        "molecular dynamics",
+        "omics",
+        "literature"
+      ],
+      "category": "Biology",
+      "homepage": "https://github.com/microsoft/discovery/tree/main/starter-kits/life-sciences",
+      "party": "1p",
+      "lifecycle": "active",
+      "agentRefs": [
+        {
+          "ref": "agents/alphafold",
+          "role": "primary",
+          "required": true,
+          "description": "Predicts 3D protein structures from amino acid sequences.",
+          "agentMeta": {
+            "name": "alphafold",
+            "displayName": "AlphaFold",
+            "version": "1.0.0",
+            "tags": [
+              "structural-biology",
+              "protein-folding",
+              "alphafold",
+              "trained-model",
+              "structure-prediction"
+            ],
+            "description": "Agent for protein structure prediction using AlphaFold. Supports monomer and multimer folding, pLDDT and PAE quality assessment, FASTA input handling, and structure analysis for proteins and protein complexes.\n"
+          }
+        },
+        {
+          "ref": "agents/ambertools",
+          "role": "supporting",
+          "required": false,
+          "description": "Biomolecular preparation and analysis with AmberTools.",
+          "agentMeta": {
+            "name": "ambertools",
+            "displayName": "AmberTools",
+            "version": "1.0.0",
+            "tags": [
+              "molecular-dynamics",
+              "biomolecular-simulation"
+            ],
+            "description": "Expert agent for biomolecular simulations using AmberTools (sander, tleap, cpptraj, antechamber).\n"
+          }
+        },
+        {
+          "ref": "agents/autodock",
+          "role": "supporting",
+          "required": false,
+          "description": "Molecular docking of small-molecule ligands to protein targets.",
+          "agentMeta": {
+            "name": "autodock",
+            "displayName": "AutoDock Vina",
+            "version": "1.0.0",
+            "tags": [
+              "molecule-docking",
+              "drug-discovery",
+              "virtual-screening"
+            ],
+            "description": "Expert molecular docking agent using AutoDock Vina for protein-ligand binding affinity prediction, virtual screening, and structure-based drug design.\n"
+          }
+        },
+        {
+          "ref": "agents/bindingdb",
+          "role": "supporting",
+          "required": false,
+          "description": "Search BindingDB for measured protein-ligand binding affinities.",
+          "agentMeta": {
+            "name": "bindingdb",
+            "displayName": "BindingDB",
+            "version": "1.0.0",
+            "tags": [
+              "binding-affinity",
+              "drug-discovery",
+              "database"
+            ],
+            "description": "BindingDB agent for retrieving comprehensive binding affinity data for protein-ligand interactions. Provides access to local SQLite database with sub-millisecond query performance.\n"
+          }
+        },
+        {
+          "ref": "agents/boltzgen",
+          "role": "supporting",
+          "required": false,
+          "description": "Generative biomolecular design with Boltz.",
+          "agentMeta": {
+            "name": "boltzgen",
+            "displayName": "BoltzGen",
+            "version": "1.0.0",
+            "tags": [
+              "protein-design",
+              "structure-prediction",
+              "trained-model",
+              "diffusion-model",
+              "generative-model"
+            ],
+            "description": "Expert agent for protein binder design using the BoltzGen diffusion pipeline. Generates, folds, scores, and ranks binder designs using Boltz-2 for structure prediction and filtering.\n"
+          }
+        },
+        {
+          "ref": "agents/boltztwo",
+          "role": "supporting",
+          "required": false,
+          "description": "Boltz-2 structure and affinity predictions.",
+          "agentMeta": {
+            "name": "boltztwo",
+            "displayName": "Boltz-2",
+            "version": "1.0.0",
+            "tags": [
+              "structure-prediction",
+              "binding-affinity",
+              "protein-folding",
+              "drug-discovery",
+              "trained-model"
+            ],
+            "description": "Expert agent for biomolecular structure prediction and binding affinity estimation using Boltz-2. Predicts 3D structures of proteins, nucleic acids, small molecules, and their complexes via co-folding. Features an affinity head that estimates binder probability and pIC50 for protein-ligand and protein-protein interactions. Outputs CIF structures with per-residue confidence (pLDDT), predicted aligned error (pAE), and interface metrics (pTM, iPTM).\n"
+          }
+        },
+        {
+          "ref": "agents/chembl",
+          "role": "supporting",
+          "required": false,
+          "description": "Query ChEMBL for bioactivity, targets, and assays.",
+          "agentMeta": {
+            "name": "chembl",
+            "displayName": "ChEMBL",
+            "version": "1.0.0",
+            "tags": [
+              "cheminformatics",
+              "bioactivity",
+              "database"
+            ],
+            "description": "ChEMBL agent for retrieving chemical and bioactivity data from the ChEMBL database. Provides access to compound information, target data, bioactivity measurements, and cross-references with PDB structures.\n"
+          }
+        },
+        {
+          "ref": "agents/clinical-trials",
+          "role": "supporting",
+          "required": false,
+          "description": "Search ClinicalTrials.gov for study metadata and outcomes.",
+          "agentMeta": {
+            "name": "clinical-trials",
+            "displayName": "Clinical Trials",
+            "version": "1.0.0",
+            "tags": [
+              "clinical-trials",
+              "database"
+            ],
+            "description": "Tool for accessing clinical trial data from ClinicalTrials.gov. Access over 400,000 clinical studies from around the world.\n"
+          }
+        },
+        {
+          "ref": "agents/core-python-agent",
+          "role": "supporting",
+          "required": false,
+          "description": "General-purpose Python execution for custom analyses.",
+          "agentMeta": {
+            "name": "core-python-agent",
+            "displayName": "core-python-agent",
+            "version": "1.0.0",
+            "tags": [
+              "cheminformatics",
+              "python",
+              "rdkit",
+              "molecular-science"
+            ],
+            "description": "A reusable worker agent for RDKit cheminformatics and general Python execution. Writes and runs Python scripts for molecular manipulation, 2D/3D conformer generation, chemical property calculations, and scientific computing.\n"
+          }
+        },
+        {
+          "ref": "agents/esm-embed",
+          "role": "supporting",
+          "required": false,
+          "description": "Generate protein embeddings with ESM models.",
+          "agentMeta": {
+            "name": "esm-embed",
+            "displayName": "ESM-2 Protein Embeddings",
+            "version": "1.0.0",
+            "tags": [
+              "protein",
+              "embeddings",
+              "language-model",
+              "esm2",
+              "transformer",
+              "bioinformatics",
+              "representation-learning",
+              "structure-prediction",
+              "gpu",
+              "trained-model",
+              "embedding-model"
+            ],
+            "description": "Generate per-residue and per-sequence embeddings from protein sequences using Meta AI's ESM-2 transformer protein language models (8M to 650M parameters). Supports mean-pooled sequence embeddings, per-residue embeddings, and contact map predictions. GPU-accelerated via PyTorch + CUDA, with automatic CPU fallback.\n"
+          }
+        },
+        {
+          "ref": "agents/gromacs",
+          "role": "supporting",
+          "required": false,
+          "description": "Run GROMACS molecular dynamics simulations.",
+          "agentMeta": {
+            "name": "gromacs",
+            "displayName": "GROMACS",
+            "version": "1.0.0",
+            "tags": [
+              "molecular-dynamics"
+            ],
+            "description": "Python code environment with Gromacs tool for high-performance molecular dynamics (MD) simulations.\n"
+          }
+        },
+        {
+          "ref": "agents/mol-toolkit",
+          "role": "supporting",
+          "required": false,
+          "description": "Cheminformatics utilities for molecule manipulation and conversion.",
+          "agentMeta": {
+            "name": "mol-toolkit",
+            "displayName": "MolToolkit",
+            "version": "1.0.0",
+            "tags": [
+              "cheminformatics"
+            ],
+            "description": "Agent dedicated to cheminformatics.\n"
+          }
+        },
+        {
+          "ref": "agents/molecular-groups",
+          "role": "supporting",
+          "required": false,
+          "description": "Identify and analyze functional groups in molecules.",
+          "agentMeta": {
+            "name": "molecular-groups",
+            "displayName": "Molecular Groups",
+            "version": "1.0.0",
+            "tags": [
+              "cheminformatics",
+              "functional-groups",
+              "safety-screening"
+            ],
+            "description": "Expert agent for identifying functional groups in molecular structures. Provides both general functional group analysis and safety screening for hazardous groups.\n"
+          }
+        },
+        {
+          "ref": "agents/openmm",
+          "role": "supporting",
+          "required": false,
+          "description": "Run OpenMM molecular dynamics simulations.",
+          "agentMeta": {
+            "name": "openmm",
+            "displayName": "OpenMM",
+            "version": "1.0.0",
+            "tags": [
+              "molecular-dynamics",
+              "biomolecular-simulation",
+              "gpu"
+            ],
+            "description": "Expert agent for GPU-accelerated molecular dynamics simulations using OpenMM. Handles PDB preparation, system building, energy minimization, equilibration, production MD, and trajectory analysis.\n"
+          }
+        },
+        {
+          "ref": "agents/pdb-insights",
+          "role": "supporting",
+          "required": false,
+          "description": "Extract structural insights from PDB entries.",
+          "agentMeta": {
+            "name": "pdb-insights",
+            "displayName": "PDB Insights",
+            "version": "1.0.0",
+            "tags": [
+              "protein-structure",
+              "structural-biology"
+            ],
+            "description": "Advanced agent for comprehensive PDB structure analysis. Uses modern API to search RCSB PDB by UniProt ID, analyze quality metrics, biological assemblies, domain coverage, and binding partners.\n"
+          }
+        },
+        {
+          "ref": "agents/pdb-search",
+          "role": "supporting",
+          "required": false,
+          "description": "Search the Protein Data Bank for structures.",
+          "agentMeta": {
+            "name": "pdb-search",
+            "displayName": "PDB Search",
+            "version": "1.0.0",
+            "tags": [
+              "protein-structure",
+              "database"
+            ],
+            "description": "Tool for managing and analyzing protein structure data from the RCSB PDB. Search, download, and process protein structures.\n"
+          }
+        },
+        {
+          "ref": "agents/pubchem",
+          "role": "supporting",
+          "required": false,
+          "description": "Query PubChem for compounds, properties, and bioassays.",
+          "agentMeta": {
+            "name": "pubchem",
+            "displayName": "PubChem",
+            "version": "1.0.0",
+            "tags": [
+              "cheminformatics",
+              "database"
+            ],
+            "description": "Tool for accessing chemical information from the PubChem database using the PubChem API.\n"
+          }
+        },
+        {
+          "ref": "agents/pubmed",
+          "role": "supporting",
+          "required": false,
+          "description": "Search PubMed for biomedical literature.",
+          "agentMeta": {
+            "name": "pubmed",
+            "displayName": "PubMed",
+            "version": "1.0.0",
+            "tags": [
+              "literature-search",
+              "biomedical"
+            ],
+            "description": "Tool for accessing biomedical literature from PubMed. Search and download articles, citations, and full-text content using PubMed/NCBI API. Includes PMC integration for open access articles.\n"
+          }
+        },
+        {
+          "ref": "agents/rfdiffusion",
+          "role": "supporting",
+          "required": false,
+          "description": "De novo protein design with RFdiffusion.",
+          "agentMeta": {
+            "name": "rfdiffusion",
+            "displayName": "RFDiffusion",
+            "version": "1.0.0",
+            "tags": [
+              "protein-design",
+              "trained-model",
+              "diffusion-model",
+              "generative-model"
+            ],
+            "description": "Expert agent for protein backbone design using the RFDiffusion denoising diffusion model. Supports unconditional generation, binder design, motif scaffolding, and symmetric oligomers.\n"
+          }
+        },
+        {
+          "ref": "agents/toxpred",
+          "role": "supporting",
+          "required": false,
+          "description": "Predict toxicity endpoints for small molecules.",
+          "agentMeta": {
+            "name": "toxpred",
+            "displayName": "ToxPred",
+            "version": "1.0.0",
+            "tags": [
+              "toxicology",
+              "safety-assessment",
+              "cheminformatics",
+              "trained-model",
+              "d-mpnn",
+              "property-prediction"
+            ],
+            "description": "Toxicity prediction agent for chemical compounds. Predicts multiple toxicity endpoints including acute toxicity, mutagenicity, carcinogenicity, and organ-specific effects from molecular structures.\n"
+          }
+        }
+      ],
+      "samplePrompts": [
+        {
+          "id": "sp-1",
+          "title": "Predict a protein structure",
+          "prompt": "Predict the 3D structure of human lysozyme from its amino acid sequence and summarize the predicted domains and confidence.",
+          "difficulty": "beginner",
+          "expectedOutput": "Predicted PDB structure, per-residue confidence scores, and a summary of structural features."
+        },
+        {
+          "id": "sp-2",
+          "title": "Dock a ligand to a target",
+          "prompt": "Dock ibuprofen against COX-2 (PDB 5KIR) and report the top binding poses with predicted affinity.",
+          "difficulty": "intermediate",
+          "expectedOutput": "Ranked poses, docking scores, and key interacting residues."
+        },
+        {
+          "id": "sp-3",
+          "title": "Find bioactive analogs",
+          "prompt": "Search ChEMBL and PubChem for analogs of imatinib with measured activity against BCR-ABL and summarize potency.",
+          "difficulty": "intermediate",
+          "expectedOutput": "Table of analogs with structures, IC50/Ki values, and source assays."
+        },
+        {
+          "id": "sp-4",
+          "title": "Mine the literature",
+          "prompt": "Summarize recent PubMed publications on GLP-1 receptor agonists for cardiovascular outcomes and list ongoing clinical trials.",
+          "difficulty": "beginner",
+          "expectedOutput": "Literature summary with citations and a list of relevant clinical trials."
+        }
+      ],
+      "riskProfile": {
+        "requiresExternalCompute": true,
+        "dataResidency": "user-managed Azure subscription"
+      },
+      "availability": "healthy",
+      "missingAgents": [],
+      "computedAt": "2026-06-01T21:28:53Z",
+      "kitPath": "starter-kits/life-sciences"
     },
     {
       "$schema": "../../docs/schemas/starter-kit-schema.json",
@@ -194,7 +1024,7 @@
       },
       "availability": "healthy",
       "missingAgents": [],
-      "computedAt": "2026-05-26T14:09:23Z",
+      "computedAt": "2026-06-01T21:28:53Z",
       "kitPath": "starter-kits/physics-cfd-sim"
     }
   ]

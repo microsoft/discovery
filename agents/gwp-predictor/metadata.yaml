@@ -1,0 +1,29 @@
+name: gwp-predictor
+type: agent
+version: 1.0.0
+associated_tools:
+  - agents/gwp-predictor/tools/gwp-predictor
+
+publisher:
+  name: Microsoft Discovery
+  contact: discovery-catalog@microsoft.com
+  support_url: https://github.com/microsoft/discovery/discussions/categories/bugs
+  party: 1p
+
+description: >
+  Predicts 100-year Global Warming Potential (GWP100) and atmospheric lifetime
+  (years) for novel molecules from SMILES. Multi-task Chemprop ensemble trained
+  on IPCC AR6 + Hodnebrog 2020 + WMO 2022 with applicability-domain flagging
+  (Tanimoto NN to training set) and OPERA AOH lifetime cross-check. Returns
+  calibrated 95% confidence intervals.
+
+tags:
+  - property-prediction
+  - gwp
+  - climate
+  - atmospheric-lifetime
+  - chemprop
+  - heat-transfer-fluid
+  - chemistry
+  - trained-model
+  - d-mpnn

@@ -1,0 +1,41 @@
+name: gromacs
+description: Gromacs is designed for high-performance molecular dynamics (MD) simulations. It is primarily used to simulate the behavior of biomolecular systems such as proteins, lipids, and nucleic acids.
+version: 1.0.0
+category: "Physics-Based Simulations"
+license: MIT
+infra:
+  - name: worker 
+    infra_type: container
+    image:
+      acr: "{name}.azurecr.io/gromacs:gpu"
+    compute:
+      min_resources:
+        cpu: 2
+        ram: "8Gi"
+        gpu: 0
+        storage: "0Gi"
+      max_resources:
+        cpu: 96
+        ram: "220Gi"
+        gpu: 1
+        storage: "0Gi"
+      infiniband: false
+      recommended_sku:
+        - Standard_NC24ads_A100_v4
+        - Standard_NC48ads_A100_v4
+        - Standard_NC96ads_A100_v4
+        - Standard_NC40ads_H100_v5
+        - Standard_NC80adis_H100_v5
+        - Standard_ND96isr_H100_v5
+        - Standard_D4s_v6
+      pool_type: static
+      pool_size: 1
+
+code_environments:
+  - language: python3
+    command: "python3 \"/{{scriptName}}\" > {{output_directory}}/logs.out 2>&1; cp -r /app/workdir/* {{output_directory}}/ 2>/dev/null || true; tail -n 100 {{output_directory}}/logs.out"
+    description: |
+      Python code environment with Gromacs tool for high-performance molecular dynamics (MD) simulations. 
+      Use this for complete automated workflows, data processing, analysis, and visualization. 
+      The script can call GROMACS commands via subprocess and perform pre/post-processing.
+    infra_node: worker

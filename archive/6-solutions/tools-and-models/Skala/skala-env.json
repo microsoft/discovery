@@ -1,3 +1,0 @@
-{
-    "MODEL_ENDPOINT": "/subscriptions/<your subscription id>/resourceGroups/<your-rg>/providers/Microsoft.MachineLearningServices/workspaces/<your-workspace>/onlineEndpoints/<your-endpoint>"
-}

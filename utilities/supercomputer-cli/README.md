@@ -43,18 +43,48 @@ curl -LsSf https://astral.sh/uv/install.sh | sh
 Install the `discovery` command globally using uv:
 
 ```bash
-uv tool install discovery --from git+https://github.com/microsoft/discovery.git#subdirectory=utils/supercomputer-cli/discovery
+uv tool install discovery --from git+https://github.com/microsoft/discovery.git#subdirectory=utilities/supercomputer-cli/discovery
 ```
 
 This installs the CLI in an isolated environment and makes it available system-wide.
 
 ### 3. Upgrade the Discovery CLI
 
-To upgrade to the latest version:
+The CLI checks for new releases once per day in the background and prints a
+one-line reminder when a newer version of the `utilities/supercomputer-cli/`
+subdirectory has landed on `main`. Apply an update in one of two ways:
+
+```bash
+discovery update            # interactive: check + prompt + install via uv
+discovery update --check    # check only
+discovery update -y         # install without confirmation
+```
+
+You can also upgrade directly:
 
 ```bash
 uv tool upgrade discovery
 ```
+
+The automatic background check can be disabled either per-invocation
+(`DISCOVERY_NO_UPDATE_CHECK=1`) or persistently:
+
+```bash
+discovery update --disable   # turn off background checks
+discovery update --enable    # turn them back on
+```
+
+> **Authentication is optional.** The update check works fully
+> unauthenticated against a public repo, but GitHub limits anonymous
+> traffic to 60 requests/hour per IP. To raise the limit to 5000/hour
+> the checker opportunistically uses `DISCOVERY_GITHUB_TOKEN`,
+> `GITHUB_TOKEN`, `GH_TOKEN`, or `gh auth token` (when the `gh` CLI is
+> installed and authenticated) — no setup required for most developers.
+
+> **Following a non-default branch.** Set `DISCOVERY_UPDATE_REF=<ref>` to
+> compare against a branch, tag, or commit other than `main`. Pair with
+> `DISCOVERY_UPDATE_REPO=owner/name` for fork-based or RC-channel
+> testing.
 
 ### 4. Verify your installation
 
@@ -193,13 +223,24 @@ Manage and monitor Discovery jobs:
 | `discovery job batch <command>` | Submit multiple independent tool runs (no polling) |
 | `discovery job vscode [--tunnel-name <name>]` | Start a job that hosts a VS Code tunnel (default name: `discovery-<username>`) |
 | `discovery job cancel <operation-id>` | Cancel a running operation |
-| `discovery job running` | List running operations (filtered to current user) |
-| `discovery job pending` | List queued operations (filtered to current user) |
-| `discovery job done` | List completed operations (succeeded/failed/canceled) |
-| `discovery job list` | List recent operations with filters |
+| `discovery job cancel --since 10m` | Bulk-cancel every locally-recorded job submitted in the last 10 minutes |
+| `discovery job running` | List your running operations (this machine); `--all` to see everyone's |
+| `discovery job pending` | List your queued operations (this machine); `--all` to see everyone's |
+| `discovery job done` | List your completed operations (this machine); `--all` to see everyone's |
+| `discovery job list` | List your recent operations (this machine); `--all` or `--user X` to widen |
 | `discovery job status [operation-id]` | Get compute usage, or status of a specific operation |
 | `discovery job pools` | List available nodepools from configuration |
 | `discovery job cleanup-anf` | List stale operations whose ANF scratch folders can be cleaned up |
+| `discovery job history` | List, locate, or wipe the local job-submit history |
+
+> **Local job history.** Every `discovery job start` / `batch` / `vscode`
+> records the operation ID + command + tool + nodepool + project + workspace
+> to `~/.discovery/job-history.jsonl` (one JSON-Lines record per submit).
+> `discovery job list / running / pending / done` filter to this machine's
+> history by default — pass `--all` (or `--user X` on `list`) to widen the
+> view to other people / other machines. Use `discovery job history` to
+> browse the local store directly without hitting the service. Set
+> `DISCOVERY_NO_JOB_HISTORY=1` to disable recording for an invocation.
 
 **Examples:**
 
@@ -223,6 +264,29 @@ discovery job start --scratch "python train.py --workdir /scratch/run"
 # default). The Scratch lookup auto-routes to whichever SC the chosen
 # pool lives on.
 discovery job start --pool ibtest2/hbv4 --scratch "echo hi"
+
+# Browse jobs you've submitted from this machine (offline, no API call)
+discovery job history
+discovery job history --limit 10
+discovery job history --since 7d
+discovery job history --all-workspaces --this-host
+
+# Add live status + computed runtime (one parallel API call per entry)
+discovery job history --status
+discovery job history --status --since 24h
+
+# Server-side listings default to jobs from this machine — pass --all
+# to widen the view (or --user X on `list` for a specific submitter)
+discovery job list                  # mine
+discovery job list --all            # everyone's
+discovery job list --user alice     # alice's (implies --all)
+discovery job running                # mine, running now
+discovery job running --all          # everyone's running
+
+# Bulk-cancel everything you submitted from this machine in the last 10
+# minutes (current workspace only; --yes skips the interactive confirm).
+discovery job cancel --since 10m
+discovery job cancel --since 1h --yes
 
 # Submit several independent runs in one shot
 discovery job batch 4 "python -c 'print(\"hello\")'"

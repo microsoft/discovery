@@ -1,0 +1,14 @@
+name: gromacs
+type: agent
+version: 1.0.0
+associated_tools:
+  - agents/gromacs/tools/gromacs
+publisher:
+  name: Microsoft
+  contact: discovery-catalog@microsoft.com
+  support_url: https://github.com/microsoft/discovery/discussions/categories/bugs
+  party: 1p
+description: >
+  Python code environment with Gromacs tool for high-performance molecular dynamics (MD) simulations.
+tags:
+  - molecular-dynamics

@@ -1,0 +1,61 @@
+name: psiFour
+description: |
+  Psi4 is an open-source ab initio quantum chemistry package designed for high-throughput
+  quantum chemistry calculations. It supports a wide range of methods including Hartree-Fock,
+  DFT, MP2, CCSD, CCSD(T), SAPT, and excited state calculations (EOM-CCSD, TD-DFT).
+  Psi4 features a Python API for scriptable workflows, density fitting for efficiency,
+  and multi-core parallelism for routine calculations with 2500+ basis functions.
+version: 1.0.0
+category: "Quantum Mechanical Simulations"
+license: LGPL-3.0
+
+infra:
+  - name: worker
+    infra_type: container
+    image:
+      acr: "{name}.azurecr.io/psi4:latest"
+    compute:
+      min_resources:
+        cpu: 2
+        ram: "8Gi"
+        gpu: 0
+        storage: "0Gi"
+      max_resources:
+        cpu: 96
+        ram: "220Gi"
+        gpu: 0
+        storage: "0Gi"
+      infiniband: false
+      recommended_sku:
+        - Standard_D4s_v6           # Light calculations
+        - Standard_D8s_v6           # Medium calculations
+        - Standard_D32s_v6          # Heavy calculations
+        - Standard_E8s_v5           # Memory-intensive
+        - Standard_E32s_v5          # Large basis sets
+      pool_type: static
+      pool_size: 1
+
+code_environments:
+  - language: python3
+    command: "python3 -u \"/{{scriptName}}\" > {{output_directory}}/logs.out 2>&1; cp -r /app/workdir/* {{output_directory}}/ 2>/dev/null || true; tail -n 100 {{output_directory}}/logs.out"
+    description: |
+      Python code environment with Psi4 for ab initio quantum chemistry calculations.
+      Use this for complete automated workflows including single-point energies,
+      geometry optimization, frequency calculations, thermochemistry, SAPT interaction
+      analysis, and excited state calculations.
+
+      Key capabilities:
+        - Hartree-Fock (RHF, UHF, ROHF)
+        - Density Functional Theory (B3LYP, PBE0, wB97X-D, M06-2X, etc.)
+        - Post-HF methods (MP2, CCSD, CCSD(T), CISD)
+        - Symmetry-Adapted Perturbation Theory (SAPT0, SAPT2, SAPT2+)
+        - Excited states (EOM-CCSD, TD-DFT/TDA)
+        - Geometry optimization and frequency calculations
+        - Thermochemistry (ZPVE, enthalpy, entropy, Gibbs free energy)
+        - Basis set extrapolation and counterpoise correction
+
+      Available basis sets: STO-3G to cc-pV5Z, aug-cc-pVXZ, def2-SVP/TZVP/QZVP
+
+      Python libraries: numpy, scipy, matplotlib, pandas, rdkit, ase
+
+    infra_node: worker

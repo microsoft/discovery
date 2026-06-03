@@ -1,3 +1,0 @@
-{
-  "MODEL_ENDPOINT": "/subscriptions/<your subscription id>/resourceGroups/<your workspace-mrg>/providers/Microsoft.MachineLearningServices/workspaces/<your Azure Machine Learning workspace>"
-}

@@ -61,7 +61,7 @@ class ToolResult(BaseModel):
     runtime_details: str = Field(..., alias="runtimeDetails")
     status: AzureCoreOperationState = Field(
         ..., description="Status of the tool execution at completion."
-    )  # noqa: E501
+    )
     tool_report: ToolReport = Field(..., alias="toolReport")
 
     model_config = ConfigDict(
@@ -129,6 +129,44 @@ class OperationsResultModel(BaseModel):
     )
 
 
+class PodInfo(BaseModel):
+    """Status information for a single pod in a running tool execution.
+
+    Returned by the preview pods endpoint
+    (GET /tools/projects/{project}/preview/operations/{operationId}/pods).
+    The ``index`` corresponds to the ``?pod=`` query parameter on the
+    ``:connect`` API.
+    """
+
+    index: int = Field(
+        ..., description="Linear pod index (0 = leader/main, 1+ = workers)."
+    )
+    role: str = Field(
+        ..., description='Pod role: "main" (single-container), "leader" or "worker" (MPI).'
+    )
+    phase: str = Field(
+        ..., description="Kubernetes pod phase: Running, Pending, Succeeded, Failed, Unknown."
+    )
+
+    model_config = ConfigDict(
+        populate_by_name=True,
+        str_strip_whitespace=True,
+        serialize_by_alias=True,
+    )
+
+
+class ToolRunPodsResponse(BaseModel):
+    """Response model for the preview pods endpoint."""
+
+    pods: list[PodInfo] = Field(default_factory=list)
+
+    model_config = ConfigDict(
+        populate_by_name=True,
+        str_strip_whitespace=True,
+        serialize_by_alias=True,
+    )
+
+
 class OperationsListResponse(BaseModel):
     """Response model for listing operations."""
 
@@ -151,8 +189,10 @@ class OperationsListResponse(BaseModel):
 __all__ = [
     "OperationsListResponse",
     "OperationsResultModel",
+    "PodInfo",
     "ToolExecutionEnvelope",
     "ToolExecutionResponse",
     "ToolReport",
     "ToolResult",
+    "ToolRunPodsResponse",
 ]
