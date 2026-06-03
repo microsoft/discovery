@@ -112,5 +112,20 @@ class ApiVersion(str, Enum):
         """
         return self is ApiVersion.V2025_07_01_PREVIEW
 
+    @property
+    def supports_mount_protocol(self) -> bool:
+        """True when the api-version accepts the optional ``mountProtocol`` enum on data mounts.
+
+        Added in 2026-06-01 (GA). Pre-GA api-versions reject the field via
+        ``JsonUnmappedMemberHandling.Disallow``, so this is gated as a deny-list of
+        pre-GA versions — any future version added to :class:`ApiVersion` is assumed
+        to support it (forward-compat).
+        """
+        return self not in (
+            ApiVersion.V2025_07_01_PREVIEW,
+            ApiVersion.V2025_12_01_PREVIEW,
+            ApiVersion.V2026_02_01_PREVIEW,
+        )
+
 
 __all__ = ["ApiVersion"]

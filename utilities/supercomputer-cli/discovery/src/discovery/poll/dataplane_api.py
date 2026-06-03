@@ -294,6 +294,29 @@ class TransientHTTPError(PollError):
     """Represents a transient HTTP/network issue suitable for retry."""
 
 
+class CancelWaitTimeoutError(PollError):
+    """Raised when ``cancel_operation(wait=True)`` accepted the cancel POST but the
+    operation did not reach a terminal state (``Succeeded``/``Failed``/``Canceled``)
+    within the configured wait window.
+
+    Distinguishes "cancel POST itself failed" (other ``PollError`` / HTTP errors)
+    from "cancel was queued but didn't settle in time". CLI callers can catch this
+    and exit successfully with a warning rather than treating it as a hard failure.
+    """
+
+
+# Positive allow-list of terminal operation states (per the GA 2026-06-01 swagger
+# `Azure.Core.Foundations.OperationState` enum and `AzureCoreOperationStateExtensions.IsTerminal()`).
+# Used by the cancel-wait path so a transient state surfaces as "still polling"
+# rather than mis-terminating like the legacy non-running heuristic would.
+_TERMINAL_OPERATION_STATES: frozenset[str] = frozenset({"Succeeded", "Failed", "Canceled"})
+
+# Polling cadence for the cancel-wait loop. Tighter than DEFAULT_POLL_INTERVAL=5
+# because cancellations typically settle within a few seconds — there's no tool
+# log progress to stream so the only cost of polling faster is the request rate.
+_CANCEL_WAIT_POLL_INTERVAL = 2
+
+
 _token_cache: dict[str, tuple[float, str]] = {}
 _TOKEN_REFRESH_MARGIN = 120  # refresh 2 min before actual expiry
 
@@ -484,16 +507,88 @@ def run_and_poll(
     )
 
 
+def _wait_for_cancel_terminal(
+    project_name: str,
+    operation_id: str,
+    workspace_url: str,
+    *,
+    api_version: str,
+    timeout_seconds: int,
+) -> str:
+    """Poll ``get_operation_status`` until the operation reaches a terminal state.
+
+    Uses the positive allow-list ``_TERMINAL_OPERATION_STATES`` (Succeeded / Failed /
+    Canceled). A 404 from the status endpoint during the wait is treated as terminal
+    success — the op was reaped, which means the user's cancellation goal ("make it
+    stop") is satisfied.
+
+    Returns the final status string. Raises :class:`CancelWaitTimeoutError` if the loop
+    exceeds ``timeout_seconds`` without reaching a terminal state.
+    """
+    start = time.time()
+    while True:
+        if time.time() - start > timeout_seconds:
+            msg = (
+                f"Cancel was accepted for operation {operation_id} but it did not "
+                f"reach a terminal state within {timeout_seconds}s"
+            )
+            raise CancelWaitTimeoutError(msg)
+        try:
+            data = get_operation_status(
+                project_name, operation_id, workspace_url, api_version=api_version,
+            )
+        except httpx.HTTPStatusError as exc:
+            if exc.response.status_code == 404:
+                # Operation was reaped — cancel goal is satisfied.
+                debug(f"cancel wait: operation {operation_id} returned 404; treating as Canceled")
+                return "Canceled"
+            raise
+        if data.status in _TERMINAL_OPERATION_STATES:
+            return data.status
+        debug(f"cancel wait: operation {operation_id} status={data.status}; continuing to poll")
+        time.sleep(_CANCEL_WAIT_POLL_INTERVAL)
+
+
 def cancel_operation(
     project_name: str,
     operation_id: str,
     workspace_url: str,
     api_version: str,
-) -> None:
+    *,
+    wait: bool = False,
+    wait_timeout_seconds: int = 120,
+) -> str | None:
     """Request cancellation of a running operation.
 
-    Posts to the Tools cancel endpoint. Returns parsed JSON body if present,
-    otherwise an empty dict. Raises PollError for non-2xx responses or token issues.
+    Posts to the Tools cancel endpoint. On api-version ``>= 2026-06-01`` the server
+    returns a 202 Accepted with an LRO body and ``Operation-Location`` header; on
+    earlier versions the body is empty. Either way the operation continues toward a
+    terminal state asynchronously.
+
+    Args:
+        project_name: The Discovery project name.
+        operation_id: The operation id to cancel.
+        workspace_url: The workspace base URL.
+        api_version: The api-version query string.
+        wait: When True, after the POST is accepted, poll the operation until it
+            reaches a terminal state (``Succeeded`` / ``Failed`` / ``Canceled``).
+            Default ``False`` to preserve library back-compat for SDK callers; the
+            CLI explicitly passes ``wait=True``.
+        wait_timeout_seconds: Cap on the poll loop when ``wait=True``. On timeout
+            the cancel POST has already been accepted server-side; a
+            :class:`CancelWaitTimeoutError` is raised so callers can decide whether to
+            treat it as a hard failure.
+
+    Returns:
+        When ``wait=True``: the terminal status string from the final status poll.
+        When ``wait=False``: ``None`` (the function returns immediately after the
+        POST is acknowledged).
+
+    Raises:
+        PollError: missing required arguments.
+        CancelWaitTimeoutError: cancel POST was accepted but no terminal state observed
+            within ``wait_timeout_seconds`` (only when ``wait=True``).
+        httpx.HTTPStatusError: non-2xx response from the cancel POST itself.
     """
     if not project_name or not operation_id:
         msg = "project_name and operation_id required"
@@ -517,6 +612,20 @@ def cancel_operation(
         data=_EmptyBody(),
         params=params,
     )
+
+    if not wait:
+        return None
+
+    info(f"Waiting for cancellation of operation {operation_id} to settle…")
+    final_status = _wait_for_cancel_terminal(
+        project_name,
+        operation_id,
+        workspace_url,
+        api_version=api_version,
+        timeout_seconds=wait_timeout_seconds,
+    )
+    info(f"Operation {operation_id} reached terminal state: {final_status}")
+    return final_status
 
 
 def list_operations(
@@ -637,6 +746,7 @@ def get_compute_status(
 
 
 __all__ = [
+    "CancelWaitTimeoutError",
     "JsonValidationError",
     "PollError",
     "cancel_operation",

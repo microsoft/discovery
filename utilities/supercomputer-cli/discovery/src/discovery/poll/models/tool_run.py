@@ -5,7 +5,41 @@ Derived from sample at tests/artifacts/toolrun.json and schema toolrun.schema.js
 
 from __future__ import annotations
 
+from enum import Enum
+
 from pydantic import BaseModel, ConfigDict, Field
+
+
+class StorageMountProtocol(str, Enum):
+    """Per-mount protocol override for the GA (2026-06-01+) data plane.
+
+    Wire values match the ``StorageMountProtocol`` enum in
+    ``Microsoft.AiForScience.Supercomputer.Common.Models.Version20260601``:
+
+    * ``NFS`` — POSIX semantics, typically backed by Azure NetApp Files.
+    * ``BlobfuseCaching`` — Blobfuse in file-cache mode, typically backed by
+      Azure Blob Storage.
+
+    Sending this on api-versions ``< 2026-06-01`` is rejected by the server
+    (``JsonUnmappedMemberHandling.Disallow``). The CLI guards against that at
+    the flag-parse layer via ``ApiVersion.supports_mount_protocol``.
+    """
+
+    NFS = "NFS"
+    BLOBFUSE_CACHING = "BlobfuseCaching"
+
+    @classmethod
+    def parse(cls, value: str) -> "StorageMountProtocol":
+        """Case-insensitive parse to a member; raises ``ValueError`` on unknown."""
+        if isinstance(value, cls):
+            return value
+        normalized = value.casefold()
+        for member in cls:
+            if member.value.casefold() == normalized:
+                return member
+        valid = ", ".join(m.value for m in cls)
+        msg = f"Invalid mount protocol {value!r}. Valid values: {valid}."
+        raise ValueError(msg)
 
 
 class InlineFile(BaseModel):
@@ -28,6 +62,11 @@ class DataMount(BaseModel):
     mount_path: str = Field(..., alias="mountPath", min_length=1)
     uri: str | None = Field(None, description="discovery://dataassets URI (api <= 2025-12-01-preview)")
     storage_uri: str | None = Field(None, alias="storageUri", description="discovery://storageassets URI (api >= 2026-02-01-preview)")
+    mount_protocol: StorageMountProtocol | None = Field(
+        None,
+        alias="mountProtocol",
+        description="Per-mount protocol override (api >= 2026-06-01). Omitted on the wire when None.",
+    )
 
     model_config = ConfigDict(
         populate_by_name=True,
@@ -123,5 +162,6 @@ __all__ = [
     "InfraOverridesFlat",
     "InlineFile",
     "ResourceSpec",
+    "StorageMountProtocol",
     "ToolRunRequest",
 ]
