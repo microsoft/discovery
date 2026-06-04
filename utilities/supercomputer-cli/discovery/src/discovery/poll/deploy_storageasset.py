@@ -5,8 +5,10 @@ This module provides functions to:
 2. Deploy a storage asset if not present
 
 Storage assets are the v2 equivalent of data assets, introduced in the
-``2026-02-01-preview`` API version. They live under
-``Microsoft.Discovery/storagecontainers/{name}/storageAssets/{asset}``.
+``2026-02-01-preview`` API version and GA at ``2026-06-01``. They live under
+``Microsoft.Discovery/storagecontainers/{name}/storageAssets/{asset}``. The
+ARM api-version used for every ``az`` call here is pinned via
+:data:`discovery.poll.models.arm_versions.STORAGEASSET_ARM_API_VERSION`.
 
 Follows the same pattern as deploy_dataasset.py for consistency.
 """
@@ -25,12 +27,15 @@ import typer
 
 from discovery.common.logging import debug, error, info
 
+from .models.arm_versions import STORAGEASSET_ARM_API_VERSION
 from .models.dataasset import StorageAssetInputs
 
 
 TEMPLATE_DIR = files("discovery.poll").joinpath("templates/storageasset")
 
-STORAGE_ASSET_API_VERSION = "2026-02-01-preview"
+# Re-export under the historical name so any in-tree imports keep working.
+# New code should import from ``models.arm_versions`` directly.
+STORAGE_ASSET_API_VERSION = STORAGEASSET_ARM_API_VERSION
 
 
 def _load_text(name: str) -> str:

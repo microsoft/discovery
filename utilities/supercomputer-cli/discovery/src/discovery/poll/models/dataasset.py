@@ -6,6 +6,13 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
+from .arm_versions import (
+    DATAASSET_ARM_API_VERSION,
+    DATACONTAINER_ARM_API_VERSION,
+    STORAGEASSET_ARM_API_VERSION,
+    STORAGECONTAINER_ARM_API_VERSION,
+)
+
 
 class DataAssetInputs(BaseModel):
     """Input parameters for creating or deploying a data asset.
@@ -19,7 +26,7 @@ class DataAssetInputs(BaseModel):
     description: str = Field(default="", description="Description of the data asset")
     path: str = Field(description="Blob storage path for the data asset")
     api_version: str = Field(
-        default="2025-07-01-preview",
+        default=DATAASSET_ARM_API_VERSION,
         description="API version for Microsoft.Discovery/dataContainers/dataAssets",
     )
 
@@ -33,8 +40,8 @@ class StorageAssetInputs(BaseModel):
     """Input parameters for creating or deploying a storage asset.
 
     Storage assets are the v2 equivalent of data assets, introduced in the
-    ``2026-02-01-preview`` API version. They live under
-    ``Microsoft.Discovery/storagecontainers/{name}/storageAssets/{asset}``
+    ``2026-02-01-preview`` API version and GA at ``2026-06-01``. They live
+    under ``Microsoft.Discovery/storagecontainers/{name}/storageAssets/{asset}``
     and carry the same ``description``/``path`` properties as data assets.
 
     Maps to the parameters in templates/storageasset/template.json.
@@ -52,7 +59,7 @@ class StorageAssetInputs(BaseModel):
         )
     )
     api_version: str = Field(
-        default="2026-02-01-preview",
+        default=STORAGEASSET_ARM_API_VERSION,
         description="API version for Microsoft.Discovery/storagecontainers/storageAssets",
     )
 
@@ -107,7 +114,7 @@ class DataContainerInputs(BaseModel):
         ),
     )
     api_version: str = Field(
-        default="2025-07-01-preview",
+        default=DATACONTAINER_ARM_API_VERSION,
         description="API version for Microsoft.Discovery/dataContainers",
     )
 
@@ -139,7 +146,7 @@ class BlobDataContainerInputs(BaseModel):
         ),
     )
     api_version: str = Field(
-        default="2025-07-01-preview",
+        default=DATACONTAINER_ARM_API_VERSION,
         description="API version for Microsoft.Discovery/dataContainers",
     )
 
@@ -152,8 +159,9 @@ class BlobDataContainerInputs(BaseModel):
 class StorageContainerInputs(BaseModel):
     """Input parameters for creating an AzureNetAppFiles-kind storage container.
 
-    V2 (``2026-02-01-preview``) equivalent of ``DataContainerInputs``: wraps a
+    V2 equivalent of ``DataContainerInputs``: wraps a
     ``Microsoft.NetApp/netAppAccounts/capacityPools/volumes`` resource.
+    Introduced at ``2026-02-01-preview``; GA at ``2026-06-01``.
     """
 
     name: str = Field(description="Name of the storage container")
@@ -166,7 +174,7 @@ class StorageContainerInputs(BaseModel):
         ),
     )
     api_version: str = Field(
-        default="2026-02-01-preview",
+        default=STORAGECONTAINER_ARM_API_VERSION,
         description="API version for Microsoft.Discovery/storageContainers",
     )
 
@@ -190,7 +198,7 @@ class BlobStorageContainerInputs(BaseModel):
         description="Full ARM resource ID of a Microsoft.Storage/storageAccounts to wrap.",
     )
     api_version: str = Field(
-        default="2026-02-01-preview",
+        default=STORAGECONTAINER_ARM_API_VERSION,
         description="API version for Microsoft.Discovery/storageContainers",
     )
 
