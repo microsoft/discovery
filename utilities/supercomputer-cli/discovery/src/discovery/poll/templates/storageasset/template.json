@@ -12,7 +12,7 @@
             "type": "String"
         },
         "outApiVersion": {
-            "defaultValue": "2026-02-01-preview",
+            "defaultValue": "2026-06-01",
             "type": "String"
         },
         "outStorageAssetDescription": {

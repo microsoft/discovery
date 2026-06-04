@@ -16,6 +16,10 @@ from rich.console import Console
 from rich.table import Table
 
 from discovery.common.logging import debug, error, info
+from discovery.poll.models.arm_versions import (
+    DATAASSET_ARM_API_VERSION,
+    DATACONTAINER_ARM_API_VERSION,
+)
 from discovery.poll.models.tool_response import AzureCoreOperationState
 from discovery.poll.models.tool_run import DataMount, ToolRunRequest
 
@@ -123,7 +127,7 @@ def _resource_exists(resource_id: str, subscription: str) -> bool:
             "az", "resource", "show",
             "--ids", resource_id,
             "--subscription", subscription,
-            "--api-version", "2025-07-01-preview",
+            "--api-version", DATACONTAINER_ARM_API_VERSION,
             "-o", "json",
         ])
         return True
@@ -137,7 +141,7 @@ def _get_resource(resource_id: str, subscription: str) -> dict:
         "az", "resource", "show",
         "--ids", resource_id,
         "--subscription", subscription,
-        "--api-version", "2025-07-01-preview",
+        "--api-version", DATACONTAINER_ARM_API_VERSION,
         "-o", "json",
     ])
 
@@ -176,7 +180,7 @@ def _ensure_anf_datacontainer(
         "--id", dc_id,
         "--subscription", subscription,
         "--location", location,
-        "--api-version", "2025-07-01-preview",
+        "--api-version", DATACONTAINER_ARM_API_VERSION,
         "--properties", json.dumps({
             "dataStore": {
                 "kind": "DiscoveryStorage",
@@ -207,7 +211,7 @@ def _ensure_anf_root_dataasset(subscription: str, resource_group: str, location:
         "--id", da_id,
         "--subscription", subscription,
         "--location", location,
-        "--api-version", "2025-07-01-preview",
+        "--api-version", DATAASSET_ARM_API_VERSION,
         "--properties", json.dumps({
             "description": "Root of ANF scratch volume for cleanup operations",
             "path": ".",

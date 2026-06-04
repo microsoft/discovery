@@ -16,6 +16,10 @@ from typing import TYPE_CHECKING
 from discovery.common.logging import debug, error  # lightweight import (no cycle)
 
 from .azcli import run_az
+from .models.arm_versions import (
+    NODEPOOL_ARM_API_VERSION,
+    STORAGECONTAINER_ARM_API_VERSION,
+)
 
 
 if TYPE_CHECKING:  # pragma: no cover
@@ -696,8 +700,9 @@ def get_storagecontainer_storagestore(storagecontainer_id: str) -> dict:
     """Return the ``properties.storageStore`` dict for a storage container resource.
 
     Storage containers are the v2 equivalent of data containers and use the
-    ``2026-02-01-preview`` API version. The ``storageStore`` shape mirrors the
-    data container ``dataStore`` shape:
+    Discovery RP's V2 ARM api-version (see
+    :data:`models.arm_versions.STORAGECONTAINER_ARM_API_VERSION`). The
+    ``storageStore`` shape mirrors the data container ``dataStore`` shape:
       - ``AzureStorageBlob``: contains ``storageAccountId``
       - ``DiscoveryStorage``: contains ``discoveryStorageId``
     """
@@ -708,7 +713,7 @@ def get_storagecontainer_storagestore(storagecontainer_id: str) -> dict:
         "--ids",
         storagecontainer_id,
         "--api-version",
-        "2026-02-01-preview",
+        STORAGECONTAINER_ARM_API_VERSION,
         "-o",
         "json",
     ]
@@ -913,7 +918,7 @@ async def _fetch_nodepool_details_async(
     from discovery.poll.dataplane_api import http_get_async, AuthHeaders
 
     url = f"https://management.azure.com{nodepool_id}"
-    params = {"api-version": "2025-07-01-preview"}
+    params = {"api-version": NODEPOOL_ARM_API_VERSION}
     headers = AuthHeaders(Authorization=f"Bearer {token}")
 
     try:

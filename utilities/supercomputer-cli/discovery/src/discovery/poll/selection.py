@@ -276,9 +276,12 @@ def select_api_version(env_cfg: EnvConfig) -> None:
             labels.append("latest")
         if member is current:
             labels.append("current")
+        # Distinguish previews (-preview suffix on the wire) from GA so the
+        # picker hints at stability without conflating "newest" with "stable".
+        labels.append("preview" if member.value.endswith("-preview") else "GA")
         # Container kind hint mirrors README.md guidance.
         labels.append(
-            "V1 / datacontainers" if member.uses_dataassets_uri else "V2 / storagecontainers"
+            "datacontainers" if member.uses_dataassets_uri else "storagecontainers"
         )
         options.append(f"{member.value}\t{', '.join(labels)}")
 
