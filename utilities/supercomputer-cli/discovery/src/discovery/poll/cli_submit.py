@@ -921,9 +921,11 @@ def batch(
             idx, op_id, err = future.result()
             completed_count += 1
             if op_id:
-                cmd_preview = command_list[idx][:80]
                 successful_jobs.append((idx, op_id, command_list[idx]))
-                info(f"  [{completed_count}/{total}] {op_id}  {cmd_preview}")
+                # Print the full command. Rich's Console soft-wraps to
+                # terminal width; the `[n/total] op-id ` prefix anchors
+                # each entry visually even when the command wraps.
+                info(f"  [{completed_count}/{total}] {op_id}  {command_list[idx]}")
             else:
                 failed_jobs.append((idx, err or "Unknown error"))
                 error(f"  [FAILED] Job {idx + 1}: {err}")
@@ -932,15 +934,17 @@ def batch(
     if failed_jobs:
         error(f"Failed to submit {len(failed_jobs)} jobs.")
 
-    # Print ordered mapping table so users can correlate operation IDs to commands
+    # Print ordered mapping table so users can correlate operation IDs to commands.
+    # Long commands are wrapped (overflow="fold") rather than truncated so the
+    # full command is always visible — this is the canonical correlation artifact.
     if successful_jobs:
         successful_jobs.sort(key=lambda t: t[0])
         table = Table(title="Operation Mapping (input order)")
-        table.add_column("#", justify="right", style="cyan")
-        table.add_column("Operation ID", style="green")
-        table.add_column("Command", style="white")
+        table.add_column("#", justify="right", style="cyan", no_wrap=True)
+        table.add_column("Operation ID", style="green", no_wrap=True)
+        table.add_column("Command", style="white", overflow="fold")
         for idx, op_id, cmd in successful_jobs:
-            table.add_row(str(idx + 1), op_id, cmd[:80])
+            table.add_row(str(idx + 1), op_id, cmd)
         Console().print(table)
 
     # Keep operation_ids list for any downstream callers
