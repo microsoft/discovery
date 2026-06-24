@@ -1053,6 +1053,14 @@ def vscode_cmd(
         if np_info:
             effective_nodepool_id = np_info.id
             info(f"Using nodepool: {np_info.qualified_name}")
+        # Check if it's a full ID that wasn't in our cached list
+        elif pool.startswith("/"):
+            effective_nodepool_id = pool
+            info(f"Using nodepool ID: {pool}")
+        else:
+            available = [np.qualified_name for np in env_cfg.nodepools]
+            error(f"Nodepool '{pool}' not found. Available pools: {available}")
+            raise typer.Exit(code=1)
     else:
         # Try to get nodepool info for the default pool to use full-node defaults
         for np in env_cfg.nodepools:
