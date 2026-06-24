@@ -302,6 +302,50 @@ discovery job status <operation-id>
 discovery job cancel <operation-id>
 ```
 
+### Debugging & Troubleshooting Jobs
+
+When a job misbehaves or fails, these are the main tools:
+
+- **Inspect a specific operation** — `discovery job status <operation-id>` is the
+  primary debugging command. For a given operation it renders:
+  - **Logs** — captured stdout/stderr from the tool run (or a note when none
+    were captured).
+  - **Status Information** — structured status reported by the tool.
+  - **Debug Info** — extra diagnostic detail, especially useful for failed jobs.
+  - **Error Details** — the error message and details when the job failed or was
+    canceled.
+
+  ```bash
+  discovery job status <operation-id>
+  ```
+
+- **Find the operation id** — use `discovery job done` (completed/failed/canceled),
+  `discovery job running`, or `discovery job list` (with `--user`, `--pool`,
+  `--date` filters) to locate the id.
+
+- **Verbose CLI logging** — add the global `--verbose` / `-v` flag to any command
+  to emit debug-level logs (request payloads, resolved config, API calls) for
+  diagnosing CLI-side issues:
+
+  ```bash
+  discovery -v job start "python train.py"
+  discovery --verbose job status <operation-id>
+  ```
+
+- **Interactive debugging** — attach a VS Code tunnel to debug live inside the
+  job container (see [VS Code Tunnel Integration](#vs-code-tunnel-integration)):
+
+  ```bash
+  discovery job vscode
+  ```
+
+- **Check installation/auth health** — `discovery doctor` validates modules,
+  templates, required tools (`az`, `azcopy`), and authentication status.
+
+- **Config file** — resolved settings are persisted to `~/.discovery-sc-config`
+  (JSON). Inspect it to confirm which project, nodepool, API version, archive,
+  and scratch wrappers are in effect. Re-run `discovery configure` to change them.
+
 ### Blob Storage Commands (`discovery blob`)
 
 Upload, download, and manage files in Discovery storage:
