@@ -6,7 +6,7 @@
 
 This folder complements Microsoft Learn with **dynamic content** that tends to move faster than the formal docs — most notably the **frequently asked questions (FAQs)** below, which consolidate recurring questions from customer allow-listing and architecture reviews into reusable, publishable guidance.
 
-> Looking for the local-first **Microsoft Discovery app** docs instead? See [`docs/discovery-app/`](../../discovery-app/).
+> Looking for the local-first **Microsoft Discovery app** docs instead? See [`docs/discovery-app/`](../../docs/discovery-app/).
 
 ## Frequently asked questions
 
