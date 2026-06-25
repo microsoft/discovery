@@ -635,6 +635,11 @@ def list_operations(
     api_version: str = "2025-07-01-preview",
     *,
     page_size: int = 128,
+    status: str | None = None,
+    created_by: str | None = None,
+    created_after: str | None = None,
+    created_before: str | None = None,
+    nodepool_id: str | None = None,
 ) -> OperationsListResponse:
     """List operations for a project (single page).
 
@@ -644,6 +649,11 @@ def list_operations(
         query: Optional query parameters (e.g. {"status": "Running"})
         api_version: API version to send as query param
         page_size: Number of results per page (server default is 128)
+        status: Filter by operation status (e.g. "Running", "Succeeded", "Failed")
+        created_by: Filter by submitter UPN/email
+        created_after: Inclusive lower bound on creation timestamp (ISO-8601 UTC)
+        created_before: Exclusive upper bound on creation timestamp (ISO-8601 UTC)
+        nodepool_id: Filter by nodepool ARM resource ID
 
     Returns:
         OperationsListResponse containing list of operations and optional next link
@@ -656,6 +666,18 @@ def list_operations(
     query = {**query, "api-version": api_version}
     if "$top" not in query:
         query["$top"] = str(page_size)
+
+    # Add server-side filters when provided
+    if status:
+        query["status"] = status
+    if created_by:
+        query["createdBy"] = created_by
+    if created_after:
+        query["createdAfter"] = created_after
+    if created_before:
+        query["createdBefore"] = created_before
+    if nodepool_id:
+        query["nodepoolId"] = nodepool_id
 
     token = get_access_token()
     url = f"{workspace_url.rstrip('/')}/tools/projects/{project_name}/operations"
