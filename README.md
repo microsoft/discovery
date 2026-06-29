@@ -1,3 +1,30 @@
+# ⬇️ Download the Discovery app
+
+<table>
+  <tr>
+    <td align="center" width="320">
+      <img src="includes/media/windows.svg" width="96" height="96" alt="Windows logo"><br>
+      <a href="https://aka.ms/discovery/download/current"><img src="includes/media/windows-download-card.svg" width="220" height="80" alt="Download Windows 11"></a><br>
+      <strong>User Installer</strong>
+      <a href="https://aka.ms/discovery/download/current"><strong>x64</strong></a>
+      <a href="https://aka.ms/downloads/arm64/current"><strong>Arm64</strong></a>
+    </td>
+    <td valign="middle">
+      A self-contained Windows app - no SDK, no cloud setup. Current release: <strong>v0.15.4</strong>.<br>
+      <sub>macOS and Linux are not supported yet. Windows x64 and Windows ARM64 installers are available today.</sub><br><br>
+      🛠️ <a href="docs/discovery-app/install.md">Install guide</a> - setup, verification, and upgrade steps.
+    </td>
+  </tr>
+</table>
+
+**Previous release** — this repo keeps only the current and the immediately preceding version available for download.
+
+| Version | Date | Platform | Installer |
+| --- | --- | --- | --- |
+| v0.15.3 _(previous)_ | 2026-06-22 | Windows x64 | [`Discovery-app-0.15.3-preview-win-x64.exe`](https://aka.ms/discovery/download/previous) |
+
+---
+
 # Microsoft Discovery community
 
 Welcome to the **Microsoft Discovery community** — the public home for the Discovery platform, where users, partners, and the product team build together. Share what you've built, ask questions, file bugs, suggest ideas, and see what other Discovery users are doing across disciplines.
@@ -12,31 +39,6 @@ Microsoft Discovery is offered in two complementary experiences: an enterprise-g
 | ☁️ **Microsoft Discovery** | The cloud-hosted, team-scale experience on Azure. | [Microsoft Learn](https://learn.microsoft.com/en-us/azure/microsoft-discovery/) — full reference |
 
 In addition, this repository hosts the **public Discovery Catalog** — the canonical metadata catalog of AI research **agents** and **starter kits** contributed by Microsoft and ecosystem partners. Agent code, container images, and model weights live in each contributor's own infrastructure; the metadata and documentation that describe them live here, where they are PR-reviewed, schema-validated, and surfaced to every Discovery user.
-
----
-
-## ⬇️ Download the Discovery app
-
-<table>
-  <tr>
-    <td align="center" width="200">
-      <img src="includes/media/windows.svg" width="64" height="64" alt="Windows logo"><br><br>
-      <a href="https://aka.ms/discovery/download/current"><strong>&#11015;&nbsp; Windows</strong></a><br>
-      <sub>Windows 11 &middot; x64</sub>
-    </td>
-    <td valign="middle">
-      A self-contained Windows app - no SDK, no cloud setup. Current release: <strong>v0.15.3</strong> (2026-06-22).<br>
-      <sub>macOS and Linux are not supported yet. Only the Windows x64 installer is available today.</sub><br><br>
-      🛠️ <a href="docs/discovery-app/install.md">Install guide</a> - setup, verification, and upgrade steps.
-    </td>
-  </tr>
-</table>
-
-**Previous release** — this repo keeps only the current and the immediately preceding version available for download.
-
-| Version | Date | Platform | Installer |
-| --- | --- | --- | --- |
-| v0.15.2 _(previous)_ | 2026-06-15 | Windows x64 | [`Discovery-app-0.15.2-preview-win-x64.exe`](https://aka.ms/discovery/download/previous) |
 
 ---
 
@@ -58,7 +60,6 @@ For an app-specific 15-minute hands-on tour, see [`docs/discovery-app/quickstart
 
 | Surface | What it is | Best for |
 | --- | --- | --- |
-| 📥 **[Releases](https://github.com/microsoft/discovery/releases)** | Signed Windows installers and release notes for the Discovery app. | Downloading the latest build of the app. |
 | 🤖 **[`agents/`](/agents/)** | Catalog of AI research agents (1P and 3P) surfaced in Discovery. Each entry contains a `metadata.yaml`, `agent.yaml`, `README.md`, and optional `tools/`. | Browsing what's available, or contributing a new agent. |
 | 📑 **[`docs/`](/docs/)** | Documentation and pointers for both Microsoft Discovery and the Discovery app, including documentation for authoring guides and schemas. | Learning more about Discovery experiences and best practices. |
 | 🎥 **[How to videos](/docs/how-to-videos/README.md)** | Curated how-to video content for Discovery workflows and onboarding. | Watching guided walkthroughs and quick task demos. |

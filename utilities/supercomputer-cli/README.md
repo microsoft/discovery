@@ -221,6 +221,7 @@ Manage and monitor Discovery jobs:
 |---------|-------------|
 | `discovery job start <command>` | Start a tool run and poll until completion |
 | `discovery job batch <command>` | Submit multiple independent tool runs (no polling) |
+| `discovery job debug [options] <operation-id>` | Start a debug session on a running operation. Creates a Dev Tunnel on your behalf and attaches a VS Code debug container to the running job |
 | `discovery job vscode [--tunnel-name <name>]` | Start a job that hosts a VS Code tunnel (default name: `discovery-<username>`) |
 | `discovery job cancel <operation-id>` | Cancel a running operation |
 | `discovery job cancel --since 10m` | Bulk-cancel every locally-recorded job submitted in the last 10 minutes |
@@ -390,6 +391,35 @@ uv run ruff check src tests
 
 ## VS Code Tunnel Integration
 
+There are currently two supported methods for connecting to and debugging a running job. **Option 1 is the recommended approach**, as it is simpler to configure, more reliable, and requires no custom image modifications. **Option 2 remains available for backward compatibility but is planned for deprecation in a future release**.
+
+
+
+**Option 1: Use the debug Option with discovery job (Recommended)**
+
+You can debug and tunnel into a running job by using the **debug** option with the *discovery job* command.
+
+```bash
+ discovery job debug [OPTIONS] OPERATION_ID
+```
+Creates a Dev Tunnel on your behalf and attaches a VS Code debug container to the running job. The tunnel appears in your VS Code Remote Tunnels list.
+
+```bash
+Options:
+--pod   -p               # Pod index to debug (0=leader/main, 1+=workers). Use 'job status' to see available pods default:0                                                                              
+--help                   # Show this message and exit. 
+operation_id             # TEXT  Operation ID of a running job to debug [required]  
+```
+
+### Examples:
+
+     discovery job debug abc12345-def6-7890-abcd-ef1234567890
+     discovery job debug abc12345-def6-7890-abcd-ef1234567890 --pod 2
+
+
+
+**Option 2: Use a Custom Image with VS Code Tunnel Support (Legacy)**
+
 VS Code tunnel support lets you debug Discovery jobs interactively from your local VS Code.
 
 When you build with `--vscode`:
@@ -422,6 +452,7 @@ This starts a VS Code tunnel in the job container, letting you connect to it fro
 | `VS_CODE_TUNNEL_RETRY_DELAY` | `5` | Seconds between restart attempts |
 
 ---
+
 
 ## Quick Reference
 
