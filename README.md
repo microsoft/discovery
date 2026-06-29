@@ -2,14 +2,16 @@
 
 <table>
   <tr>
-    <td align="center" width="200">
-      <img src="includes/media/windows.svg" width="64" height="64" alt="Windows logo"><br><br>
-      <a href="https://aka.ms/discovery/download/current"><strong>&#11015;&nbsp; Windows</strong></a><br>
-      <sub>Windows 11 &middot; x64</sub>
+    <td align="center" width="320">
+      <img src="includes/media/windows.svg" width="96" height="96" alt="Windows logo"><br>
+      <a href="https://aka.ms/discovery/download/current"><img src="includes/media/windows-download-card.svg" width="220" height="80" alt="Download Windows 11"></a><br>
+      <strong>User Installer</strong>
+      <a href="https://aka.ms/discovery/download/current"><strong>x64</strong></a>
+      <a href="https://aka.ms/downloads/arm64/current"><strong>Arm64</strong></a>
     </td>
     <td valign="middle">
-      A self-contained Windows app - no SDK, no cloud setup. Current release: <strong>v0.15.3</strong> (2026-06-22).<br>
-      <sub>macOS and Linux are not supported yet. Only the Windows x64 installer is available today.</sub><br><br>
+      A self-contained Windows app - no SDK, no cloud setup. Current release: <strong>v0.15.4</strong>.<br>
+      <sub>macOS and Linux are not supported yet. Windows x64 and Windows ARM64 installers are available today.</sub><br><br>
       🛠️ <a href="docs/discovery-app/install.md">Install guide</a> - setup, verification, and upgrade steps.
     </td>
   </tr>
@@ -19,7 +21,7 @@
 
 | Version | Date | Platform | Installer |
 | --- | --- | --- | --- |
-| v0.15.2 _(previous)_ | 2026-06-15 | Windows x64 | [`Discovery-app-0.15.2-preview-win-x64.exe`](https://aka.ms/discovery/download/previous) |
+| v0.15.3 _(previous)_ | 2026-06-22 | Windows x64 | [`Discovery-app-0.15.3-preview-win-x64.exe`](https://aka.ms/discovery/download/previous) |
 
 ---
 
