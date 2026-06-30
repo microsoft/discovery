@@ -38,7 +38,7 @@ jobs:
 
       - name: Checkout PR branch
         if: steps.changes.outputs.relevant == 'true'
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           fetch-depth: 0
 
