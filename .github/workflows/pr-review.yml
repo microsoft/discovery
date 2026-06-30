@@ -34,10 +34,16 @@ jobs:
 
       - name: Get changed files
         id: changed
+        env:
+          # Pass untrusted, attacker-controllable values through the environment
+          # instead of interpolating ${{ }} directly into the shell. This prevents
+          # expression/command injection (MSRC 124614).
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
         run: |
           # Fetch the base commit so git diff can compare across fork boundaries
-          git fetch origin ${{ github.event.pull_request.base.sha }} --depth=1 2>/dev/null || true
-          FILES=$(git diff --name-only ${{ github.event.pull_request.base.sha }} ${{ github.event.pull_request.head.sha }} 2>/dev/null || git diff --name-only HEAD~1 HEAD)
+          git fetch origin "$BASE_SHA" --depth=1 2>/dev/null || true
+          FILES=$(git diff --name-only "$BASE_SHA" "$HEAD_SHA" 2>/dev/null || git diff --name-only HEAD~1 HEAD)
           # Newline-separated list → space-separated for the classify step
           FILES_INLINE=$(echo "$FILES" | tr '\n' ' ' | sed 's/ $//')
           echo "all_changed_files=$FILES_INLINE" >> "$GITHUB_OUTPUT"
@@ -45,8 +51,13 @@ jobs:
 
       - name: Classify paths
         id: classify
+        env:
+          # Changed file paths are attacker-controlled (an attacker can name a
+          # file in their PR). Pass via env so the value is never expanded by
+          # the shell parser (MSRC 124614).
+          ALL_CHANGED_FILES: ${{ steps.changed.outputs.all_changed_files }}
         run: |
-          FILES="${{ steps.changed.outputs.all_changed_files }}"
+          FILES="$ALL_CHANGED_FILES"
           HAS_AGENTS=false
           HAS_DOCS_ONLY=true
           for f in $FILES; do
@@ -100,8 +111,12 @@ jobs:
         run: pip install jsonschema pyyaml onnx picklescan
 
       - name: Write changed files list
+        env:
+          # Attacker-controlled file paths — pass via env, never interpolate
+          # directly into the shell (MSRC 124614).
+          CHANGED_FILES: ${{ needs.classify.outputs.changed_files }}
         run: |
-          echo "${{ needs.classify.outputs.changed_files }}" \
+          echo "$CHANGED_FILES" \
             | tr ' ' '\n' \
             | grep -v '^$' \
             > /tmp/changed-files.txt
@@ -181,18 +196,30 @@ jobs:
           fetch-depth: 0
 
       - name: Run TruffleHog secret scan (verified — blocking)
+        env:
+          # Pass commit SHAs through the environment rather than interpolating
+          # ${{ }} directly into the shell, to avoid expression/command
+          # injection (MSRC 124614).
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
         run: |
           # Install TruffleHog directly — avoids org-level action allowlist restrictions
           curl -sSfL https://raw.githubusercontent.com/trufflesecurity/trufflehog/main/scripts/install.sh \
             | sh -s -- -b /usr/local/bin
           trufflehog git file://. \
-            --since-commit ${{ github.event.pull_request.base.sha }} \
-            --branch ${{ github.event.pull_request.head.sha }} \
+            --since-commit "$BASE_SHA" \
+            --branch "$HEAD_SHA" \
             --only-verified \
             --fail
 
       - name: SEC-002 — Audit-mode scan (unverified — non-blocking, informational)
         continue-on-error: true
+        env:
+          # Pass commit SHAs through the environment rather than interpolating
+          # ${{ }} directly into the shell, to avoid expression/command
+          # injection (MSRC 124614).
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
         run: |
           # Re-run TruffleHog without --only-verified to surface high-entropy
           # strings and unverified credentials. This does NOT fail the build;
@@ -200,8 +227,8 @@ jobs:
           # placeholders that the verified scan deliberately ignores.
           set +e
           trufflehog git file://. \
-            --since-commit ${{ github.event.pull_request.base.sha }} \
-            --branch ${{ github.event.pull_request.head.sha }} \
+            --since-commit "$BASE_SHA" \
+            --branch "$HEAD_SHA" \
             --json \
             > /tmp/trufflehog-audit.json 2>/dev/null
           if [ -s /tmp/trufflehog-audit.json ]; then
