@@ -12,6 +12,7 @@ This directory contains standalone helper scripts for operators standing up or m
 | [`rbac-roles-assignment/`](rbac-roles-assignment/) | Assigns the complete set of Azure RBAC roles required for a Discovery persona (Platform Administrator or Scientist) to one or more users. Validates the executor's permissions, supports batch assignment, handles guest users. | After resource-provider registration, when granting users access to a Discovery services environment. |
 | [`dataasset-migration/`](dataasset-migration/) | Migrates a Discovery v1 `DataContainer` + child `DataAssets` to the v2 `StorageContainer` + `StorageAssets` shape (API `2025-07-01-preview` → `2026-02-01-preview`). Control-plane metadata only — does **not** move blobs. | One-time migration for tenants that onboarded before the v2 storage model. |
 | [`Supercomputer CLI/`](supercomputer-cli/) | Toolkit provides basic access to the Discovery Supercomputer API for submitting and running jobs directly on Supercomputer | Submit jobs directly to the supercomputer |
+| [`terraform/`](terraform/) | End-to-end Terraform module for a Microsoft Discovery services environment (VNet, UAMI, storage, role assignments, supercomputer, workspace, chat model, project). Uses `hashicorp/azurerm` for platform primitives and `Azure/azapi` (pinned to `Microsoft.Discovery/*@2026-02-01-preview`) for Discovery resources. | Provision a Discovery environment as Infrastructure-as-Code with Terraform instead of the Bicep sample. |
 
 ## Common prerequisites
 
