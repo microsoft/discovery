@@ -10,10 +10,15 @@ assertion and fails with::
 
     AADSTS700024: Client assertion is not within its valid time range.
 
-When running in a CI environment with OIDC enabled, this module returns a
-``ClientAssertionCredential`` whose callback mints a FRESH OIDC token on every
-token request, so refresh works for jobs of any length. Outside such an
-environment (e.g. local dev) it falls back to ``DefaultAzureCredential``.
+When running in a CI environment with OIDC enabled, this module returns the
+SDK's own ``ClientAssertionCredential``. That credential caches the Azure
+access token in memory and only invokes its callback to mint a fresh OIDC
+assertion when it actually needs a new access token (on expiry or for a new
+audience), so refresh works for jobs of any length. All security-critical token
+exchange and caching is handled by the Azure Identity SDK, not by this module;
+the only custom code is a plain HTTPS GET to the GitHub OIDC endpoint (the same
+call ``azure/login`` makes internally). Outside such an environment (e.g. local
+dev) it falls back to ``DefaultAzureCredential``.
 
 Requires (in CI): the ability to mint OIDC tokens plus ``AZURE_CLIENT_ID`` and
 ``AZURE_TENANT_ID`` exported to the step.
@@ -50,8 +55,9 @@ def get_credential():
     """Return a TokenCredential suited to the current environment.
 
     In GitHub Actions with OIDC configured, returns a ``ClientAssertionCredential``
-    that re-mints a short-lived GitHub OIDC token on every refresh (so long jobs
-    never outlive their assertion). Otherwise returns ``DefaultAzureCredential``.
+    that re-mints a short-lived GitHub OIDC assertion only when the SDK needs a
+    new access token (so long jobs never outlive their assertion); the SDK caches
+    the access token itself. Otherwise returns ``DefaultAzureCredential``.
     """
     client_id = os.environ.get("AZURE_CLIENT_ID")
     tenant_id = os.environ.get("AZURE_TENANT_ID")
