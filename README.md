@@ -7,7 +7,7 @@
       <a href="https://aka.ms/discovery/download/current"><img src="includes/media/windows-download-card.svg" width="220" height="80" alt="Download Windows 11"></a><br>
       <strong>User Installer</strong>
       <a href="https://aka.ms/discovery/download/current"><strong>x64</strong></a>
-      <a href="https://aka.ms/downloads/arm64/current"><strong>Arm64</strong></a>
+      <a href="https://aka.ms/discovery/download/arm64/current"><strong>Arm64</strong></a>
     </td>
     <td valign="middle">
       A self-contained Windows app - no SDK, no cloud setup. Current release: <strong>v0.15.5</strong>.<br>
@@ -22,6 +22,7 @@
 | Version | Date | Platform | Installer |
 | --- | --- | --- | --- |
 | v0.15.4 _(previous)_ | 2026-06-29 | Windows x64 | [`Discovery-app-0.15.4-preview-win-x64.exe`](https://aka.ms/discovery/download/previous) |
+| v0.15.4 _(previous)_ | 2026-06-29 | Windows Arm64 | [`Discovery-app-0.15.4-preview-win-arm64.exe`](https://aka.ms/discovery/download/arm64/previous) |
 
 ---
 
