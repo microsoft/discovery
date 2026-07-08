@@ -78,6 +78,26 @@ class DiscoveryAgentClient:
         self.token = (token or "").replace("Bearer ", "").strip() or get_token(scope)
 
     # -- low-level HTTP -----------------------------------------------------
+    def _url(self, *segments: object, query: dict | None = None) -> str:
+        """Build a data-plane URL from path segments and query params.
+
+        Each path segment is percent-encoded (``safe=""`` so values such as
+        project/investigation/conversation names cannot inject extra path or
+        query structure) and the query string is built with ``urlencode`` rather
+        than manual string formatting.
+        """
+        parts = urllib.parse.urlsplit(self.base)
+        encoded = "/".join(
+            urllib.parse.quote(str(seg), safe="") for seg in segments)
+        path = f"{parts.path.rstrip('/')}/{encoded}"
+        return urllib.parse.urlunsplit((
+            parts.scheme,
+            parts.netloc,
+            path,
+            urllib.parse.urlencode(query) if query else "",
+            "",
+        ))
+
     def _request(self, method: str, url: str, body: dict | None = None) -> tuple[int, dict]:
         # Guard against non-HTTPS schemes (e.g. file://) reaching urlopen: the
         # Discovery data-plane is always addressed over HTTPS.
@@ -106,9 +126,9 @@ class DiscoveryAgentClient:
                              display_name: str | None = None,
                              description: str | None = None) -> str:
         """PUT-create (idempotent) a Discovery investigation. Returns its id."""
-        inv_path = f"/projects/{project}/investigations/{investigation}"
-        query = urllib.parse.urlencode({"api-version": self.api_version})
-        url = f"{self.base}{inv_path}?{query}"
+        url = self._url(
+            "projects", project, "investigations", investigation,
+            query={"api-version": self.api_version})
         body = {
             "displayName": display_name or investigation,
             "description": description or "Automated agent evaluation run",
@@ -121,9 +141,9 @@ class DiscoveryAgentClient:
                             display_name: str | None = None) -> str:
         """Open a conversation inside an investigation. Returns its id."""
         inv_name = f"/projects/{project}/investigations/{investigation}"
-        query = urllib.parse.urlencode(
-            {"api-version": self.api_version, "investigationName": inv_name})
-        url = f"{self.base}/conversations?{query}"
+        url = self._url(
+            "conversations",
+            query={"api-version": self.api_version, "investigationName": inv_name})
         body = {
             "investigationName": inv_name,
             "displayName": display_name or investigation,
@@ -139,7 +159,8 @@ class DiscoveryAgentClient:
     def create_response(self, conversation: str, agent: str, query: str) -> str:
         """Send one user message to the agent. Returns the response id."""
         # The /openai/v1/ route is GA and rejects the api-version query param.
-        url = f"{self.base}/conversations/{conversation}/openai/v1/responses"
+        url = self._url(
+            "conversations", conversation, "openai", "v1", "responses")
         body = {
             "input": [
                 {
@@ -159,7 +180,8 @@ class DiscoveryAgentClient:
 
     def get_response(self, conversation: str, response_id: str) -> dict | None:
         """Fetch a response by id, falling back to the list endpoint."""
-        by_id = f"{self.base}/conversations/{conversation}/openai/v1/responses/{response_id}"
+        by_id = self._url(
+            "conversations", conversation, "openai", "v1", "responses", response_id)
         try:
             status, payload = self._request("GET", by_id)
             if status == 200 and payload.get("id") == response_id:
@@ -173,8 +195,9 @@ class DiscoveryAgentClient:
 
     def list_responses(self, conversation: str, *, limit: int = 100) -> list[dict]:
         """List responses in a conversation (most-recent first)."""
-        query = urllib.parse.urlencode({"limit": limit})
-        url = f"{self.base}/conversations/{conversation}/openai/v1/responses?{query}"
+        url = self._url(
+            "conversations", conversation, "openai", "v1", "responses",
+            query={"limit": limit})
         _, payload = self._request("GET", url)
         return payload.get("data", []) or []
 
