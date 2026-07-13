@@ -12,6 +12,7 @@ dataset file under the project directory or default/. Conventional scopes are
 shared, tool-calling, and retrieval.
 """
 
+import random
 import re
 import time
 from pathlib import Path
@@ -21,6 +22,8 @@ DATASET_SUFFIX = "-evaluators.json"
 
 _INVESTIGATION_NAME_MAX = 24
 _BASE36 = "0123456789abcdefghijklmnopqrstuvwxyz"
+# Length of the random collision-breaking suffix (base-36 characters).
+_INVESTIGATION_RAND_LEN = 3
 
 
 def scope_filename(scope: str) -> str:
@@ -71,26 +74,49 @@ def resolve_dataset(scope: str, datasets_dir: Path, project: str) -> Path | None
     return None
 
 
+def _to_base36(value: int) -> str:
+    """Compact, lexicographically-sortable base-36 encoding of a non-negative int
+    (values of equal magnitude keep equal width, so string order == numeric order)."""
+    if value == 0:
+        return "0"
+    digits = ""
+    while value:
+        value, rem = divmod(value, 36)
+        digits = _BASE36[rem] + digits
+    return digits
+
+
 def make_investigation_name(prefix: str, agent: str) -> str:
     """Build a fresh, unique investigation id for a pipeline run.
 
     Discovery requires investigation ids to be 3-24 characters containing only
     letters, digits, and hyphens. One investigation is created per agent per run
     so evaluation traffic stays isolated from any user/production investigations.
-    The agent slug is truncated as needed and a compact base-36 timestamp keeps
-    each run unique within the length budget.
+
+    Naming schema: ``<prefix>-<timestamp>-<agent>-<rand>`` where
+
+      - ``prefix``    is a fixed, sanitized label (e.g. "eval") shared by every
+        run, so it does not disturb ordering.
+      - ``timestamp`` is a base-36 encoding of the current epoch seconds placed
+        directly after the prefix. Because it is the first varying component and
+        base-36 preserves numeric order, sorting the ids in *descending* order
+        puts the newest investigation on top.
+      - ``agent``     is the (possibly truncated) agent slug, so the name carries
+        a recognizable part of the agent it belongs to.
+      - ``rand``      is a short random base-36 suffix that breaks collisions when
+        two runs of the same agent start within the same second.
+
+    The agent slug is truncated as needed so the whole id stays within the
+    24-character budget.
     """
     pfx = re.sub(r"[^a-z0-9]+", "-", prefix.lower()).strip("-") or "eval"
     agent_slug = re.sub(r"[^a-z0-9]+", "-", agent.lower()).strip("-")
-    stamp = ""
-    epoch = int(time.time())
-    while epoch:
-        epoch, rem = divmod(epoch, 36)
-        stamp = _BASE36[rem] + stamp
-    # Reserve room for prefix, stamp, and two hyphen separators.
-    avail = _INVESTIGATION_NAME_MAX - len(pfx) - len(stamp) - 2
+    stamp = _to_base36(int(time.time()))
+    rand = "".join(random.choice(_BASE36) for _ in range(_INVESTIGATION_RAND_LEN))
+    # Reserve room for prefix, stamp, rand suffix, and three hyphen separators.
+    avail = _INVESTIGATION_NAME_MAX - len(pfx) - len(stamp) - len(rand) - 3
     agent_slug = agent_slug[: max(0, avail)].strip("-")
-    parts = [p for p in (pfx, agent_slug, stamp) if p]
+    parts = [p for p in (pfx, stamp, agent_slug, rand) if p]
     return "-".join(parts)[:_INVESTIGATION_NAME_MAX].strip("-")
 
 
