@@ -16,6 +16,34 @@ This utility is a minimal, end-to-end Terraform module for a Microsoft Discovery
 
 The provider split is deliberate: `Microsoft.Discovery/*` is not yet in the AzureRM provider's resource catalog, so AzAPI is required for those types. Every other resource uses AzureRM to benefit from strongly-typed schemas, better plan output, and stable state migrations.
 
+## Quickstart (TL;DR)
+
+For an experienced Azure/Terraform user with an active `az login`, the full happy path is:
+
+```bash
+# 1. create the RG (kept out of Terraform state on purpose)
+az group create --name rg-discovery-terraform --location swedencentral
+
+# 2. grant yourself blob data access on the RG (see Step 6.1 for why)
+MY_OID=$(az ad signed-in-user show --query id -o tsv)
+SUB_ID=$(az account show --query id -o tsv)
+az role assignment create --assignee "$MY_OID" \
+  --role "Storage Blob Data Owner" \
+  --scope "/subscriptions/$SUB_ID/resourceGroups/rg-discovery-terraform"
+
+# 3. clone / cd into this directory, then preflight
+cd utilities/terraform
+cp -n terraform.tfvars.example terraform.tfvars   # edit if you want non-defaults
+./preflight.sh                                    # 9 checks; exits non-zero on any FAIL
+
+# 4. init / plan / apply
+terraform init
+terraform plan  -out=tfplan
+terraform apply tfplan
+```
+
+Wall time is ~20-45 minutes, dominated by the supercomputer + workspace creates. The rest of this document walks through every step in detail and covers failure modes to expect.
+
 ## What you build
 
 A single resource group containing:
@@ -83,6 +111,15 @@ If you only see `Contributor`, the deployment will fail at the three `azurerm_ro
 
 ### 1.3 Check resource provider registration
 
+Discovery depends on 25 resource providers. Rather than list them all here, let the preflight script check them for you — it verifies `Microsoft.Discovery` plus the 24 dependency RPs and prints the exact `az provider register` command for any that aren't registered:
+
+```bash
+cd utilities/terraform
+./preflight.sh          # checks 1 and 5 cover RP registration
+```
+
+If you'd rather spot-check the critical few manually first:
+
 ```bash
 for ns in \
   Microsoft.Discovery \
@@ -105,14 +142,30 @@ az provider register --namespace <namespace> --wait
 
 `Microsoft.Discovery` in particular has a several-minute registration time on first use in a fresh subscription.
 
-### 1.4 Confirm the region supports Discovery workspaces
+### 1.4 Pick a region
+
+List regions the Discovery RP claims to support:
 
 ```bash
 az provider show -n Microsoft.Discovery \
   --query "resourceTypes[?resourceType=='workspaces'].locations[]" -o tsv
 ```
 
-Pick a region from this list and note it — you'll pass it as `location` in Terraform variables in Step 3.
+> **Region availability as of 2026-07-10** (verified against real `terraform apply` attempts on subscription
+> `ME-MngEnvMCAP385978-ossiottka-1`). The RP-metadata list above is not authoritative on its own — several
+> regions advertise support but fail creates for other reasons. Cross-check against this table before
+> committing to a region:
+>
+> | Region | Status | Failure mode if broken |
+> |---|---|---|
+> | `uksouth` | ✅ **recommended** | — |
+> | `swedencentral` | ⚠️ use with fallback | Hit `AKSCapacityHeavyUsage` on 2026-07-09; likely transient but not queryable in advance |
+> | `eastus` | ❌ avoid unless SKU is allowlisted | Subscription-level: all `Standard_D4s_v*` SKUs return `NotAvailableForSubscription`. The Discovery RP internally provisions AKS with `Standard_D4s_v6`, so the SC create is rejected. Fix requires an Azure support ticket to enable D-series compute in this region. |
+> | `eastus2` | ❌ avoid | Discovery RP **region gate**: metadata claims support, but the PUT handler rejects new supercomputer creates with `"Creation of new Supercomputer resources is not supported in region 'eastus2'"`. Not transient — will fail every attempt until Microsoft ships an RP update. Re-check this note periodically. |
+>
+> The `preflight.sh` script (Step 6.4) checks the deterministic failure modes (registration, SKU
+> availability, quota) automatically. The RP region gate on `eastus2` cannot be detected via any
+> Azure API today — that's why it lives in this table instead of the script.
 
 ### 1.5 Record what you found
 
@@ -123,7 +176,7 @@ Before moving on, capture these values somewhere handy (a scratch file, `~/.disc
 | Subscription ID | `00000000-0000-0000-0000-000000000000` |
 | Tenant ID | `00000000-0000-0000-0000-000000000000` |
 | Signed-in user object ID | `00000000-0000-0000-0000-000000000000` |
-| Target region | `swedencentral` |
+| Target region | `uksouth` |
 
 Terraform will pull the first three from your `az` context automatically, but keeping them written down makes debugging RBAC errors much faster.
 
@@ -141,16 +194,16 @@ So we create the RG imperatively with `az` and pass its name to Terraform as a v
 ```bash
 az group create \
   --name rg-discovery-terraform \
-  --location swedencentral \
+  --location uksouth \
   --output table
 ```
 
 Expected output:
 
 ```text
-Location       Name
--------------  ----------------------
-swedencentral  rg-discovery-terraform
+Location    Name
+----------  ----------------------
+uksouth     rg-discovery-terraform
 ```
 
 ### 2.2 Confirm it exists and is empty
@@ -169,7 +222,7 @@ Add it to the scratch list from Step 1.5:
 | Value | This quickstart's example |
 |-------|---------------------------|
 | Resource group | `rg-discovery-terraform` |
-| Region | `swedencentral` |
+| Region | `uksouth` |
 
 ## Step 3: Scaffold the Terraform project
 
@@ -389,7 +442,54 @@ terraform validate
 
 Both should be silent (fmt) and print `Success! The configuration is valid.` (validate). If validate reports schema errors on the Discovery API version, see the header comment in `discovery.tf` — the pin is `@2026-02-01-preview` because AzAPI v2.10 doesn't yet ship a GA schema.
 
-### 6.4 Plan
+### 6.4 Preflight (recommended)
+
+Before running `plan`, run `./preflight.sh` to catch the failure classes that only surface hours into an apply:
+
+```bash
+./preflight.sh                    # reads terraform.tfvars
+./preflight.sh -l uksouth         # or override location
+./preflight.sh -h                 # help + full arg list
+```
+
+The script runs 9 **deterministic** checks — things Azure will reject every time until you change your inputs or open a support ticket. Checks 1-4 are built into `preflight.sh`; checks 5-9 are encapsulated modules under [preflight-checks/](preflight-checks/) that can be individually disabled by removing their file.
+
+| # | Check | Source |
+|---|---|---|
+| 1 | `Microsoft.Discovery` RP is Registered | `preflight.sh` |
+| 2 | Region is not on the `KNOWN_BAD_REGIONS` blocklist (catches RP-level gates that no Azure API surfaces — e.g. `eastus2` rejects new supercomputer creates even though metadata claims support) | `preflight.sh` |
+| 3 | AKS system-pool SKU (`Standard_D4s_v6`, hardcoded by the RP) and your `node_pool_vm_size` are both allowlisted on the subscription in the region (`NotAvailableForSubscription` is a hard block that only a support ticket can fix) | `preflight.sh` |
+| 4 | Compute cores quota (family + regional total) is sufficient for `node_pool_max_node_count × vCPUs + AKS system pool` | `preflight.sh` |
+| 5 | Registration state of the other 24 RPs Discovery depends on (Compute, Network, Storage, ManagedIdentity, CognitiveServices, DocumentDB, ContainerService, etc.) — prints ready-to-copy `az provider register` commands for any that are unregistered | [preflight-checks/05-additional-resource-providers.sh](preflight-checks/05-additional-resource-providers.sh) |
+| 6 | Positive allowlist match against the Discovery-supported region list (`eastus`, `swedencentral`, `uksouth`) | [preflight-checks/06-approved-regions.sh](preflight-checks/06-approved-regions.sh) |
+| 7 | `Microsoft.DocumentDB` (Cosmos DB) is available in the target region — otherwise workspace create fails its async Cosmos provisioning LRO | [preflight-checks/07-cosmosdb-region.sh](preflight-checks/07-cosmosdb-region.sh) |
+| 8 | Chat model has enough AI Foundry TPM quota in the region (reads `chat_model_name` from `terraform.tfvars` / `variables.tf`; PASS ≥ recommended, WARN below recommended, FAIL at zero headroom) | [preflight-checks/08-ai-foundry-tpm.sh](preflight-checks/08-ai-foundry-tpm.sh) |
+| 9 | **Opt-in.** Network Security Perimeter prerequisites (`AIFSPInfrastructure` SP + NSP Perimeter Joiner role + Reader). Skipped by default because this module deploys standard VNet-injected workspaces, not NSP-joined ones | [preflight-checks/09-network-security-perimeter.sh](preflight-checks/09-network-security-perimeter.sh) |
+
+**Environment overrides:**
+
+```bash
+# Override the approved-regions allowlist (comma-separated) for check 6
+PREFLIGHT_APPROVED_REGIONS="eastus,uksouth" ./preflight.sh
+
+# Enable check 9 (only relevant if you extend the module to deploy
+# network-hardened / NSP-joined workspaces)
+PREFLIGHT_CHECK_NSP=1 ./preflight.sh
+```
+
+**Adding or removing checks.** Every file matching `preflight-checks/[0-9]*.sh` is auto-sourced in numeric order. To disable one, `rm` its file. To add one, drop a new numbered `.sh` in the same directory following the contract documented in [preflight-checks/README.md](preflight-checks/README.md). No changes to `preflight.sh` required.
+
+**Provenance.** Checks 5-9 mirror the deterministic gates enforced by the Microsoft Discovery Toolbox VS Code extension (see [../discovery-toolbox/README.md](../discovery-toolbox/README.md)) — the checks that are (a) verifiable pre-`terraform apply` and (b) relevant to this Terraform module.
+
+**Deliberately not checked** (would give false confidence):
+
+- RP metadata region list — unreliable; check 2 (blocklist) + check 6 (allowlist) are the workarounds.
+- Transient AKS capacity (`AKSCapacityHeavyUsage`) — not queryable in advance.
+- Chat model catalog — no listable RP endpoint at `2026-02-01-preview`. Check 8 verifies quota for the *configured* model; verify the model name itself against the [Discovery docs](https://learn.microsoft.com/azure/microsoft-discovery/) manually.
+
+Exit code is `0` if there are only `PASS`/`WARN` results, `1` on any `FAIL`. Don't run `terraform apply` until preflight is green.
+
+### 6.5 Plan
 
 ```bash
 cp -n terraform.tfvars.example terraform.tfvars   # first run only
@@ -404,7 +504,7 @@ Plan: 19 to add, 0 to change, 0 to destroy.
 
 The 19 resources are: `random_string.suffix`, `azurerm_virtual_network` + 5 subnets, `azurerm_user_assigned_identity`, `azurerm_storage_account`, `azapi_resource.outputs_container`, 3 `azurerm_role_assignment`, and 6 Discovery `azapi_resource`s (supercomputer, node pool, workspace, chat model, storage container, project). Ten outputs are also declared.
 
-### 6.5 Apply
+### 6.6 Apply
 
 ```bash
 terraform apply "tfplan"
@@ -412,7 +512,7 @@ terraform apply "tfplan"
 
 Wall time: **20–45 minutes**, dominated by the Discovery supercomputer (which provisions an AKS cluster + node pool) and the workspace. Both have `timeouts { create = "60m" }` set in `discovery.tf` to avoid spurious `context deadline exceeded` errors under RP load.
 
-### 6.6 Known failure modes and recovery
+### 6.7 Known failure modes and recovery
 
 **A. Workspace `context deadline exceeded` even with the 60m timeout.** The workspace is often provisioned server-side successfully by the time Terraform gives up. Check:
 
@@ -466,3 +566,12 @@ Filled in as each step lands. Common failure modes to preview:
 * `context deadline exceeded` on workspace — see Step 6.6.A (import path).
 * `SubnetHasServiceEndpointConfiguration` or delegation conflicts — see Step 3.
 * Discovery `workspace` create returning `InvalidRequest` with a `workspaceIdentity` error — the identity block is Discovery-specific, not the standard ARM `identity` envelope. See the `workspace` block in [discovery.tf](discovery.tf) for the correct shape.
+
+## Deletion order:
+Step 1: Delete the nodepool
+Step 2: Delete the workspace
+Step 3: Delete the supercomputer
+Step 4: Delete the resource group
+
+
+## TODO: Deleting the RG via the terraform.
