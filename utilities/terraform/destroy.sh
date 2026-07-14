@@ -20,19 +20,12 @@
 #   3. Pre-drains Discovery children (projects, chat models, storage
 #      containers, node pools, then workspaces and supercomputers) ONE AT A
 #      TIME. This prevents the parallel-cascade race that produces
-#      InvalidResourceOperation and ServerTimeout / stuck-SAL deadlocks.
+#      InvalidResourceOperation and ServerTimeout errors.
 #   4. Detaches AKS-orphaned NSGs from any subnets in the RG's VNets. When
 #      Discovery's Supercomputer AKS attaches auto-generated NSGs to your
 #      BYO subnets, deleting the SC does NOT remove those references -- the
 #      subnet then blocks its own deletion with 409
 #      InUseNetworkSecurityGroupCannotBeDeleted and stalls the RG cascade.
-#   4b. Detects orphaned serviceAssociationLinks (e.g. 'legionservicelink'
-#       installed by the AI Foundry / AML agent service on the delegated
-#       agentSubnet). These CANNOT be removed via any self-service API --
-#       only the owning first-party service is authorized. Confirmed by
-#       Microsoft Q&A #12746700 and #12722985. If detected, the script
-#       stops with a support-ticket template OR (if --abandon-orphan-vnet
-#       is set) tags the RG as quarantined and skips the doomed RG delete.
 #   5. Deletes the primary RG and polls for completion.
 #   6. Force-deletes any MRGs that survived, retrying the Supercomputer MRG
 #      up to 3 times because its AKS-backed cleanup is racy.
@@ -45,7 +38,6 @@
 #   ./destroy.sh -y                              # non-interactive (no prompt)
 #   ./destroy.sh --timeout 180                   # max minutes to wait on primary RG (default 120)
 #   ./destroy.sh --poll-interval 30              # seconds between progress polls (default 60)
-#   ./destroy.sh --abandon-orphan-vnet           # tag+keep RG if an orphaned SAL blocks VNet delete
 #
 # Progress: the script submits the RG delete asynchronously and polls itself
 # every minute, printing remaining resource count and elapsed time. Every 5
@@ -66,7 +58,6 @@ RESOURCE_GROUP="rg-discovery-terraform"
 SKIP_TERRAFORM=false
 DRY_RUN=false
 ASSUME_YES=false
-ABANDON_ORPHAN_VNET=false   # when true, tag+keep RG if VNet delete is blocked by an orphan SAL
 MRG_RETRIES=3
 MRG_RETRY_DELAY=30
 
@@ -104,7 +95,6 @@ while [[ $# -gt 0 ]]; do
     -y|--yes)              ASSUME_YES=true; shift ;;
     --timeout)             RG_DELETE_TIMEOUT="$2"; shift 2 ;;
     --poll-interval)       POLL_INTERVAL="$2"; shift 2 ;;
-    --abandon-orphan-vnet) ABANDON_ORPHAN_VNET=true; shift ;;
     -h|--help)             usage 0 ;;
     *)                   err "unknown argument: $1"; usage 1 ;;
   esac
@@ -213,9 +203,6 @@ $RG_EXISTS \
   && log "  step 1.6: detach AKS-orphaned NSGs from BYO subnets" \
   || log "  step 1.6: (skip) RG '${RESOURCE_GROUP}' does not exist"
 $RG_EXISTS \
-  && log "  step 1.7: detect orphaned serviceAssociationLinks (legionservicelink)" \
-  || log "  step 1.7: (skip) RG '${RESOURCE_GROUP}' does not exist"
-$RG_EXISTS \
   && log "  step 2:   delete resource group '${RESOURCE_GROUP}'" \
   || log "  step 2:   (skip) RG '${RESOURCE_GROUP}' does not exist"
 if [[ ${#MRGS[@]} -gt 0 ]]; then
@@ -259,9 +246,8 @@ fi
 #
 #   * InvalidResourceOperation ("another DELETE ... is active/in-progress")
 #     on workspaces/nodepools when the cascade races itself.
-#   * Workspaces_Delete ServerTimeout that leaves a serviceAssociationLink
-#     ('legionservicelink') on the delegated agentSubnet, which then pins
-#     the subnet, which pins every NSG in the VNet.
+#   * Workspaces_Delete ServerTimeout when the RG cascade tears down the
+#     workspace and its dependencies concurrently.
 #
 # The fix is to delete workspaces and supercomputers ONE AT A TIME, with a
 # long per-resource timeout, and wait for each to actually be gone before
@@ -391,155 +377,6 @@ else
   log "step 1.6: RG already gone, skipping NSG detach"
 fi
 
-# ---- step 1.7: detect orphaned subnet serviceAssociationLinks --------------
-#
-# Background: Discovery workspaces install an AI Foundry / AML capability host
-# that adds a serviceAssociationLink (SAL) named 'legionservicelink' on the
-# delegated agentSubnet. When the workspace deletes cleanly, the capability
-# host removes its own SAL. When a prior destroy attempt force-deleted the
-# workspace's managed RG (mrg-dwsp-*) before the capability host could
-# deregister -- or the workspace-delete API call timed out -- the SAL is
-# stranded on the subnet as an ORPHAN.
-#
-# CRITICAL: there is NO self-service API to remove an orphaned
-# 'Microsoft.App/environments' SAL. The Network RP allows the SAL to be
-# deleted only by the owning first-party service (the capability host, which
-# no longer exists). Confirmed unauthorized as of 2026-07:
-#
-#   * `az network vnet subnet update --remove serviceAssociationLinks` -> UnauthorizedClientApplication
-#   * `az rest DELETE .../serviceAssociationLinks/legionservicelink` -> UnauthorizedClientApplication
-#   * `az rest PATCH subnet {serviceAssociationLinks: []}` -> UnauthorizedClientApplication
-#   * `Microsoft.Web/purgeUnusedVirtualNetworkIntegration` -> returns success but does NOT remove Microsoft.App/environments SALs
-#
-# Cited by Microsoft Q&A #12746700 and #12722985: the only fix is a Microsoft
-# Support ticket for backend cleanup, or -- pragmatically -- ABANDON the RG.
-# See also: https://aka.ms/deletesubnet
-#
-# What this step does:
-#   1. Enumerate every subnet in the RG and detect orphaned SALs.
-#   2. If none found, log and continue.
-#   3. If found, PRINT a support-ticket template and stop the destroy unless
-#      --abandon-orphan-vnet was passed. In abandon mode, tag the RG so it's
-#      obviously quarantined and let step 2 skip the RG delete.
-
-ORPHAN_SAL_DETECTED=false
-ORPHAN_SAL_SUBNETS=()   # each entry: "<vnet>/<subnet>=<sal1>,<sal2>"
-
-detect_orphaned_sals() {
-  local vnets
-  vnets=$(az network vnet list -g "$RESOURCE_GROUP" --query "[].name" -o tsv 2>/dev/null || true)
-  if [[ -z "$vnets" ]]; then
-    log "  step 1.7: no VNets in RG"
-    return 0
-  fi
-
-  while IFS= read -r vnet; do
-    [[ -z "$vnet" ]] && continue
-    local subnets_json
-    subnets_json=$(az network vnet subnet list -g "$RESOURCE_GROUP" --vnet-name "$vnet" \
-      --query "[?serviceAssociationLinks!=null && length(serviceAssociationLinks)>\`0\`].{name:name, sals:serviceAssociationLinks[].name}" \
-      -o json 2>/dev/null || echo "[]")
-    local count
-    count=$(echo "$subnets_json" | jq 'length')
-    [[ "$count" == "0" ]] && continue
-
-    ORPHAN_SAL_DETECTED=true
-    while IFS= read -r entry; do
-      local subnet sals
-      subnet=$(echo "$entry" | jq -r '.name')
-      sals=$(echo "$entry" | jq -r '.sals | join(",")')
-      ORPHAN_SAL_SUBNETS+=("${vnet}/${subnet}=${sals}")
-      warn "  step 1.7: ORPHAN SAL detected: ${vnet}/${subnet} -> ${sals}"
-    done < <(echo "$subnets_json" | jq -c '.[]')
-  done <<< "$vnets"
-}
-
-print_orphan_sal_guidance() {
-  err ""
-  err "  ============================================================================"
-  err "  ORPHANED serviceAssociationLink DETECTED - NO SELF-SERVICE FIX AVAILABLE"
-  err "  ============================================================================"
-  err ""
-  err "  Affected subnet(s):"
-  for entry in "${ORPHAN_SAL_SUBNETS[@]}"; do
-    err "    * ${entry}"
-  done
-  err ""
-  err "  Why this happens: a Discovery workspace's AI Foundry capability host"
-  err "  installs a SAL on the delegated agentSubnet. If the workspace or its"
-  err "  managed resource group is force-deleted before the capability host can"
-  err "  deregister, the SAL becomes an orphan. The Network RP blocks SAL removal"
-  err "  by any non-owning client (Azure CLI, PowerShell, Terraform, portal), so"
-  err "  no local fix works. This is documented in Microsoft Q&A #12746700 and"
-  err "  #12722985; see also https://aka.ms/deletesubnet."
-  err ""
-  err "  Two paths forward:"
-  err ""
-  err "  A. RECOMMENDED: Abandon this RG and redeploy to a fresh one."
-  err "     1. Re-run this script with --abandon-orphan-vnet to tag the RG and"
-  err "        skip the failing VNet/RG delete:"
-  err "          ./destroy.sh -g ${RESOURCE_GROUP} --abandon-orphan-vnet -y"
-  err "     2. Update terraform.tfvars to point at a NEW resource group name."
-  err "     3. Create the new RG and re-run 'terraform apply'."
-  err "     4. (Optional) File a Microsoft Support ticket to purge the orphaned"
-  err "        SAL(s) so the tainted RG can eventually be cleaned up."
-  err ""
-  err "  B. WAIT-AND-RETRY: File a Microsoft Support ticket now, wait for backend"
-  err "     cleanup, then re-run this script. Support-ticket template:"
-  err ""
-  err "     Subject: Orphaned Microsoft.App/environments serviceAssociationLink"
-  err "              (legionservicelink) blocking subnet + VNet deletion"
-  err ""
-  err "     Subscription: ${SUB_ID}"
-  err "     Resource group: ${RESOURCE_GROUP}"
-  err "     Affected subnet resource IDs:"
-  for entry in "${ORPHAN_SAL_SUBNETS[@]}"; do
-    local pair="${entry%=*}"
-    local vnet="${pair%%/*}"
-    local subnet="${pair##*/}"
-    err "       /subscriptions/${SUB_ID}/resourceGroups/${RESOURCE_GROUP}/providers/Microsoft.Network/virtualNetworks/${vnet}/subnets/${subnet}"
-  done
-  err ""
-  err "     Please have the Networking backend team remove the orphaned"
-  err "     'legionservicelink' serviceAssociationLink(s) so subnet + VNet"
-  err "     deletion can proceed. The owning capability host has already been"
-  err "     deleted (linked resource no longer exists)."
-  err ""
-  err "  ============================================================================"
-  err ""
-}
-
-if az group show --name "$RESOURCE_GROUP" >/dev/null 2>&1; then
-  log "step 1.7: scanning for orphaned subnet serviceAssociationLinks..."
-  detect_orphaned_sals
-  if $ORPHAN_SAL_DETECTED; then
-    if $ABANDON_ORPHAN_VNET; then
-      warn "  --abandon-orphan-vnet set: tagging RG and skipping the failing VNet/RG delete"
-      if ! $DRY_RUN; then
-        az group update -n "$RESOURCE_GROUP" --set \
-          tags.discovery_status=orphaned \
-          tags.discovery_reason=legionservicelink_orphan \
-          tags.discovery_orphan_date="$(date -u +%Y-%m-%d)" \
-          tags.discovery_support_ticket=pending \
-          -o none 2>/dev/null \
-          || warn "  failed to tag RG -- continuing"
-      fi
-      # Skip the RG-delete phase; anything else in the RG has already been
-      # drained by steps 1.5/1.6. The MRG cleanup in step 3 still runs.
-      SKIP_RG_DELETE=true
-    else
-      print_orphan_sal_guidance
-      exit 2
-    fi
-  else
-    ok "  step 1.7: no orphaned serviceAssociationLinks found"
-  fi
-else
-  log "step 1.7: RG already gone, skipping SAL scan"
-fi
-
-SKIP_RG_DELETE="${SKIP_RG_DELETE:-false}"
-
 # ---- step 2: delete the primary RG (with live progress monitoring) ---------
 #
 # We deliberately use --no-wait and poll ourselves so we can:
@@ -604,10 +441,7 @@ print_deadlock_hints() {
   err ""
 }
 
-if $SKIP_RG_DELETE; then
-  log "step 2: SKIPPED -- --abandon-orphan-vnet is set and the RG is tagged as orphaned"
-  log "         RG '${RESOURCE_GROUP}' will remain until the orphaned SAL is purged"
-elif az group show --name "$RESOURCE_GROUP" >/dev/null 2>&1; then
+if az group show --name "$RESOURCE_GROUP" >/dev/null 2>&1; then
   log "step 2: deleting resource group '${RESOURCE_GROUP}' (async; timeout ${RG_DELETE_TIMEOUT}m)..."
 
   # Fire and forget; we poll for completion below.
