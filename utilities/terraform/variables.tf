@@ -16,7 +16,7 @@ variable "resource_group_name" {
 variable "location" {
   description = "Azure region. Must be a Discovery-supported region."
   type        = string
-  default     = "swedencentral"
+  default     = "uksouth"
 
   validation {
     condition     = contains(["eastus", "eastus2", "uksouth", "swedencentral"], var.location)

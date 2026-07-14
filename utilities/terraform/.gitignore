@@ -12,3 +12,7 @@ terraform.tfvars
 
 # Plan artifacts.
 *.tfplan
+tfplan
+
+# Local-only test planning notes (kept out of the published module).
+TESTING-PLAN.md

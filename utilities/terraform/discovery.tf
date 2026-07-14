@@ -186,6 +186,14 @@ resource "azapi_resource" "discovery_storage_container" {
 
 # -----------------------------------------------------------------------------
 # Project (child of workspace)
+#
+# Implicit RP-side ordering (not visible to Terraform from references):
+#   * V2 project create validates that at least one ChatModelDeployment on the
+#     workspace is in `Succeeded` state -- otherwise it returns 400
+#     "Cannot create a V2 project: no ChatModelDeployment in Succeeded state
+#     found in workspace ...". Chat model and project both hang off the
+#     workspace as parallel children, so without an explicit depends_on
+#     Terraform will submit them concurrently and lose the race.
 # -----------------------------------------------------------------------------
 resource "azapi_resource" "project" {
   type      = "Microsoft.Discovery/workspaces/projects@2026-02-01-preview"
@@ -200,4 +208,6 @@ resource "azapi_resource" "project" {
       ]
     }
   }
+
+  depends_on = [azapi_resource.chat_model]
 }
