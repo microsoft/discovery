@@ -60,7 +60,6 @@ flowchart LR
 | [`evaluators/eval_datasets.py`](evaluators/eval_datasets.py) | Scope discovery, dataset resolution, and Foundry dataset assembly. |
 | [`evaluators/run_offline_eval.py`](evaluators/run_offline_eval.py) | Runs Foundry evaluators over captured rows; also a standalone offline CLI. |
 | [`evaluators/azure_credential.py`](evaluators/azure_credential.py) | Credential factory that survives long-running GitHub OIDC jobs. |
-| [`evaluators/invoke_and_capture.py`](evaluators/invoke_and_capture.py) | Helper for invoking an agent and capturing a single response. |
 
 ---
 
