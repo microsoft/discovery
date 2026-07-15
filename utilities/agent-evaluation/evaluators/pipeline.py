@@ -21,26 +21,26 @@ while still exercising the online agent against the user's chosen dataset.
 Programmatic use:
     from pipeline import EvaluationPipeline
     pipeline = EvaluationPipeline(
-        data_plane_endpoint="https://ws-<id>.workspace.discovery.azure.com",
+        workspace_api_url="https://<your-workspace>.workspace.discovery.azure.com",
         discovery_project="Literature-Research",
-        project_endpoint="<foundry-project-endpoint>",
+        foundry_project_endpoint="<foundry-project-endpoint>",
         datasets_dir="../datasets",
         dataset_project="literature-agent",
-        deployment_name="gpt-5.4-mini",
+        llm_judge_model_deployment_name="gpt-5.4-mini",
     )
     result = pipeline.run(agent="LiteratureAgent", suites="shared,tool-calling,retrieval")
     print(result.exit_code, result.summary())
 
 CLI use (a CI workflow can invoke this):
     python pipeline.py \
-        --data-plane-endpoint https://ws-<id>.workspace.discovery.azure.com \
-        --project-endpoint <foundry-project-endpoint> \
+        --workspace-api-url https://<your-workspace>.workspace.discovery.azure.com \
+        --foundry-project-endpoint <foundry-project-endpoint> \
         --discovery-project Literature-Research \
         --agent LiteratureAgent \
         --datasets-dir ../datasets \
         --dataset-project literature-agent \
         --suites shared,tool-calling,retrieval \
-        --deployment-name gpt-5.4-mini \
+        --llm-judge-model-deployment-name gpt-5.4-mini \
         --output-dir ./out \
         --fail-on errored
 
@@ -138,24 +138,24 @@ class EvaluationPipeline:
     ``run`` per agent/suite selection; reuse the instance across agents.
     """
 
-    def __init__(self, *, data_plane_endpoint: str, discovery_project: str,
-                 project_endpoint: str, datasets_dir, dataset_project: str,
-                 deployment_name: str | None = None, token: str | None = None,
+    def __init__(self, *, workspace_api_url: str, discovery_project: str,
+                 foundry_project_endpoint: str, datasets_dir, dataset_project: str,
+                 llm_judge_model_deployment_name: str | None = None, token: str | None = None,
                  scope: str = DEFAULT_SCOPE, api_version: str = DEFAULT_API_VERSION,
                  poll_seconds: int = 600, poll_interval: int = 3,
                  eval_poll_seconds: int = 900):
         self.discovery_project = discovery_project
         self.dataset_project = dataset_project
         self.datasets_dir = Path(datasets_dir)
-        self.deployment_name = deployment_name
+        self.llm_judge_model_deployment_name = llm_judge_model_deployment_name
         self.poll_seconds = poll_seconds
         self.poll_interval = poll_interval
         self.eval_poll_seconds = eval_poll_seconds
 
         self.client = DiscoveryAgentClient(
-            data_plane_endpoint, token, scope=scope, api_version=api_version)
+            workspace_api_url, token, scope=scope, api_version=api_version)
         self.foundry = AIProjectClient(
-            endpoint=project_endpoint, credential=get_credential())
+            endpoint=foundry_project_endpoint, credential=get_credential())
 
     # -- discovery ----------------------------------------------------------
     def available_suites(self) -> list[str]:
@@ -284,13 +284,13 @@ class EvaluationPipeline:
             captures_path.write_text(json.dumps(captures, indent=2), encoding="utf-8")
             result.captures_path = str(captures_path)
 
-        dataset = build_dataset(suite, config, eval_rows, self.deployment_name)
+        dataset = build_dataset(suite, config, eval_rows, self.llm_judge_model_deployment_name)
         if out_dir:
             dataset_out = out_dir / f"dataset-{suite}.json"
             dataset_out.write_text(json.dumps(dataset, indent=2), encoding="utf-8")
             result.dataset_path = str(dataset_out)
 
-        criteria = build_testing_criteria(dataset, self.deployment_name)
+        criteria = build_testing_criteria(dataset, self.llm_judge_model_deployment_name)
         if not criteria:
             print(f"  WARNING: no evaluators configured for suite '{suite}' -- skipping")
             result.status = "no-evaluators"
@@ -315,10 +315,12 @@ def main() -> int:
     parser = argparse.ArgumentParser(
         description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
     )
-    # Data-plane (live invocation) target.
-    parser.add_argument("--data-plane-endpoint", required=True,
-                        help="Workspace data-plane base URL, "
-                             "e.g. https://ws-<id>.workspace.discovery.azure.com")
+    # Workspace (live invocation) target.
+    parser.add_argument("--workspace-api-url", required=True,
+                        help="Discovery workspace API URL (the workspace data-plane base "
+                             "URL). Find it in the Azure portal on your "
+                             "Microsoft.Discovery/workspaces resource, or via 'az resource "
+                             "show'. Format: https://<your-workspace>.workspace.discovery.azure.com")
     parser.add_argument("--discovery-project", required=True,
                         help="Discovery project name used by the data-plane")
     parser.add_argument("--investigation", default=None,
@@ -329,10 +331,10 @@ def main() -> int:
     parser.add_argument("--agent", required=True,
                         help="Agent name (agent_reference) to invoke")
     # Foundry (evaluation) target.
-    parser.add_argument("--project-endpoint", required=True,
+    parser.add_argument("--foundry-project-endpoint", required=True,
                         help="Foundry project endpoint URL for running evaluators")
-    parser.add_argument("--deployment-name", default=None,
-                        help="Model deployment for LLM-judge / custom evaluators")
+    parser.add_argument("--llm-judge-model-deployment-name", default=None,
+                        help="Foundry model deployment used by the LLM-judge / custom evaluators")
     # Dataset / suite selection (end-user choices).
     parser.add_argument("--datasets-dir", required=True,
                         help="Root datasets directory (contains default/ and per-project dirs)")
@@ -366,12 +368,12 @@ def main() -> int:
     args = parser.parse_args()
 
     pipeline = EvaluationPipeline(
-        data_plane_endpoint=args.data_plane_endpoint,
+        workspace_api_url=args.workspace_api_url,
         discovery_project=args.discovery_project,
-        project_endpoint=args.project_endpoint,
+        foundry_project_endpoint=args.foundry_project_endpoint,
         datasets_dir=args.datasets_dir,
         dataset_project=args.dataset_project,
-        deployment_name=args.deployment_name,
+        llm_judge_model_deployment_name=args.llm_judge_model_deployment_name,
         token=args.token,
         scope=args.scope,
         api_version=args.api_version,

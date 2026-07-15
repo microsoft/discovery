@@ -19,7 +19,7 @@ identity). If the CLI path fails with 'Please run az login', run:
 
 Example:
     from discovery_client import DiscoveryAgentClient
-    client = DiscoveryAgentClient("https://ws-<id>.workspace.discovery.azure.com")
+    client = DiscoveryAgentClient("https://<your-workspace>.workspace.discovery.azure.com")
     client.create_investigation("Literature-Research", "eval-001")
     response, conv = client.invoke(
         "Literature-Research", "eval-001", "LiteratureAgent",

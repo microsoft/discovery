@@ -97,8 +97,10 @@ agent.
 ### Prerequisites
 
 - Python >= 3.10.
-- A Discovery workspace with your agent deployed, and its **data-plane endpoint**
-  (`https://ws-<id>.workspace.discovery.azure.com`).
+- A Discovery workspace with your agent deployed, and its **workspace API URL**
+  (the workspace data-plane base URL). Find it in the Azure portal on your
+  `Microsoft.Discovery/workspaces` resource (or via `az resource show`). Format:
+  `https://<your-workspace>.workspace.discovery.azure.com`.
 - A Foundry **project endpoint** and a **model deployment** for the LLM-judge
   evaluators.
 - Access to the Discovery data-plane audience
@@ -115,11 +117,11 @@ az login --scope https://discovery.azure.com/.default
 
 # Run the pipeline for one agent across the three sample suites.
 python utilities/agent-evaluation/evaluators/pipeline.py \
-    --data-plane-endpoint https://ws-<id>.workspace.discovery.azure.com \
+    --workspace-api-url https://<your-workspace>.workspace.discovery.azure.com \
     --discovery-project Literature-Research \
     --agent LiteratureAgent \
-    --project-endpoint <foundry-project-endpoint> \
-    --deployment-name gpt-5.4-mini \
+    --foundry-project-endpoint <foundry-project-endpoint> \
+    --llm-judge-model-deployment-name gpt-5.4-mini \
     --datasets-dir utilities/agent-evaluation/datasets \
     --dataset-project literature-agent \
     --suites shared,tool-calling,retrieval \
@@ -134,8 +136,8 @@ Copy [`workflows/agent-evaluation.yml`](workflows/agent-evaluation.yml) into you
 own repository's `.github/workflows/` and set these repository variables:
 
 - Auth (OIDC): `AZURE_CLIENT_ID`, `AZURE_TENANT_ID`, `AZURE_SUBSCRIPTION_ID`
-- Endpoints: `DISCOVERY_DATA_PLANE_ENDPOINT`, `PROJECT_ENDPOINT`,
-  `EVALUATION_DEPLOYMENT_NAME`
+- Endpoints: `DISCOVERY_WORKSPACE_API_URL`, `FOUNDRY_PROJECT_ENDPOINT`,
+  `LLM_JUDGE_MODEL_DEPLOYMENT_NAME`
 
 Authentication uses GitHub OIDC via `azure/login@v2`. Because Discovery
 investigations can run for many minutes, the credential factory re-mints a fresh
@@ -146,7 +148,7 @@ OIDC token on every refresh.
 ## Adapting this sample
 
 - **New agent / project:** change `--discovery-project`, `--agent`, and
-  `--dataset-project`, and point `--project-endpoint` at your Foundry project.
+  `--dataset-project`, and point `--foundry-project-endpoint` at your Foundry project.
 - **New queries:** edit the `<suite>-evaluators.json` files (or add a new
   `datasets/<your-project>/` directory that overrides `datasets/default/`).
 - **New suite:** drop a `<suite>-evaluators.json` file — no code change needed.

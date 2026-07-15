@@ -12,9 +12,9 @@
 #
 # Auth: GitHub OIDC (azure/login@v2). Required repository variables:
 #   AZURE_CLIENT_ID, AZURE_TENANT_ID, AZURE_SUBSCRIPTION_ID
-#   DISCOVERY_DATA_PLANE_ENDPOINT   workspace data-plane base URL
-#   PROJECT_ENDPOINT                Foundry project endpoint for the evaluators
-#   EVALUATION_DEPLOYMENT_NAME      model deployment for LLM-judge evaluators
+#   DISCOVERY_WORKSPACE_API_URL       workspace API URL (workspace data-plane base URL)
+#   FOUNDRY_PROJECT_ENDPOINT          Foundry project endpoint for the evaluators
+#   LLM_JUDGE_MODEL_DEPLOYMENT_NAME   model deployment for LLM-judge evaluators
 # =============================================================================
 name: Agent Evaluation (sample)
 
@@ -60,9 +60,9 @@ jobs:
     environment: dev
     timeout-minutes: 120
     env:
-      DATA_PLANE_ENDPOINT: ${{ vars.DISCOVERY_DATA_PLANE_ENDPOINT }}
-      PROJECT_ENDPOINT: ${{ vars.PROJECT_ENDPOINT }}
-      DEPLOYMENT_NAME: ${{ vars.EVALUATION_DEPLOYMENT_NAME }}
+      WORKSPACE_API_URL: ${{ vars.DISCOVERY_WORKSPACE_API_URL }}
+      FOUNDRY_PROJECT_ENDPOINT: ${{ vars.FOUNDRY_PROJECT_ENDPOINT }}
+      MODEL_DEPLOYMENT_NAME: ${{ vars.LLM_JUDGE_MODEL_DEPLOYMENT_NAME }}
       MAX_QUERIES: ${{ inputs.maxQueries }}
       FAIL_ON: ${{ inputs.failOn }}
     steps:
@@ -95,12 +95,12 @@ jobs:
           AZURE_TENANT_ID: ${{ vars.AZURE_TENANT_ID }}
         run: |
           python3 "${GITHUB_WORKSPACE}/utilities/agent-evaluation/evaluators/pipeline.py" \
-            --data-plane-endpoint "${DATA_PLANE_ENDPOINT}" \
+            --workspace-api-url "${WORKSPACE_API_URL}" \
             --discovery-project "${{ inputs.discoveryProject }}" \
             --investigation-prefix "eval" \
             --agent "${{ inputs.agent }}" \
-            --project-endpoint "${PROJECT_ENDPOINT}" \
-            --deployment-name "${DEPLOYMENT_NAME}" \
+            --foundry-project-endpoint "${FOUNDRY_PROJECT_ENDPOINT}" \
+            --llm-judge-model-deployment-name "${MODEL_DEPLOYMENT_NAME}" \
             --datasets-dir "${GITHUB_WORKSPACE}/utilities/agent-evaluation/datasets" \
             --dataset-project "${{ inputs.datasetProject }}" \
             --suites "${{ inputs.suites }}" \

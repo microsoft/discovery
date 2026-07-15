@@ -28,9 +28,9 @@ initialization_parameters (e.g. {"builtin.groundedness": {"deployment_name": "gp
 
 Usage:
     python run_offline_eval.py \
-        --endpoint <project-endpoint> \
+        --foundry-project-endpoint <foundry-project-endpoint> \
         --data-path <dataset.json> \
-        [--deployment-name <model-deployment>] \
+        [--llm-judge-model-deployment-name <model-deployment>] \
         [--poll-seconds 900] \
         [--fail-on errored|failed|none] \
         [--output results.json]
@@ -48,8 +48,9 @@ from azure.identity import DefaultAzureCredential
 from openai.types.eval_create_params import DataSourceConfigCustom
 
 # Builtin metric evaluators that do NOT take a model deployment (no LLM judge).
-# Everything else gets deployment_name auto-injected when --deployment-name is
-# supplied and the dataset does not override it via evaluator_parameters.
+# Everything else gets deployment_name auto-injected when
+# --llm-judge-model-deployment-name is supplied and the dataset does not
+# override it via evaluator_parameters.
 NO_DEPLOYMENT_EVALUATORS = {
     "builtin.document_retrieval",
 }
@@ -300,12 +301,12 @@ def main() -> int:
         description="Run Foundry evaluators over pre-captured agent responses "
         "(no live agent target)."
     )
-    parser.add_argument("--endpoint", required=True, help="Foundry project endpoint URL.")
+    parser.add_argument("--foundry-project-endpoint", required=True, help="Foundry project endpoint URL.")
     parser.add_argument("--data-path", required=True, help="Dataset JSON file.")
     parser.add_argument(
-        "--deployment-name",
+        "--llm-judge-model-deployment-name",
         default=None,
-        help="Model deployment for LLM-judge evaluators (auto-injected unless "
+        help="Foundry model deployment for LLM-judge evaluators (auto-injected unless "
         "the dataset overrides it via evaluator_parameters).",
     )
     parser.add_argument("--poll-seconds", type=int, default=900)
@@ -325,13 +326,13 @@ def main() -> int:
         print(f"ERROR: no data rows in {args.data_path}", file=sys.stderr)
         return 1
 
-    criteria = _testing_criteria(dataset, args.deployment_name)
+    criteria = _testing_criteria(dataset, args.llm_judge_model_deployment_name)
     if not criteria:
         print(f"ERROR: no evaluators in {args.data_path}", file=sys.stderr)
         return 1
 
     project = AIProjectClient(
-        endpoint=args.endpoint, credential=DefaultAzureCredential()
+        endpoint=args.foundry_project_endpoint, credential=DefaultAzureCredential()
     )
 
     name = dataset.get("name", Path(args.data_path).stem)
