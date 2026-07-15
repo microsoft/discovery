@@ -1,14 +1,14 @@
-"""Dataset discovery, scope resolution, and Foundry-dataset assembly helpers.
+"""Dataset discovery, suite resolution, and Foundry-dataset assembly helpers.
 
 These are the reusable, side-effect-free pieces the evaluation pipeline uses to:
-  - discover which evaluation scopes a project supports (data-driven: a scope
+  - discover which evaluation suites a project supports (data-driven: a suite
     "<name>" is backed by a "<name>-evaluators.json" dataset file),
-  - resolve a scope's dataset file (project-specific first, then default/),
+  - resolve a suite's dataset file (project-specific first, then default/),
   - mint a fresh, length-bounded investigation id per run,
   - assemble a Foundry-compatible combined dataset from captured response rows.
 
-A scope requires NO code change to add: just drop a "<scope>-evaluators.json"
-dataset file under the project directory or default/. Conventional scopes are
+A suite requires NO code change to add: just drop a "<suite>-evaluators.json"
+dataset file under the project directory or default/. Conventional suites are
 shared, tool-calling, and retrieval.
 """
 
@@ -17,7 +17,7 @@ import re
 import time
 from pathlib import Path
 
-# A scope "<scope>" is backed by a dataset file "<scope>-evaluators.json".
+# A suite "<suite>" is backed by a dataset file "<suite>-evaluators.json".
 DATASET_SUFFIX = "-evaluators.json"
 
 _INVESTIGATION_NAME_MAX = 24
@@ -26,51 +26,51 @@ _BASE36 = "0123456789abcdefghijklmnopqrstuvwxyz"
 _INVESTIGATION_RAND_LEN = 3
 
 
-def scope_filename(scope: str) -> str:
-    """Dataset filename backing a scope (uniform: '<scope>-evaluators.json')."""
-    return f"{scope}{DATASET_SUFFIX}"
+def suite_filename(suite: str) -> str:
+    """Dataset filename backing a suite (uniform: '<suite>-evaluators.json')."""
+    return f"{suite}{DATASET_SUFFIX}"
 
 
-def discover_scopes(datasets_dir: Path, project: str) -> list[str]:
-    """All scopes available to a project: the union of '<scope>-evaluators.json'
+def discover_suites(datasets_dir: Path, project: str) -> list[str]:
+    """All suites available to a project: the union of '<suite>-evaluators.json'
     files in the project directory and in default/ (project overrides default)."""
-    scopes: set[str] = set()
+    suites: set[str] = set()
     for directory in (datasets_dir / project, datasets_dir / "default"):
         if directory.is_dir():
             for path in directory.glob(f"*{DATASET_SUFFIX}"):
-                scopes.add(path.name[: -len(DATASET_SUFFIX)])
-    return sorted(scopes)
+                suites.add(path.name[: -len(DATASET_SUFFIX)])
+    return sorted(suites)
 
 
-def parse_scopes(raw: str, available: list[str]) -> list[str]:
-    """Resolve a user's scope selection against the scopes actually available
-    (discovered from dataset files). 'all' expands to every available scope."""
+def parse_suites(raw: str, available: list[str]) -> list[str]:
+    """Resolve a user's suite selection against the suites actually available
+    (discovered from dataset files). 'all' expands to every available suite."""
     if raw.strip().lower() == "all":
         return list(available)
-    scopes = []
+    suites = []
     for token in raw.split(","):
-        scope = token.strip().lower()
-        if not scope:
+        suite = token.strip().lower()
+        if not suite:
             continue
-        if scope not in available:
-            print(f"WARNING: scope '{scope}' has no '{scope_filename(scope)}' "
+        if suite not in available:
+            print(f"WARNING: suite '{suite}' has no '{suite_filename(suite)}' "
                   f"dataset for this project or in default/ (skipped). "
                   f"Available: {', '.join(available) or '(none)'}, all")
             continue
-        scopes.append(scope)
-    return scopes
+        suites.append(suite)
+    return suites
 
 
-def resolve_dataset(scope: str, datasets_dir: Path, project: str) -> Path | None:
-    """Resolve a scope's dataset file: project-specific first, then default/."""
-    filename = scope_filename(scope)
+def resolve_dataset(suite: str, datasets_dir: Path, project: str) -> Path | None:
+    """Resolve a suite's dataset file: project-specific first, then default/."""
+    filename = suite_filename(suite)
     project_path = datasets_dir / project / filename
     default_path = datasets_dir / "default" / filename
     if project_path.is_file():
         return project_path
     if default_path.is_file():
         return default_path
-    print(f"  WARNING: no {filename} for project '{project}' or in default/ -- skipping scope")
+    print(f"  WARNING: no {filename} for project '{project}' or in default/ -- skipping suite")
     return None
 
 
@@ -143,8 +143,8 @@ def augment_evaluator_parameters(config: dict, deployment_name: str | None) -> d
     custom (non-builtin) evaluator that does not already define them, preserving
     any explicit evaluator_parameters from the dataset.
 
-    Scope-agnostic: only the dataset's evaluator list drives behavior, so a
-    custom evaluator works in any scope.
+    Suite-agnostic: only the dataset's evaluator list drives behavior, so a
+    custom evaluator works in any suite.
     """
     params = dict(config.get("evaluator_parameters", {}))
     for evaluator in config.get("evaluators", []):
@@ -154,16 +154,16 @@ def augment_evaluator_parameters(config: dict, deployment_name: str | None) -> d
     return params
 
 
-def build_dataset(scope: str, config: dict, eval_rows: list[dict],
+def build_dataset(suite: str, config: dict, eval_rows: list[dict],
                   deployment_name: str | None) -> dict:
     """Assemble a Foundry-compatible combined dataset from captured eval rows.
 
-    Carries the scope's selected evaluators (and any custom evaluator params)
+    Carries the suite's selected evaluators (and any custom evaluator params)
     from the source dataset config, maps every captured field to {{item.*}}, and
     embeds the captured rows as static data.
     """
     dataset = {
-        "name": f"investigation-{scope}",
+        "name": f"investigation-{suite}",
         "evaluators": config.get("evaluators", []),
         "data_mapping": build_data_mapping(eval_rows),
         "data": eval_rows,

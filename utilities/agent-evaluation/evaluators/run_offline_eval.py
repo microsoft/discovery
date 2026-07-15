@@ -24,7 +24,7 @@ Dataset schema (two differences from a live-agent eval dataset):
   - each `data` row carries the captured fields the evaluators consume.
 
 Optional `evaluator_parameters` maps an evaluator name to its
-initialization_parameters (e.g. {"builtin.groundedness": {"deployment_name": "gpt-4o"}}).
+initialization_parameters (e.g. {"builtin.groundedness": {"deployment_name": "gpt-5.4-mini"}}).
 
 Usage:
     python run_offline_eval.py \

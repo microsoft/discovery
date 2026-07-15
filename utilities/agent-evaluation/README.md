@@ -9,7 +9,7 @@ built-in evaluators.
 Use it as a starting point to build your own evaluation pipeline: swap in your
 project, agent, bookshelf documents, and dataset queries.
 
-> **Scope note:** like everything under `utilities/`, this sample targets
+> **Applicability note:** like everything under `utilities/`, this sample targets
 > **Microsoft Discovery services** (the Azure cloud experience). It is not used
 > by the local Discovery app and is not run by any workflow in this repository.
 > It is a copyable reference, not operational tooling for this repo.
@@ -19,10 +19,10 @@ project, agent, bookshelf documents, and dataset queries.
 ## What it does
 
 The orchestrator [`evaluators/pipeline.py`](evaluators/pipeline.py) runs, per
-selected evaluation **scope**, this sequence:
+selected evaluation **suite**, this sequence:
 
-1. **Resolve the dataset for the scope.** A scope `<scope>` is backed by a
-   `<scope>-evaluators.json` file. A project-specific dataset under
+1. **Resolve the dataset for the suite.** A suite `<suite>` is backed by a
+   `<suite>-evaluators.json` file. A project-specific dataset under
    `datasets/<project>/` is preferred, falling back to `datasets/default/`.
 2. **Create a fresh investigation** so evaluation traffic stays isolated from
    real user/production investigations.
@@ -43,7 +43,7 @@ selected evaluation **scope**, this sequence:
 
 ```mermaid
 flowchart LR
-  A[Query dataset<br/>scope-evaluators.json] --> B[DiscoveryAgentClient<br/>invoke online agent]
+  A[Query dataset<br/>suite-evaluators.json] --> B[DiscoveryAgentClient<br/>invoke online agent]
   B -->|real tools run| C[Captured OpenAI<br/>Responses object]
   C --> D[response_to_row<br/>restore tool_call_id,<br/>extract docs + ground truth]
   D --> E[Foundry eval<br/>static JSONL, no re-invoke]
@@ -57,20 +57,20 @@ flowchart LR
 | [`evaluators/pipeline.py`](evaluators/pipeline.py) | End-to-end orchestrator + CLI entry point. |
 | [`evaluators/discovery_client.py`](evaluators/discovery_client.py) | Data-plane client that invokes the online agent (investigation -> conversation -> response). |
 | [`evaluators/responses_to_eval_dataset.py`](evaluators/responses_to_eval_dataset.py) | Converts a captured Responses object into a well-formed offline-eval row. |
-| [`evaluators/eval_datasets.py`](evaluators/eval_datasets.py) | Scope discovery, dataset resolution, and Foundry dataset assembly. |
+| [`evaluators/eval_datasets.py`](evaluators/eval_datasets.py) | Suite discovery, dataset resolution, and Foundry dataset assembly. |
 | [`evaluators/run_offline_eval.py`](evaluators/run_offline_eval.py) | Runs Foundry evaluators over captured rows; also a standalone offline CLI. |
 | [`evaluators/azure_credential.py`](evaluators/azure_credential.py) | Credential factory that survives long-running GitHub OIDC jobs. |
 
 ---
 
-## Evaluation scopes and datasets
+## Evaluation suites and datasets
 
-Scopes are **data-driven**: adding a scope requires no code change, only a new
-`<scope>-evaluators.json` file under `datasets/<project>/` or
-`datasets/default/`. The sample ships three scopes for a literature-research
+Suites are **data-driven**: adding a suite requires no code change, only a new
+`<suite>-evaluators.json` file under `datasets/<project>/` or
+`datasets/default/`. The sample ships three suites for a literature-research
 agent under [`datasets/literature-agent/`](datasets/literature-agent):
 
-| Scope | Backing file | Evaluators |
+| Suite | Backing file | Evaluators |
 | --- | --- | --- |
 | `shared` | `shared-evaluators.json` | Task Adherence, Task Completion, Intent Resolution, Indirect Attack, Code Vulnerability, Coherence, Fluency, and risk/safety (violence, sexual, self-harm, hate/unfairness) |
 | `tool-calling` | `tool-calling-evaluators.json` | Groundedness, Tool Call Accuracy, Tool Input Accuracy, Tool Output Utilization, Tool Call Success |
@@ -113,16 +113,16 @@ pip install "./utilities/agent-evaluation[evaluation]"
 # Authenticate to the Discovery data-plane audience.
 az login --scope https://discovery.azure.com/.default
 
-# Run the pipeline for one agent across the three sample scopes.
+# Run the pipeline for one agent across the three sample suites.
 python utilities/agent-evaluation/evaluators/pipeline.py \
     --data-plane-endpoint https://ws-<id>.workspace.discovery.azure.com \
     --discovery-project Literature-Research \
     --agent LiteratureAgent \
     --project-endpoint <foundry-project-endpoint> \
-    --deployment-name gpt-4o \
+    --deployment-name gpt-5.4-mini \
     --datasets-dir utilities/agent-evaluation/datasets \
     --dataset-project literature-agent \
-    --scopes shared,tool-calling,retrieval \
+    --suites shared,tool-calling,retrieval \
     --max-queries 0 \
     --fail-on errored \
     --output-dir ./artifacts/agent-eval
@@ -147,6 +147,6 @@ OIDC token on every refresh.
 
 - **New agent / project:** change `--discovery-project`, `--agent`, and
   `--dataset-project`, and point `--project-endpoint` at your Foundry project.
-- **New queries:** edit the `<scope>-evaluators.json` files (or add a new
+- **New queries:** edit the `<suite>-evaluators.json` files (or add a new
   `datasets/<your-project>/` directory that overrides `datasets/default/`).
-- **New scope:** drop a `<scope>-evaluators.json` file — no code change needed.
+- **New suite:** drop a `<suite>-evaluators.json` file — no code change needed.

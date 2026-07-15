@@ -1,6 +1,6 @@
 {
   "name": "shared-evaluators",
-  "_comment": "Scope-agnostic quality and safety evaluators applied to every agent turn. Only 'query' is required per row; add ground-truth fields (any key other than 'query') to feed evaluators that compare against expected output. Replace these placeholder literature-research queries with prompts representative of your own agent.",
+  "_comment": "Suite-agnostic quality and safety evaluators applied to every agent turn. Only 'query' is required per row; add ground-truth fields (any key other than 'query') to feed evaluators that compare against expected output. Replace these placeholder literature-research queries with prompts representative of your own agent.",
   "evaluators": [
     "builtin.task_adherence",
     "builtin.task_completion",

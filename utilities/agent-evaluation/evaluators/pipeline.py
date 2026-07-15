@@ -1,14 +1,14 @@
 """End-to-end agent evaluation pipeline.
 
-Given a project, an agent, and one or more evaluation scopes, the pipeline:
-  1. Resolves each scope's dataset (project-specific first, then default/).
+Given a project, an agent, and one or more evaluation suites, the pipeline:
+  1. Resolves each suite's dataset (project-specific first, then default/).
   2. Drives the ONLINE agent against every dataset query through the Discovery
      workspace data-plane (DiscoveryAgentClient), capturing each response.
   3. Converts each captured response into a well-formed offline-eval row
      (tool_call_id restored from call_id; ground-truth fields carried through).
-  4. Assembles a Foundry-compatible combined dataset with the scope's selected
+  4. Assembles a Foundry-compatible combined dataset with the suite's selected
      evaluators and triggers a Foundry eval over it.
-  5. Returns a structured EvaluationResult (per-scope status, criteria summary,
+  5. Returns a structured EvaluationResult (per-suite status, criteria summary,
      artifact paths, and an overall exit code).
 
 Why this path (not bare Foundry agent eval / native traces): Discovery agents
@@ -26,9 +26,9 @@ Programmatic use:
         project_endpoint="<foundry-project-endpoint>",
         datasets_dir="../datasets",
         dataset_project="literature-agent",
-        deployment_name="gpt-4o",
+        deployment_name="gpt-5.4-mini",
     )
-    result = pipeline.run(agent="LiteratureAgent", scopes="shared,tool-calling,retrieval")
+    result = pipeline.run(agent="LiteratureAgent", suites="shared,tool-calling,retrieval")
     print(result.exit_code, result.summary())
 
 CLI use (a CI workflow can invoke this):
@@ -39,8 +39,8 @@ CLI use (a CI workflow can invoke this):
         --agent LiteratureAgent \
         --datasets-dir ../datasets \
         --dataset-project literature-agent \
-        --scopes shared,tool-calling,retrieval \
-        --deployment-name gpt-4o \
+        --suites shared,tool-calling,retrieval \
+        --deployment-name gpt-5.4-mini \
         --output-dir ./out \
         --fail-on errored
 
@@ -72,10 +72,10 @@ from discovery_client import (  # noqa: E402
 )
 from eval_datasets import (  # noqa: E402
     build_dataset,
-    discover_scopes,
+    discover_suites,
     ground_truth_fields,
     make_investigation_name,
-    parse_scopes,
+    parse_suites,
     resolve_dataset,
 )
 from responses_to_eval_dataset import response_to_row  # noqa: E402
@@ -88,9 +88,9 @@ from run_offline_eval import (  # noqa: E402
 
 
 @dataclass
-class ScopeResult:
-    """Outcome of evaluating one scope."""
-    scope: str
+class SuiteResult:
+    """Outcome of evaluating one suite."""
+    suite: str
     status: str                      # completed | failed | canceled | no-captures | no-evaluators | no-dataset
     errored: int = 0
     criteria: dict = field(default_factory=dict)
@@ -107,18 +107,18 @@ class EvaluationResult:
     project: str
     agent: str
     investigation: str
-    scopes: list[ScopeResult]
+    suites: list[SuiteResult]
     exit_code: int
 
     def summary(self) -> dict:
-        """Compact JSON-serializable summary keyed by scope."""
+        """Compact JSON-serializable summary keyed by suite."""
         return {
             "project": self.project,
             "agent": self.agent,
             "investigation": self.investigation,
             "exit_code": self.exit_code,
-            "scopes": {
-                s.scope: {
+            "suites": {
+                s.suite: {
                     "status": s.status,
                     "errored": s.errored,
                     "criteria": s.criteria,
@@ -126,7 +126,7 @@ class EvaluationResult:
                     "captured": s.captured,
                     "results": s.results_path,
                 }
-                for s in self.scopes
+                for s in self.suites
             },
         }
 
@@ -135,7 +135,7 @@ class EvaluationPipeline:
     """Orchestrates live capture + Foundry scoring for one Discovery project.
 
     One pipeline instance targets a single project (data-plane + Foundry). Call
-    ``run`` per agent/scope selection; reuse the instance across agents.
+    ``run`` per agent/suite selection; reuse the instance across agents.
     """
 
     def __init__(self, *, data_plane_endpoint: str, discovery_project: str,
@@ -158,26 +158,26 @@ class EvaluationPipeline:
             endpoint=project_endpoint, credential=get_credential())
 
     # -- discovery ----------------------------------------------------------
-    def available_scopes(self) -> list[str]:
-        """Scopes this project supports (data-driven from dataset files)."""
-        return discover_scopes(self.datasets_dir, self.dataset_project)
+    def available_suites(self) -> list[str]:
+        """Suites this project supports (data-driven from dataset files)."""
+        return discover_suites(self.datasets_dir, self.dataset_project)
 
     # -- main entry point ---------------------------------------------------
-    def run(self, agent: str, scopes: str, *, investigation: str | None = None,
+    def run(self, agent: str, suites: str, *, investigation: str | None = None,
             investigation_prefix: str = "eval", max_queries: int = 0,
             fail_on: str = "errored", output_dir=None) -> EvaluationResult:
-        """Evaluate ``agent`` across the selected ``scopes`` and return results.
+        """Evaluate ``agent`` across the selected ``suites`` and return results.
 
-        ``scopes`` is a comma-separated selection or 'all'. A fresh investigation
+        ``suites`` is a comma-separated selection or 'all'. A fresh investigation
         is created per run unless ``investigation`` is supplied. When
         ``output_dir`` is given, captures/datasets/results/summary are persisted
         there for audit.
         """
-        available = self.available_scopes()
-        selected = parse_scopes(scopes, available)
+        available = self.available_suites()
+        selected = parse_suites(suites, available)
         if not selected:
             raise ValueError(
-                f"no valid scopes selected (available for "
+                f"no valid suites selected (available for "
                 f"'{self.dataset_project}': {', '.join(available) or '(none)'})")
 
         out_dir = Path(output_dir) if output_dir else None
@@ -187,20 +187,20 @@ class EvaluationPipeline:
         investigation = self._ensure_investigation(
             agent, investigation, investigation_prefix)
 
-        scope_results: list[ScopeResult] = []
+        suite_results: list[SuiteResult] = []
         exit_code = 0
-        for scope in selected:
-            print(f"\n=== Scope: {scope} ===")
-            result = self._run_scope(
-                scope, agent, investigation, max_queries, fail_on, out_dir)
-            scope_results.append(result)
+        for suite in selected:
+            print(f"\n=== Suite: {suite} ===")
+            result = self._run_suite(
+                suite, agent, investigation, max_queries, fail_on, out_dir)
+            suite_results.append(result)
             if result.status in ("failed", "canceled") or result.errored:
                 if fail_on != "none":
                     exit_code = 2
 
         eval_result = EvaluationResult(
             project=self.discovery_project, agent=agent,
-            investigation=investigation, scopes=scope_results, exit_code=exit_code,
+            investigation=investigation, suites=suite_results, exit_code=exit_code,
         )
         if out_dir:
             (out_dir / "summary.json").write_text(
@@ -258,50 +258,50 @@ class EvaluationPipeline:
             eval_rows.append(response_to_row(response, query, gt))
         return eval_rows, captures
 
-    def _run_scope(self, scope, agent, investigation, max_queries, fail_on,
-                   out_dir) -> ScopeResult:
-        """Resolve, capture, build dataset, and score one scope."""
-        dataset_path = resolve_dataset(scope, self.datasets_dir, self.dataset_project)
+    def _run_suite(self, suite, agent, investigation, max_queries, fail_on,
+                   out_dir) -> SuiteResult:
+        """Resolve, capture, build dataset, and score one suite."""
+        dataset_path = resolve_dataset(suite, self.datasets_dir, self.dataset_project)
         if dataset_path is None:
-            return ScopeResult(scope=scope, status="no-dataset")
+            return SuiteResult(suite=suite, status="no-dataset")
         config = json.loads(dataset_path.read_text(encoding="utf-8"))
         src_rows = config.get("data", [])
         if not src_rows:
             print(f"  WARNING: dataset {dataset_path} has no data rows -- skipping")
-            return ScopeResult(scope=scope, status="no-dataset")
+            return SuiteResult(suite=suite, status="no-dataset")
         print(f"  dataset: {dataset_path} ({len(src_rows)} queries)")
 
         eval_rows, captures = self._capture_responses(
             agent, investigation, src_rows, max_queries)
-        result = ScopeResult(scope=scope, status="no-captures",
+        result = SuiteResult(suite=suite, status="no-captures",
                              queries=len(src_rows), captured=len(eval_rows))
         if not eval_rows:
-            print(f"  WARNING: no responses captured for scope '{scope}' -- skipping eval")
+            print(f"  WARNING: no responses captured for suite '{suite}' -- skipping eval")
             return result
 
         if out_dir:
-            captures_path = out_dir / f"captures-{scope}.json"
+            captures_path = out_dir / f"captures-{suite}.json"
             captures_path.write_text(json.dumps(captures, indent=2), encoding="utf-8")
             result.captures_path = str(captures_path)
 
-        dataset = build_dataset(scope, config, eval_rows, self.deployment_name)
+        dataset = build_dataset(suite, config, eval_rows, self.deployment_name)
         if out_dir:
-            dataset_out = out_dir / f"dataset-{scope}.json"
+            dataset_out = out_dir / f"dataset-{suite}.json"
             dataset_out.write_text(json.dumps(dataset, indent=2), encoding="utf-8")
             result.dataset_path = str(dataset_out)
 
         criteria = build_testing_criteria(dataset, self.deployment_name)
         if not criteria:
-            print(f"  WARNING: no evaluators configured for scope '{scope}' -- skipping")
+            print(f"  WARNING: no evaluators configured for suite '{suite}' -- skipping")
             result.status = "no-evaluators"
             return result
 
         clean_rows = [clean_row(r) for r in eval_rows]
         run, summary, errored, item_errors = execute_eval(
-            self.foundry, f"investigation:{scope}", clean_rows, criteria,
+            self.foundry, f"investigation:{suite}", clean_rows, criteria,
             self.eval_poll_seconds)
 
-        results_path = str(out_dir / f"results-{scope}.json") if out_dir else None
+        results_path = str(out_dir / f"results-{suite}.json") if out_dir else None
         report(run, summary, errored, item_errors, results_path, fail_on)
         result.status = run.status
         result.errored = errored
@@ -333,17 +333,17 @@ def main() -> int:
                         help="Foundry project endpoint URL for running evaluators")
     parser.add_argument("--deployment-name", default=None,
                         help="Model deployment for LLM-judge / custom evaluators")
-    # Dataset / scope selection (end-user choices).
+    # Dataset / suite selection (end-user choices).
     parser.add_argument("--datasets-dir", required=True,
                         help="Root datasets directory (contains default/ and per-project dirs)")
     parser.add_argument("--dataset-project", required=True,
                         help="Dataset subdirectory to prefer (e.g. literature-agent)")
-    parser.add_argument("--scopes", required=True,
-                        help="Comma-separated scopes to evaluate, or 'all'. A scope "
+    parser.add_argument("--suites", required=True,
+                        help="Comma-separated suites to evaluate, or 'all'. A suite "
                              "'<name>' is backed by a '<name>-evaluators.json' dataset "
                              "(e.g. shared, tool-calling, retrieval)")
     parser.add_argument("--max-queries", type=int, default=0,
-                        help="Cap queries invoked per scope (0 = no cap)")
+                        help="Cap queries invoked per suite (0 = no cap)")
     # Run control.
     parser.add_argument("--output-dir", required=True,
                         help="Directory for captured responses, datasets, and results")
@@ -383,7 +383,7 @@ def main() -> int:
     try:
         result = pipeline.run(
             agent=args.agent,
-            scopes=args.scopes,
+            suites=args.suites,
             investigation=args.investigation,
             investigation_prefix=args.investigation_prefix,
             max_queries=args.max_queries,

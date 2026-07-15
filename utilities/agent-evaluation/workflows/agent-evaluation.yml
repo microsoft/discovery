@@ -5,7 +5,7 @@
 # see utilities/agent-evaluation/README.md for how to extend it to a matrix of
 # agents/projects.
 #
-# What it does: drives the ONLINE agent against the selected dataset scopes
+# What it does: drives the ONLINE agent against the selected dataset suites
 # through the Discovery workspace data-plane, captures each response, and scores
 # the captured responses with Foundry built-in evaluators. Results are uploaded
 # as a build artifact.
@@ -33,12 +33,12 @@ on:
         description: "Dataset subdirectory under datasets/"
         type: string
         default: "literature-agent"
-      scopes:
-        description: "Comma-separated scopes, or 'all'"
+      suites:
+        description: "Comma-separated suites, or 'all'"
         type: string
         default: "shared,tool-calling,retrieval"
       maxQueries:
-        description: "Max queries per scope (0 = no cap)"
+        description: "Max queries per suite (0 = no cap)"
         type: string
         default: "0"
       failOn:
@@ -103,7 +103,7 @@ jobs:
             --deployment-name "${DEPLOYMENT_NAME}" \
             --datasets-dir "${GITHUB_WORKSPACE}/utilities/agent-evaluation/datasets" \
             --dataset-project "${{ inputs.datasetProject }}" \
-            --scopes "${{ inputs.scopes }}" \
+            --suites "${{ inputs.suites }}" \
             --max-queries "${MAX_QUERIES}" \
             --fail-on "${FAIL_ON}" \
             --output-dir "${GITHUB_WORKSPACE}/artifacts/agent-eval"
