@@ -31,7 +31,7 @@ Usage:
         --foundry-project-endpoint <foundry-project-endpoint> \
         --data-path <dataset.json> \
         [--llm-judge-model-deployment-name <model-deployment>] \
-        [--poll-seconds 900] \
+        [--timeout 900] \
         [--fail-on errored|failed|none] \
         [--output results.json]
 """
@@ -189,7 +189,7 @@ def _aggregate(output_items):
     return summary, errored, item_errors
 
 
-def execute_eval(project, name, rows, criteria, poll_seconds):
+def execute_eval(project, name, rows, criteria, timeout):
     """Create a Foundry eval with a static JSONL data source, run it over `rows`,
     poll to completion, and return (run, summary, errored, item_errors).
 
@@ -222,17 +222,17 @@ def execute_eval(project, name, rows, criteria, poll_seconds):
         data_source=data_source,  # type: ignore[arg-type]
     )
     print(f"created eval run {run.id} status={run.status}")
-    return poll_run(oai, eval_object.id, run, poll_seconds)
+    return poll_run(oai, eval_object.id, run, timeout)
 
 
-def poll_run(oai, eval_id, run, poll_seconds):
+def poll_run(oai, eval_id, run, timeout):
     """Poll an eval run to completion and return (run, summary, errored, item_errors).
 
     Shared by the offline (static JSONL) and trace (azure_ai_traces) runners.
     """
     start = time.time()
     last = None
-    while time.time() - start < poll_seconds:
+    while time.time() - start < timeout:
         run = oai.evals.runs.retrieve(run_id=run.id, eval_id=eval_id)
         line = f"[{int(time.time() - start):4d}s] status={run.status} {run.result_counts}"
         if line != last:
@@ -242,7 +242,7 @@ def poll_run(oai, eval_id, run, poll_seconds):
             break
         time.sleep(10)
     else:
-        raise TimeoutError(f"run still {run.status} after {poll_seconds}s")
+        raise TimeoutError(f"run still {run.status} after {timeout}s")
 
     output_items = oai.evals.runs.output_items.list(run_id=run.id, eval_id=eval_id)
     summary, errored, item_errors = _aggregate(output_items)
@@ -309,7 +309,7 @@ def main() -> int:
         help="Foundry model deployment for LLM-judge evaluators (auto-injected unless "
         "the dataset overrides it via evaluator_parameters).",
     )
-    parser.add_argument("--poll-seconds", type=int, default=900)
+    parser.add_argument("--timeout", type=int, default=900)
     parser.add_argument(
         "--fail-on",
         choices=["errored", "failed", "none"],
@@ -338,7 +338,7 @@ def main() -> int:
     name = dataset.get("name", Path(args.data_path).stem)
     try:
         run, summary, errored, item_errors = execute_eval(
-            project, f"offline:{name}", rows, criteria, args.poll_seconds
+            project, f"offline:{name}", rows, criteria, args.timeout
         )
     except TimeoutError as exc:
         print(f"ERROR: {exc}", file=sys.stderr)

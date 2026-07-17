@@ -40,7 +40,7 @@ DEFAULT_SCOPE = "https://discovery.azure.com/.default"
 TERMINAL_STATUSES = {"completed", "failed", "incomplete", "cancelled", "canceled"}
 
 
-def get_token(scope: str = DEFAULT_SCOPE) -> str:
+def get_token() -> str:
     """Acquire a bearer token, preferring an explicit one from the environment.
 
     Honors the DISCOVERY_TOKEN environment variable, else falls back to
@@ -56,7 +56,7 @@ def get_token(scope: str = DEFAULT_SCOPE) -> str:
             "azure-identity is required for token auth. Install the 'evaluation' extra "
             "or pass a token explicitly / via DISCOVERY_TOKEN."
         )
-    return get_credential().get_token(scope).token
+    return get_credential().get_token(DEFAULT_SCOPE).token
 
 
 class DiscoveryAgentClient:
@@ -68,14 +68,12 @@ class DiscoveryAgentClient:
     """
 
     def __init__(self, endpoint: str, token: str | None = None, *,
-                 scope: str = DEFAULT_SCOPE,
                  api_version: str = DEFAULT_API_VERSION):
         if not endpoint:
             raise ValueError("endpoint is required")
         self.base = endpoint.rstrip("/")
         self.api_version = api_version
-        self.scope = scope
-        self.token = (token or "").replace("Bearer ", "").strip() or get_token(scope)
+        self.token = (token or "").replace("Bearer ", "").strip() or get_token()
 
     # -- low-level HTTP -----------------------------------------------------
     def _url(self, *segments: object, query: dict | None = None) -> str:
@@ -117,7 +115,7 @@ class DiscoveryAgentClient:
             detail = exc.read().decode("utf-8", errors="replace")
             raise SystemExit(
                 f"HTTP {exc.code} on {method} {url}\n{detail}\n"
-                "(If 401/403, try a different scope or pass a token. If 404, check "
+                "(If 401/403, pass a token. If 404, check "
                 "endpoint / project / investigation / api-version.)"
             ) from exc
 
@@ -202,9 +200,9 @@ class DiscoveryAgentClient:
         return payload.get("data", []) or []
 
     def poll_response(self, conversation: str, response_id: str, *,
-                      poll_seconds: int = 600, poll_interval: int = 3) -> dict:
+                      timeout: int = 600, poll_interval: int = 3) -> dict:
         """Poll a response until it reaches a terminal status (or timeout)."""
-        deadline = time.time() + poll_seconds
+        deadline = time.time() + timeout
         last_status = None
         while time.time() < deadline:
             response = self.get_response(conversation, response_id)
@@ -216,13 +214,13 @@ class DiscoveryAgentClient:
                 return response
             time.sleep(poll_interval)
         raise SystemExit(
-            f"Timed out after {poll_seconds}s waiting for response {response_id} "
+            f"Timed out after {timeout}s waiting for response {response_id} "
             f"(last status: {last_status})."
         )
 
     def invoke(self, project: str, investigation: str, agent: str, query: str, *,
                display_name: str | None = None, conversation: str | None = None,
-               poll_seconds: int = 600, poll_interval: int = 3) -> tuple[dict, str]:
+               timeout: int = 600, poll_interval: int = 3) -> tuple[dict, str]:
         """Invoke the agent for one query and poll. Returns (response, conv_id).
 
         The returned ``response`` is the well-formed OpenAI Responses object
@@ -233,5 +231,5 @@ class DiscoveryAgentClient:
             project, investigation, display_name=display_name)
         resp_id = self.create_response(conv_id, agent, query)
         response = self.poll_response(
-            conv_id, resp_id, poll_seconds=poll_seconds, poll_interval=poll_interval)
+            conv_id, resp_id, timeout=timeout, poll_interval=poll_interval)
         return response, conv_id

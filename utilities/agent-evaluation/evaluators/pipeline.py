@@ -45,7 +45,7 @@ CLI use (a CI workflow can invoke this):
         --fail-on errored
 
 Auth: the data-plane uses DefaultAzureCredential with the
-  https://discovery.azure.com/.default audience (override with --scope, or pass a
+  https://discovery.azure.com/.default audience (or pass a
   raw token via --token / DISCOVERY_TOKEN). The Foundry evaluation uses
   AIProjectClient with DefaultAzureCredential. Both work under the same service
   principal when the workflow exports AZURE_CLIENT_ID / AZURE_TENANT_ID / etc.
@@ -67,7 +67,6 @@ from azure.ai.projects import AIProjectClient  # noqa: E402
 from azure_credential import get_credential  # noqa: E402
 from discovery_client import (  # noqa: E402
     DEFAULT_API_VERSION,
-    DEFAULT_SCOPE,
     DiscoveryAgentClient,
 )
 from eval_datasets import (  # noqa: E402
@@ -141,19 +140,19 @@ class EvaluationPipeline:
     def __init__(self, *, workspace_api_url: str, discovery_project: str,
                  foundry_project_endpoint: str, datasets_dir, dataset_project: str,
                  llm_judge_model_deployment_name: str | None = None, token: str | None = None,
-                 scope: str = DEFAULT_SCOPE, api_version: str = DEFAULT_API_VERSION,
-                 poll_seconds: int = 600, poll_interval: int = 3,
-                 eval_poll_seconds: int = 900):
+                 api_version: str = DEFAULT_API_VERSION,
+                 timeout: int = 600, poll_interval: int = 3,
+                 eval_timeout: int = 900):
         self.discovery_project = discovery_project
         self.dataset_project = dataset_project
         self.datasets_dir = Path(datasets_dir)
         self.llm_judge_model_deployment_name = llm_judge_model_deployment_name
-        self.poll_seconds = poll_seconds
+        self.timeout = timeout
         self.poll_interval = poll_interval
-        self.eval_poll_seconds = eval_poll_seconds
+        self.eval_timeout = eval_timeout
 
         self.client = DiscoveryAgentClient(
-            workspace_api_url, token, scope=scope, api_version=api_version)
+            workspace_api_url, token, api_version=api_version)
         self.foundry = AIProjectClient(
             endpoint=foundry_project_endpoint, credential=get_credential())
 
@@ -241,7 +240,7 @@ class EvaluationPipeline:
             try:
                 response, conv_id = self.client.invoke(
                     self.discovery_project, investigation, agent, query,
-                    poll_seconds=self.poll_seconds, poll_interval=self.poll_interval)
+                    timeout=self.timeout, poll_interval=self.poll_interval)
             except SystemExit as exc:
                 print(f"      ERROR invoking agent (skipped): {exc}")
                 continue
@@ -299,7 +298,7 @@ class EvaluationPipeline:
         clean_rows = [clean_row(r) for r in eval_rows]
         run, summary, errored, item_errors = execute_eval(
             self.foundry, f"investigation:{suite}", clean_rows, criteria,
-            self.eval_poll_seconds)
+            self.eval_timeout)
 
         results_path = str(out_dir / f"results-{suite}.json") if out_dir else None
         report(run, summary, errored, item_errors, results_path, fail_on)
@@ -355,15 +354,13 @@ def main() -> int:
                              "fails, or never")
     parser.add_argument("--api-version", default=DEFAULT_API_VERSION,
                         help=f"Data-plane API version (default {DEFAULT_API_VERSION})")
-    parser.add_argument("--scope", default=DEFAULT_SCOPE,
-                        help=f"AAD token scope for the data-plane (default {DEFAULT_SCOPE})")
     parser.add_argument("--token", default=None,
-                        help="Raw data-plane bearer token (overrides --scope / DISCOVERY_TOKEN)")
-    parser.add_argument("--poll-seconds", type=int, default=600,
+                        help="Raw data-plane bearer token (overrides DISCOVERY_TOKEN)")
+    parser.add_argument("--timeout", type=int, default=600,
                         help="Max seconds to wait for each agent response (default 600)")
     parser.add_argument("--poll-interval", type=int, default=3,
                         help="Seconds between response polls (default 3)")
-    parser.add_argument("--eval-poll-seconds", type=int, default=900,
+    parser.add_argument("--eval-timeout", type=int, default=900,
                         help="Max seconds to wait for each Foundry eval run (default 900)")
     args = parser.parse_args()
 
@@ -375,11 +372,10 @@ def main() -> int:
         dataset_project=args.dataset_project,
         llm_judge_model_deployment_name=args.llm_judge_model_deployment_name,
         token=args.token,
-        scope=args.scope,
         api_version=args.api_version,
-        poll_seconds=args.poll_seconds,
+        timeout=args.timeout,
         poll_interval=args.poll_interval,
-        eval_poll_seconds=args.eval_poll_seconds,
+        eval_timeout=args.eval_timeout,
     )
 
     try:
