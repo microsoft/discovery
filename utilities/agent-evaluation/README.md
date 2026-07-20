@@ -22,8 +22,7 @@ The orchestrator [`evaluators/pipeline.py`](evaluators/pipeline.py) runs, per
 selected evaluation **suite**, this sequence:
 
 1. **Resolve the dataset for the suite.** A suite `<suite>` is backed by a
-   `<suite>-evaluators.json` file. A project-specific dataset under
-   `datasets/<project>/` is preferred, falling back to `datasets/default/`.
+   `<suite>-evaluators.json` file found in the `--dataset-dir` directory.
 2. **Create a fresh investigation** so evaluation traffic stays isolated from
    real user/production investigations.
 3. **Invoke the online agent per query** through the workspace data-plane
@@ -66,9 +65,9 @@ flowchart LR
 ## Evaluation suites and datasets
 
 Suites are **data-driven**: adding a suite requires no code change, only a new
-`<suite>-evaluators.json` file under `datasets/<project>/` or
-`datasets/default/`. The sample ships three suites for a literature-research
-agent under [`datasets/literature-agent/`](datasets/literature-agent):
+`<suite>-evaluators.json` file in the dataset directory. The sample ships three
+suites for a literature-research agent under
+[`datasets/literature-agent/`](datasets/literature-agent):
 
 | Suite | Backing file | Evaluators |
 | --- | --- | --- |
@@ -122,10 +121,10 @@ python utilities/agent-evaluation/evaluators/pipeline.py \
     --agent LiteratureAgent \
     --foundry-project-endpoint <foundry-project-endpoint> \
     --llm-judge-model-deployment-name gpt-5.4-mini \
-    --datasets-dir utilities/agent-evaluation/datasets \
-    --dataset-project literature-agent \
+    --dataset-dir utilities/agent-evaluation/datasets/literature-agent \
     --suites shared,tool-calling,retrieval \
     --max-queries 0 \
+    --concurrency 4 \
     --fail-on errored \
     --output-dir ./artifacts/agent-eval
 ```
@@ -148,7 +147,7 @@ OIDC token on every refresh.
 ## Adapting this sample
 
 - **New agent / project:** change `--discovery-project`, `--agent`, and
-  `--dataset-project`, and point `--foundry-project-endpoint` at your Foundry project.
-- **New queries:** edit the `<suite>-evaluators.json` files (or add a new
-  `datasets/<your-project>/` directory that overrides `datasets/default/`).
+  `--dataset-dir`, and point `--foundry-project-endpoint` at your Foundry project.
+- **New queries:** edit the `<suite>-evaluators.json` files (or point
+  `--dataset-dir` at a new directory of dataset files).
 - **New suite:** drop a `<suite>-evaluators.json` file — no code change needed.

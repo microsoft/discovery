@@ -6,6 +6,7 @@ requires-python = ">=3.10"
 
 [project.optional-dependencies]
 evaluation = [
+    "aiohttp>=3.9.0",
     "azure-ai-projects>=2.2.0",
     "azure-identity>=1.19.0",
 ]

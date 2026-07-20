@@ -1,7 +1,7 @@
 """End-to-end agent evaluation pipeline.
 
 Given a project, an agent, and one or more evaluation suites, the pipeline:
-  1. Resolves each suite's dataset (project-specific first, then default/).
+  1. Resolves each suite's dataset.
   2. Drives the ONLINE agent against every dataset query through the Discovery
      workspace data-plane (DiscoveryAgentClient), capturing each response.
   3. Converts each captured response into a well-formed offline-eval row
@@ -19,16 +19,18 @@ responses through the data-plane and scoring them offline sidesteps both modes
 while still exercising the online agent against the user's chosen dataset.
 
 Programmatic use:
+    import asyncio
     from pipeline import EvaluationPipeline
     pipeline = EvaluationPipeline(
         workspace_api_url="https://<your-workspace>.workspace.discovery.azure.com",
         discovery_project="Literature-Research",
         foundry_project_endpoint="<foundry-project-endpoint>",
-        datasets_dir="../datasets",
-        dataset_project="literature-agent",
+        dataset_dir="../datasets/literature-agent",
         llm_judge_model_deployment_name="gpt-5.4-mini",
+        max_workers=4,
     )
-    result = pipeline.run(agent="LiteratureAgent", suites="shared,tool-calling,retrieval")
+    result = asyncio.run(
+        pipeline.run(agent="LiteratureAgent", suites="shared,tool-calling,retrieval"))
     print(result.exit_code, result.summary())
 
 CLI use (a CI workflow can invoke this):
@@ -37,8 +39,7 @@ CLI use (a CI workflow can invoke this):
         --foundry-project-endpoint <foundry-project-endpoint> \
         --discovery-project Literature-Research \
         --agent LiteratureAgent \
-        --datasets-dir ../datasets \
-        --dataset-project literature-agent \
+        --dataset-dir ../datasets/literature-agent \
         --suites shared,tool-calling,retrieval \
         --llm-judge-model-deployment-name gpt-5.4-mini \
         --output-dir ./out \
@@ -52,6 +53,7 @@ Auth: the data-plane uses DefaultAzureCredential with the
 """
 
 import argparse
+import asyncio
 import json
 import sys
 import time
@@ -138,18 +140,18 @@ class EvaluationPipeline:
     """
 
     def __init__(self, *, workspace_api_url: str, discovery_project: str,
-                 foundry_project_endpoint: str, datasets_dir, dataset_project: str,
+                 foundry_project_endpoint: str, dataset_dir,
                  llm_judge_model_deployment_name: str | None = None, token: str | None = None,
                  api_version: str = DEFAULT_API_VERSION,
                  timeout: int = 600, poll_interval: int = 3,
-                 eval_timeout: int = 900):
+                 eval_timeout: int = 900, max_workers: int = 1):
         self.discovery_project = discovery_project
-        self.dataset_project = dataset_project
-        self.datasets_dir = Path(datasets_dir)
+        self.dataset_dir = Path(dataset_dir)
         self.llm_judge_model_deployment_name = llm_judge_model_deployment_name
         self.timeout = timeout
         self.poll_interval = poll_interval
         self.eval_timeout = eval_timeout
+        self.max_workers = max(1, max_workers)
 
         self.client = DiscoveryAgentClient(
             workspace_api_url, token, api_version=api_version)
@@ -158,44 +160,46 @@ class EvaluationPipeline:
 
     # -- discovery ----------------------------------------------------------
     def available_suites(self) -> list[str]:
-        """Suites this project supports (data-driven from dataset files)."""
-        return discover_suites(self.datasets_dir, self.dataset_project)
+        """Suites this dataset directory supports (data-driven from dataset files)."""
+        return discover_suites(self.dataset_dir)
 
     # -- main entry point ---------------------------------------------------
-    def run(self, agent: str, suites: str, *, investigation: str | None = None,
-            investigation_prefix: str = "eval", max_queries: int = 0,
-            fail_on: str = "errored", output_dir=None) -> EvaluationResult:
+    async def run(self, agent: str, suites: str, *, investigation: str | None = None,
+                  investigation_prefix: str = "eval", max_queries: int = 0,
+                  fail_on: str = "errored", output_dir=None) -> EvaluationResult:
         """Evaluate ``agent`` across the selected ``suites`` and return results.
 
         ``suites`` is a comma-separated selection or 'all'. A fresh investigation
         is created per run unless ``investigation`` is supplied. When
         ``output_dir`` is given, captures/datasets/results/summary are persisted
-        there for audit.
+        there for audit. Live agent queries within a suite are invoked
+        concurrently (bounded by ``max_workers``).
         """
         available = self.available_suites()
         selected = parse_suites(suites, available)
         if not selected:
             raise ValueError(
-                f"no valid suites selected (available for "
-                f"'{self.dataset_project}': {', '.join(available) or '(none)'})")
+                f"no valid suites selected (available in "
+                f"'{self.dataset_dir}': {', '.join(available) or '(none)'})")
 
         out_dir = Path(output_dir) if output_dir else None
         if out_dir:
             out_dir.mkdir(parents=True, exist_ok=True)
 
-        investigation = self._ensure_investigation(
-            agent, investigation, investigation_prefix)
+        async with self.client:
+            investigation = await self._ensure_investigation(
+                agent, investigation, investigation_prefix)
 
-        suite_results: list[SuiteResult] = []
-        exit_code = 0
-        for suite in selected:
-            print(f"\n=== Suite: {suite} ===")
-            result = self._run_suite(
-                suite, agent, investigation, max_queries, fail_on, out_dir)
-            suite_results.append(result)
-            if result.status in ("failed", "canceled") or result.errored:
-                if fail_on != "none":
-                    exit_code = 2
+            suite_results: list[SuiteResult] = []
+            exit_code = 0
+            for suite in selected:
+                print(f"\n=== Suite: {suite} ===")
+                result = await self._run_suite(
+                    suite, agent, investigation, max_queries, fail_on, out_dir)
+                suite_results.append(result)
+                if result.status in ("failed", "canceled") or result.errored:
+                    if fail_on != "none":
+                        exit_code = 2
 
         eval_result = EvaluationResult(
             project=self.discovery_project, agent=agent,
@@ -209,58 +213,89 @@ class EvaluationPipeline:
         return eval_result
 
     # -- internals ----------------------------------------------------------
-    def _ensure_investigation(self, agent, investigation, prefix) -> str:
+    async def _ensure_investigation(self, agent, investigation, prefix) -> str:
         """Reuse a given investigation, else mint and PUT-create a fresh one."""
         if investigation:
             print(f"Using existing investigation: {investigation}")
             return investigation
         investigation = make_investigation_name(prefix, agent)
         print(f"Creating investigation for this run: {investigation}")
-        self.client.create_investigation(
+        await self.client.create_investigation(
             self.discovery_project, investigation,
             display_name=f"Agent evaluation: {agent}")
         return investigation
 
-    def _capture_responses(self, agent, investigation, src_rows, max_queries):
+    async def _capture_one(self, agent, investigation, idx, total, src_row):
+        """Invoke the live agent for a single dataset row.
+
+        Returns ``(capture, eval_row)`` on success, or ``None`` when the row is
+        skipped (no query) or the invocation errors. Safe to run concurrently:
+        each call opens its own conversation and only reads immutable client
+        state.
+        """
+        query = src_row.get("query")
+        if not query:
+            print(f"  [{idx}/{total}] skipped row without 'query'")
+            return None
+        gt = ground_truth_fields(src_row)
+        label = f"[{idx}/{total}]"
+        print(f"  {label} invoking agent: {query[:80]!r}")
+        try:
+            response, conv_id = await self.client.invoke(
+                self.discovery_project, investigation, agent, query,
+                timeout=self.timeout, poll_interval=self.poll_interval,
+                label=label)
+        except SystemExit as exc:
+            print(f"      ERROR invoking agent (skipped): {exc}")
+            return None
+        status = response.get("status")
+        if status != "completed":
+            print(f"      WARNING: terminal status '{status}' "
+                  f"(error={response.get('error')}); still scoring captured output")
+        capture = {
+            "query": query,
+            "conversation_id": conv_id,
+            "status": status,
+            "response": response,
+        }
+        return capture, response_to_row(response, query, gt)
+
+    async def _capture_responses(self, agent, investigation, src_rows, max_queries):
         """Invoke the live agent once per dataset query.
 
         Returns (eval_rows, captures): eval_rows are Foundry-ready rows, captures
-        are the raw responses kept for audit.
+        are the raw responses kept for audit. Queries are invoked concurrently on
+        the event loop (the client is I/O-bound on network + polling), bounded by
+        an ``asyncio.Semaphore(self.max_workers)``. Output order is kept aligned
+        with the source dataset regardless of completion order.
         """
+        rows = src_rows if max_queries <= 0 else src_rows[:max_queries]
+        total = len(rows)
+        semaphore = asyncio.Semaphore(self.max_workers)
+
+        async def guarded(idx, src_row):
+            async with semaphore:
+                return await self._capture_one(
+                    agent, investigation, idx, total, src_row)
+
+        ordered = await asyncio.gather(*(
+            guarded(idx, src_row) for idx, src_row in enumerate(rows, start=1)
+        ))
+
         eval_rows = []
         captures = []
-        rows = src_rows if max_queries <= 0 else src_rows[:max_queries]
-        for idx, src_row in enumerate(rows, start=1):
-            query = src_row.get("query")
-            if not query:
-                print(f"  [{idx}/{len(rows)}] skipped row without 'query'")
+        for item in ordered:
+            if item is None:
                 continue
-            gt = ground_truth_fields(src_row)
-            print(f"  [{idx}/{len(rows)}] invoking agent: {query[:80]!r}")
-            try:
-                response, conv_id = self.client.invoke(
-                    self.discovery_project, investigation, agent, query,
-                    timeout=self.timeout, poll_interval=self.poll_interval)
-            except SystemExit as exc:
-                print(f"      ERROR invoking agent (skipped): {exc}")
-                continue
-            status = response.get("status")
-            if status != "completed":
-                print(f"      WARNING: terminal status '{status}' "
-                      f"(error={response.get('error')}); still scoring captured output")
-            captures.append({
-                "query": query,
-                "conversation_id": conv_id,
-                "status": status,
-                "response": response,
-            })
-            eval_rows.append(response_to_row(response, query, gt))
+            capture, eval_row = item
+            captures.append(capture)
+            eval_rows.append(eval_row)
         return eval_rows, captures
 
-    def _run_suite(self, suite, agent, investigation, max_queries, fail_on,
-                   out_dir) -> SuiteResult:
+    async def _run_suite(self, suite, agent, investigation, max_queries, fail_on,
+                         out_dir) -> SuiteResult:
         """Resolve, capture, build dataset, and score one suite."""
-        dataset_path = resolve_dataset(suite, self.datasets_dir, self.dataset_project)
+        dataset_path = resolve_dataset(suite, self.dataset_dir)
         if dataset_path is None:
             return SuiteResult(suite=suite, status="no-dataset")
         config = json.loads(dataset_path.read_text(encoding="utf-8"))
@@ -270,7 +305,7 @@ class EvaluationPipeline:
             return SuiteResult(suite=suite, status="no-dataset")
         print(f"  dataset: {dataset_path} ({len(src_rows)} queries)")
 
-        eval_rows, captures = self._capture_responses(
+        eval_rows, captures = await self._capture_responses(
             agent, investigation, src_rows, max_queries)
         result = SuiteResult(suite=suite, status="no-captures",
                              queries=len(src_rows), captured=len(eval_rows))
@@ -335,10 +370,9 @@ def main() -> int:
     parser.add_argument("--llm-judge-model-deployment-name", default=None,
                         help="Foundry model deployment used by the LLM-judge / custom evaluators")
     # Dataset / suite selection (end-user choices).
-    parser.add_argument("--datasets-dir", required=True,
-                        help="Root datasets directory (contains default/ and per-project dirs)")
-    parser.add_argument("--dataset-project", required=True,
-                        help="Dataset subdirectory to prefer (e.g. literature-agent)")
+    parser.add_argument("--dataset-dir", required=True,
+                        help="Directory containing the '<suite>-evaluators.json' dataset "
+                             "files (e.g. datasets/literature-agent)")
     parser.add_argument("--suites", required=True,
                         help="Comma-separated suites to evaluate, or 'all'. A suite "
                              "'<name>' is backed by a '<name>-evaluators.json' dataset "
@@ -360,6 +394,11 @@ def main() -> int:
                         help="Max seconds to wait for each agent response (default 600)")
     parser.add_argument("--poll-interval", type=int, default=3,
                         help="Seconds between response polls (default 3)")
+    parser.add_argument("--concurrency", type=int, default=1,
+                        help="Number of agent queries to invoke concurrently per suite "
+                             "(default 1 = sequential). Increase to speed up large "
+                             "datasets; each concurrent query holds an independent "
+                             "conversation on the async client")
     parser.add_argument("--eval-timeout", type=int, default=900,
                         help="Max seconds to wait for each Foundry eval run (default 900)")
     args = parser.parse_args()
@@ -368,18 +407,18 @@ def main() -> int:
         workspace_api_url=args.workspace_api_url,
         discovery_project=args.discovery_project,
         foundry_project_endpoint=args.foundry_project_endpoint,
-        datasets_dir=args.datasets_dir,
-        dataset_project=args.dataset_project,
+        dataset_dir=args.dataset_dir,
         llm_judge_model_deployment_name=args.llm_judge_model_deployment_name,
         token=args.token,
         api_version=args.api_version,
         timeout=args.timeout,
         poll_interval=args.poll_interval,
         eval_timeout=args.eval_timeout,
+        max_workers=args.concurrency,
     )
 
     try:
-        result = pipeline.run(
+        result = asyncio.run(pipeline.run(
             agent=args.agent,
             suites=args.suites,
             investigation=args.investigation,
@@ -387,7 +426,7 @@ def main() -> int:
             max_queries=args.max_queries,
             fail_on=args.fail_on,
             output_dir=args.output_dir,
-        )
+        ))
     except ValueError as exc:
         print(f"ERROR: {exc}", file=sys.stderr)
         return 1

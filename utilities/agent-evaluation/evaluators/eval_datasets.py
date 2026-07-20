@@ -1,15 +1,15 @@
 """Dataset discovery, suite resolution, and Foundry-dataset assembly helpers.
 
 These are the reusable, side-effect-free pieces the evaluation pipeline uses to:
-  - discover which evaluation suites a project supports (data-driven: a suite
-    "<name>" is backed by a "<name>-evaluators.json" dataset file),
-  - resolve a suite's dataset file (project-specific first, then default/),
+  - discover which evaluation suites a dataset directory supports (data-driven:
+    a suite "<name>" is backed by a "<name>-evaluators.json" dataset file),
+  - resolve a suite's dataset file from the dataset directory,
   - mint a fresh, length-bounded investigation id per run,
   - assemble a Foundry-compatible combined dataset from captured response rows.
 
 A suite requires NO code change to add: just drop a "<suite>-evaluators.json"
-dataset file under the project directory or default/. Conventional suites are
-shared, tool-calling, and retrieval.
+dataset file into the dataset directory. Conventional suites are shared,
+tool-calling, and retrieval.
 """
 
 import random
@@ -31,14 +31,13 @@ def suite_filename(suite: str) -> str:
     return f"{suite}{DATASET_SUFFIX}"
 
 
-def discover_suites(datasets_dir: Path, project: str) -> list[str]:
-    """All suites available to a project: the union of '<suite>-evaluators.json'
-    files in the project directory and in default/ (project overrides default)."""
+def discover_suites(dataset_dir: Path) -> list[str]:
+    """All suites available in a dataset directory: every '<suite>-evaluators.json'
+    file found directly inside it."""
     suites: set[str] = set()
-    for directory in (datasets_dir / project, datasets_dir / "default"):
-        if directory.is_dir():
-            for path in directory.glob(f"*{DATASET_SUFFIX}"):
-                suites.add(path.name[: -len(DATASET_SUFFIX)])
+    if dataset_dir.is_dir():
+        for path in dataset_dir.glob(f"*{DATASET_SUFFIX}"):
+            suites.add(path.name[: -len(DATASET_SUFFIX)])
     return sorted(suites)
 
 
@@ -54,23 +53,20 @@ def parse_suites(raw: str, available: list[str]) -> list[str]:
             continue
         if suite not in available:
             print(f"WARNING: suite '{suite}' has no '{suite_filename(suite)}' "
-                  f"dataset for this project or in default/ (skipped). "
+                  f"dataset in the dataset directory (skipped). "
                   f"Available: {', '.join(available) or '(none)'}, all")
             continue
         suites.append(suite)
     return suites
 
 
-def resolve_dataset(suite: str, datasets_dir: Path, project: str) -> Path | None:
-    """Resolve a suite's dataset file: project-specific first, then default/."""
+def resolve_dataset(suite: str, dataset_dir: Path) -> Path | None:
+    """Resolve a suite's dataset file from the dataset directory."""
     filename = suite_filename(suite)
-    project_path = datasets_dir / project / filename
-    default_path = datasets_dir / "default" / filename
-    if project_path.is_file():
-        return project_path
-    if default_path.is_file():
-        return default_path
-    print(f"  WARNING: no {filename} for project '{project}' or in default/ -- skipping suite")
+    path = dataset_dir / filename
+    if path.is_file():
+        return path
+    print(f"  WARNING: no {filename} in {dataset_dir} -- skipping suite")
     return None
 
 

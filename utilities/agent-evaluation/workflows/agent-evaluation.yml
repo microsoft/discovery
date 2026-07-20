@@ -29,10 +29,10 @@ on:
         description: "Agent name (agent_reference) to invoke"
         type: string
         default: "LiteratureAgent"
-      datasetProject:
-        description: "Dataset subdirectory under datasets/"
+      datasetDir:
+        description: "Dataset directory (relative to the repo) with the *-evaluators.json files"
         type: string
-        default: "literature-agent"
+        default: "utilities/agent-evaluation/datasets/literature-agent"
       suites:
         description: "Comma-separated suites, or 'all'"
         type: string
@@ -41,6 +41,10 @@ on:
         description: "Max queries per suite (0 = no cap)"
         type: string
         default: "0"
+      concurrency:
+        description: "Agent queries to invoke concurrently per suite (1 = sequential)"
+        type: string
+        default: "1"
       failOn:
         description: "Fail build on"
         type: choice
@@ -64,6 +68,7 @@ jobs:
       FOUNDRY_PROJECT_ENDPOINT: ${{ vars.FOUNDRY_PROJECT_ENDPOINT }}
       MODEL_DEPLOYMENT_NAME: ${{ vars.LLM_JUDGE_MODEL_DEPLOYMENT_NAME }}
       MAX_QUERIES: ${{ inputs.maxQueries }}
+      CONCURRENCY: ${{ inputs.concurrency }}
       FAIL_ON: ${{ inputs.failOn }}
     steps:
       - name: Checkout source code
@@ -101,10 +106,10 @@ jobs:
             --agent "${{ inputs.agent }}" \
             --foundry-project-endpoint "${FOUNDRY_PROJECT_ENDPOINT}" \
             --llm-judge-model-deployment-name "${MODEL_DEPLOYMENT_NAME}" \
-            --datasets-dir "${GITHUB_WORKSPACE}/utilities/agent-evaluation/datasets" \
-            --dataset-project "${{ inputs.datasetProject }}" \
+            --dataset-dir "${GITHUB_WORKSPACE}/${{ inputs.datasetDir }}" \
             --suites "${{ inputs.suites }}" \
             --max-queries "${MAX_QUERIES}" \
+            --concurrency "${CONCURRENCY}" \
             --fail-on "${FAIL_ON}" \
             --output-dir "${GITHUB_WORKSPACE}/artifacts/agent-eval"
 
