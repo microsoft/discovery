@@ -145,6 +145,32 @@ variable "agent_subnet_prefix" {
   default     = "10.0.5.0/24"
 }
 
+variable "search_subnet_prefix" {
+  description = "Address prefix for the search subnet (delegated to Microsoft.App/environments)."
+  type        = string
+  default     = "10.0.6.0/24"
+}
+
+# ---- workspace features -----------------------------------------------------
+
+variable "network_isolation" {
+  description = "Workspace network isolation mode, surfaced via the NetworkIsolation tag. Must be true whenever the agent/private-endpoint/workspace subnet IDs are supplied (as they always are here): the Discovery RP then VNet-injects the managed Container Apps environment and creates private endpoints (Cosmos, Search, etc.) in the private endpoint subnet. Setting this false while passing subnet IDs produces a broken hybrid where Cosmos public access is disabled but no private endpoint is created, leaving the managed backend unable to reach Cosmos (agent upsert then fails with InternalServerError and teardown deadlocks)."
+  type        = bool
+  default     = true
+}
+
+variable "enable_ghcp_ai_features" {
+  description = "Enable GitHub Copilot and AI features in the Discovery workspace via the discovery.workbench.enableGhcpAiFeatures tag."
+  type        = bool
+  default     = true
+}
+
+variable "enable_extensions" {
+  description = "Enable the VS Code Extension Marketplace in the Discovery workspace via the discovery.workbench.enableExtensions tag."
+  type        = bool
+  default     = true
+}
+
 # ---- node pool sizing -------------------------------------------------------
 
 variable "node_pool_vm_size" {
