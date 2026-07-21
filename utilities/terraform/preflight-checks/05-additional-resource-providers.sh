@@ -54,7 +54,10 @@ else
   _pf05_unregistered=()
   _pf05_registering=()
   for ns in "${_pf05_namespaces[@]}"; do
-    state=$(echo "$_pf05_all" | jq -r --arg ns "$ns" '.[] | select(.ns == $ns) | .state')
+    # Case-insensitive match: ARM returns some namespaces lowercased (for
+    # example `microsoft.insights`) even though the canonical form is
+    # `Microsoft.Insights`, so an exact-case compare gives false "not visible".
+    state=$(echo "$_pf05_all" | jq -r --arg ns "$ns" '.[] | select((.ns | ascii_downcase) == ($ns | ascii_downcase)) | .state')
     case "$state" in
       Registered)   ;;                              # silent success -- avoid 24 PASS lines
       Registering)  _pf05_registering+=("$ns") ;;
