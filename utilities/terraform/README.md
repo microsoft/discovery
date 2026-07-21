@@ -311,7 +311,7 @@ Note that you don't need explicit `depends_on` blocks between the VNet and its s
 * `kubelet`  -> `Supercomputer.identities.kubeletIdentity` (node-level image pulls + startup data access)
 * `workload` -> `Supercomputer.identities.workloadIdentities` (agent/tool federated data access)
 
-**Known gap.** Discovery expects `isolationScope: 'Regional'` on each UAMI (Managed Identity API `2024-11-30`). AzureRM 4.x does not yet expose this property. The file includes a code comment showing how to add an `azapi_update_resource` patch if your policy requires it. For a smoke test, the default is fine.
+**isolationScope.** The Bicep sets `isolationScope: 'Regional'` on each UAMI (Managed Identity API `2024-11-30`) so an identity can only be assigned to source resources in its own region, which shrinks the blast radius if it is ever compromised and contains identity-plane failures to one region. AzureRM 4.x does not expose this property, so the module patches it on with one `azapi_update_resource` per identity. All source resources here live in `var.location`, so `Regional` is a clean fit.
 
 ### 4.3 `storage.tf` -- storage account (AzureRM) + one blob container (**AzAPI**)
 
@@ -511,10 +511,10 @@ terraform plan -out=tfplan
 Expected shape:
 
 ```text
-Plan: 27 to add, 0 to change, 0 to destroy.
+Plan: 31 to add, 0 to change, 0 to destroy.
 ```
 
-The 27 resources are: `random_string.suffix`, `azurerm_virtual_network` + 6 subnets, 4 `azurerm_user_assigned_identity` (workspace, cluster, kubelet, workload), `azurerm_storage_account`, `azapi_resource.outputs_container`, 7 `azurerm_role_assignment`, and 6 Discovery `azapi_resource`s (supercomputer, node pool, workspace, chat model, storage container, project). Thirteen outputs are also declared.
+The 31 resources are: `random_string.suffix`, `azurerm_virtual_network` + 6 subnets, 4 `azurerm_user_assigned_identity` (workspace, cluster, kubelet, workload) + 4 `azapi_update_resource` (isolationScope patches), `azurerm_storage_account`, `azapi_resource.outputs_container`, 7 `azurerm_role_assignment`, and 6 Discovery `azapi_resource`s (supercomputer, node pool, workspace, chat model, storage container, project). Thirteen outputs are also declared.
 
 ### 6.6 Apply
 
