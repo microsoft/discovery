@@ -4,6 +4,7 @@
 # Storage account with:
 #   * shared key access disabled (Entra ID only)
 #   * blob public access disabled
+#   * public network access restricted to the Discovery subnets + optional IPs
 #   * TLS 1.2 minimum
 #   * CORS for Discovery Studio + VS Code
 #
@@ -45,10 +46,29 @@ resource "azurerm_storage_account" "outputs" {
   min_tls_version                 = "TLS1_2"
   https_traffic_only_enabled      = true
 
-  # Discovery's storageContainer binding disables public network access on
-  # the account. Declare `false` here so plan doesn't perpetually try to
-  # re-enable it (AzureRM's default for this field is `true`).
-  public_network_access_enabled = false
+  # Public network access stays Enabled but locked to "selected virtual
+  # networks and IP addresses" via network_rules below. Discovery requires the
+  # supercomputer / AKS / workspace / agent subnets to reach the account
+  # (VNet-injected compute reaches it over the Microsoft.Storage service
+  # endpoint). Fully DISABLING public access without a private endpoint leaves
+  # the platform unable to reach storage and breaks investigation I/O. See:
+  # https://learn.microsoft.com/azure/microsoft-discovery/concept-storage-account#networking
+  public_network_access_enabled = true
+
+  network_rules {
+    default_action = "Deny"
+    bypass         = ["AzureServices"]
+    virtual_network_subnet_ids = [
+      azurerm_subnet.supercomputer_nodepool.id,
+      azurerm_subnet.aks.id,
+      azurerm_subnet.workspace.id,
+      azurerm_subnet.private_endpoint.id,
+      azurerm_subnet.agent.id,
+    ]
+    # Optional: client/public IPs (e.g. your workstation) so output data is
+    # browsable in Discovery Studio. Azure rejects /31 and /32 CIDRs here.
+    ip_rules = var.storage_allowed_ip_rules
+  }
 
   blob_properties {
     cors_rule {

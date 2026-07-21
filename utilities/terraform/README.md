@@ -322,6 +322,8 @@ Note that you don't need explicit `depends_on` blocks between the VNet and its s
 
 If you're running locally and already hold `Storage Blob Data Owner` on the account you're deploying into, you can swap the AzAPI block for a plain `azurerm_storage_container` and set `storage_use_azuread = true` on the AzureRM provider in `providers.tf`. Behaviour is identical from Discovery's perspective.
 
+**Networking.** The account keeps public network access **Enabled but restricted to selected virtual networks and IP addresses** (`network_rules` with `default_action = "Deny"`). The supercomputer, AKS, workspace, private-endpoint, and agent subnets are allowlisted and carry a `Microsoft.Storage` service endpoint, so VNet-injected compute reaches storage over the Azure backbone. This mirrors the [Discovery storage-account requirements](https://learn.microsoft.com/azure/microsoft-discovery/concept-storage-account#networking). Add your workstation IP via `storage_allowed_ip_rules` if you want to browse output data in Discovery Studio. Note: fully *disabling* public network access without a private endpoint leaves the platform unable to reach storage and breaks investigation I/O.
+
 ### 4.4 `roles.tf` -- seven least-privilege role assignments   [PROVIDER: azurerm]
 
 [roles.tf](roles.tf) creates the seven role assignments Discovery requires, each bound to only the identity that needs it:

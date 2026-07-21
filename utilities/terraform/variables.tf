@@ -169,6 +169,12 @@ variable "search_subnet_prefix" {
   default     = "10.0.6.0/24"
 }
 
+variable "storage_allowed_ip_rules" {
+  description = "Optional public IP addresses or CIDR ranges allowed to reach the storage account through its network rules (for example, your workstation IP so you can browse output data in Discovery Studio). The Discovery subnets are always allowed via service endpoints. Azure storage network rules reject /31 and /32 CIDRs."
+  type        = list(string)
+  default     = []
+}
+
 # ---- workspace features -----------------------------------------------------
 
 variable "network_isolation" {

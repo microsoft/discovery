@@ -33,6 +33,7 @@ resource "azurerm_subnet" "supercomputer_nodepool" {
   virtual_network_name            = azurerm_virtual_network.this.name
   address_prefixes                = [var.supercomputer_nodepool_subnet_prefix]
   default_outbound_access_enabled = false
+  service_endpoints               = ["Microsoft.Storage"]
 }
 
 resource "azurerm_subnet" "aks" {
@@ -41,6 +42,7 @@ resource "azurerm_subnet" "aks" {
   virtual_network_name            = azurerm_virtual_network.this.name
   address_prefixes                = [var.aks_subnet_prefix]
   default_outbound_access_enabled = false
+  service_endpoints               = ["Microsoft.Storage"]
 }
 
 resource "azurerm_subnet" "workspace" {
@@ -49,6 +51,7 @@ resource "azurerm_subnet" "workspace" {
   virtual_network_name            = azurerm_virtual_network.this.name
   address_prefixes                = [var.workspace_subnet_prefix]
   default_outbound_access_enabled = false
+  service_endpoints               = ["Microsoft.Storage"]
 
   delegation {
     name = "Microsoft.App.environments"
@@ -65,6 +68,7 @@ resource "azurerm_subnet" "private_endpoint" {
   virtual_network_name            = azurerm_virtual_network.this.name
   address_prefixes                = [var.private_endpoint_subnet_prefix]
   default_outbound_access_enabled = false
+  service_endpoints               = ["Microsoft.Storage"]
 }
 
 resource "azurerm_subnet" "agent" {
@@ -73,6 +77,7 @@ resource "azurerm_subnet" "agent" {
   virtual_network_name            = azurerm_virtual_network.this.name
   address_prefixes                = [var.agent_subnet_prefix]
   default_outbound_access_enabled = false
+  service_endpoints               = ["Microsoft.Storage"]
 
   delegation {
     name = "Microsoft.App.environments"
