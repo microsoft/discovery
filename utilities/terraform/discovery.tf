@@ -39,21 +39,26 @@ resource "azapi_resource" "supercomputer" {
       subnetId = azurerm_subnet.aks.id
       identities = {
         clusterIdentity = {
-          id = azurerm_user_assigned_identity.workspace.id
+          id = azurerm_user_assigned_identity.cluster.id
         }
         kubeletIdentity = {
-          id = azurerm_user_assigned_identity.workspace.id
+          id = azurerm_user_assigned_identity.kubelet.id
         }
         workloadIdentities = {
-          (azurerm_user_assigned_identity.workspace.id) = {}
+          (azurerm_user_assigned_identity.workload.id) = {}
         }
       }
     }
   }
 
-  # AcrPull is scoped to the RG; ensure it lands before the SC comes up so any
-  # image pulls into the SC's AKS cluster succeed on first try.
-  depends_on = [azurerm_role_assignment.acr_pull]
+  # The cluster identity needs Network Contributor on the AKS subnet, and the
+  # kubelet identity needs Managed Identity Operator on the cluster identity plus
+  # AcrPull on the RG -- all before the SC provisions its AKS cluster.
+  depends_on = [
+    azurerm_role_assignment.cluster_network_contributor,
+    azurerm_role_assignment.kubelet_managed_identity_operator,
+    azurerm_role_assignment.kubelet_acr_pull,
+  ]
 
   # Supercomputer create provisions an AKS cluster; azapi's 30m default is
   # too tight. Bump to 60m to avoid `context deadline exceeded` on cold RGs.
@@ -129,7 +134,7 @@ resource "azapi_resource" "workspace" {
 
   # Workspace create validates the UAMI has Discovery Platform Contributor
   # on the RG. Force ordering so this is not racy on first apply.
-  depends_on = [azurerm_role_assignment.discovery_platform_contributor]
+  depends_on = [azurerm_role_assignment.workspace_discovery_platform_contributor]
 
   # Workspace create can take 30-45 min under load; extend past azapi's
   # 30m default so we don't cancel a healthy in-flight provision.
@@ -188,7 +193,7 @@ resource "azapi_resource" "discovery_storage_container" {
   # Storage Blob Data Contributor grant and the blob container both exist
   # before we try to bind.
   depends_on = [
-    azurerm_role_assignment.storage_blob_data_contributor,
+    azurerm_role_assignment.workspace_storage_blob_data_contributor,
     azapi_resource.outputs_container,
   ]
 }

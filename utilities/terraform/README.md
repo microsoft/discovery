@@ -49,7 +49,7 @@ Wall time is ~20-45 minutes, dominated by the supercomputer + workspace creates.
 A single resource group containing:
 
 * A virtual network with six subnets (three delegated to `Microsoft.App/environments`).
-* A user-assigned managed identity with three role assignments.
+* Four user-assigned managed identities with seven least-privilege role assignments.
 * A storage account plus a blob container that Discovery mounts.
 * A Discovery Supercomputer with one Node Pool.
 * A Discovery Workspace with one Chat Model Deployment.
@@ -69,7 +69,7 @@ Local tooling:
 Azure requirements (verified in Step 1 below):
 
 * An Azure subscription in a tenant where you can sign in with `az login`.
-* Permission to create resources and role assignments in that subscription. `Owner` or the combination of `Contributor` plus `Role Based Access Control Administrator` at subscription scope both work. Plain `Contributor` will fail on the three role assignments the module creates.
+* Permission to create resources and role assignments in that subscription. `Owner` or the combination of `Contributor` plus `Role Based Access Control Administrator` at subscription scope both work. Plain `Contributor` will fail on the seven role assignments the module creates.
 * The `Microsoft.Discovery`, `Microsoft.Network`, `Microsoft.ManagedIdentity`, `Microsoft.Storage`, `Microsoft.Authorization`, and `Microsoft.App` resource providers registered on the subscription.
 * Deployment region set to one of the Discovery-supported regions: `eastus`, `eastus2`, `uksouth`, or `swedencentral`.
 
@@ -296,15 +296,16 @@ Why standalone `azurerm_subnet` rather than inline `subnet {}` blocks on `azurer
 
 Note that you don't need explicit `depends_on` blocks between the VNet and its subnets — Terraform infers ordering from `azurerm_subnet.aks.id` references elsewhere in the module.
 
-### 4.2 `identity.tf` -- one user-assigned managed identity   [PROVIDER: azurerm]
+### 4.2 `identity.tf` -- four user-assigned managed identities   [PROVIDER: azurerm]
 
-[identity.tf](identity.tf) creates the shared UAMI that shows up in three places downstream:
+[identity.tf](identity.tf) creates four UAMIs that mirror the least-privilege split in `../discovery.bicep`, so each Discovery identity slot holds only the roles it needs:
 
-* `Supercomputer.identities.clusterIdentity`, `kubeletIdentity`, `workloadIdentities`
-* `Workspace.workspaceIdentity`
-* All three role assignments in [roles.tf](roles.tf)
+* `workspace` -> `Workspace.workspaceIdentity` (control + data plane)
+* `cluster`  -> `Supercomputer.identities.clusterIdentity` (AKS control plane)
+* `kubelet`  -> `Supercomputer.identities.kubeletIdentity` (node-level image pulls + startup data access)
+* `workload` -> `Supercomputer.identities.workloadIdentities` (agent/tool federated data access)
 
-**Known gap.** Discovery expects `isolationScope: 'Regional'` on the UAMI (Managed Identity API `2024-11-30`). AzureRM 4.x does not yet expose this property. The file includes a code comment showing how to add an `azapi_update_resource` patch if your policy requires it. For a smoke test, the default is fine.
+**Known gap.** Discovery expects `isolationScope: 'Regional'` on each UAMI (Managed Identity API `2024-11-30`). AzureRM 4.x does not yet expose this property. The file includes a code comment showing how to add an `azapi_update_resource` patch if your policy requires it. For a smoke test, the default is fine.
 
 ### 4.3 `storage.tf` -- storage account (AzureRM) + one blob container (**AzAPI**)
 
@@ -315,17 +316,21 @@ Note that you don't need explicit `depends_on` blocks between the VNet and its s
 
 If you're running locally and already hold `Storage Blob Data Owner` on the account you're deploying into, you can swap the AzAPI block for a plain `azurerm_storage_container` and set `storage_use_azuread = true` on the AzureRM provider in `providers.tf`. Behaviour is identical from Discovery's perspective.
 
-### 4.4 `roles.tf` -- three role assignments   [PROVIDER: azurerm]
+### 4.4 `roles.tf` -- seven least-privilege role assignments   [PROVIDER: azurerm]
 
-[roles.tf](roles.tf) creates the three role assignments Discovery requires, all bound to the UAMI's `principal_id`:
+[roles.tf](roles.tf) creates the seven role assignments Discovery requires, each bound to only the identity that needs it:
 
-| Role                             | Scope                | Definition ID |
-|----------------------------------|----------------------|----------------|
-| Storage Blob Data Contributor    | Storage account      | `ba92f5b4-...` |
-| Discovery Platform Contributor   | Resource group       | `01288891-...` (Discovery-owned built-in; hardcode the GUID) |
-| AcrPull                          | Resource group       | `7f951dda-...` |
+| Identity  | Role                           | Scope             | Definition ID |
+|-----------|--------------------------------|-------------------|----------------|
+| workspace | Discovery Platform Contributor | Resource group    | `01288891-...` (Discovery-owned built-in; hardcode the GUID) |
+| workspace | Storage Blob Data Contributor  | Storage account   | `ba92f5b4-...` |
+| cluster   | Network Contributor            | AKS subnet only   | `4d97b98b-...` |
+| kubelet   | Managed Identity Operator      | Cluster identity  | `f1a07417-...` |
+| kubelet   | AcrPull                        | Resource group    | `7f951dda-...` |
+| kubelet   | Storage Blob Data Contributor  | Storage account   | `ba92f5b4-...` |
+| workload  | Storage Blob Data Contributor  | Storage account   | `ba92f5b4-...` |
 
-Every assignment has `depends_on = [azurerm_user_assigned_identity.workspace]` to avoid the `PrincipalNotFoundError` race that hits when the UAMI's service principal has not fully replicated to Entra ID by the time the role assignment is submitted. Terraform's implicit dependency graph does not know about that lag; the explicit `depends_on` costs nothing and buys reliability.
+Every assignment has an explicit `depends_on` on its target UAMI to avoid the `PrincipalNotFoundError` race that hits when the UAMI's service principal has not fully replicated to Entra ID by the time the role assignment is submitted. Terraform's implicit dependency graph does not know about that lag; the explicit `depends_on` costs nothing and buys reliability.
 
 ### 4.5 Validate
 
@@ -500,10 +505,10 @@ terraform plan -out=tfplan
 Expected shape:
 
 ```text
-Plan: 20 to add, 0 to change, 0 to destroy.
+Plan: 27 to add, 0 to change, 0 to destroy.
 ```
 
-The 20 resources are: `random_string.suffix`, `azurerm_virtual_network` + 6 subnets, `azurerm_user_assigned_identity`, `azurerm_storage_account`, `azapi_resource.outputs_container`, 3 `azurerm_role_assignment`, and 6 Discovery `azapi_resource`s (supercomputer, node pool, workspace, chat model, storage container, project). Ten outputs are also declared.
+The 27 resources are: `random_string.suffix`, `azurerm_virtual_network` + 6 subnets, 4 `azurerm_user_assigned_identity` (workspace, cluster, kubelet, workload), `azurerm_storage_account`, `azapi_resource.outputs_container`, 7 `azurerm_role_assignment`, and 6 Discovery `azapi_resource`s (supercomputer, node pool, workspace, chat model, storage container, project). Twelve outputs are also declared.
 
 ### 6.6 Apply
 
