@@ -16,6 +16,14 @@ location            = "swedencentral"
 # managed_identity_name      = "uami-discovery-dev"
 # storage_account_name       = "stgdiscoverydev01"   # must be globally unique, 3-24 lowercase alphanumeric
 
+# Workspace features (all default to true).
+# network_isolation MUST stay true: the workspace always passes the agent /
+# private-endpoint / workspace subnet IDs, and false + subnets is a broken
+# hybrid that leaves the managed backend unable to reach Cosmos.
+# network_isolation       = true
+# enable_ghcp_ai_features = true
+# enable_extensions       = true
+
 # Node pool sizing (defaults are fine for a smoke test).
 # node_pool_vm_size            = "Standard_D4s_v6"
 # node_pool_min_node_count     = 0

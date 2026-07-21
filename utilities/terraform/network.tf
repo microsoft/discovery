@@ -1,8 +1,8 @@
 # -----------------------------------------------------------------------------
 # network.tf   [PROVIDER: azurerm]
 #
-# One VNet, five subnets. Two of the subnets (workspace, agent) are delegated
-# to Microsoft.App/environments so Discovery can attach Container Apps
+# One VNet, six subnets. Three of the subnets (workspace, agent, search) are
+# delegated to Microsoft.App/environments so Discovery can attach Container Apps
 # environments into them.
 #
 # Why AzureRM: virtual networks, subnets, and subnet delegations are all
@@ -72,6 +72,22 @@ resource "azurerm_subnet" "agent" {
   resource_group_name             = data.azurerm_resource_group.rg.name
   virtual_network_name            = azurerm_virtual_network.this.name
   address_prefixes                = [var.agent_subnet_prefix]
+  default_outbound_access_enabled = false
+
+  delegation {
+    name = "Microsoft.App.environments"
+    service_delegation {
+      name    = "Microsoft.App/environments"
+      actions = ["Microsoft.Network/virtualNetworks/subnets/join/action"]
+    }
+  }
+}
+
+resource "azurerm_subnet" "search" {
+  name                            = "searchSubnet"
+  resource_group_name             = data.azurerm_resource_group.rg.name
+  virtual_network_name            = azurerm_virtual_network.this.name
+  address_prefixes                = [var.search_subnet_prefix]
   default_outbound_access_enabled = false
 
   delegation {

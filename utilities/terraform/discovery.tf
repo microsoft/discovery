@@ -91,8 +91,14 @@ resource "azapi_resource" "node_pool" {
 #   * `workspaceIdentity` is a Discovery-specific identity block, NOT the
 #     standard ARM `identity` envelope. AzAPI passes it through as-is; any
 #     future azurerm_discovery_workspace will need its own schema for this.
-#   * `tags = { version = "v2" }` is a schema-version pin the Discovery RP
-#     reads. Preserve it verbatim -- do not treat as a normal cosmetic tag.
+#   * `tags.version = "v2"` is a schema-version pin the Discovery RP reads.
+#     Preserve it verbatim -- do not treat as a normal cosmetic tag.
+#   * `tags.NetworkIsolation` MUST be "true" while the agent/private-endpoint/
+#     workspace subnet IDs below are set. false + subnets is a broken hybrid:
+#     the RP disables Cosmos public access but never creates the private
+#     endpoint or VNet-injects the ACA environment, so the managed backend
+#     cannot reach Cosmos, the agent upsert fails (InternalServerError), and
+#     teardown deadlocks. See variable "network_isolation" for the full note.
 # -----------------------------------------------------------------------------
 resource "azapi_resource" "workspace" {
   type      = "Microsoft.Discovery/workspaces@2026-02-01-preview"
@@ -101,7 +107,10 @@ resource "azapi_resource" "workspace" {
   parent_id = data.azurerm_resource_group.rg.id
 
   tags = {
-    version = "v2"
+    version                                    = "v2"
+    "discovery.workbench.enableGhcpAiFeatures" = tostring(var.enable_ghcp_ai_features)
+    "discovery.workbench.enableExtensions"     = tostring(var.enable_extensions)
+    NetworkIsolation                           = tostring(var.network_isolation)
   }
 
   body = {

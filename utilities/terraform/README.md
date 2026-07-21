@@ -48,7 +48,7 @@ Wall time is ~20-45 minutes, dominated by the supercomputer + workspace creates.
 
 A single resource group containing:
 
-* A virtual network with five subnets (two delegated to `Microsoft.App/environments`).
+* A virtual network with six subnets (three delegated to `Microsoft.App/environments`).
 * A user-assigned managed identity with three role assignments.
 * A storage account plus a blob container that Discovery mounts.
 * A Discovery Supercomputer with one Node Pool.
@@ -288,9 +288,9 @@ terraform validate  # will fail until Steps 4 and 5 are written -- expected
 
 Every resource in this step is a stable AzureRM type. **No AzAPI here except one blob container** (called out explicitly in 4.3). If you see an AzAPI block outside of that, something drifted.
 
-### 4.1 `network.tf` -- VNet + five subnets   [PROVIDER: azurerm]
+### 4.1 `network.tf` -- VNet + six subnets   [PROVIDER: azurerm]
 
-[network.tf](network.tf) creates the VNet and five standalone `azurerm_subnet` blocks. Two subnets (`workspace`, `agent`) carry a `delegation { service_delegation { name = "Microsoft.App/environments" } }` because Discovery attaches Container Apps environments into them.
+[network.tf](network.tf) creates the VNet and six standalone `azurerm_subnet` blocks. Three subnets (`workspace`, `agent`, `search`) carry a `delegation { service_delegation { name = "Microsoft.App/environments" } }` because Discovery attaches Container Apps environments into them.
 
 Why standalone `azurerm_subnet` rather than inline `subnet {}` blocks on `azurerm_virtual_network`: mixing the two styles is a well-known source of drift in AzureRM. Standalone is the recommended pattern and it lets each subnet have its own lifecycle.
 
@@ -362,7 +362,8 @@ Child of the Supercomputer via `parent_id = azapi_resource.supercomputer.id`. St
 Two things worth flagging:
 
 1. `workspaceIdentity` is a Discovery-specific identity block. It is **not** the standard ARM `identity` envelope. AzAPI passes it through unchanged; any future `azurerm_discovery_workspace` will have to model its own schema for this.
-2. `tags = { version = "v2" }` is a schema-version pin the Discovery RP reads. Preserve it verbatim — do not treat it as a cosmetic tag.
+2. `tags.version = "v2"` is a schema-version pin the Discovery RP reads. Preserve it verbatim — do not treat it as a cosmetic tag.
+3. `tags.NetworkIsolation` **must** be `"true"` (the module default) because the workspace always passes the agent / private-endpoint / workspace subnet IDs. Setting it `false` while passing subnets is a broken hybrid: the RP disables Cosmos public access but never creates the private endpoint or VNet-injects the Container Apps environment, so the managed backend cannot reach Cosmos, the agent upsert fails with `InternalServerError`, and teardown deadlocks. The `discovery.workbench.enableGhcpAiFeatures` and `discovery.workbench.enableExtensions` tags toggle the matching workbench features.
 
 Explicit `depends_on = [azurerm_role_assignment.discovery_platform_contributor]` because workspace create validates the UAMI has that role.
 
@@ -499,10 +500,10 @@ terraform plan -out=tfplan
 Expected shape:
 
 ```text
-Plan: 19 to add, 0 to change, 0 to destroy.
+Plan: 20 to add, 0 to change, 0 to destroy.
 ```
 
-The 19 resources are: `random_string.suffix`, `azurerm_virtual_network` + 5 subnets, `azurerm_user_assigned_identity`, `azurerm_storage_account`, `azapi_resource.outputs_container`, 3 `azurerm_role_assignment`, and 6 Discovery `azapi_resource`s (supercomputer, node pool, workspace, chat model, storage container, project). Ten outputs are also declared.
+The 20 resources are: `random_string.suffix`, `azurerm_virtual_network` + 6 subnets, `azurerm_user_assigned_identity`, `azurerm_storage_account`, `azapi_resource.outputs_container`, 3 `azurerm_role_assignment`, and 6 Discovery `azapi_resource`s (supercomputer, node pool, workspace, chat model, storage container, project). Ten outputs are also declared.
 
 ### 6.6 Apply
 
