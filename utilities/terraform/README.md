@@ -58,6 +58,12 @@ A single resource group containing:
 
 Estimated wall time: 20 to 30 minutes for the first run, most of it waiting on the Supercomputer to come up.
 
+## Design decisions (ADRs)
+
+Architecture Decision Records for this module live in [docs/adr/](docs/adr/):
+
+* [0001 — Network isolation posture for the Discovery workspace](docs/adr/0001-network-isolation-posture.md) — why the module defaults to `network_isolation = true` and always provisions the private topology.
+
 ## Prerequisites
 
 Local tooling:
@@ -508,7 +514,7 @@ Expected shape:
 Plan: 27 to add, 0 to change, 0 to destroy.
 ```
 
-The 27 resources are: `random_string.suffix`, `azurerm_virtual_network` + 6 subnets, 4 `azurerm_user_assigned_identity` (workspace, cluster, kubelet, workload), `azurerm_storage_account`, `azapi_resource.outputs_container`, 7 `azurerm_role_assignment`, and 6 Discovery `azapi_resource`s (supercomputer, node pool, workspace, chat model, storage container, project). Twelve outputs are also declared.
+The 27 resources are: `random_string.suffix`, `azurerm_virtual_network` + 6 subnets, 4 `azurerm_user_assigned_identity` (workspace, cluster, kubelet, workload), `azurerm_storage_account`, `azapi_resource.outputs_container`, 7 `azurerm_role_assignment`, and 6 Discovery `azapi_resource`s (supercomputer, node pool, workspace, chat model, storage container, project). Thirteen outputs are also declared.
 
 ### 6.6 Apply
 
