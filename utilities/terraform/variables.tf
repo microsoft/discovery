@@ -85,7 +85,25 @@ variable "vnet_name" {
 }
 
 variable "managed_identity_name" {
-  description = "User-assigned managed identity name."
+  description = "Workspace user-assigned managed identity name (workspaceIdentity: control + data plane)."
+  type        = string
+  default     = null
+}
+
+variable "cluster_identity_name" {
+  description = "Supercomputer cluster user-assigned managed identity name (AKS control plane)."
+  type        = string
+  default     = null
+}
+
+variable "kubelet_identity_name" {
+  description = "Supercomputer kubelet user-assigned managed identity name (node-level image pulls + startup data access)."
+  type        = string
+  default     = null
+}
+
+variable "workload_identity_name" {
+  description = "Supercomputer workload user-assigned managed identity name (agent/tool federated data access - keep minimally privileged)."
   type        = string
   default     = null
 }

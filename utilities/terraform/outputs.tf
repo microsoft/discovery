@@ -36,13 +36,28 @@ output "project_id" {
 }
 
 output "managed_identity_id" {
-  description = "Resource ID of the user-assigned managed identity."
+  description = "Resource ID of the workspace user-assigned managed identity (workspaceIdentity)."
   value       = azurerm_user_assigned_identity.workspace.id
 }
 
 output "managed_identity_principal_id" {
-  description = "AAD object ID of the user-assigned managed identity."
+  description = "AAD object ID of the workspace user-assigned managed identity (workspaceIdentity)."
   value       = azurerm_user_assigned_identity.workspace.principal_id
+}
+
+output "cluster_identity_id" {
+  description = "Resource ID of the Supercomputer cluster user-assigned managed identity (clusterIdentity)."
+  value       = azurerm_user_assigned_identity.cluster.id
+}
+
+output "kubelet_identity_id" {
+  description = "Resource ID of the Supercomputer kubelet user-assigned managed identity (kubeletIdentity)."
+  value       = azurerm_user_assigned_identity.kubelet.id
+}
+
+output "workload_identity_id" {
+  description = "Resource ID of the Supercomputer workload user-assigned managed identity (workloadIdentities)."
+  value       = azurerm_user_assigned_identity.workload.id
 }
 
 output "storage_account_id" {
