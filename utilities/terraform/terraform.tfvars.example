@@ -2,7 +2,7 @@
 # Anything left commented out will fall back to the default in variables.tf.
 
 resource_group_name = "rg-discovery-terraform"
-location            = "swedencentral"
+location            = "uksouth"
 
 # Optional: pin a fixed suffix so resource names are stable across runs.
 # name_suffix = "dev01"

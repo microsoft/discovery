@@ -78,6 +78,12 @@ variable "project_name" {
   default     = null
 }
 
+variable "bookshelf_name" {
+  description = "Discovery Bookshelf name (3-24 chars, alphanumeric + hyphen). Becomes part of the data-plane URL https://<name>.bookshelf.discovery.azure.com."
+  type        = string
+  default     = null
+}
+
 variable "vnet_name" {
   description = "Virtual network name."
   type        = string

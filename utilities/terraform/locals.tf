@@ -23,6 +23,7 @@ locals {
   workspace_name         = coalesce(var.workspace_name, "ws-${local.suffix}")
   storage_container_name = coalesce(var.storage_container_name, "stc-${local.suffix}")
   project_name           = coalesce(var.project_name, "prj-${local.suffix}")
+  bookshelf_name         = coalesce(var.bookshelf_name, "bs-${local.suffix}")
   vnet_name              = coalesce(var.vnet_name, "vnet-${local.suffix}")
   managed_identity_name  = coalesce(var.managed_identity_name, "uami-ws-${local.suffix}")
   cluster_identity_name  = coalesce(var.cluster_identity_name, "uami-cluster-${local.suffix}")

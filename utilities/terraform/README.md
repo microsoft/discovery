@@ -55,6 +55,7 @@ A single resource group containing:
 * A Discovery Workspace with one Chat Model Deployment.
 * A Discovery Storage Container bound to the storage account above.
 * A Discovery Project inside the workspace.
+* A Discovery Bookshelf (indexed knowledge-base search), co-located in `var.location` with the supercomputer nodepool.
 
 Estimated wall time: 20 to 30 minutes for the first run, most of it waiting on the Supercomputer to come up.
 
@@ -513,10 +514,10 @@ terraform plan -out=tfplan
 Expected shape:
 
 ```text
-Plan: 27 to add, 0 to change, 0 to destroy.
+Plan: 28 to add, 0 to change, 0 to destroy.
 ```
 
-The 27 resources are: `random_string.suffix`, `azurerm_virtual_network` + 6 subnets, 4 `azurerm_user_assigned_identity` (workspace, cluster, kubelet, workload), `azurerm_storage_account`, `azapi_resource.outputs_container`, 7 `azurerm_role_assignment`, and 6 Discovery `azapi_resource`s (supercomputer, node pool, workspace, chat model, storage container, project). Thirteen outputs are also declared.
+The 28 resources are: `random_string.suffix`, `azurerm_virtual_network` + 6 subnets, 4 `azurerm_user_assigned_identity` (workspace, cluster, kubelet, workload), `azurerm_storage_account`, `azapi_resource.outputs_container`, 7 `azurerm_role_assignment`, and 7 Discovery `azapi_resource`s (supercomputer, node pool, workspace, chat model, storage container, project, bookshelf). Fourteen outputs are also declared.
 
 ### 6.6 Apply
 
