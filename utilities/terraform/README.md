@@ -323,7 +323,7 @@ Note that you don't need explicit `depends_on` blocks between the VNet and its s
 
 If you're running locally and already hold `Storage Blob Data Owner` on the account you're deploying into, you can swap the AzAPI block for a plain `azurerm_storage_container` and set `storage_use_azuread = true` on the AzureRM provider in `providers.tf`. Behaviour is identical from Discovery's perspective.
 
-**Networking.** The account keeps public network access **Enabled but restricted to selected virtual networks and IP addresses** (`network_rules` with `default_action = "Deny"`). The supercomputer, AKS, workspace, private-endpoint, and agent subnets are allowlisted and carry a `Microsoft.Storage` service endpoint, so VNet-injected compute reaches storage over the Azure backbone. This mirrors the [Discovery storage-account requirements](https://learn.microsoft.com/azure/microsoft-discovery/concept-storage-account#networking). Add your workstation IP via `storage_allowed_ip_rules` if you want to browse output data in Discovery Studio. Note: fully *disabling* public network access without a private endpoint leaves the platform unable to reach storage and breaks investigation I/O.
+**Networking.** Public network access on the account stays **Disabled**. The Discovery `storageContainer` binding (network hardening) forces `publicNetworkAccess=Disabled` and clears any VNet firewall rules, so a "selected networks" allowlist doesn't hold. Instead the module creates a **blob private endpoint** in the `privateEndpointSubnet` plus the `privatelink.blob.core.windows.net` private DNS zone (linked to the VNet), so the VNet-injected supercomputer/workspace/agent compute resolves the account to a private IP and reaches it over the Azure backbone. This matches the [network-hardened deployment guide](https://learn.microsoft.com/azure/microsoft-discovery/how-to-deploy-network-hardened-stack). Note: with public access disabled, browsing output data in Discovery Studio requires the browser to reach the private endpoint (VNet, VPN, or ExpressRoute).
 
 ### 4.4 `roles.tf` -- seven least-privilege role assignments   [PROVIDER: azurerm]
 
@@ -514,10 +514,10 @@ terraform plan -out=tfplan
 Expected shape:
 
 ```text
-Plan: 28 to add, 0 to change, 0 to destroy.
+Plan: 31 to add, 0 to change, 0 to destroy.
 ```
 
-The 28 resources are: `random_string.suffix`, `azurerm_virtual_network` + 6 subnets, 4 `azurerm_user_assigned_identity` (workspace, cluster, kubelet, workload), `azurerm_storage_account`, `azapi_resource.outputs_container`, 7 `azurerm_role_assignment`, and 7 Discovery `azapi_resource`s (supercomputer, node pool, workspace, chat model, storage container, project, bookshelf). Fourteen outputs are also declared.
+The 31 resources are: `random_string.suffix`, `azurerm_virtual_network` + 6 subnets, 4 `azurerm_user_assigned_identity` (workspace, cluster, kubelet, workload), `azurerm_storage_account`, `azapi_resource.outputs_container`, a blob `azurerm_private_endpoint` + `azurerm_private_dns_zone` + `azurerm_private_dns_zone_virtual_network_link`, 7 `azurerm_role_assignment`, and 7 Discovery `azapi_resource`s (supercomputer, node pool, workspace, chat model, storage container, project, bookshelf). Fourteen outputs are also declared.
 
 ### 6.6 Apply
 

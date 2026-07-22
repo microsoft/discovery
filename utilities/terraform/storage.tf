@@ -4,7 +4,7 @@
 # Storage account with:
 #   * shared key access disabled (Entra ID only)
 #   * blob public access disabled
-#   * public network access restricted to the Discovery subnets + optional IPs
+#   * public network access disabled; reachable via a blob private endpoint
 #   * TLS 1.2 minimum
 #   * CORS for Discovery Studio + VS Code
 #
@@ -46,29 +46,13 @@ resource "azurerm_storage_account" "outputs" {
   min_tls_version                 = "TLS1_2"
   https_traffic_only_enabled      = true
 
-  # Public network access stays Enabled but locked to "selected virtual
-  # networks and IP addresses" via network_rules below. Discovery requires the
-  # supercomputer / AKS / workspace / agent subnets to reach the account
-  # (VNet-injected compute reaches it over the Microsoft.Storage service
-  # endpoint). Fully DISABLING public access without a private endpoint leaves
-  # the platform unable to reach storage and breaks investigation I/O. See:
-  # https://learn.microsoft.com/azure/microsoft-discovery/concept-storage-account#networking
-  public_network_access_enabled = true
-
-  network_rules {
-    default_action = "Deny"
-    bypass         = ["AzureServices"]
-    virtual_network_subnet_ids = [
-      azurerm_subnet.supercomputer_nodepool.id,
-      azurerm_subnet.aks.id,
-      azurerm_subnet.workspace.id,
-      azurerm_subnet.private_endpoint.id,
-      azurerm_subnet.agent.id,
-    ]
-    # Optional: client/public IPs (e.g. your workstation) so output data is
-    # browsable in Discovery Studio. Azure rejects /31 and /32 CIDRs here.
-    ip_rules = var.storage_allowed_ip_rules
-  }
+  # Public network access stays DISABLED. The Discovery storageContainer binding
+  # (network hardening) forces publicNetworkAccess=Disabled and clears any VNet
+  # firewall rules on the account, so a "selected networks" allowlist does not
+  # hold -- the only durable private path is a private endpoint (see
+  # azurerm_private_endpoint.blob below). Declaring false here matches the
+  # platform and avoids perpetual plan drift.
+  public_network_access_enabled = false
 
   blob_properties {
     cors_rule {
@@ -82,6 +66,51 @@ resource "azurerm_storage_account" "outputs" {
       exposed_headers    = ["*"]
       max_age_in_seconds = 200
     }
+  }
+}
+
+# -----------------------------------------------------------------------------
+# Blob private endpoint + private DNS   [PROVIDER: azurerm]
+#
+# Discovery network hardening keeps the account's publicNetworkAccess=Disabled,
+# so the VNet-injected supercomputer / workspace / agent compute reaches Blob
+# storage through a private endpoint in the privateEndpointSubnet. The private
+# DNS zone privatelink.blob.core.windows.net (linked to the VNet) resolves the
+# account FQDN to the endpoint's private IP, and the zone group keeps the A
+# record in sync if the endpoint IP changes.
+#
+# Note: with public access disabled, browsing output data in Discovery Studio
+# requires the browser to reach the private endpoint (VNet, VPN, or ExpressRoute).
+# -----------------------------------------------------------------------------
+resource "azurerm_private_dns_zone" "blob" {
+  name                = "privatelink.blob.core.windows.net"
+  resource_group_name = data.azurerm_resource_group.rg.name
+}
+
+resource "azurerm_private_dns_zone_virtual_network_link" "blob" {
+  name                  = "link-blob-${local.storage_account_name}"
+  resource_group_name   = data.azurerm_resource_group.rg.name
+  private_dns_zone_name = azurerm_private_dns_zone.blob.name
+  virtual_network_id    = azurerm_virtual_network.this.id
+  registration_enabled  = false
+}
+
+resource "azurerm_private_endpoint" "blob" {
+  name                = "pe-blob-${local.storage_account_name}"
+  location            = data.azurerm_resource_group.rg.location
+  resource_group_name = data.azurerm_resource_group.rg.name
+  subnet_id           = azurerm_subnet.private_endpoint.id
+
+  private_service_connection {
+    name                           = "pe-blob-conn"
+    private_connection_resource_id = azurerm_storage_account.outputs.id
+    subresource_names              = ["blob"]
+    is_manual_connection           = false
+  }
+
+  private_dns_zone_group {
+    name                 = "default"
+    private_dns_zone_ids = [azurerm_private_dns_zone.blob.id]
   }
 }
 
