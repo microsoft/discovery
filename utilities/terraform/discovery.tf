@@ -243,6 +243,7 @@ resource "azapi_resource" "project" {
 # resources; delegated/injected subnets may not).
 # -----------------------------------------------------------------------------
 resource "azapi_resource" "bookshelf" {
+  count     = var.enable_bookshelf ? 1 : 0
   type      = "Microsoft.Discovery/bookshelves@2026-02-01-preview"
   name      = local.bookshelf_name
   location  = var.location

@@ -36,8 +36,8 @@ output "project_id" {
 }
 
 output "bookshelf_id" {
-  description = "Resource ID of the Discovery Bookshelf."
-  value       = azapi_resource.bookshelf.id
+  description = "Resource ID of the Discovery Bookshelf (null when enable_bookshelf = false)."
+  value       = one(azapi_resource.bookshelf[*].id)
 }
 
 output "managed_identity_id" {

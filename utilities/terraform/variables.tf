@@ -195,6 +195,12 @@ variable "enable_extensions" {
   default     = true
 }
 
+variable "enable_bookshelf" {
+  description = "Deploy a Microsoft.Discovery/bookshelves resource (indexed knowledge-base search). Off by default: bookshelf provisioning is heavy (~40 min -- managed Azure AI Search S1 + SQL Hyperscale + Container Apps + Foundry) and a backend provisioning failure would block the whole apply and strand a Failed resource. Enable it deliberately once the core stack is up."
+  type        = bool
+  default     = false
+}
+
 # ---- node pool sizing -------------------------------------------------------
 
 variable "node_pool_vm_size" {
