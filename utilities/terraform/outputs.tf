@@ -35,11 +35,6 @@ output "project_id" {
   value       = azapi_resource.project.id
 }
 
-output "bookshelf_id" {
-  description = "Resource ID of the Discovery Bookshelf (null when enable_bookshelf = false)."
-  value       = one(azapi_resource.bookshelf[*].id)
-}
-
 output "managed_identity_id" {
   description = "Resource ID of the workspace user-assigned managed identity (workspaceIdentity)."
   value       = azurerm_user_assigned_identity.workspace.id

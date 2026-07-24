@@ -78,12 +78,6 @@ variable "project_name" {
   default     = null
 }
 
-variable "bookshelf_name" {
-  description = "Discovery Bookshelf name (3-24 chars, alphanumeric + hyphen). Becomes part of the data-plane URL https://<name>.bookshelf.discovery.azure.com."
-  type        = string
-  default     = null
-}
-
 variable "vnet_name" {
   description = "Virtual network name."
   type        = string
@@ -193,12 +187,6 @@ variable "enable_extensions" {
   description = "Enable the VS Code Extension Marketplace in the Discovery workspace via the discovery.workbench.enableExtensions tag."
   type        = bool
   default     = true
-}
-
-variable "enable_bookshelf" {
-  description = "Deploy a Microsoft.Discovery/bookshelves resource (indexed knowledge-base search). Off by default: bookshelf provisioning is heavy (~40 min -- managed Azure AI Search S1 + SQL Hyperscale + Container Apps + Foundry) and a backend provisioning failure would block the whole apply and strand a Failed resource. Enable it deliberately once the core stack is up."
-  type        = bool
-  default     = false
 }
 
 # ---- node pool sizing -------------------------------------------------------

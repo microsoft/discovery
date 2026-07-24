@@ -55,7 +55,6 @@ A single resource group containing:
 * A Discovery Workspace with one Chat Model Deployment.
 * A Discovery Storage Container bound to the storage account above.
 * A Discovery Project inside the workspace.
-* *(optional, set `enable_bookshelf = true`)* A Discovery Bookshelf (indexed knowledge-base search), co-located in `var.location` with the supercomputer nodepool. Off by default because its backend provisioning (managed AI Search + SQL Hyperscale + Container Apps + Foundry) is heavy (~40 min) and can fail independently of the core stack.
 
 Estimated wall time: 20 to 30 minutes for the first run, most of it waiting on the Supercomputer to come up.
 
@@ -517,7 +516,7 @@ Expected shape:
 Plan: 30 to add, 0 to change, 0 to destroy.
 ```
 
-The 30 resources are: `random_string.suffix`, `azurerm_virtual_network` + 6 subnets, 4 `azurerm_user_assigned_identity` (workspace, cluster, kubelet, workload), `azurerm_storage_account`, `azapi_resource.outputs_container`, a blob `azurerm_private_endpoint` + `azurerm_private_dns_zone` + `azurerm_private_dns_zone_virtual_network_link`, 7 `azurerm_role_assignment`, and 6 Discovery `azapi_resource`s (supercomputer, node pool, workspace, chat model, storage container, project). Setting `enable_bookshelf = true` adds a 7th Discovery resource (the bookshelf). Fourteen outputs are also declared.
+The 30 resources are: `random_string.suffix`, `azurerm_virtual_network` + 6 subnets, 4 `azurerm_user_assigned_identity` (workspace, cluster, kubelet, workload), `azurerm_storage_account`, `azapi_resource.outputs_container`, a blob `azurerm_private_endpoint` + `azurerm_private_dns_zone` + `azurerm_private_dns_zone_virtual_network_link`, 7 `azurerm_role_assignment`, and 6 Discovery `azapi_resource`s (supercomputer, node pool, workspace, chat model, storage container, project). Thirteen outputs are also declared.
 
 ### 6.6 Apply
 
