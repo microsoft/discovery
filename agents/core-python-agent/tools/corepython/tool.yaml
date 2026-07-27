@@ -19,7 +19,7 @@ infra:
         gpu: 0
       max_resources:
         cpu: 2
-        ram: 16Gi
+        ram: 13Gi
         storage: 32Gi
         gpu: 0
       infiniband: false
