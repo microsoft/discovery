@@ -2,8 +2,8 @@
 
 `NexusResearcher` — and the optional pipeline agents in [`../tasks/`](../tasks/README.md) — reach the
 [Wiley Nexus](https://nexus.wiley.com/playground/docs/v1/getting-started/overview) corpus through an
-**MCP tool**: a remote Model Context Protocol server registered in the Microsoft Foundry project that
-backs your Discovery workspace.
+**MCP tool**: a connection to a remote Model Context Protocol server, registered in the Microsoft
+Foundry project that backs your Discovery workspace.
 
 At the moment, Discovery Studio doesn't expose MCP tool registration, so this is done in Foundry. You
 register the tool **once per project**, then attach it to each agent that needs it.
@@ -19,7 +19,7 @@ In Discovery Studio, open the agent under **Resources → Agents**, then select 
 
 ![Open in Foundry button on the agent details page in Discovery Studio](assets/1-discovery-open-in-foundry.png)
 
-> Studio itself notes that *"some settings are not available on Discovery"* — tools are one of them.
+> Studio itself notes that "some settings are not available on Discovery" — tools are one of them.
 
 ## 2. Go to Tools and start a new connection
 
@@ -56,14 +56,14 @@ Select **Connect**.
 
 ## 5. Attach the tool to your agent
 
-Open the `nexus-domains` tool, then use **Use in an agent** and pick the agent from the list
-(**View all agents** if it isn't in the recents).
+Open the `nexus-domains` tool, then select **Use in an agent** and pick the agent from the list
+(**View all agents** if it isn't under **Recent agents**).
 
 ![The nexus-domains tool page with the Use in an agent dropdown open](assets/5-foundry-tool-use-in-an-agent.png)
 
 Repeat this for each agent that needs Nexus access.
 
-## 6. Configure the tool and turn off approval
+## 6. Configure the tool and set approval to auto-approve
 
 This step is easy to miss and the agent will not work without it.
 
@@ -83,12 +83,11 @@ Select **Apply**.
 
 ## 7. Save the agent
 
-Use **Save** (and **Publish** if you're promoting the version). Each save creates a new immutable
+Select **Save** (or **Publish** to promote the version for wider use). Each save creates a new immutable
 version; the latest is what Discovery tasks use.
 
-Back in Discovery Studio, the agent now lists `nexus-domains` among its tools alongside Discovery's
-built-in resource tools (`GetResourceContext`, `PreviewResource`, `WriteResource`, `ShareResource`,
-`UpdateResourceDetails`).
+Back in Discovery Studio, the agent now lists `nexus-domains` among its tools, alongside the
+resource-handling tools Discovery injects into every agent.
 
 ---
 
@@ -101,8 +100,12 @@ The Wiley Nexus MCP server exposes two tools:
 | `search_publications` | Semantic search over the Nexus corpus; returns passage-level hits with metadata and, when full text is available, a download token |
 | `download_publication` | Returns one publication's full text, using a token from a search hit |
 
-For the full picture of the Wiley Nexus services — what the corpus covers, the tool parameters and
-response shapes, token behaviour, and rate limits — see the
+Two fields from the search response are referenced by the agent instructions: `full_text_token`, the
+short-lived token that `download_publication` consumes, and `wol_link`, the publication's Wiley Online
+Library URL used to build references.
+
+For the full picture of the Wiley Nexus service — what the corpus covers, the tool parameters and
+response shapes, token behavior, and rate limits — see the
 **[Wiley Nexus documentation](https://nexus.wiley.com/playground/docs/v1/getting-started/overview)**.
 
 How each agent actually uses these tools is governed by its instructions, not by the tool
@@ -112,7 +115,8 @@ configuration.
 
 - **Register once, attach many.** The tool is a project-level resource. Adding it to a second agent is
   just steps 5 and 6 — don't create a duplicate connection.
-- **Changing the tool for everyone.** The configure dialog's changes apply to that one agent. To
-  change the tool itself (endpoint, credential), use *edit the tool at the project level*.
+- **Per-agent settings vs. the tool itself.** Changes in the Configure dialog apply only to that one
+  agent. To change the endpoint or credential for everyone, use the **edit the tool at the project
+  level** link in that dialog.
 - **Rotating the key.** Edit the credential on the project-level tool; agents pick it up without
   needing to be republished.

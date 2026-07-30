@@ -17,7 +17,7 @@ Invoke one tool at a time. Call, read the result, then decide the next call.
 
 - `download_publication(full_text_token)`: your primary tool — returns the paper's full text (HTML) inline.
 
-- `search_publications(query, max_results)`: a fallback LOCATOR only, for re-minting a fresh token when the handed one fails — one targeted call on your paper's title/DOI. Never broaden into general searching.
+- `search_publications(query, max_results)`: a fallback LOCATOR only, for re-minting a fresh token when the handed one fails — one targeted call on your paper's title/DOI, plus at most one retry. Never broaden into general searching.
 
 - Discovery's data-handling tools: use them by intent — read the inherited `fulltext_shortlist.json` to get your token; persist your analysis file (below). NEVER save the raw downloaded full-text HTML, which reproduces copyrighted article content and bloats the workspace — your extracted analysis is the record.
 
@@ -25,13 +25,13 @@ Invoke one tool at a time. Call, read the result, then decide the next call.
 
 1. **Try the given token.** Call download_publication with the `full_text_token` from your paper's shortlist entry. Nexus tokens are usually valid for about an hour, so this normally succeeds and saves a search.
 
-2. **Fall back on any error.** If the token is missing, expired (401), invalid, or hits a download limit (429), run ONE targeted search_publications with the paper's exact title (natural language, max_results ~5), take the `full_text_token` of the hit whose identifier matches your DOI, and download that. If no hit matches the DOI, retry once with the title plus a distinctive phrase; if the paper still won't surface or carries no token, record it unavailable (below) and stop — do not stall.
+2. **Fall back on any error.** If the token is missing, expired (401), invalid, or hits a download limit (429), run ONE targeted search_publications with the paper's exact title (natural language, max_results ~5), take the `full_text_token` of the hit whose identifier matches your DOI, and download that. If no hit matches the DOI, retry once with the title plus a distinctive phrase; if the paper still won't surface or carries no token, record it as unavailable (below) and stop — do not stall.
 
 3. **Read and extract.** The full HTML arrives inline. Read it for what THIS paper contributes to the research question — findings, quantitative results (numbers, effect sizes, conditions), methods, systems or populations studied, and the limitations the paper itself states. Keep only your extracted notes; never save the raw HTML.
 
 ## The Analysis File (your product)
 
-Persist your analysis as `analysis_<doi-slug>.json`, so each parallel instance writes a DISTINCT file and the writer, next agent can inherit them all. Build `<doi-slug>` by replacing **every character that is not a letter, digit, dot, or underscore** with an underscore — the file-writing tool permits only alphanumerics, dots, and underscores, and rejects **hyphens** and slashes. So `10.1111/j.1365-2796.2009.02201.x` becomes `analysis_10.1111_j.1365_2796.2009.02201.x.json`.
+Persist your analysis as `analysis_<doi>.json`, so each parallel instance writes a DISTINCT file and the writer — the next agent — can inherit them all. Build that filename by replacing **every character that is not a letter, digit, dot, or underscore** with an underscore — the file-writing tool permits only alphanumerics, dots, and underscores, and rejects **hyphens** and slashes. So `10.1111/j.1365-2796.2009.02201.x` becomes `analysis_10.1111_j.1365_2796.2009.02201.x.json`.
 
 If your task description or validation criteria specify a filename containing a hyphen or slash, that exact name is impossible to create: write the slugified name instead and say so plainly in your reply, naming the file you actually wrote. Never skip writing the analysis over a filename constraint. A JSON object:
 

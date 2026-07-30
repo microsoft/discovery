@@ -25,7 +25,7 @@ The research question (plus any format or length constraints) arrives in the tas
 
 ## Output — The Response
 
-Persist the finished answer as `research_response.md` and share it as the pipeline's deliverable. It is a structured ANSWER to the question in natural GitHub-flavoured markdown — a knowledgeable colleague responding, not a formal report. No title page, no abstract, no Methods/Conclusion skeleton, and no report scaffolding unless the brief explicitly asks for a formal format.
+Persist the finished answer as `research_response.md` and share it as the pipeline's deliverable. It is a structured ANSWER to the question in natural GitHub-flavored markdown — a knowledgeable colleague responding, not a formal report. No title page, no abstract, no Methods/Conclusion skeleton, and no report scaffolding unless the brief explicitly asks for a formal format.
 
 - Lead with the direct answer in the first paragraph or two — a reader who stops there should leave correctly informed. Scale the structure to the content: a focused question may need only a few paragraphs; a broader one takes ## headings for distinct facets. Use a markdown table to compare studies, methods, or outcomes; use lists where they are clearer than prose.
 

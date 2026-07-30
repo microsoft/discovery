@@ -5,7 +5,7 @@ answer, reading **each shortlisted paper in its own parallel task**.
 
 This is an alternative to chatting with `NexusResearcher` directly (see
 [`../README.md`](../README.md)). Use it when you want an autonomous, multi-paper review where every
-paper gets a full read in an isolated context rather than the two-paper cap of an interactive session.
+paper gets a full read in an isolated context, instead of the two-paper cap of an interactive session.
 
 ## What it does
 
@@ -26,28 +26,25 @@ flowchart LR
 You create **three** tasks. The Discovery Engine expands the middle one into as many per-paper tasks as
 the shortlist contains.
 
-### The three agents
+### The three agents and their tasks
 
 Each is a prompt agent you create in Discovery Studio. The files here are the paste source — YAML
-frontmatter holds the form fields (name, description, model), and the body below the closing `---` is
+frontmatter holds the form fields (name, displayName, description, model), and the body below the closing `---` is
 the instructions.
 
 | # | Task name | Agent | Definition | Produces |
 | --- | --- | --- | --- | --- |
 | 1 | `Gather Literature Evidence` | NexusSearch | [`nexus-search.md`](nexus-search.md) | The evidence base + a shortlist of papers worth reading in full |
-| 2 | `Analyze Each Shortlisted Paper` | NexusFullTextAnalyzer (one instance per paper) | [`nexus-fulltext-analyzer.md`](nexus-fulltext-analyzer.md) | One analysis per paper |
+| 2 | `Analyze Each Shortlisted Paper` | NexusFullTextAnalyzer (one instance per paper) | [`nexus-fulltext-analyzer.md`](nexus-fulltext-analyzer.md) | One analysis per shortlisted paper |
 | 3 | `Compose the Response` | NexusWriter | [`nexus-writer.md`](nexus-writer.md) | The final answer |
-
-The `model: gpt-5-5` in each frontmatter means "a reasoning-model deployment" — substitute the name of
-your own deployment, and leave temperature and top-p unset.
 
 ### Outputs
 
 | File | Written by | Contents |
 | --- | --- | --- |
-| `evidence_passages.md` | Task 1 | Every unique publication found, with metadata (DOI, authors, journal, year, Wiley Online Library link) and its verbatim passages, plus a note on what each search angle covered. |
-| `fulltext_shortlist.json` | Task 1 | The 3–5 papers most worth reading in full, each with its DOI, a one-line rationale, and its download token. |
-| `analysis_<doi>.json` | Task 2, one per paper | That paper's contribution, key findings, methods, and limitations. |
+| `evidence_passages.md` | Task 1 | Every unique publication found, with its labeled metadata (DOI, authors, journal, full-text availability, Wiley Online Library link) and verbatim passages, plus a note on what each search angle covered. |
+| `fulltext_shortlist.json` | Task 1 | The 3–5 papers most worth reading in full, each with its DOI, title, a one-line rationale, and its download token. |
+| `analysis_<doi>.json` | Task 2, one per shortlisted paper | That paper's status, contribution, key findings, methods, and limitations — or a status of `unavailable` with a reason if it could not be retrieved. |
 | `research_response.md` | Task 3 | **The deliverable** — a structured answer with IEEE-numbered citations linked to Wiley Online Library. |
 
 ## Before you start
@@ -65,8 +62,9 @@ your own deployment, and leave temperature and top-p unset.
 Do this once per project, for each of the three definition files above.
 
 1. In your project, go to **Resources → Agents → + Create new agent**.
-2. Fill the form fields from the file's **YAML frontmatter**: `name`, `description`, and the model.
-   Substitute your own reasoning-model deployment name for `gpt-5-5`, and leave temperature and top-p
+2. Fill the form fields from the file's **YAML frontmatter**: `name` (the agent name tasks refer to),
+   `displayName`, `description`, and the model.
+   Substitute your own reasoning-model deployment name for `gpt-5-5`, and leave temperature and `top_p`
    unset — reasoning models reject them.
 3. Paste everything **below the closing `---`** into **Instructions**.
 4. Attach the `nexus-domains` MCP tool to **NexusSearch** and **NexusFullTextAnalyzer**, with approval
@@ -79,7 +77,7 @@ against them, which is why the tasks below leave *Assigned to* blank.
 
 ---
 
-## Creating the tasks
+## Creating and running the pipeline
 
 ### 1. Create a shared session
 
@@ -109,7 +107,7 @@ For each task, fill in:
 | **Shared Session** | The session you just created |
 | **Description** | Paste from the task file — replace `{{RESEARCH_QUESTION}}` with your question |
 | **Validation Criteria** | Paste from the task file |
-| **Assigned to** | **Leave blank on all three.** Required for Task 2 — it's what lets the Engine split it into one task per paper. |
+| **Assigned to** | **Leave blank on all three.** For Task 2 this is mandatory — a blank assignment is what lets the Engine split it into one task per paper. |
 | **Priority** | `Medium` |
 | **Dependent tasks** | Task 1: none · Task 2: Task 1 · Task 3: Tasks 1 and 2 |
 
@@ -144,12 +142,11 @@ are reusable — you only redo the tasks:
 
 ## Notes on the design
 
-Two things about this pipeline are worth understanding before you change it:
+Three things about this pipeline are worth understanding before you change it:
 
 - **Task 2 must stay unassigned.** The Engine decomposes an unassigned task; assigning an agent makes it
   run the whole shortlist as a single task instead of fanning out.
 - **Task 1 lists the shortlist in its reply, not just in a file.** The Engine reads an upstream task's
   result text when planning what to create next, so that list is what it fans out over.
-
-Output filenames use only letters, digits, dots, and underscores — every other character in a DOI
-becomes an underscore — because the file-writing tool rejects hyphens and slashes.
+- **Output filenames use only letters, digits, dots, and underscores** — every other character in a
+  DOI becomes an underscore — because the file-writing tool rejects hyphens and slashes.

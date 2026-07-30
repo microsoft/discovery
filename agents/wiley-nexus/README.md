@@ -1,13 +1,13 @@
 # Wiley Nexus — Scholarly Research Agents
 
 Research agents grounded in Wiley's peer-reviewed scholarly corpus, reached through the
-[Wiley Nexus](https://nexus.wiley.com/playground/docs/v1/getting-started/overview) MCP server. Every
-factual claim traces to a publication the agent actually retrieved — never to model memory — and
-answers close with IEEE-numbered references linked to Wiley Online Library.
+[Wiley Nexus](https://nexus.wiley.com/playground/docs/v1/getting-started/overview) MCP server. The agent is
+instructed to ground every factual claim in a publication it retrieved during the conversation, rather
+than in model memory, and to end with IEEE-numbered references linked to Wiley Online Library.
 
 ## Overview
 
-**NexusResearcher** is the registered agent in this folder. It answers a scientific or technical
+**NexusResearcher** is the agent defined in this folder's `agent.yaml`. It answers a scientific or technical
 question end to end: it plans the query, searches the Nexus corpus from several distinct angles
 (letting each result set sharpen the next), optionally reads the most on-point papers in full, and
 returns a citation-backed synthesis. It then stays in the conversation to handle follow-ups from the
@@ -21,12 +21,12 @@ It works in two modes:
 | **Follow-up** | A question building on an answer already given in the conversation | A short conversational reply, grounded in papers already in play, with at most a targeted single retrieval |
 
 Alongside the interactive agent, this folder ships an optional **three-agent Discovery Engine
-pipeline** for autonomous literature reviews, where each shortlisted paper is analysed in its own
+pipeline** for autonomous literature reviews, where each shortlisted paper is analyzed in its own
 parallel task. See [`tasks/`](tasks/README.md).
 
 ## Architecture
 
-`NexusResearcher` is a prompt agent — no containerised tools, no custom compute. It calls two remote
+`NexusResearcher` is a prompt agent — no containerized tools, no custom compute. It calls two remote
 tools over the Wiley Nexus MCP server, plus Discovery's built-in resource tools to persist its
 finished answer.
 
@@ -35,7 +35,7 @@ flowchart LR
     U(["Research question"]) --> R["NexusResearcher<br/>(prompt agent)"]
     R -->|search_publications| N[("Wiley Nexus<br/>MCP server")]
     R -->|download_publication| N
-    R --> A(["IEEE-cited answer<br/>+ saved workspace asset"])
+    R --> A(["IEEE-cited answer<br/>(saved as an asset for substantive reviews)"])
 ```
 
 The optional pipeline splits the same work across three specialists so that each paper is read in an
@@ -52,31 +52,35 @@ flowchart LR
 
 - A Microsoft Discovery workspace and project, with a chat model deployment available to the project.
 - **A reasoning model.** These agents are written for and tested with a reasoning model
-  (gpt-5.5). Reasoning models reject `temperature` and `top_p`, which is why `agent.yaml` sets no
-  model `options`.
+  (`gpt-5-5`). Reasoning models do not accept `temperature` or `topP`, which is why `agent.yaml` sets
+  no model `options`.
 - **A Wiley Nexus API key**, for the MCP connection. Nexus is a Wiley commercial service; see the
-  [Nexus documentation](https://nexus.wiley.com/playground/docs/v1/getting-started/overview) for
-  access.
+  [Wiley Nexus documentation](https://nexus.wiley.com/playground/docs/v1/getting-started/overview)
+  for access.
 - Permission to add a tool in the Microsoft Foundry project behind your Discovery workspace.
 
 ## Configuration
 
 `agent.yaml` uses the `{{CHAT-MODEL}}` placeholder for the model deployment — supply your own
-deployment name at deploy time. Leave the model options unset.
+deployment name at deploy time, and leave the model options unset.
 
-The agent needs the Wiley Nexus MCP tool connected before it can retrieve anything. Registration is
-done in Microsoft Foundry, not Discovery Studio:
+Deploy the agent to your project (or create it in Discovery Studio from `agent.yaml`) and **save** it
+before connecting the tool — the *Open in Foundry* button appears only on a saved agent.
+
+The agent declares no `tools:` array. Nexus is reached through a remote MCP connection that carries a
+per-customer API key, so it cannot be described in the catalog and is connected per project instead:
 
 | Setting | Value |
 | --- | --- |
-| Tool name | `nexus-domains` |
-| Remote MCP server endpoint | `https://nexus.wiley.com/mcp/` |
+| Name | `nexus-domains` |
+| Remote MCP Server endpoint | `https://nexus.wiley.com/mcp/` |
 | Authentication | Key-based |
-| Credential | Key `X-Api-Key`, value = your Nexus API key |
-| Approval | **Auto-approve all tools** |
+| Credential | Key `X-Api-Key`, value = your Wiley Nexus API key |
+| Approval | **Always auto-approve all tools** |
 
-> Approval must be set to auto-approve. The default asks for confirmation before every tool call,
-> and in an autonomous task run there is nobody to confirm — the agent stalls waiting.
+> Approval must be set to auto-approve. The default asks for confirmation before every single tool
+> call, which interrupts an interactive session constantly — and in an autonomous task run there is
+> nobody to confirm at all, so the agent stalls indefinitely.
 
 **[`mcp/README.md`](mcp/README.md) is the full walkthrough**, with a screenshot for each step. The API
 key lives only in that Foundry connection — never in an agent definition, a task description, or this
@@ -114,11 +118,11 @@ values to transcribe.
 
 - **Full text is not always available.** A search hit without a download token has no retrievable
   full text; the agent cites such papers from their passages instead and flags the limitation.
-- **Download tokens are short-lived** (about an hour) and belong to the search that produced them. The
-  agent re-searches to mint a fresh one when a token has expired.
+- **Download tokens are short-lived** and belong to the search that produced them. The agent runs a
+  fresh search to obtain a new token when one has expired.
 - **Full-text reads are capped** — at most two per question in interactive mode, because full-text
-  HTML is large and consumes context quickly. The pipeline in `tasks/` exists precisely to lift that
-  ceiling by giving each paper its own task.
+  HTML is large and consumes context quickly. The pipeline in [`tasks/`](tasks/README.md) exists
+  precisely to lift that ceiling by giving each paper its own task.
 
 ## Support
 
