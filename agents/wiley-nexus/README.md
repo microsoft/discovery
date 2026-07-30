@@ -112,8 +112,6 @@ values to transcribe.
 
 ## Known Limitations
 
-- **Wiley corpus only.** Retrieval is limited to what Wiley Nexus indexes. The agent does not browse
-  the live web, and it says so rather than filling gaps from memory when evidence is thin.
 - **Full text is not always available.** A search hit without a download token has no retrievable
   full text; the agent cites such papers from their passages instead and flags the limitation.
 - **Download tokens are short-lived** (about an hour) and belong to the search that produced them. The
@@ -121,11 +119,6 @@ values to transcribe.
 - **Full-text reads are capped** — at most two per question in interactive mode, because full-text
   HTML is large and consumes context quickly. The pipeline in `tasks/` exists precisely to lift that
   ceiling by giving each paper its own task.
-- **Strongest in life sciences, health science, and agriculture**, reflecting the corpus. Coverage
-  thins outside those areas.
-- **English-language literature.**
-- The agent never persists raw downloaded full-text HTML — it reproduces copyrighted article content —
-  only its own synthesis and citations.
 
 ## Support
 
