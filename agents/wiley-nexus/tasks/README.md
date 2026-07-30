@@ -34,9 +34,9 @@ the instructions.
 
 | # | Task name | Agent | Definition | Produces |
 | --- | --- | --- | --- | --- |
-| 1 | `Gather Literature Evidence` | NexusSearch | [`nexus-search.md`](nexus-search.md) | The evidence base + a shortlist of papers worth reading in full |
-| 2 | `Analyze Each Shortlisted Paper` | NexusFullTextAnalyzer (one instance per paper) | [`nexus-fulltext-analyzer.md`](nexus-fulltext-analyzer.md) | One analysis per shortlisted paper |
-| 3 | `Compose the Response` | NexusWriter | [`nexus-writer.md`](nexus-writer.md) | The final answer |
+| 1 | `Gather Literature Evidence` | NexusSearch | [`nexus-search-agent.md`](nexus-search-agent.md) | The evidence base + a shortlist of papers worth reading in full |
+| 2 | `Analyze Each Shortlisted Paper` | NexusFullTextAnalyzer (one instance per paper) | [`nexus-fulltext-analyzer-agent.md`](nexus-fulltext-analyzer-agent.md) | One analysis per shortlisted paper |
+| 3 | `Compose the Response` | NexusWriter | [`nexus-writer-agent.md`](nexus-writer-agent.md) | The final answer |
 
 ### Outputs
 
