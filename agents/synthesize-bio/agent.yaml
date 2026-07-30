@@ -82,10 +82,18 @@ tools:
       Generate gene expression from a virtual human. Describe any experiment in natural
       language; Synthesize Bio generates realistic human expression profiles using its
       Gene Expression Model (GEM). Supports bulk and single-cell RNA-seq.
+    # Auth: API key as Authorization Bearer token (Discovery does not support
+    # OAuth for this MCP yet). Configure at deploy time — do not commit secrets.
+    # Key name: Authorization | Key value: Bearer YOUR_API_KEY
+    # https://docs.synthesize.bio/platform/authentication#using-the-key
     connection:
       kind: remote
       name: synthesize-bio-mcp
       endpoint: https://app.synthesize.bio/api/mcp
+      authenticationMode: apiKey
+      usageDescription: >
+        Synthesize Bio platform API key. Set header Authorization to
+        "Bearer YOUR_API_KEY" (see https://docs.synthesize.bio/platform/authentication#using-the-key).
     approvalMode:
       kind: never
     allowedTools:

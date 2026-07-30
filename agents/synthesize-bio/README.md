@@ -34,12 +34,13 @@ Pipeline steps after confirmation:
 1. **GEM** — AI-powered gene expression model inference for each sample group.
 2. **Differential expression** — GPU-accelerated DESeq2 (negative-binomial GLM, Wald test, Cook's filter, Benjamini–Hochberg padj).
 
-Authentication to the MCP endpoint uses the caller's Synthesize Bio account (OAuth). Usage and budget limits are enforced by the Synthesize Bio API.
+Authentication to the MCP endpoint uses a Synthesize Bio **platform API key** (Bearer token). Microsoft Discovery does not currently support OAuth for this connector. Usage and budget limits are enforced by the Synthesize Bio API. Full auth reference: https://docs.synthesize.bio/platform/authentication
 
 ## Prerequisites
 
 - A Microsoft Discovery workspace (cloud) or Microsoft Discovery app environment with a chat model deployment for `{{CHAT-MODEL}}`.
 - A Synthesize Bio account — register at https://www.synthesize.bio/.
+- A Synthesize Bio platform API key (see Configuration below).
 - Network access from the Discovery runtime to `https://app.synthesize.bio/api/mcp`.
 - For raw counts downloads via `get_counts_data_url`, an environment with shell or Python network access.
 
@@ -52,7 +53,30 @@ Authentication to the MCP endpoint uses the caller's Synthesize Bio account (OAu
 | Setting | Required | Description |
 |---|---|---|
 | MCP endpoint | ✅ | `https://app.synthesize.bio/api/mcp` (declared on the MCP tool connection) |
-| Synthesize Bio OAuth | ✅ | User signs in with their Synthesize Bio account when prompted |
+| Synthesize Bio API key | ✅ | Platform API key sent as an `Authorization` Bearer token (see below) |
+
+### API key setup
+
+1. Sign in to https://app.synthesize.bio
+2. Go to **Account → API Keys**
+3. Create a new key and copy it immediately — it is only shown once
+
+MCP URL:
+
+```text
+https://app.synthesize.bio/api/mcp
+```
+
+If Discovery (or the MCP host) asks for a key name and key value, enter:
+
+```text
+Key name:  Authorization
+Key value: Bearer YOUR_API_KEY
+```
+
+The key name must be `Authorization`. The key value must include the `Bearer ` prefix before the API key. See https://docs.synthesize.bio/platform/authentication#using-the-key
+
+Keep the API key secret. Do not commit it to version control. Rotate keys from the API Keys page as needed.
 
 No container image, ACR, or Discovery-managed `tools/` package is required for this agent.
 
@@ -60,7 +84,7 @@ No container image, ACR, or Discovery-managed `tools/` package is required for t
 
 1. Deploy or enable the agent from the Discovery Catalog / Discovery Studio.
 2. Ensure the chat model parameter `{{CHAT-MODEL}}` points at your deployment.
-3. Authenticate to Synthesize Bio when the MCP connection prompts for OAuth.
+3. Configure the MCP connection with your Synthesize Bio API key (`Authorization: Bearer YOUR_API_KEY`).
 4. Ask for an experiment in natural language, for example:
 
 | Prompt | Mode |
@@ -79,7 +103,7 @@ No container image, ACR, or Discovery-managed `tools/` package is required for t
 - Public models cover a defined set of tissues, diseases, and perturbations. Out-of-coverage requests surface partnership guidance rather than silent invention of vocabulary.
 - `get_counts_data_url` returns multi-megabyte artifacts; only fetch them from environments with direct network and shell/Python tooling.
 - This catalog entry does not ship a Discovery-managed container tool — compute runs on Synthesize Bio's hosted MCP service.
-- MCP OAuth is user-interactive; enterprise deployments may need additional connector / network configuration in Azure.
+- Microsoft Discovery currently requires API key auth for this MCP connection (OAuth is not supported by Discovery for this integration yet). Store keys in your host's secret store; never embed them in catalog YAML.
 
 ## Contributing
 
