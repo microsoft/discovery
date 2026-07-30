@@ -52,13 +52,30 @@ your own deployment, and leave temperature and top-p unset.
 
 ## Before you start
 
-- **The three agents exist in your project**, created from the definition files above.
-- **The Wiley Nexus MCP tool is connected** to NexusSearch and NexusFullTextAnalyzer, with approval
-  set to auto-approve — see [`../mcp/README.md`](../mcp/README.md). NexusWriter needs no Nexus tool; it
-  works only from the files the earlier stages produced.
+- **The three agents exist in your project, with the Wiley Nexus MCP tool connected** — see
+  [Creating the agents](#creating-the-agents) below.
 - **A chat model deployment is available to the project** for the Discovery Engine's own planning and
   task validation, alongside the reasoning-model deployment the agents run on. Give it enough
   throughput to validate several per-paper tasks finishing at once.
+
+---
+
+## Creating the agents
+
+Do this once per project, for each of the three definition files above.
+
+1. In your project, go to **Resources → Agents → + Create new agent**.
+2. Fill the form fields from the file's **YAML frontmatter**: `name`, `description`, and the model.
+   Substitute your own reasoning-model deployment name for `gpt-5-5`, and leave temperature and top-p
+   unset — reasoning models reject them.
+3. Paste everything **below the closing `---`** into **Instructions**.
+4. Attach the `nexus-domains` MCP tool to **NexusSearch** and **NexusFullTextAnalyzer**, with approval
+   set to auto-approve — see [`../mcp/README.md`](../mcp/README.md). **NexusWriter needs no Nexus
+   tool**; it works only from the files the earlier stages produced.
+5. **Save.** Each save creates a new immutable version, and tasks use the latest one.
+
+Leave the descriptions as written. The Discovery Engine chooses an agent for each task by matching
+against them, which is why the tasks below leave *Assigned to* blank.
 
 ---
 
