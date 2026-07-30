@@ -4,7 +4,7 @@
 
 Microsoft Discovery is the AI for Science platform that enables agentic-driven scientific research and development. Discovery Toolbox provides an end-to-end deployment and management experience — including instantiation of agents, tools, models, knowledge bases (Bookshelves), and the supercomputer compute pool — plus subscription-wide resource inventory with cascade tear-down, declarative validation plans, live agent chat, and a `@discovery` chat participant for natural-language operations.
 
-**Current version:** `v1.1.67`
+**Current version:** `v1.5.79`
 
 ---
 
@@ -25,7 +25,7 @@ Microsoft Discovery is the AI for Science platform that enables agentic-driven s
 - 🔧 **End-to-end deployment** — Provision the full Microsoft Discovery platform from scratch (VNets, supercomputers, workspaces, projects, chat models, storage, managed identities) using a bundled, hardened Bicep template, deployed directly from inside VS Code with live terminal output.
 - 🤖 **Agent & tool publishing** — Publish AI agents and containerized tools directly to your Discovery environment. Create from scratch or from the catalog, then build tool images **remotely via ACR Tasks** — no local Docker required — and push them straight to your Azure Container Registry.
 - 🛡️ **Prerequisite validation** — Automatically verify 100+ Azure prerequisites — RBAC roles, resource providers, quotas, policies, **network security perimeter**, and configuration — before deployment, with one-click remediation actions for every issue found.
-- �️ **Inventory & cleanup** — Subscription-wide scan of every Discovery resource group, workspace, project, agent, supercomputer, storage account/container, UAMI, Bookshelf, ACR registry, and orphan MRG. Per-leaf delete and full project / workspace / supercomputer cascade tear-down with type-confirm modals (gated by `mdToolbox.enableCleanup`).
+- 🗂️ **Inventory & cleanup** — Subscription-wide scan of every Discovery resource group, workspace, project, agent, supercomputer, storage account/container, UAMI, Bookshelf, ACR registry, and orphan MRG. Per-leaf delete and full project / workspace / supercomputer cascade tear-down with type-confirm modals (gated by `mdToolbox.enableCleanup`).
 - 📊 **Architecture visualization** — See your entire Discovery deployment topology as an interactive diagram (workspaces, projects, agents, supercomputers, storage, networking) with real-time health status. Export as PNG (2×) or SVG, or browse a built-in example dataset.
 - 💰 **Cost analysis** — Track per-resource costs across your Discovery resource groups (daily, weekly, monthly breakdowns). Sortable table with RG and service filters, plus direct links to the Azure Portal cost blade.
 - 📋 **Operational monitoring** — 5-signal diagnostics dashboard (Resource Health, Active Alerts, Advisor Recommendations, Service Health, Diagnostic Settings) across main and managed resource groups, with KPI tiles.
@@ -87,4 +87,4 @@ Found a bug, want a feature, or have general feedback? Open an issue on the [mic
 
 ---
 
-<sub>Published version **v1.1.67** &middot; built from `d8bce6e` on 2026-06-01T18:47:30.060Z.</sub>
+<sub>Published version **v1.5.79** &middot; built from `b3ce513` on 2026-07-30T23:06:54.929Z.</sub>
