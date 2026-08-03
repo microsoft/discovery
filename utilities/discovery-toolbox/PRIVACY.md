@@ -42,7 +42,7 @@ The extension uses VS Code's built-in authentication providers:
 | Provider | Used for | Token lifetime |
 |---|---|---|
 | `microsoft` | All Azure ARM and Discovery data-plane calls | ~1 hour, auto-refreshed by VS Code |
-| `github` | Reading the public [`microsoft/discovery-catalog`](https://github.com/microsoft/discovery-catalog) repository | Per your VS Code GitHub sign-in |
+| `github` | Reading the public [`microsoft/discovery`](https://github.com/microsoft/discovery) catalog repository | Per your VS Code GitHub sign-in |
 
 **Tokens are never written to disk by this extension.** They are obtained
 on demand from VS Code's secure credential store, held in memory only for
@@ -67,7 +67,7 @@ Every host the extension may contact, and what for:
 | `mcp.discovery.azure.com` (when MCP enabled) | Discovery MCP server for tool invocation | Microsoft session token |
 | `learn.microsoft.com` | Open documentation links in your browser (no fetch from the extension) | None |
 | `raw.githubusercontent.com/MicrosoftDocs/azure-docs/...` | Fetch Microsoft Discovery documentation pages for the in-extension Docs view | Anonymous HTTP GET |
-| `api.github.com` / `raw.githubusercontent.com/microsoft/discovery-catalog` | Fetch the Discovery catalog (tool + agent definitions) | Your GitHub session token if you're signed in; anonymous (rate-limited) otherwise |
+| `api.github.com` / `raw.githubusercontent.com/microsoft/discovery` | Fetch the Discovery catalog (tool + agent definitions) | Your GitHub session token if you're signed in; anonymous (rate-limited) otherwise |
 | `api.github.com/repos/microsoft/discovery/contents/utilities/discovery-toolbox/...` | Fetch the toolbox update manifest + new VSIX from the release folder | Your GitHub session token while the repo is private; anonymous once it goes public |
 
 The extension does not contact any other host. It does not send error
@@ -184,6 +184,6 @@ pre-filled body before submitting — the GitHub issue is public.
 
 ---
 
-<sub>Privacy notice for Discovery Toolbox **v1.1.67** · built from `d8bce6e` on 2026-06-01T18:47:30.060Z.</sub>
+<sub>Privacy notice for Discovery Toolbox **v1.5.79** · built from `b3ce513` on 2026-07-30T23:06:54.929Z.</sub>
 
 <sub>This document is maintained in the open in the [`microsoft/discovery`](https://github.com/microsoft/discovery/tree/main/utilities/discovery-toolbox) repository. It covers only this extension; for VS Code's own privacy practices see the [VS Code privacy statement](https://code.visualstudio.com/license).</sub>
