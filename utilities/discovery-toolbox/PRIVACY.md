@@ -184,6 +184,6 @@ pre-filled body before submitting — the GitHub issue is public.
 
 ---
 
-<sub>Privacy notice for Discovery Toolbox **v1.5.79** · built from `b3ce513` on 2026-07-30T23:06:54.929Z.</sub>
+<sub>Privacy notice for Discovery Toolbox **v1.6.26** · built from `6330535` on 2026-08-04T18:11:02.055Z.</sub>
 
 <sub>This document is maintained in the open in the [`microsoft/discovery`](https://github.com/microsoft/discovery/tree/main/utilities/discovery-toolbox) repository. It covers only this extension; for VS Code's own privacy practices see the [VS Code privacy statement](https://code.visualstudio.com/license).</sub>
