@@ -35,6 +35,11 @@ output "project_id" {
   value       = azapi_resource.project.id
 }
 
+output "bookshelf_id" {
+  description = "Resource ID of the optional Discovery Bookshelf"
+  value       = try(azapi_resource.bookshelf[0].id, null)
+}
+
 output "managed_identity_id" {
   description = "Resource ID of the workspace user-assigned managed identity (workspaceIdentity)."
   value       = azurerm_user_assigned_identity.workspace.id
@@ -66,6 +71,11 @@ output "storage_account_id" {
 }
 
 output "vnet_id" {
-  description = "Resource ID of the virtual network."
+  description = "Resource ID of the Workspace virtual network"
   value       = azurerm_virtual_network.this.id
+}
+
+output "supercomputer_vnet_id" {
+  description = "Resource ID of the Supercomputer virtual network"
+  value       = azurerm_virtual_network.supercomputer.id
 }

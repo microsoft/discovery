@@ -95,6 +95,14 @@ resource "azurerm_private_dns_zone_virtual_network_link" "blob" {
   registration_enabled  = false
 }
 
+resource "azurerm_private_dns_zone_virtual_network_link" "blob_supercomputer" {
+  name                  = "link-blob-${local.supercomputer_vnet_name}"
+  resource_group_name   = data.azurerm_resource_group.rg.name
+  private_dns_zone_name = azurerm_private_dns_zone.blob.name
+  virtual_network_id    = azurerm_virtual_network.supercomputer.id
+  registration_enabled  = false
+}
+
 resource "azurerm_private_endpoint" "blob" {
   name                = "pe-blob-${local.storage_account_name}"
   location            = data.azurerm_resource_group.rg.location

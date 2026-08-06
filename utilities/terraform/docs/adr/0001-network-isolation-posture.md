@@ -81,6 +81,4 @@ Negative / trade-offs:
 
 - Four-identity least-privilege model (`identity.tf` / `roles.tf`), ported from
   `../../bicep/uami.bicep`.
-- AzAPI API version pin (`2026-02-01-preview`) for `Microsoft.Discovery/*`
-  resources, retained until the AzAPI provider ships schemas for the GA
-  `2026-06-01` version.
+- AzAPI API version pin (`2026-06-01`) for `Microsoft.Discovery/*` resources.

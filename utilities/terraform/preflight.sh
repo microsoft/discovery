@@ -34,12 +34,12 @@
 #   * RP metadata region list -- unreliable; see check 2 for the workaround.
 #   * AKS regional capacity (AKSCapacityHeavyUsage) -- transient, not
 #     queryable in advance.
-#   * Chat model catalog -- no listable RP endpoint at 2026-02-01-preview.
+#   * Chat model catalog -- no listable RP endpoint at 2026-06-01.
 #
 # Usage:
 #   ./preflight.sh                    # reads terraform.tfvars if present
-#   ./preflight.sh -l uksouth         # override location
-#   ./preflight.sh -l uksouth -v Standard_D4s_v5 -n 3
+#   ./preflight.sh -l uksouth         # override control-plane location
+#   ./preflight.sh -l uksouth -c swedencentral -n 3
 #
 # Exit codes:
 #   0  all checks passed (WARN entries do not fail)
@@ -48,6 +48,8 @@
 # -----------------------------------------------------------------------------
 
 set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 # ---- constants -------------------------------------------------------------
 #
@@ -77,6 +79,7 @@ FAIL_COUNT=0
 # ---- arg parsing ------------------------------------------------------------
 
 LOCATION=""
+COMPUTE_LOCATION=""
 NODE_POOL_VM_SIZE=""
 NODE_POOL_MAX_COUNT=""
 
@@ -87,11 +90,12 @@ usage() {
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
-    -l|--location)     LOCATION="$2"; shift 2 ;;
-    -v|--vm-size)      NODE_POOL_VM_SIZE="$2"; shift 2 ;;
-    -n|--max-nodes)    NODE_POOL_MAX_COUNT="$2"; shift 2 ;;
-    -h|--help)         usage 0 ;;
-    *)                 echo "unknown argument: $1" >&2; usage 2 ;;
+    -l|--location)          LOCATION="$2"; shift 2 ;;
+    -c|--compute-location)  COMPUTE_LOCATION="$2"; shift 2 ;;
+    -v|--vm-size)           NODE_POOL_VM_SIZE="$2"; shift 2 ;;
+    -n|--max-nodes)         NODE_POOL_MAX_COUNT="$2"; shift 2 ;;
+    -h|--help)              usage 0 ;;
+    *)                      echo "unknown argument: $1" >&2; usage 2 ;;
   esac
 done
 
@@ -119,8 +123,8 @@ read_tfvar() {
   # Read `key = "value"` (or bare number) from terraform.tfvars.
   # Uses POSIX character classes -- BSD sed on macOS does not support `\s`.
   local key="$1"
-  [[ -f terraform.tfvars ]] || return 0
-  grep -E "^[[:space:]]*${key}[[:space:]]*=" terraform.tfvars 2>/dev/null \
+  [[ -f "${SCRIPT_DIR}/terraform.tfvars" ]] || return 0
+  grep -E "^[[:space:]]*${key}[[:space:]]*=" "${SCRIPT_DIR}/terraform.tfvars" 2>/dev/null \
     | head -n 1 \
     | sed -E "s/^[[:space:]]*${key}[[:space:]]*=[[:space:]]*//; s/^\"//; s/\"[[:space:]]*$//; s/[[:space:]]*$//"
 }
@@ -131,7 +135,7 @@ read_tf_default() {
   # a different variable can't leak in. Uses POSIX character classes because
   # BSD awk on macOS does not understand `\s`.
   local key="$1"
-  [[ -f variables.tf ]] || return 0
+  [[ -f "${SCRIPT_DIR}/variables.tf" ]] || return 0
   awk -v k="$key" '
     $0 ~ "^variable \"" k "\" \\{" { in_block = 1; next }
     in_block && /^\}/                                { in_block = 0 }
@@ -142,7 +146,7 @@ read_tf_default() {
       print
       exit
     }
-  ' variables.tf
+  ' "${SCRIPT_DIR}/variables.tf"
 }
 
 resolve() {
@@ -167,13 +171,24 @@ LOCATION=$(resolve            "$LOCATION"            "location"                 
 NODE_POOL_VM_SIZE=$(resolve   "$NODE_POOL_VM_SIZE"   "node_pool_vm_size"        "node_pool_vm_size")
 NODE_POOL_MAX_COUNT=$(resolve "$NODE_POOL_MAX_COUNT" "node_pool_max_node_count" "node_pool_max_node_count")
 
+if [[ -z "$COMPUTE_LOCATION" ]]; then
+  COMPUTE_LOCATION=$(read_tfvar "supercomputer_managed_resource_group_location" || true)
+fi
+if [[ -z "$COMPUTE_LOCATION" || "$COMPUTE_LOCATION" == "null" ]]; then
+  COMPUTE_LOCATION=$(read_tfvar "managed_resource_group_location" || true)
+fi
+if [[ -z "$COMPUTE_LOCATION" || "$COMPUTE_LOCATION" == "null" ]]; then
+  COMPUTE_LOCATION="$LOCATION"
+fi
+
 SUB_ID=$(az account show --query id -o tsv)
 SUB_NAME=$(az account show --query name -o tsv)
 
 echo
 info "preflight configuration"
 info "  subscription:       ${SUB_NAME} (${SUB_ID})"
-info "  location:           ${LOCATION}"
+info "  control location:   ${LOCATION}"
+info "  compute location:   ${COMPUTE_LOCATION}"
 info "  node pool VM size:  ${NODE_POOL_VM_SIZE}"
 info "  node pool max:      ${NODE_POOL_MAX_COUNT}"
 info "  AKS system SKU:     ${AKS_SYSTEM_VM_SIZE} (Discovery RP internal)"
@@ -246,51 +261,66 @@ check_sku_available() {
   return 1
 }
 
-info "3. VM SKU availability for subscription in '${LOCATION}'"
-check_sku_available "$AKS_SYSTEM_VM_SIZE" "AKS system pool SKU (Discovery RP default)" || true
+info "3. VM SKU availability for subscription in '${COMPUTE_LOCATION}'"
+LOCATION="$COMPUTE_LOCATION" check_sku_available "$AKS_SYSTEM_VM_SIZE" "AKS system pool SKU (Discovery RP default)" || true
 if [[ "$NODE_POOL_VM_SIZE" != "$AKS_SYSTEM_VM_SIZE" ]]; then
-  check_sku_available "$NODE_POOL_VM_SIZE" "Node pool SKU"                        || true
+  LOCATION="$COMPUTE_LOCATION" check_sku_available "$NODE_POOL_VM_SIZE" "Node pool SKU" || true
 fi
 
 # ---- check 4: compute cores quota ------------------------------------------
 #
-# The relevant family is derived from the VM SKU name. Discovery + AKS both
-# count against the standard "standardDSv..." / "standardDDv..." families.
-# We look up the exact family from the SKU listing.
+# Workload and AKS system pools can belong to different quota families. Check
+# each family independently, then add both pools for the regional total.
 
-info "4. Compute cores quota in '${LOCATION}'"
+info "4. Compute cores quota in '${COMPUTE_LOCATION}'"
 
-sku_family=$(az vm list-skus --location "$LOCATION" --resource-type virtualMachines \
+sku_family=$(az vm list-skus --location "$COMPUTE_LOCATION" --resource-type virtualMachines \
               --query "[?name=='${NODE_POOL_VM_SIZE}'] | [0].family" -o tsv 2>/dev/null)
-sku_vcpus=$(az vm list-skus --location "$LOCATION" --resource-type virtualMachines \
+sku_vcpus=$(az vm list-skus --location "$COMPUTE_LOCATION" --resource-type virtualMachines \
               --query "[?name=='${NODE_POOL_VM_SIZE}'] | [0].capabilities[?name=='vCPUs'].value | [0]" -o tsv 2>/dev/null)
+sys_family=$(az vm list-skus --location "$COMPUTE_LOCATION" --resource-type virtualMachines \
+               --query "[?name=='${AKS_SYSTEM_VM_SIZE}'] | [0].family" -o tsv 2>/dev/null)
+sys_vcpus=$(az vm list-skus --location "$COMPUTE_LOCATION" --resource-type virtualMachines \
+               --query "[?name=='${AKS_SYSTEM_VM_SIZE}'] | [0].capabilities[?name=='vCPUs'].value | [0]" -o tsv 2>/dev/null)
 
-if [[ -z "$sku_family" || -z "$sku_vcpus" ]]; then
-  warn "  could not resolve family/vCPU count for '${NODE_POOL_VM_SIZE}' (likely because the SKU is not available). Skipping quota math."
+if [[ -z "$sku_family" || -z "$sku_vcpus" || -z "$sys_family" || -z "$sys_vcpus" ]]; then
+  warn "  could not resolve VM family/vCPU counts. Skipping quota math."
 else
-  required_cores=$(( NODE_POOL_MAX_COUNT * sku_vcpus ))
-  # The AKS system pool consumes cores too; assume 1 x AKS_SYSTEM_VM_SIZE.
-  sys_vcpus=$(az vm list-skus --location "$LOCATION" --resource-type virtualMachines \
-                --query "[?name=='${AKS_SYSTEM_VM_SIZE}'] | [0].capabilities[?name=='vCPUs'].value | [0]" -o tsv 2>/dev/null)
-  [[ -n "$sys_vcpus" ]] && required_cores=$(( required_cores + sys_vcpus ))
+  workload_cores=$(( NODE_POOL_MAX_COUNT * sku_vcpus ))
+  required_cores=$(( workload_cores + sys_vcpus ))
 
-  quota_row=$(az vm list-usage --location "$LOCATION" \
-                --query "[?name.value=='${sku_family}'] | [0]" -o json 2>/dev/null)
-  if [[ -z "$quota_row" || "$quota_row" == "null" ]]; then
-    warn "  no quota row for family '${sku_family}' in ${LOCATION}"
-  else
-    limit=$(echo "$quota_row"    | jq -r '.limit')
-    current=$(echo "$quota_row"  | jq -r '.currentValue')
-    available=$(( limit - current ))
-    if (( available >= required_cores )); then
-      pass "  family '${sku_family}': ${current}/${limit} used, ${available} free, need ${required_cores}"
-    else
-      fail "  family '${sku_family}': only ${available} cores free, need ${required_cores}. Request a quota increase or reduce node_pool_max_node_count."
+  check_family_quota() {
+    local family="$1"
+    local required="$2"
+    local label="$3"
+    local quota_row limit current available
+
+    quota_row=$(az vm list-usage --location "$COMPUTE_LOCATION" \
+      --query "[?name.value=='${family}'] | [0]" -o json 2>/dev/null)
+    if [[ -z "$quota_row" || "$quota_row" == "null" ]]; then
+      warn "  no quota row for ${label} family '${family}' in ${COMPUTE_LOCATION}"
+      return
     fi
+
+    limit=$(echo "$quota_row" | jq -r '.limit')
+    current=$(echo "$quota_row" | jq -r '.currentValue')
+    available=$(( limit - current ))
+    if (( available >= required )); then
+      pass "  ${label} family '${family}': ${current}/${limit} used, ${available} free, need ${required}"
+    else
+      fail "  ${label} family '${family}': only ${available} cores free, need ${required}. Request a quota increase or choose another region."
+    fi
+  }
+
+  if [[ "$sku_family" == "$sys_family" ]]; then
+    check_family_quota "$sku_family" "$required_cores" "combined workload/system"
+  else
+    check_family_quota "$sku_family" "$workload_cores" "workload"
+    check_family_quota "$sys_family" "$sys_vcpus" "AKS system"
   fi
 
   # Regional total quota check
-  total_row=$(az vm list-usage --location "$LOCATION" \
+  total_row=$(az vm list-usage --location "$COMPUTE_LOCATION" \
                 --query "[?name.value=='cores'] | [0]" -o json 2>/dev/null)
   if [[ -n "$total_row" && "$total_row" != "null" ]]; then
     tlimit=$(echo "$total_row"   | jq -r '.limit')
@@ -314,7 +344,6 @@ fi
 # To disable a module: `rm preflight-checks/<file>` (or rename its prefix out
 # of the [0-9] glob). No changes to this orchestrator required.
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 if [[ -d "${SCRIPT_DIR}/preflight-checks" ]]; then
   # Nullglob so the loop is a no-op if the directory is empty.
   shopt -s nullglob

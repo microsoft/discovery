@@ -4,12 +4,8 @@
 # All Microsoft.Discovery/* resources. There are NO azurerm_discovery_*
 # resources in the AzureRM provider today, so every block here uses azapi.
 #
-# API version pin: "@2026-02-01-preview" on every resource -- this matches
-# ../discovery.bicep and is what AzAPI v2.10's embedded schema recognizes.
-# The Discovery RP also exposes a GA `2026-06-01` per Learn, but the AzAPI
-# provider hasn't shipped schemas for it yet (validate fails for at least
-# `supercomputers`, `nodePools`, `workspaces`, and `storageContainers`).
-# When AzAPI catches up, do a single find/replace here to bump the pin.
+# API version pin: "@2026-06-01" on every Discovery resource, matching the
+# current Microsoft Learn Bicep quickstart and ARM template reference.
 #
 # Ordering: Terraform infers order from the references in `body`, so the
 # explicit `dependsOn: [vnet]` blocks from ../discovery.bicep are unnecessary
@@ -29,10 +25,16 @@
 # rather than jsonencode(...).
 # -----------------------------------------------------------------------------
 resource "azapi_resource" "supercomputer" {
-  type      = "Microsoft.Discovery/supercomputers@2026-02-01-preview"
+  type      = "Microsoft.Discovery/supercomputers@2026-06-01"
   name      = local.supercomputer_name
   location  = var.location
   parent_id = data.azurerm_resource_group.rg.id
+  tags = merge(
+    var.common_tags,
+    var.supercomputer_tags,
+    local.managed_resource_group_tags.supercomputer,
+    { version = local.discovery_resource_version },
+  )
 
   body = {
     properties = {
@@ -73,10 +75,11 @@ resource "azapi_resource" "supercomputer" {
 # Node pool (child of Supercomputer)
 # -----------------------------------------------------------------------------
 resource "azapi_resource" "node_pool" {
-  type      = "Microsoft.Discovery/supercomputers/nodePools@2026-02-01-preview"
+  type      = "Microsoft.Discovery/supercomputers/nodePools@2026-06-01"
   name      = var.node_pool_name
   location  = var.location
   parent_id = azapi_resource.supercomputer.id
+  tags      = merge(var.common_tags, var.node_pool_tags)
 
   body = {
     properties = {
@@ -106,17 +109,22 @@ resource "azapi_resource" "node_pool" {
 #     teardown deadlocks. See variable "network_isolation" for the full note.
 # -----------------------------------------------------------------------------
 resource "azapi_resource" "workspace" {
-  type      = "Microsoft.Discovery/workspaces@2026-02-01-preview"
+  type      = "Microsoft.Discovery/workspaces@2026-06-01"
   name      = local.workspace_name
   location  = var.location
   parent_id = data.azurerm_resource_group.rg.id
 
-  tags = {
-    version                                    = "v2"
-    "discovery.workbench.enableGhcpAiFeatures" = tostring(var.enable_ghcp_ai_features)
-    "discovery.workbench.enableExtensions"     = tostring(var.enable_extensions)
-    NetworkIsolation                           = tostring(var.network_isolation)
-  }
+  tags = merge(
+    var.common_tags,
+    var.workspace_tags,
+    local.managed_resource_group_tags.workspace,
+    {
+      version                                    = local.discovery_resource_version
+      "discovery.workbench.enableGhcpAiFeatures" = tostring(var.enable_ghcp_ai_features)
+      "discovery.workbench.enableExtensions"     = tostring(var.enable_extensions)
+      NetworkIsolation                           = tostring(var.network_isolation)
+    },
+  )
 
   body = {
     properties = {
@@ -152,10 +160,11 @@ resource "azapi_resource" "workspace" {
 # SKUs; left unset here to match ../discovery.bicep behavior.
 # -----------------------------------------------------------------------------
 resource "azapi_resource" "chat_model" {
-  type      = "Microsoft.Discovery/workspaces/chatModelDeployments@2026-02-01-preview"
+  type      = "Microsoft.Discovery/workspaces/chatModelDeployments@2026-06-01"
   name      = var.chat_model_deployment_name
   location  = var.location
   parent_id = azapi_resource.workspace.id
+  tags      = merge(var.common_tags, var.chat_model_deployment_tags)
 
   body = {
     properties = {
@@ -175,10 +184,11 @@ resource "azapi_resource" "chat_model" {
 # left unset to match the Bicep quickstart.
 # -----------------------------------------------------------------------------
 resource "azapi_resource" "discovery_storage_container" {
-  type      = "Microsoft.Discovery/storageContainers@2026-02-01-preview"
+  type      = "Microsoft.Discovery/storageContainers@2026-06-01"
   name      = local.storage_container_name
   location  = var.location
   parent_id = data.azurerm_resource_group.rg.id
+  tags      = merge(var.common_tags, var.storage_container_tags)
 
   body = {
     properties = {
@@ -210,10 +220,11 @@ resource "azapi_resource" "discovery_storage_container" {
 #     Terraform will submit them concurrently and lose the race.
 # -----------------------------------------------------------------------------
 resource "azapi_resource" "project" {
-  type      = "Microsoft.Discovery/workspaces/projects@2026-02-01-preview"
+  type      = "Microsoft.Discovery/workspaces/projects@2026-06-01"
   name      = local.project_name
   location  = var.location
   parent_id = azapi_resource.workspace.id
+  tags      = merge(var.common_tags, var.project_tags)
 
   body = {
     properties = {
@@ -224,4 +235,38 @@ resource "azapi_resource" "project" {
   }
 
   depends_on = [azapi_resource.chat_model]
+}
+
+# -----------------------------------------------------------------------------
+# Bookshelf
+# -----------------------------------------------------------------------------
+resource "azapi_resource" "bookshelf" {
+  count = var.enable_bookshelf ? 1 : 0
+
+  type      = "Microsoft.Discovery/bookshelves@2026-06-01"
+  name      = local.bookshelf_name
+  location  = var.location
+  parent_id = data.azurerm_resource_group.rg.id
+  tags = merge(
+    var.common_tags,
+    var.bookshelf_tags,
+    local.managed_resource_group_tags.bookshelf,
+  )
+
+  body = {
+    properties = {
+      privateEndpointSubnetId = azurerm_subnet.private_endpoint.id
+      publicNetworkAccess     = var.bookshelf_public_network_access
+      searchSubnetId          = azurerm_subnet.search.id
+      workloadIdentities = {
+        (azurerm_user_assigned_identity.workload.id) = {}
+      }
+    }
+  }
+
+  timeouts {
+    create = "60m"
+    update = "60m"
+    delete = "60m"
+  }
 }

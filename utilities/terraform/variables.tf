@@ -10,18 +10,90 @@
 variable "resource_group_name" {
   description = "Existing resource group that will hold every resource. Created imperatively in Step 2 of the quickstart."
   type        = string
-  default     = "rg-discovery-terraform"
 }
 
 variable "location" {
   description = "Azure region. Must be a Discovery-supported region."
   type        = string
-  default     = "uksouth"
 
   validation {
     condition     = contains(["eastus", "eastus2", "uksouth", "swedencentral"], var.location)
     error_message = "Location must be one of: eastus, eastus2, uksouth, swedencentral."
   }
+}
+
+variable "managed_resource_group_location" {
+  description = "Deprecated fallback region for Discovery-managed resource groups; use the resource-specific location variables"
+  type        = string
+  default     = null
+}
+
+variable "supercomputer_managed_resource_group_location" {
+  description = "Region for the Supercomputer managed resource group and its compute infrastructure"
+  type        = string
+  default     = null
+}
+
+variable "workspace_managed_resource_group_location" {
+  description = "Region for the Workspace managed resource group"
+  type        = string
+  default     = null
+}
+
+variable "bookshelf_managed_resource_group_location" {
+  description = "Region for the Bookshelf managed resource group"
+  type        = string
+  default     = null
+}
+
+# ---- tags -------------------------------------------------------------------
+
+variable "common_tags" {
+  description = "Tags applied to every Microsoft Discovery resource"
+  type        = map(string)
+  default     = {}
+}
+
+variable "supercomputer_tags" {
+  description = "Additional tags applied to the Discovery Supercomputer"
+  type        = map(string)
+  default     = {}
+}
+
+variable "node_pool_tags" {
+  description = "Additional tags applied to the Supercomputer node pool"
+  type        = map(string)
+  default     = {}
+}
+
+variable "workspace_tags" {
+  description = "Additional tags applied to the Discovery Workspace"
+  type        = map(string)
+  default     = {}
+}
+
+variable "chat_model_deployment_tags" {
+  description = "Additional tags applied to the chat model deployment"
+  type        = map(string)
+  default     = {}
+}
+
+variable "storage_container_tags" {
+  description = "Additional tags applied to the Discovery storage container"
+  type        = map(string)
+  default     = {}
+}
+
+variable "project_tags" {
+  description = "Additional tags applied to the Discovery project"
+  type        = map(string)
+  default     = {}
+}
+
+variable "bookshelf_tags" {
+  description = "Additional tags applied to the Discovery Bookshelf"
+  type        = map(string)
+  default     = {}
 }
 
 # ---- naming (all optional; a random suffix fills in blanks) -----------------
@@ -44,13 +116,13 @@ variable "supercomputer_name" {
 }
 
 variable "node_pool_name" {
-  description = "Node pool name (1-12 lowercase alphanumeric, starts with a letter)."
+  description = "Node pool name (3-12 lowercase alphanumeric, starts with a letter)."
   type        = string
   default     = "nodepool1"
 
   validation {
-    condition     = can(regex("^[a-z][a-z0-9]{0,11}$", var.node_pool_name))
-    error_message = "node_pool_name must be 1-12 lowercase alphanumeric characters starting with a letter."
+    condition     = can(regex("^[a-z][a-z0-9]{2,11}$", var.node_pool_name))
+    error_message = "node_pool_name must be 3-12 lowercase alphanumeric characters starting with a letter."
   }
 }
 
@@ -78,8 +150,25 @@ variable "project_name" {
   default     = null
 }
 
+variable "bookshelf_name" {
+  description = "Discovery Bookshelf name (3-24 chars, alphanumeric + hyphen)"
+  type        = string
+  default     = null
+
+  validation {
+    condition     = var.bookshelf_name == null || can(regex("^[a-zA-Z0-9-]{3,24}$", var.bookshelf_name))
+    error_message = "bookshelf_name must contain 3 to 24 alphanumeric or hyphen characters."
+  }
+}
+
 variable "vnet_name" {
-  description = "Virtual network name."
+  description = "Workspace virtual network name"
+  type        = string
+  default     = null
+}
+
+variable "supercomputer_vnet_name" {
+  description = "Supercomputer virtual network name"
   type        = string
   default     = null
 }
@@ -128,21 +217,27 @@ variable "blob_container_name" {
 # ---- networking -------------------------------------------------------------
 
 variable "vnet_address_prefix" {
-  description = "Address space for the VNet."
+  description = "Address space for the Workspace VNet"
   type        = string
   default     = "10.0.0.0/16"
+}
+
+variable "supercomputer_vnet_address_prefix" {
+  description = "Address space for the Supercomputer VNet"
+  type        = string
+  default     = "10.1.0.0/16"
 }
 
 variable "supercomputer_nodepool_subnet_prefix" {
   description = "Address prefix for the Supercomputer node pool subnet."
   type        = string
-  default     = "10.0.1.0/24"
+  default     = "10.1.1.0/24"
 }
 
 variable "aks_subnet_prefix" {
   description = "Address prefix for the AKS system subnet used by the Supercomputer."
   type        = string
-  default     = "10.0.2.0/24"
+  default     = "10.1.2.0/24"
 }
 
 variable "workspace_subnet_prefix" {
@@ -171,6 +266,23 @@ variable "search_subnet_prefix" {
 
 # ---- workspace features -----------------------------------------------------
 
+variable "enable_bookshelf" {
+  description = "Whether to create a private Discovery Bookshelf"
+  type        = bool
+  default     = false
+}
+
+variable "bookshelf_public_network_access" {
+  description = "Whether public network access is enabled for the Bookshelf"
+  type        = string
+  default     = "Disabled"
+
+  validation {
+    condition     = contains(["Disabled", "Enabled"], var.bookshelf_public_network_access)
+    error_message = "bookshelf_public_network_access must be Disabled or Enabled."
+  }
+}
+
 variable "network_isolation" {
   description = "Workspace network isolation mode, surfaced via the NetworkIsolation tag. Must be true whenever the agent/private-endpoint/workspace subnet IDs are supplied (as they always are here): the Discovery RP then VNet-injects the managed Container Apps environment and creates private endpoints (Cosmos, Search, etc.) in the private endpoint subnet. Setting this false while passing subnet IDs produces a broken hybrid where Cosmos public access is disabled but no private endpoint is created, leaving the managed backend unable to reach Cosmos (agent upsert then fails with InternalServerError and teardown deadlocks)."
   type        = bool
@@ -194,7 +306,27 @@ variable "enable_extensions" {
 variable "node_pool_vm_size" {
   description = "VM SKU for the node pool."
   type        = string
-  default     = "Standard_D4s_v6"
+  default     = "Standard_NC4as_T4_v3"
+
+  validation {
+    condition = contains([
+      "Standard_NC4as_T4_v3",
+      "Standard_NC8as_T4_v3",
+      "Standard_NC16as_T4_v3",
+      "Standard_NC64as_T4_v3",
+      "Standard_NC24ads_A100_v4",
+      "Standard_NC48ads_A100_v4",
+      "Standard_NC96ads_A100_v4",
+      "Standard_ND40rs_v2",
+      "Standard_NV6ads_A10_v5",
+      "Standard_NV12ads_A10_v5",
+      "Standard_NV24ads_A10_v5",
+      "Standard_NV36ads_A10_v5",
+      "Standard_NV36adms_A10_v5",
+      "Standard_NV72ads_A10_v5",
+    ], var.node_pool_vm_size)
+    error_message = "node_pool_vm_size must be a VM SKU supported by Discovery node pools."
+  }
 }
 
 variable "node_pool_max_node_count" {

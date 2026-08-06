@@ -12,7 +12,7 @@ keywords:
 
 # Terraform utility: Deploy Microsoft Discovery
 
-This utility is a minimal, end-to-end Terraform module for a Microsoft Discovery services environment. It uses the AzureRM provider for platform primitives (VNet, UAMI, storage, role assignments) and the AzAPI provider — pinned to API version `2026-02-01-preview` — for every `Microsoft.Discovery/*` resource.
+This utility is a minimal, end-to-end Terraform module for a Microsoft Discovery services environment. It uses the AzureRM provider for platform primitives (VNet, UAMI, storage, role assignments) and the AzAPI provider, pinned to API version `2026-06-01`, for every `Microsoft.Discovery/*` resource.
 
 The provider split is deliberate: `Microsoft.Discovery/*` is not yet in the AzureRM provider's resource catalog, so AzAPI is required for those types. Every other resource uses AzureRM to benefit from strongly-typed schemas, better plan output, and stable state migrations.
 
@@ -33,7 +33,7 @@ az role assignment create --assignee "$MY_OID" \
 
 # 3. clone / cd into this directory, then preflight
 cd utilities/terraform
-cp -n terraform.tfvars.example terraform.tfvars   # edit if you want non-defaults
+cp -n terraform.tfvars.example terraform.tfvars   # set deployment-specific values
 ./preflight.sh                                    # 9 checks; exits non-zero on any FAIL
 
 # 4. init / plan / apply
@@ -46,9 +46,10 @@ Wall time is ~20-45 minutes, dominated by the supercomputer + workspace creates.
 
 ## What you build
 
-A single resource group containing:
+A single resource group containing control-plane resources and customer-managed prerequisites. Discovery-managed resource groups can use independent regions through resource-specific MRG location tags.
 
-* A virtual network with six subnets (three delegated to `Microsoft.App/environments`).
+* A Workspace virtual network with four subnets, three delegated to `Microsoft.App/environments`.
+* A peered Supercomputer virtual network with AKS system and GPU node-pool subnets.
 * Four user-assigned managed identities with seven least-privilege role assignments.
 * A storage account plus a blob container that Discovery mounts.
 * A Discovery Supercomputer with one Node Pool.
@@ -254,7 +255,7 @@ variables.tf
 The module uses two providers on purpose. This is the single most important architectural choice in the utility, so it deserves a file of its own:
 
 * **`azurerm ~> 4.20`** for every non-Discovery resource (VNet, subnets, UAMI, storage account, blob CORS, role assignments).
-* **`azapi ~> 2.0`** for every `Microsoft.Discovery/*` resource, plus the single blob container that would otherwise require Storage data-plane rights. There is no `azurerm_discovery_*` resource in AzureRM today; AzAPI talks to the ARM REST API at a pinned version. We pin **`2026-02-01-preview`**, which matches what AzAPI v2.10 ships schemas for at time of writing.
+* **`azapi ~> 2.0`** for every `Microsoft.Discovery/*` resource, plus the single blob container that would otherwise require Storage data-plane rights. There is no `azurerm_discovery_*` resource in AzureRM today; AzAPI talks to the ARM REST API at the pinned GA version **`2026-06-01`**.
 
 See [providers.tf](providers.tf) for the exact block. Note the two commented-out lines you may want to enable later:
 
@@ -263,7 +264,7 @@ See [providers.tf](providers.tf) for the exact block. Note the two commented-out
 
 ### 3.2 `variables.tf` and `locals.tf` -- input contract
 
-[variables.tf](variables.tf) declares every input the module accepts, including the same constraints Discovery requires (subnet CIDRs, node-pool VM SKU, node counts, chat model name). Defaults are pre-filled with sensible starter values so a `terraform apply` with no `-var` overrides produces a working environment.
+[variables.tf](variables.tf) declares the module's input contract and validation rules. Deployment-specific values such as `resource_group_name` and `location` are required and intentionally have no defaults. Set them once in `terraform.tfvars`. Reusable settings such as subnet prefixes and node-pool sizing retain sensible defaults.
 
 [locals.tf](locals.tf) does two things:
 
@@ -276,7 +277,7 @@ See [providers.tf](providers.tf) for the exact block. Note the two commented-out
 
 ### 3.4 `terraform.tfvars.example` and `.gitignore`
 
-Copy [terraform.tfvars.example](terraform.tfvars.example) to `terraform.tfvars` and edit anything you want to pin. Everything commented out falls back to the defaults in `variables.tf`.
+Copy [terraform.tfvars.example](terraform.tfvars.example) to `terraform.tfvars`. Terraform automatically loads `terraform.tfvars`; it does not automatically load the `.example` file. Treat the real, gitignored `terraform.tfvars` as the source of truth for deployment-specific values. Commented reusable settings fall back to defaults in `variables.tf`.
 
 [.gitignore](.gitignore) keeps state files, `.terraform/`, real `.tfvars`, and plan artifacts out of git.
 
@@ -294,9 +295,9 @@ terraform validate  # will fail until Steps 4 and 5 are written -- expected
 
 Every resource in this step is a stable AzureRM type. **No AzAPI here except one blob container** (called out explicitly in 4.3). If you see an AzAPI block outside of that, something drifted.
 
-### 4.1 `network.tf` -- VNet + six subnets   [PROVIDER: azurerm]
+### 4.1 `network.tf` -- regional VNets and six subnets   [PROVIDER: azurerm]
 
-[network.tf](network.tf) creates the VNet and six standalone `azurerm_subnet` blocks. Three subnets (`workspace`, `agent`, `search`) carry a `delegation { service_delegation { name = "Microsoft.App/environments" } }` because Discovery attaches Container Apps environments into them.
+[network.tf](network.tf) creates two globally peered VNets and six standalone `azurerm_subnet` blocks. The Workspace VNet remains in the Discovery control-plane region and contains the `workspace`, `agent`, `search`, and private-endpoint subnets. The Supercomputer VNet is created in `supercomputer_managed_resource_group_location` and contains the AKS system and GPU node-pool subnets. Both VNets link to the private Blob DNS zone so Supercomputer workloads can resolve the storage private endpoint across the peering.
 
 Why standalone `azurerm_subnet` rather than inline `subnet {}` blocks on `azurerm_virtual_network`: mixing the two styles is a well-known source of drift in AzureRM. Standalone is the recommended pattern and it lets each subnet have its own lifecycle.
 
@@ -311,7 +312,12 @@ Note that you don't need explicit `depends_on` blocks between the VNet and its s
 * `kubelet`  -> `Supercomputer.identities.kubeletIdentity` (node-level image pulls + startup data access)
 * `workload` -> `Supercomputer.identities.workloadIdentities` (agent/tool federated data access)
 
-**isolationScope.** Each UAMI sets `isolation_scope = "Regional"` (exposed natively by the `azurerm` provider) so an identity can only be assigned to source resources in its own region, which shrinks the blast radius if it is ever compromised and contains identity-plane failures to one region. All source resources here live in `var.location`, so `Regional` is a clean fit. (Don't also patch this via `azapi_update_resource` -- the two providers then fight and each plan flips the value.)
+The UAMIs intentionally do not set `isolation_scope = "Regional"`. Discovery supports placing a resource's managed infrastructure in a different region from its control-plane resource, and Regional UAMI isolation would prevent assignment across that boundary. The customer-owned identities remain in the control-plane region and can be assigned to the managed infrastructure region.
+
+This identity setting is separate from Workspace `NetworkIsolation`. Workspace network isolation remains enabled because its subnet IDs are supplied and the resource provider requires the isolated topology to create the corresponding private endpoints.
+
+> [!WARNING]
+> Treat changing `supercomputer_managed_resource_group_location` on an existing stack as a rebuild. Terraform must replace the Supercomputer subnets to move them into the regional VNet, and the Discovery resource provider must reconcile or recreate the managed AKS resources. Use the split-region configuration for a fresh full-stack run unless you have an explicit migration and downtime plan.
 
 ### 4.3 `storage.tf` -- storage account (AzureRM) + one blob container (**AzAPI**)
 
@@ -352,7 +358,7 @@ terraform validate  # still fails until Step 5 -- expected
 
 **Every resource in [discovery.tf](discovery.tf) uses `azapi_resource`.** This is why the utility exists: AzureRM ships no `azurerm_discovery_*` resources today, and driving ARM PUTs through AzAPI is the only Terraform-native path to Discovery resources right now.
 
-All six blocks pin `@2026-02-01-preview`. AzAPI v2.10 ships preview schemas for this version; when a GA schema becomes available in a future AzAPI release, the pin can move forward. Change it in one place per resource and note it in your commit message — schemas across API versions are close but not identical.
+All Discovery blocks pin `@2026-06-01`. Change the pin consistently across resources and note it in the commit message because schemas can differ between API versions.
 
 ### 5.1 Supercomputer   [PROVIDER: azapi]
 
@@ -454,7 +460,7 @@ terraform fmt
 terraform validate
 ```
 
-Both should be silent (fmt) and print `Success! The configuration is valid.` (validate). If validate reports schema errors on the Discovery API version, see the header comment in `discovery.tf` — the pin is `@2026-02-01-preview` because AzAPI v2.10 doesn't yet ship a GA schema.
+Both should be silent (fmt) and print `Success! The configuration is valid.` (validate). If validation reports schema errors, confirm that the lock file selected AzAPI 2.11 or later, which includes the Discovery `2026-06-01` schemas.
 
 ### 6.4 Preflight (recommended)
 
@@ -463,6 +469,7 @@ Before running `plan`, run `./preflight.sh` to catch the failure classes that on
 ```bash
 ./preflight.sh                    # reads terraform.tfvars
 ./preflight.sh -l uksouth         # or override location
+./preflight.sh -l uksouth -c swedencentral # split control and compute regions
 ./preflight.sh -h                 # help + full arg list
 ```
 
@@ -472,8 +479,8 @@ The script runs 9 **deterministic** checks — things Azure will reject every ti
 |---|---|---|
 | 1 | `Microsoft.Discovery` RP is Registered | `preflight.sh` |
 | 2 | Region is not on the `KNOWN_BAD_REGIONS` blocklist (catches RP-level gates that no Azure API surfaces — e.g. `eastus2` rejects new supercomputer creates even though metadata claims support) | `preflight.sh` |
-| 3 | AKS system-pool SKU (`Standard_D4s_v6`, hardcoded by the RP) and your `node_pool_vm_size` are both allowlisted on the subscription in the region (`NotAvailableForSubscription` is a hard block that only a support ticket can fix) | `preflight.sh` |
-| 4 | Compute cores quota (family + regional total) is sufficient for `node_pool_max_node_count × vCPUs + AKS system pool` | `preflight.sh` |
+| 3 | AKS system-pool SKU (`Standard_D4s_v6`, hardcoded by the RP) and your `node_pool_vm_size` are both available in the Supercomputer MRG region (`NotAvailableForSubscription` is a hard block that only a support ticket can fix) | `preflight.sh` |
+| 4 | Compute cores quota in the Supercomputer MRG region is sufficient for the workload family, AKS system family, and regional total | `preflight.sh` |
 | 5 | Registration state of the other 24 RPs Discovery depends on (Compute, Network, Storage, ManagedIdentity, CognitiveServices, DocumentDB, ContainerService, etc.) — prints ready-to-copy `az provider register` commands for any that are unregistered | [preflight-checks/05-additional-resource-providers.sh](preflight-checks/05-additional-resource-providers.sh) |
 | 6 | Positive allowlist match against the Discovery-supported region list (`eastus`, `swedencentral`, `uksouth`) | [preflight-checks/06-approved-regions.sh](preflight-checks/06-approved-regions.sh) |
 | 7 | `Microsoft.DocumentDB` (Cosmos DB) is available in the target region — otherwise workspace create fails its async Cosmos provisioning LRO | [preflight-checks/07-cosmosdb-region.sh](preflight-checks/07-cosmosdb-region.sh) |
@@ -499,7 +506,7 @@ PREFLIGHT_CHECK_NSP=1 ./preflight.sh
 
 - RP metadata region list — unreliable; check 2 (blocklist) + check 6 (allowlist) are the workarounds.
 - Transient AKS capacity (`AKSCapacityHeavyUsage`) — not queryable in advance.
-- Chat model catalog — no listable RP endpoint at `2026-02-01-preview`. Check 8 verifies quota for the *configured* model; verify the model name itself against the [Discovery docs](https://learn.microsoft.com/azure/microsoft-discovery/) manually.
+- Chat model catalog — no listable RP endpoint at `2026-06-01`. Check 8 verifies quota for the *configured* model; verify the model name itself against the [Discovery docs](https://learn.microsoft.com/azure/microsoft-discovery/) manually.
 
 Exit code is `0` if there are only `PASS`/`WARN` results, `1` on any `FAIL`. Don't run `terraform apply` until preflight is green.
 
@@ -589,3 +596,135 @@ Step 4: Delete the resource group
 
 
 ## TODO: Deleting the RG via the terraform.
+
+## Architecture and roadmap
+
+Today this utility is a single root module that deploys the full supported
+Discovery topology. The `modules/` and `examples/` directories hold the
+in-progress restructuring into layered, composable modules described below. Both
+layouts target the same `2026-06-01` API contract, so the conventions here apply
+whichever entry point you use.
+
+### Target module layout
+
+```text
+utilities/terraform/
+├── modules/
+│   ├── control-plane/     # thin wrappers over one Microsoft.Discovery/* resource each
+│   │   ├── supercomputer/ # + node pool children
+│   │   ├── workspace/     # + chat model deployment and project children
+│   │   ├── bookshelf/
+│   │   └── tool/
+│   ├── provisioning/      # compose a control-plane module with its prerequisites
+│   │   ├── supercomputer/
+│   │   ├── workspace/
+│   │   └── tool/
+│   └── discovery/         # opinionated end-to-end composition
+├── examples/              # runnable configurations per consumption level
+└── README.md
+```
+
+Ownership boundaries keep the composition acyclic:
+
+* **Control-plane modules** own exactly one Discovery resource type and its
+  children. They never create networks, identities, storage, or role assignments.
+* **Provisioning modules** own only the prerequisites specific to their resource
+  (identities, subnet consumption, least-privilege role assignments) and invoke
+  their matching control-plane module.
+* **The end-to-end module** creates shared prerequisites, invokes the provisioning
+  modules, and optionally invokes Bookshelf behind `enable_bookshelf`.
+* Every module requires an existing resource group; none creates it.
+* Children (node pools, chat model deployments, projects, tools) use stable
+  `for_each` keys so adding or removing one never renumbers unrelated resources.
+
+### Tag model and precedence
+
+Every top-level Discovery resource accepts arbitrary tags. Tags merge in a fixed
+precedence so required platform tags cannot be lost:
+
+```hcl
+tags = merge(
+  var.common_tags,   # applied to every Discovery resource
+  var.resource_tags, # per-resource overrides
+  local.required_discovery_tags,
+)
+```
+
+Required Discovery tags win over caller values when changing them would create an
+invalid deployment; all other tags pass through unchanged. The
+`discovery.overridemrgregion` tag is exposed for every managed-resource-group-producing
+resource and its value is constrained to the supported Discovery region allowlist
+(`eastus`, `eastus2`, `uksouth`, `swedencentral`), not an arbitrary Azure region.
+
+### API and provider version policy
+
+All Discovery resources pin `2026-06-01`. Before each release:
+
+1. Compare the Microsoft Learn Bicep quickstart against the ARM template reference.
+2. Confirm one API version is available for every Discovery resource type in use.
+3. Run AzAPI preflight validation against that version.
+4. Record intentional deviations from the Bicep quickstart in an ADR.
+5. Keep AzureRM and AzAPI constraints conservative enough for reproducible builds.
+
+If AzAPI schema validation lags the service API, upgrade AzAPI first. Disable
+schema validation for a specific resource only as a documented, temporary
+exception backed by an integration test against Azure.
+
+### Naming conventions
+
+Defaults derive from a shared random suffix; explicit names remain supported and
+are validated only against constraints Azure documents.
+
+| Resource | Default prefix | Constraint |
+| --- | --- | --- |
+| Supercomputer | `sc-<suffix>` | 3–24 alphanumeric or hyphen |
+| Workspace | `ws-<suffix>` | 3–24 alphanumeric or hyphen |
+| Bookshelf | `bs-<suffix>` | 3–24 alphanumeric or hyphen |
+| Tool | `tool-<suffix>` | 3–24 alphanumeric or hyphen |
+| Node pool | `nodepool1` | 3–12 lowercase alphanumeric, starts with a letter |
+| Storage container | `stc-<suffix>` | 3–24 alphanumeric or hyphen |
+| Project | `prj-<suffix>` | 3–24 alphanumeric or hyphen |
+| User-assigned identity | `uami-<purpose>-<suffix>` | — |
+| Storage account | `stg<suffix>` | 3–24 lowercase alphanumeric |
+| Virtual network | `vnet-<suffix>` / `vnet-sc-<suffix>` | — |
+
+### Key architecture decisions
+
+* Use AzAPI for `Microsoft.Discovery/*` until equivalent AzureRM resources exist;
+  use AzureRM for supported platform resources (networks, identities, storage,
+  private endpoints, role assignments).
+* Assume every managed-resource-group-producing Discovery resource accepts
+  `discovery.overridemrgregion`, constrained to supported Discovery regions.
+* Provisioning modules consume existing prerequisites; the end-to-end module
+  creates the shared prerequisites it needs.
+* Tool is its own control-plane module with a matching provisioning module,
+  parallel to Supercomputer.
+* Use separate least-privilege identities and narrowly scoped role assignments,
+  improving on the shared-identity Bicep example where practical.
+* Node pools stay children of Supercomputer; chat model deployments and projects
+  stay children of Workspace.
+* Bookshelf networking follows current Bicep and ARM guidance; it is absent by
+  default and created only when explicitly enabled.
+
+### Validation checklist
+
+Run for every module and example before merging:
+
+1. `terraform fmt -check -recursive`
+2. `terraform init -backend=false` and `terraform validate`
+3. TFLint and a repository-supported security scanner
+4. Plans for both module-managed and bring-your-own-dependencies examples
+5. An end-to-end deployment with Bookshelf disabled and one with it enabled
+6. A second plan after apply to confirm idempotency
+7. Targeted destroy tests that respect Discovery managed-resource-group deletion
+   ordering
+
+### References
+
+* [Deploy Microsoft Discovery infrastructure using Bicep](https://learn.microsoft.com/azure/microsoft-discovery/quickstart-infrastructure-bicep?tabs=CLI)
+* [Microsoft.Discovery Supercomputers template reference](https://learn.microsoft.com/azure/templates/microsoft.discovery/supercomputers)
+* [Microsoft.Discovery Workspaces template reference](https://learn.microsoft.com/azure/templates/microsoft.discovery/workspaces)
+* [Microsoft.Discovery Bookshelves template reference](https://learn.microsoft.com/azure/templates/microsoft.discovery/bookshelves)
+* [Microsoft.Discovery Tools template reference](https://learn.microsoft.com/azure/templates/microsoft.discovery/tools)
+* [Terraform module composition](https://developer.hashicorp.com/terraform/language/modules/develop/composition)
+* [Azure resource naming guidance](https://learn.microsoft.com/azure/cloud-adoption-framework/ready/azure-best-practices/resource-naming)

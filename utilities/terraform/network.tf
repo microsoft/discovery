@@ -22,15 +22,36 @@
 
 resource "azurerm_virtual_network" "this" {
   name                = local.vnet_name
-  location            = data.azurerm_resource_group.rg.location
+  location            = var.location
   resource_group_name = data.azurerm_resource_group.rg.name
   address_space       = [var.vnet_address_prefix]
+}
+
+resource "azurerm_virtual_network" "supercomputer" {
+  name                = local.supercomputer_vnet_name
+  location            = local.managed_resource_group_locations.supercomputer
+  resource_group_name = data.azurerm_resource_group.rg.name
+  address_space       = [var.supercomputer_vnet_address_prefix]
+}
+
+resource "azurerm_virtual_network_peering" "workspace_to_supercomputer" {
+  name                      = "workspace-to-supercomputer"
+  resource_group_name       = data.azurerm_resource_group.rg.name
+  virtual_network_name      = azurerm_virtual_network.this.name
+  remote_virtual_network_id = azurerm_virtual_network.supercomputer.id
+}
+
+resource "azurerm_virtual_network_peering" "supercomputer_to_workspace" {
+  name                      = "supercomputer-to-workspace"
+  resource_group_name       = data.azurerm_resource_group.rg.name
+  virtual_network_name      = azurerm_virtual_network.supercomputer.name
+  remote_virtual_network_id = azurerm_virtual_network.this.id
 }
 
 resource "azurerm_subnet" "supercomputer_nodepool" {
   name                            = "supercomputerNodepoolSubnet"
   resource_group_name             = data.azurerm_resource_group.rg.name
-  virtual_network_name            = azurerm_virtual_network.this.name
+  virtual_network_name            = azurerm_virtual_network.supercomputer.name
   address_prefixes                = [var.supercomputer_nodepool_subnet_prefix]
   default_outbound_access_enabled = false
 }
@@ -38,7 +59,7 @@ resource "azurerm_subnet" "supercomputer_nodepool" {
 resource "azurerm_subnet" "aks" {
   name                            = "aksSubnet"
   resource_group_name             = data.azurerm_resource_group.rg.name
-  virtual_network_name            = azurerm_virtual_network.this.name
+  virtual_network_name            = azurerm_virtual_network.supercomputer.name
   address_prefixes                = [var.aks_subnet_prefix]
   default_outbound_access_enabled = false
 }

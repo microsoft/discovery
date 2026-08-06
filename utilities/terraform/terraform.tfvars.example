@@ -1,8 +1,30 @@
 # Copy to terraform.tfvars and edit before running `terraform apply`.
 # Anything left commented out will fall back to the default in variables.tf.
 
-resource_group_name = "rg-discovery-terraform"
+resource_group_name = "rg-discovery-terraform-mods-full"
 location            = "uksouth"
+
+# Discovery control-plane resources remain in `location`. Their managed
+# infrastructure can use other Azure regions through resource-specific MRG
+# overrides. This example places the GPU-bearing Supercomputer in Sweden.
+supercomputer_managed_resource_group_location = "swedencentral"
+
+# Optional MRG overrides for other managed-resource-group producers.
+# workspace_managed_resource_group_location = "uksouth"
+# bookshelf_managed_resource_group_location = "uksouth"
+
+# Tags can be applied globally and overridden per Discovery resource.
+# common_tags = {
+#   environment = "dev"
+#   owner       = "discovery-team"
+# }
+# supercomputer_tags          = {}
+# node_pool_tags              = {}
+# workspace_tags              = {}
+# chat_model_deployment_tags  = {}
+# storage_container_tags      = {}
+# project_tags                = {}
+# bookshelf_tags              = {}
 
 # Optional: pin a fixed suffix so resource names are stable across runs.
 # name_suffix = "dev01"
@@ -12,7 +34,9 @@ location            = "uksouth"
 # workspace_name             = "ws-discovery-dev"
 # storage_container_name     = "stc-discovery-dev"
 # project_name               = "prj-discovery-dev"
+# bookshelf_name             = "bs-discovery-dev"
 # vnet_name                  = "vnet-discovery-dev"
+# supercomputer_vnet_name    = "vnet-sc-discovery-dev"
 # managed_identity_name      = "uami-discovery-dev"
 # storage_account_name       = "stgdiscoverydev01"   # must be globally unique, 3-24 lowercase alphanumeric
 
@@ -24,8 +48,13 @@ location            = "uksouth"
 # enable_ghcp_ai_features = true
 # enable_extensions       = true
 
+# Optional Bookshelf. It reuses the private endpoint and search subnets plus
+# the workload identity created by this configuration.
+# enable_bookshelf                 = false
+# bookshelf_public_network_access = "Disabled"
+
 # Node pool sizing (defaults are fine for a smoke test).
-# node_pool_vm_size            = "Standard_D4s_v6"
+# node_pool_vm_size            = "Standard_NC4as_T4_v3"
 # node_pool_min_node_count     = 0
 # node_pool_max_node_count     = 3
 # node_pool_scale_set_priority = "Regular"
