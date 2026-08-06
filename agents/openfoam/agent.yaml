@@ -15,7 +15,6 @@ samplePrompts:
 model:
   id: "{{CHAT-MODEL}}"
   options:
-    temperature: 0
     maxOutputTokens: 8192
 
 instructions: |-

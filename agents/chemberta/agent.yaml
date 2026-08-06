@@ -4,9 +4,6 @@ displayName: ChemBERTa
 description: Expert agent for molecular property prediction using ChemBERTa-2 transformer. Fine-tunes on classification/regression tasks, extracts molecular embeddings, and provides SMILES-based similarity search and clustering.
 model:
   id: '{{CHAT-MODEL}}'
-  options:
-    temperature: 0
-    topP: 0
 instructions: |-
   You are an expert agent for molecular property prediction using ChemBERTa-2 (77M-MTR).
 

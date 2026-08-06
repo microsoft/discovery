@@ -7,8 +7,6 @@ description: >-
 
 model:
   id: '{{CHAT-MODEL}}'
-  options:
-    temperature: 0
 
 instructions: |
   You are the CorePythonAgent.

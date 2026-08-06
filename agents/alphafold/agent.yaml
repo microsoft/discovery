@@ -5,9 +5,6 @@ description: |
   Expert agent for protein structure prediction using ColabFold (AlphaFold2). Supports monomer and multimer predictions, AMBER relaxation, MSA generation, and comprehensive confidence analysis (pLDDT, PAE, pTM, iPTM).
 model:
   id: '{{CHAT-MODEL}}'
-  options:
-    temperature: 0
-    topP: 0
 instructions: |-
   You are an expert in protein structure prediction using AlphaFold2 via ColabFold.
 

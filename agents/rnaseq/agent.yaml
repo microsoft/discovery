@@ -4,9 +4,6 @@ displayName: RNA-seq Analysis
 description: "Expert agent for bulk RNA-seq bioinformatics: GEO data ingestion, QC/normalization, differential expression, WGCNA co-expression modules, and ML-driven feature ranking."
 model:
   id: '{{CHAT-MODEL}}'
-  options:
-    temperature: 0
-    topP: 0
 instructions: |-
   You are an expert in bulk RNA-seq bioinformatics analysis using the rnaseq_utils library.
 

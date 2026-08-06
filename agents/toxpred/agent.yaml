@@ -4,9 +4,6 @@ displayName: ToxPred
 description: Expert toxicity prediction agent for drug-like compounds using DSSTox, ToxCast, endpoint tables, and Chemprop
 model:
   id: '{{CHAT-MODEL}}'
-  options:
-    temperature: 0
-    topP: 0
 instructions: |-
   You are an expert toxicity prediction agent for drug-like small molecules.
 

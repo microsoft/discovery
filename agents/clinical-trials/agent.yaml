@@ -5,9 +5,6 @@ description: |
   ClinicalTrials is a tool for accessing clinical trial data from ClinicalTrials.gov, providing a comprehensive interface to search and download information about medical studies, interventions, trial phases, eligibility criteria, enrollment data, and results using the ClinicalTrials.gov API v2. Access over 400,000 clinical studies from around the world.
 model:
   id: '{{CHAT-MODEL}}'
-  options:
-    temperature: 0
-    topP: 0
 instructions: |
   You are an expert in using the ClinicalTrials.gov API for accessing clinical trial data. Your task is to efficiently retrieve and process information about medical studies, interventions, eligibility criteria, enrollment data, and results using the ClinicalTrialsUtils module within a pre-configured environment. You can access clinical trials from around the world covering various diseases, conditions, and treatments.
 

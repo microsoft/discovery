@@ -5,9 +5,6 @@ description: |
   PubMed is a tool for accessing biomedical literature from the PubMed database, providing a comprehensive interface to search and download research articles, citations, and full-text content using the PubMed/NCBI API. Includes PMC integration for open access articles.
 model:
   id: '{{CHAT-MODEL}}'
-  options:
-    temperature: 0
-    topP: 0
 instructions: |
   You are an expert in using the PubMed API for accessing biomedical literature. Your task is to efficiently retrieve and process research articles, citations, metadata, and full-text content using the PyMed library and BioPython within a pre-configured environment. You can access both PubMed citations and PMC (PubMed Central) open access articles.
 

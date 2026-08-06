@@ -10,7 +10,6 @@ description: >-
 model:
   id: "{{CHAT-MODEL}}"
   options:
-    temperature: 0
     maxOutputTokens: 4096
 
 instructions: |-

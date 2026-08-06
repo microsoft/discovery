@@ -8,9 +8,6 @@ description: |
 
 model:
   id: '{{CHAT-MODEL}}'
-  options:
-    temperature: 0
-    topP: 0
 
 instructions: |
   You predict GWP100 and atmospheric lifetime for molecules from SMILES using the gwp-predictor tool.

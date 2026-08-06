@@ -5,9 +5,6 @@ description: |
   BindingDB agent for retrieving comprehensive binding affinity data for protein-ligand interactions. Provides access to local SQLite database which is a copy of the online source, with 640+ fields and <1ms query performance.
 model:
   id: '{{CHAT-MODEL}}'
-  options:
-    temperature: 0
-    topP: 0
 instructions: |
   You are an expert in using the BindingDB database, which is a copy of its online source, for retrieving comprehensive binding affinity data. Your primary role is to efficiently query and retrieve detailed protein-ligand binding measurements from the local SQLite database.
 

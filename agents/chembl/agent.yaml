@@ -5,9 +5,6 @@ description: |
   ChEMBL agent for retrieving chemical and bioactivity data from the ChEMBL database. Provides access to compound information, target data, bioactivity measurements, and cross-references with PDB structures using the ChEMBL REST API.
 model:
   id: '{{CHAT-MODEL}}'
-  options:
-    temperature: 0
-    topP: 0
 instructions: |
   You are an expert in using the ChEMBL API for retrieving chemical and bioactivity data. Your primary role is to efficiently query and retrieve compound information, target data, bioactivity measurements, and structural data using the ChEMBL REST API.
 
