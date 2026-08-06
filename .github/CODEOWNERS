@@ -7,15 +7,15 @@
 # See https://docs.github.com/en/repositories/managing-your-repositories-settings-and-customization/customizing-your-repository/about-code-owners
 
 # Default reviewers — applied when no more-specific rule matches.
-*                                       @mukesh-dua @charwen @leijgao @karthikananth @anzaman @surajmb @prashney @umamaheshmsft @cjtozer @yousefi-msft @ryansokolowski
+*                                       @mukesh-dua @charwen @leijgao @karthikananth @anzaman @surajmb @prashney @umamaheshmsft @cjtozer @yousefi-msft @ryansok
 
 # CI / workflow tooling
-/.github/workflows/                     @mukesh-dua @charwen @leijgao @karthikananth @anzaman @surajmb @prashney @umamaheshmsft @cjtozer @yousefi-msft @ryansokolowski
-/.github/scripts/                       @mukesh-dua @charwen @leijgao @karthikananth @anzaman @surajmb @prashney @umamaheshmsft @cjtozer @yousefi-msft @ryansokolowski
-/.github/CODEOWNERS                     @mukesh-dua @charwen @leijgao @karthikananth @anzaman @surajmb @prashney @umamaheshmsft @cjtozer @yousefi-msft @ryansokolowski
+/.github/workflows/                     @mukesh-dua @charwen @leijgao @karthikananth @anzaman @surajmb @prashney @umamaheshmsft @cjtozer @yousefi-msft @ryansok
+/.github/scripts/                       @mukesh-dua @charwen @leijgao @karthikananth @anzaman @surajmb @prashney @umamaheshmsft @cjtozer @yousefi-msft @ryansok
+/.github/CODEOWNERS                     @mukesh-dua @charwen @leijgao @karthikananth @anzaman @surajmb @prashney @umamaheshmsft @cjtozer @yousefi-msft @ryansok
 
 # Schema files — changes here can break every agent/kit in the catalog.
-/docs/schemas/                          @mukesh-dua @charwen @leijgao @karthikananth @anzaman @surajmb @prashney @umamaheshmsft @cjtozer @yousefi-msft @ryansokolowski
+/docs/schemas/                          @mukesh-dua @charwen @leijgao @karthikananth @anzaman @surajmb @prashney @umamaheshmsft @cjtozer @yousefi-msft @ryansok
 
 # Auto-generated registries — should normally never be hand-edited (see POL-011).
 # `discovery-registry-bot` is the GitHub App that authors the chore/registry-refresh*
@@ -25,11 +25,11 @@
 # approve its own PRs (GitHub forbids self-approval), so this line is structural
 # prep for fully-automated registry merges; until a second identity is wired up,
 # a human codeowner from the list below still needs to approve.
-/.auto-registry/                        @mukesh-dua @charwen @leijgao @karthikananth @anzaman @surajmb @prashney @umamaheshmsft @cjtozer @discovery-registry-bot @yousefi-msft @ryansokolowski
+/.auto-registry/                        @mukesh-dua @charwen @leijgao @karthikananth @anzaman @surajmb @prashney @umamaheshmsft @cjtozer @discovery-registry-bot @yousefi-msft @ryansok
 
 # Per-content area
-/agents/                                @mukesh-dua @charwen @leijgao @karthikananth @anzaman @surajmb @prashney @umamaheshmsft @cjtozer @yousefi-msft @ryansokolowski
-/starter-kits/                          @mukesh-dua @charwen @leijgao @karthikananth @anzaman @surajmb @prashney @umamaheshmsft @cjtozer @yousefi-msft @ryansokolowski
+/agents/                                @mukesh-dua @charwen @leijgao @karthikananth @anzaman @surajmb @prashney @umamaheshmsft @cjtozer @yousefi-msft @ryansok
+/starter-kits/                          @mukesh-dua @charwen @leijgao @karthikananth @anzaman @surajmb @prashney @umamaheshmsft @cjtozer @yousefi-msft @ryansok
 
 # Operator utilities for Discovery services (PowerShell scripts).
-/utilities/                             @mukesh-dua @charwen @leijgao @karthikananth @anzaman @surajmb @prashney @umamaheshmsft @cjtozer @yousefi-msft @ryansokolowski
+/utilities/                             @mukesh-dua @charwen @leijgao @karthikananth @anzaman @surajmb @prashney @umamaheshmsft @cjtozer @yousefi-msft @ryansok
