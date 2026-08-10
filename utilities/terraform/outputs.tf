@@ -1,81 +1,81 @@
 # -----------------------------------------------------------------------------
 # outputs.tf
 #
-# Mirrors the outputs at the bottom of ../discovery.bicep so downstream
-# tooling (Toolbox, scripts, azd wrappers) sees the same values.
+# Surfaces the module outputs so downstream tooling (Toolbox, scripts, azd
+# wrappers) sees the same values as the Bicep path.
 # -----------------------------------------------------------------------------
 
 output "supercomputer_id" {
   description = "Resource ID of the Discovery Supercomputer."
-  value       = azapi_resource.supercomputer.id
+  value       = module.supercomputer.id
 }
 
-output "node_pool_id" {
-  description = "Resource ID of the Supercomputer node pool."
-  value       = azapi_resource.node_pool.id
+output "node_pool_ids" {
+  description = "Resource IDs of the Supercomputer node pools keyed by name."
+  value       = module.supercomputer.node_pool_ids
 }
 
 output "workspace_id" {
   description = "Resource ID of the Discovery Workspace."
-  value       = azapi_resource.workspace.id
+  value       = module.workspace.id
 }
 
-output "chat_model_deployment_id" {
-  description = "Resource ID of the chat model deployment."
-  value       = azapi_resource.chat_model.id
+output "chat_model_deployment_ids" {
+  description = "Resource IDs of the chat model deployments keyed by name."
+  value       = module.workspace.chat_model_deployment_ids
+}
+
+output "project_ids" {
+  description = "Resource IDs of the Discovery projects keyed by name."
+  value       = module.workspace.project_ids
 }
 
 output "storage_container_id" {
   description = "Resource ID of the Discovery StorageContainer (control-plane binding)."
-  value       = azapi_resource.discovery_storage_container.id
-}
-
-output "project_id" {
-  description = "Resource ID of the Discovery Project."
-  value       = azapi_resource.project.id
+  value       = module.platform.storage_container_id
 }
 
 output "bookshelf_id" {
-  description = "Resource ID of the optional Discovery Bookshelf"
-  value       = try(azapi_resource.bookshelf[0].id, null)
+  description = "Resource ID of the optional Discovery Bookshelf."
+  value       = try(module.bookshelf[0].id, null)
 }
 
 output "managed_identity_id" {
   description = "Resource ID of the workspace user-assigned managed identity (workspaceIdentity)."
-  value       = azurerm_user_assigned_identity.workspace.id
+  value       = module.platform.workspace_identity_id
 }
 
 output "managed_identity_principal_id" {
   description = "AAD object ID of the workspace user-assigned managed identity (workspaceIdentity)."
-  value       = azurerm_user_assigned_identity.workspace.principal_id
+  value       = module.platform.workspace_identity_principal_id
 }
 
 output "cluster_identity_id" {
   description = "Resource ID of the Supercomputer cluster user-assigned managed identity (clusterIdentity)."
-  value       = azurerm_user_assigned_identity.cluster.id
+  value       = module.platform.cluster_identity_id
 }
 
 output "kubelet_identity_id" {
   description = "Resource ID of the Supercomputer kubelet user-assigned managed identity (kubeletIdentity)."
-  value       = azurerm_user_assigned_identity.kubelet.id
+  value       = module.platform.kubelet_identity_id
 }
 
 output "workload_identity_id" {
   description = "Resource ID of the Supercomputer workload user-assigned managed identity (workloadIdentities)."
-  value       = azurerm_user_assigned_identity.workload.id
+  value       = module.platform.workload_identity_id
 }
 
 output "storage_account_id" {
   description = "Resource ID of the storage account backing the Discovery StorageContainer."
-  value       = azurerm_storage_account.outputs.id
+  value       = module.platform.storage_account_id
 }
 
 output "vnet_id" {
-  description = "Resource ID of the Workspace virtual network"
-  value       = azurerm_virtual_network.this.id
+  description = "Resource ID of the Workspace virtual network."
+  value       = module.platform.workspace_vnet_id
 }
 
 output "supercomputer_vnet_id" {
-  description = "Resource ID of the Supercomputer virtual network"
-  value       = azurerm_virtual_network.supercomputer.id
+  description = "Resource ID of the Supercomputer virtual network."
+  value       = module.platform.supercomputer_vnet_id
 }

@@ -1,10 +1,11 @@
 # -----------------------------------------------------------------------------
-# examples/03-workspace -- individual Workspace control-plane resource (bare)
+# examples/03-workspace -- Workspace control-plane resource with children
 #
 # Consumes the shared prerequisites from 01 and the Supercomputer ID from 02,
-# then creates ONLY the Discovery Workspace linked to that Supercomputer. It is
-# intentionally BARE: no chat model deployments and no projects. Those are added
-# by 04-complete-e2e, which brings this workspace in as an existing resource.
+# then creates the Discovery Workspace linked to that Supercomputer, plus its
+# chat model deployment and a project bound to the StorageContainer from 01.
+# This completes the staged BYO deployment using the same workspace module the
+# end-to-end root uses.
 #
 # network_isolation = true (with all three subnets) is required by the module
 # and is the healthy posture: the RP VNet-injects the managed Container Apps
@@ -46,6 +47,19 @@ module "workspace" {
   agent_subnet_id            = local.prereqs.agent_subnet_id
   private_endpoint_subnet_id = local.prereqs.private_endpoint_subnet_id
   workspace_subnet_id        = local.prereqs.workspace_subnet_id
+
+  chat_model_deployments = {
+    "gpt-5-2" = {
+      model_format = "OpenAI"
+      model_name   = "gpt-5.2"
+    }
+  }
+
+  projects = {
+    "prj-${local.prereqs.name_suffix}" = {
+      storage_container_ids = [local.prereqs.storage_container_id]
+    }
+  }
 
   tags = {
     scenario = "module-to-full"

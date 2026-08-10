@@ -78,12 +78,6 @@ variable "chat_model_deployment_tags" {
   default     = {}
 }
 
-variable "storage_container_tags" {
-  description = "Additional tags applied to the Discovery storage container"
-  type        = map(string)
-  default     = {}
-}
-
 variable "project_tags" {
   description = "Additional tags applied to the Discovery project"
   type        = map(string)
@@ -138,12 +132,6 @@ variable "chat_model_deployment_name" {
   default     = "gpt-5-2"
 }
 
-variable "storage_container_name" {
-  description = "Discovery StorageContainer (control-plane binding) name (3-24 chars, alphanumeric + hyphen)."
-  type        = string
-  default     = null
-}
-
 variable "project_name" {
   description = "Discovery Project name (3-24 chars, alphanumeric + hyphen)."
   type        = string
@@ -158,53 +146,6 @@ variable "bookshelf_name" {
   validation {
     condition     = var.bookshelf_name == null || can(regex("^[a-zA-Z0-9-]{3,24}$", var.bookshelf_name))
     error_message = "bookshelf_name must contain 3 to 24 alphanumeric or hyphen characters."
-  }
-}
-
-variable "vnet_name" {
-  description = "Workspace virtual network name"
-  type        = string
-  default     = null
-}
-
-variable "supercomputer_vnet_name" {
-  description = "Supercomputer virtual network name"
-  type        = string
-  default     = null
-}
-
-variable "managed_identity_name" {
-  description = "Workspace user-assigned managed identity name (workspaceIdentity: control + data plane)."
-  type        = string
-  default     = null
-}
-
-variable "cluster_identity_name" {
-  description = "Supercomputer cluster user-assigned managed identity name (AKS control plane)."
-  type        = string
-  default     = null
-}
-
-variable "kubelet_identity_name" {
-  description = "Supercomputer kubelet user-assigned managed identity name (node-level image pulls + startup data access)."
-  type        = string
-  default     = null
-}
-
-variable "workload_identity_name" {
-  description = "Supercomputer workload user-assigned managed identity name (agent/tool federated data access - keep minimally privileged)."
-  type        = string
-  default     = null
-}
-
-variable "storage_account_name" {
-  description = "Globally unique storage account name (3-24 lowercase alphanumeric)."
-  type        = string
-  default     = null
-
-  validation {
-    condition     = var.storage_account_name == null || can(regex("^[a-z0-9]{3,24}$", var.storage_account_name))
-    error_message = "storage_account_name must be 3-24 lowercase alphanumeric characters."
   }
 }
 

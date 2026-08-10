@@ -28,9 +28,7 @@ and the deployment fails on the project resource.
 
 The same broken backend also blocks teardown: project delete-validation calls the
 unhealthy backend and fails, the workspace refuses to delete while the project
-exists, and a resource-group delete times out and rolls back. This was observed
-as a reproducible incident in `uksouth` (see the repository incident notes for
-correlation IDs and diagnosis).
+exists, and a resource-group delete times out and rolls back.
 
 This Terraform utility always provisions the delegated subnets and the private
 endpoint subnet, so the isolated topology is clearly the intended design.

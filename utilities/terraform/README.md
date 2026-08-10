@@ -231,23 +231,29 @@ Add it to the scratch list from Step 1.5:
 | Resource group | `rg-discovery-terraform` |
 | Region | `uksouth` |
 
-## Step 3: Scaffold the Terraform project
+## Step 3: Project layout
 
-Every file below lives in the same directory as this quickstart (`Terraform/`). Run `ls Terraform/` after this step and you should see:
+The utility ships as a set of modules with a thin root that assembles them. Run `ls` in this directory and you should see:
 
 ```text
-.gitignore
-README.md
-discovery.tf           # written in Step 5
-identity.tf            # written in Step 4
-locals.tf
-network.tf             # written in Step 4
-outputs.tf
-providers.tf
-roles.tf               # written in Step 4
-storage.tf             # written in Step 4
+main.tf                     # end-to-end assembly: calls the modules below
+locals.tf                   # suffix, names, managed-resource-group tags
+variables.tf                # input contract
+outputs.tf                  # resource IDs for downstream automation
+providers.tf                # azurerm + azapi provider pins
 terraform.tfvars.example
-variables.tf
+modules/
+  platform/                 # network, identities, storage, RBAC, storage container
+  control-plane/
+    supercomputer/          # supercomputer + node pools
+    workspace/              # workspace + chat model deployments + projects
+    bookshelf/              # optional bookshelf
+    tool/                   # discovery tool
+examples/                   # staged BYO deployments that reuse the same modules
+  01-prereqs/               # calls modules/platform
+  02-supercomputer/         # calls modules/control-plane/supercomputer
+  03-workspace/             # calls modules/control-plane/workspace (+ children)
+  05-bookshelf/             # calls modules/control-plane/bookshelf
 ```
 
 ### 3.1 `providers.tf` -- pin both providers
@@ -268,12 +274,12 @@ See [providers.tf](providers.tf) for the exact block. Note the two commented-out
 
 [locals.tf](locals.tf) does two things:
 
-* Declares a `random_string` for an 8-character suffix. Any resource name left unset in `tfvars` derives from this suffix.
-* Reads the resource group (created in Step 2) via `data "azurerm_resource_group" "rg"`. We deliberately do NOT manage the RG in Terraform -- keeping it imperative protects it from `terraform destroy`.
+* Declares a `random_string` for an 8-character suffix. Any resource name left unset in `tfvars` derives from this suffix, which is passed into `modules/platform` so the whole deployment shares one suffix.
+* Resolves the per-resource managed-resource-group region overrides and the `discovery.overridemrgregion` tags. The resource group itself (created in Step 2) is read inside `modules/platform`; we deliberately do NOT manage the RG in Terraform, keeping it imperative and safe from `terraform destroy`.
 
 ### 3.3 `outputs.tf` -- resource IDs for downstream automation
 
-[outputs.tf](outputs.tf) exports nine resource IDs (supercomputer, node pool, workspace, chat model deployment, Discovery storage container, project, UAMI, storage account, VNet) plus the UAMI's `principal_id` for anyone downstream who needs to grant it more roles.
+[outputs.tf](outputs.tf) exports the key resource IDs (supercomputer, node pools, workspace, chat model deployments, projects, Discovery storage container, the four UAMIs, storage account, and both VNets) plus the workspace UAMI's `principal_id` for anyone downstream who needs to grant it more roles.
 
 ### 3.4 `terraform.tfvars.example` and `.gitignore`
 
@@ -284,28 +290,29 @@ Copy [terraform.tfvars.example](terraform.tfvars.example) to `terraform.tfvars`.
 ### 3.5 Sanity check
 
 ```bash
-cd Terraform
+cd utilities/terraform
 terraform fmt -check
-terraform validate  # will fail until Steps 4 and 5 are written -- expected
+terraform init
+terraform validate  # Success! The configuration is valid.
 ```
 
-`terraform fmt -check` should pass right now. `terraform validate` won't pass until Step 5 lands, because the outputs in `outputs.tf` reference resources that don't exist yet.
+Both should pass: the modules ship complete, so there is nothing to hand-author before validation succeeds.
 
-## Step 4: Author the platform primitives (AzureRM)
+## Step 4: The platform module (AzureRM primitives)
 
-Every resource in this step is a stable AzureRM type. **No AzAPI here except one blob container** (called out explicitly in 4.3). If you see an AzAPI block outside of that, something drifted.
+`modules/platform` creates every non-Discovery primitive. All of it is stable AzureRM types **except one blob container** (called out in 4.3), which uses AzAPI.
 
-### 4.1 `network.tf` -- regional VNets and six subnets   [PROVIDER: azurerm]
+### 4.1 Networking -- regional VNets and six subnets   [PROVIDER: azurerm]
 
-[network.tf](network.tf) creates two globally peered VNets and six standalone `azurerm_subnet` blocks. The Workspace VNet remains in the Discovery control-plane region and contains the `workspace`, `agent`, `search`, and private-endpoint subnets. The Supercomputer VNet is created in `supercomputer_managed_resource_group_location` and contains the AKS system and GPU node-pool subnets. Both VNets link to the private Blob DNS zone so Supercomputer workloads can resolve the storage private endpoint across the peering.
+[modules/platform/main.tf](modules/platform/main.tf) creates two globally peered VNets and six standalone `azurerm_subnet` blocks. The Workspace VNet remains in the Discovery control-plane region and contains the `workspace`, `agent`, `search`, and private-endpoint subnets. The Supercomputer VNet is created in `supercomputer_managed_resource_group_location` and contains the AKS system and GPU node-pool subnets. Both VNets link to the private Blob DNS zone so Supercomputer workloads can resolve the storage private endpoint across the peering.
 
 Why standalone `azurerm_subnet` rather than inline `subnet {}` blocks on `azurerm_virtual_network`: mixing the two styles is a well-known source of drift in AzureRM. Standalone is the recommended pattern and it lets each subnet have its own lifecycle.
 
 Note that you don't need explicit `depends_on` blocks between the VNet and its subnets — Terraform infers ordering from `azurerm_subnet.aks.id` references elsewhere in the module.
 
-### 4.2 `identity.tf` -- four user-assigned managed identities   [PROVIDER: azurerm]
+### 4.2 Identities -- four user-assigned managed identities   [PROVIDER: azurerm]
 
-[identity.tf](identity.tf) creates four UAMIs that mirror the least-privilege split in `../discovery.bicep`, so each Discovery identity slot holds only the roles it needs:
+[modules/platform/main.tf](modules/platform/main.tf) creates four UAMIs that mirror the least-privilege split in `../discovery.bicep`, so each Discovery identity slot holds only the roles it needs:
 
 * `workspace` -> `Workspace.workspaceIdentity` (control + data plane)
 * `cluster`  -> `Supercomputer.identities.clusterIdentity` (AKS control plane)
@@ -319,9 +326,9 @@ This identity setting is separate from Workspace `NetworkIsolation`. Workspace n
 > [!WARNING]
 > Treat changing `supercomputer_managed_resource_group_location` on an existing stack as a rebuild. Terraform must replace the Supercomputer subnets to move them into the regional VNet, and the Discovery resource provider must reconcile or recreate the managed AKS resources. Use the split-region configuration for a fresh full-stack run unless you have an explicit migration and downtime plan.
 
-### 4.3 `storage.tf` -- storage account (AzureRM) + one blob container (**AzAPI**)
+### 4.3 Storage -- storage account (AzureRM) + one blob container (**AzAPI**)
 
-[storage.tf](storage.tf) is the one file in Step 4 that mixes both providers. The reasoning:
+The platform module mixes both providers here. The reasoning:
 
 * **`azurerm_storage_account`** covers the account and folds blob-service CORS into a nested `blob_properties { cors_rule { ... } }` block. Clean, typed, done.
 * **`azapi_resource` for the blob container** exists because we set `shared_access_key_enabled = false`. AzureRM's `azurerm_storage_container` talks to the Storage **data plane** and needs either shared keys or an Entra principal with `Storage Blob Data Owner` on the account. Neither is a great fit for CI/CD, so we talk to the **control plane** directly at `Microsoft.Storage/storageAccounts/blobServices/containers@2023-05-01` via AzAPI.
@@ -330,9 +337,9 @@ If you're running locally and already hold `Storage Blob Data Owner` on the acco
 
 **Networking.** Public network access on the account stays **Disabled**. The Discovery `storageContainer` binding (network hardening) forces `publicNetworkAccess=Disabled` and clears any VNet firewall rules, so a "selected networks" allowlist doesn't hold. Instead the module creates a **blob private endpoint** in the `privateEndpointSubnet` plus the `privatelink.blob.core.windows.net` private DNS zone (linked to the VNet), so the VNet-injected supercomputer/workspace/agent compute resolves the account to a private IP and reaches it over the Azure backbone. This matches the [network-hardened deployment guide](https://learn.microsoft.com/azure/microsoft-discovery/how-to-deploy-network-hardened-stack). Note: with public access disabled, browsing output data in Discovery Studio requires the browser to reach the private endpoint (VNet, VPN, or ExpressRoute).
 
-### 4.4 `roles.tf` -- seven least-privilege role assignments   [PROVIDER: azurerm]
+### 4.4 Role assignments -- seven least-privilege bindings   [PROVIDER: azurerm]
 
-[roles.tf](roles.tf) creates the seven role assignments Discovery requires, each bound to only the identity that needs it:
+[modules/platform/main.tf](modules/platform/main.tf) creates the seven role assignments Discovery requires, each bound to only the identity that needs it:
 
 | Identity  | Role                           | Scope             | Definition ID |
 |-----------|--------------------------------|-------------------|----------------|
@@ -349,14 +356,14 @@ Every assignment has an explicit `depends_on` on its target UAMI to avoid the `P
 ### 4.5 Validate
 
 ```bash
-cd Terraform
+cd utilities/terraform
 terraform fmt -check
-terraform validate  # still fails until Step 5 -- expected
+terraform validate  # Success! The configuration is valid.
 ```
 
-## Step 5: Author the Discovery resources (AzAPI)
+## Step 5: The control-plane modules (Discovery resources, AzAPI)
 
-**Every resource in [discovery.tf](discovery.tf) uses `azapi_resource`.** This is why the utility exists: AzureRM ships no `azurerm_discovery_*` resources today, and driving ARM PUTs through AzAPI is the only Terraform-native path to Discovery resources right now.
+**Every Discovery resource lives in a `modules/control-plane/*` module and uses `azapi_resource`.** This is why the utility exists: AzureRM ships no `azurerm_discovery_*` resources today, and driving ARM PUTs through AzAPI is the only Terraform-native path to Discovery resources right now.
 
 All Discovery blocks pin `@2026-06-01`. Change the pin consistently across resources and note it in the commit message because schemas can differ between API versions.
 
@@ -414,7 +421,7 @@ Both should now pass. You are ready for `terraform init` in Step 6.
 
 ### 6.1 Pre-apply: grant yourself a blob data role
 
-Because `storage.tf` sets `shared_access_key_enabled = false` on the storage account, AzureRM's provider must poll the blob data plane with AAD (not shared keys) after creating it. That requires the identity running `terraform apply` to hold a blob data role on the account. Without this, apply fails with:
+Because the platform module sets `shared_access_key_enabled = false` on the storage account, AzureRM's provider must poll the blob data plane with AAD (not shared keys) after creating it. That requires the identity running `terraform apply` to hold a blob data role on the account. Without this, apply fails with:
 
 ```text
 Error: waiting for the Data Plane for Storage Account ... to become available:
@@ -531,7 +538,7 @@ The 30 resources are: `random_string.suffix`, `azurerm_virtual_network` + 6 subn
 terraform apply "tfplan"
 ```
 
-Wall time: **20–45 minutes**, dominated by the Discovery supercomputer (which provisions an AKS cluster + node pool) and the workspace. Both have `timeouts { create = "60m" }` set in `discovery.tf` to avoid spurious `context deadline exceeded` errors under RP load.
+Wall time: **20–45 minutes**, dominated by the Discovery supercomputer (which provisions an AKS cluster + node pool) and the workspace. Both have `timeouts { create = "60m" }` set in their control-plane modules to avoid spurious `context deadline exceeded` errors under RP load.
 
 ### 6.7 Known failure modes and recovery
 
@@ -567,7 +574,7 @@ az role assignment list --assignee "$MY_OID" \
   --query "[?roleDefinitionName=='Storage Blob Data Owner']" -o table
 ```
 
-**C. `PrincipalNotFoundError` on the very first apply.** Entra ID replication race for the freshly-created UAMI. The `depends_on` entries in `roles.tf` mitigate this, but on cold subscriptions it can still lose. Re-run apply — no code changes needed.
+**C. `PrincipalNotFoundError` on the very first apply.** Entra ID replication race for the freshly-created UAMI. The `depends_on` entries in `modules/platform` mitigate this, but on cold subscriptions it can still lose. Re-run apply — no code changes needed.
 
 ## Step 7: (coming next) Verify the deployment in Discovery Studio
 
@@ -586,7 +593,7 @@ Filled in as each step lands. Common failure modes to preview:
 * `PrincipalNotFound` on first apply after UAMI creation — Entra ID replication race; see Step 6.6.C.
 * `context deadline exceeded` on workspace — see Step 6.6.A (import path).
 * `SubnetHasServiceEndpointConfiguration` or delegation conflicts — see Step 3.
-* Discovery `workspace` create returning `InvalidRequest` with a `workspaceIdentity` error — the identity block is Discovery-specific, not the standard ARM `identity` envelope. See the `workspace` block in [discovery.tf](discovery.tf) for the correct shape.
+* Discovery `workspace` create returning `InvalidRequest` with a `workspaceIdentity` error — the identity block is Discovery-specific, not the standard ARM `identity` envelope. See [modules/control-plane/workspace/main.tf](modules/control-plane/workspace/main.tf) for the correct shape.
 
 ## Deletion order:
 Step 1: Delete the nodepool
@@ -597,42 +604,43 @@ Step 4: Delete the resource group
 
 ## TODO: Deleting the RG via the terraform.
 
-## Architecture and roadmap
+## Architecture
 
-Today this utility is a single root module that deploys the full supported
-Discovery topology. The `modules/` and `examples/` directories hold the
-in-progress restructuring into layered, composable modules described below. Both
-layouts target the same `2026-06-01` API contract, so the conventions here apply
-whichever entry point you use.
+The utility is built from reusable modules. The root ([main.tf](main.tf))
+assembles them into a single-apply end-to-end deployment, and the staged
+examples under `examples/` compose the **same** modules for
+bring-your-own-dependency scenarios. There is one definition of each resource, so
+the two paths cannot drift. Everything targets the `2026-06-01` API contract.
 
-### Target module layout
+### Module layout
 
 ```text
 utilities/terraform/
+├── main.tf                # end-to-end assembly (single apply)
 ├── modules/
-│   ├── control-plane/     # thin wrappers over one Microsoft.Discovery/* resource each
-│   │   ├── supercomputer/ # + node pool children
-│   │   ├── workspace/     # + chat model deployment and project children
-│   │   ├── bookshelf/
-│   │   └── tool/
-│   ├── provisioning/      # compose a control-plane module with its prerequisites
-│   │   ├── supercomputer/
-│   │   ├── workspace/
-│   │   └── tool/
-│   └── discovery/         # opinionated end-to-end composition
-├── examples/              # runnable configurations per consumption level
-└── README.md
+│   ├── platform/          # network, identities, storage, RBAC, storage container
+│   └── control-plane/     # thin wrappers over one Microsoft.Discovery/* resource each
+│       ├── supercomputer/ # + node pool children
+│       ├── workspace/     # + chat model deployment and project children
+│       ├── bookshelf/
+│       └── tool/
+└── examples/              # staged BYO deployments that reuse the modules
+    ├── 01-prereqs/        # modules/platform
+    ├── 02-supercomputer/  # modules/control-plane/supercomputer
+    ├── 03-workspace/      # modules/control-plane/workspace (+ children)
+    └── 05-bookshelf/      # modules/control-plane/bookshelf
 ```
 
 Ownership boundaries keep the composition acyclic:
 
+* **The platform module** owns every non-Discovery prerequisite (networks,
+  identities, storage, role assignments) plus the RG-level storage container.
 * **Control-plane modules** own exactly one Discovery resource type and its
-  children. They never create networks, identities, storage, or role assignments.
-* **Provisioning modules** own only the prerequisites specific to their resource
-  (identities, subnet consumption, least-privilege role assignments) and invoke
-  their matching control-plane module.
-* **The end-to-end module** creates shared prerequisites, invokes the provisioning
-  modules, and optionally invokes Bookshelf behind `enable_bookshelf`.
+  children. They consume prerequisite IDs and never create platform resources.
+* **The root** wires the platform outputs into the control-plane modules to
+  produce the full topology in one apply, with Bookshelf behind `enable_bookshelf`.
+* **The staged examples** deploy the same modules one layer at a time, passing
+  IDs between stages via `terraform_remote_state` for BYO scenarios.
 * Every module requires an existing resource group; none creates it.
 * Children (node pools, chat model deployments, projects, tools) use stable
   `for_each` keys so adding or removing one never renumbers unrelated resources.
