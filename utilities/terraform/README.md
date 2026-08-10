@@ -249,12 +249,10 @@ modules/
     workspace/              # workspace + chat model deployments + projects
     bookshelf/              # optional bookshelf
     tool/                   # discovery tool
-examples/                   # staged BYO deployments that reuse the same modules
-  01-prereqs/               # calls modules/platform
-  02-supercomputer/         # calls modules/control-plane/supercomputer
-  03-workspace/             # calls modules/control-plane/workspace (+ children)
-  05-bookshelf/             # calls modules/control-plane/bookshelf
 ```
+
+Deploy the whole stack with the root, or call any single module directly for a
+bring-your-own-dependency deployment (see [Deploy a single component](#deploy-a-single-component-byo)).
 
 ### 3.1 `providers.tf` -- pin both providers
 
@@ -607,28 +605,24 @@ Step 4: Delete the resource group
 ## Architecture
 
 The utility is built from reusable modules. The root ([main.tf](main.tf))
-assembles them into a single-apply end-to-end deployment, and the staged
-examples under `examples/` compose the **same** modules for
-bring-your-own-dependency scenarios. There is one definition of each resource, so
-the two paths cannot drift. Everything targets the `2026-06-01` API contract.
+assembles them into a single-apply end-to-end deployment. For
+bring-your-own-dependency scenarios you call the **same** modules directly with
+your own resource IDs (see [Deploy a single component](#deploy-a-single-component-byo)).
+There is one definition of each resource, so the paths cannot drift. Everything
+targets the `2026-06-01` API contract.
 
 ### Module layout
 
 ```text
 utilities/terraform/
 ├── main.tf                # end-to-end assembly (single apply)
-├── modules/
-│   ├── platform/          # network, identities, storage, RBAC, storage container
-│   └── control-plane/     # thin wrappers over one Microsoft.Discovery/* resource each
-│       ├── supercomputer/ # + node pool children
-│       ├── workspace/     # + chat model deployment and project children
-│       ├── bookshelf/
-│       └── tool/
-└── examples/              # staged BYO deployments that reuse the modules
-    ├── 01-prereqs/        # modules/platform
-    ├── 02-supercomputer/  # modules/control-plane/supercomputer
-    ├── 03-workspace/      # modules/control-plane/workspace (+ children)
-    └── 05-bookshelf/      # modules/control-plane/bookshelf
+└── modules/
+    ├── platform/          # network, identities, storage, RBAC, storage container
+    └── control-plane/     # thin wrappers over one Microsoft.Discovery/* resource each
+        ├── supercomputer/ # + node pool children
+        ├── workspace/     # + chat model deployment and project children
+        ├── bookshelf/
+        └── tool/
 ```
 
 Ownership boundaries keep the composition acyclic:
@@ -639,11 +633,47 @@ Ownership boundaries keep the composition acyclic:
   children. They consume prerequisite IDs and never create platform resources.
 * **The root** wires the platform outputs into the control-plane modules to
   produce the full topology in one apply, with Bookshelf behind `enable_bookshelf`.
-* **The staged examples** deploy the same modules one layer at a time, passing
-  IDs between stages via `terraform_remote_state` for BYO scenarios.
+* **BYO deployments** call any module directly with your own resource IDs; the
+  control-plane modules consume IDs and never create platform resources, so
+  nothing is duplicated.
 * Every module requires an existing resource group; none creates it.
 * Children (node pools, chat model deployments, projects, tools) use stable
   `for_each` keys so adding or removing one never renumbers unrelated resources.
+
+### Deploy a single component (BYO)
+
+The end-to-end root creates everything. To deploy one control-plane resource
+against dependencies you already manage, call its module directly and pass your
+existing resource IDs. The control-plane modules only consume IDs -- they never
+create networks, identities, or storage -- so there is no duplicated state:
+
+```hcl
+module "supercomputer" {
+  source = "./modules/control-plane/supercomputer"
+
+  name              = "sc-prod" # your name
+  location          = "uksouth"
+  resource_group_id = "/subscriptions/.../resourceGroups/rg-mine"
+
+  system_subnet_id      = "/subscriptions/.../subnets/aks" # your subnet
+  cluster_identity_id   = "/subscriptions/.../userAssignedIdentities/uami-cluster"
+  kubelet_identity_id   = "/subscriptions/.../userAssignedIdentities/uami-kubelet"
+  workload_identity_ids = ["/subscriptions/.../userAssignedIdentities/uami-workload"]
+
+  node_pools = {
+    gpu = {
+      subnet_id      = "/subscriptions/.../subnets/nodepool"
+      vm_size        = "Standard_NC4as_T4_v3"
+      max_node_count = 3
+    }
+  }
+}
+```
+
+The same pattern applies to `workspace` (pass an existing `supercomputer_ids`),
+`bookshelf`, and `platform`. To create the shared prerequisites too, call
+`modules/platform` first and feed its outputs in -- which is exactly what the
+root does. Each module's inputs are documented in its own `README.md`.
 
 ### Tag model and precedence
 
@@ -703,10 +733,9 @@ are validated only against constraints Azure documents.
   private endpoints, role assignments).
 * Assume every managed-resource-group-producing Discovery resource accepts
   `discovery.overridemrgregion`, constrained to supported Discovery regions.
-* Provisioning modules consume existing prerequisites; the end-to-end module
-  creates the shared prerequisites it needs.
-* Tool is its own control-plane module with a matching provisioning module,
-  parallel to Supercomputer.
+* Control-plane modules consume existing prerequisites; the root creates the
+  shared prerequisites via the platform module.
+* Tool is its own control-plane module, parallel to Supercomputer.
 * Use separate least-privilege identities and narrowly scoped role assignments,
   improving on the shared-identity Bicep example where practical.
 * Node pools stay children of Supercomputer; chat model deployments and projects
@@ -716,12 +745,12 @@ are validated only against constraints Azure documents.
 
 ### Validation checklist
 
-Run for every module and example before merging:
+Run for the root and every module before merging:
 
 1. `terraform fmt -check -recursive`
 2. `terraform init -backend=false` and `terraform validate`
 3. TFLint and a repository-supported security scanner
-4. Plans for both module-managed and bring-your-own-dependencies examples
+4. A plan for the end-to-end root and for a standalone module (BYO) call
 5. An end-to-end deployment with Bookshelf disabled and one with it enabled
 6. A second plan after apply to confirm idempotency
 7. Targeted destroy tests that respect Discovery managed-resource-group deletion
