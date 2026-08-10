@@ -1,2 +1,6 @@
 agents/gwp-predictor/tools/gwp-predictor/models/*.pt filter=lfs diff=lfs merge=lfs -text
 agents/gwp-predictor/tools/gwp-predictor/models/*.npz filter=lfs diff=lfs merge=lfs -text
+
+# Shell scripts must use LF so they run correctly inside Linux containers.
+# CRLF endings cause "set: pipefail\r: invalid option name" and similar failures.
+*.sh text eol=lf
