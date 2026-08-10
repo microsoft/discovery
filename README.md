@@ -10,7 +10,7 @@
       <a href="https://aka.ms/discovery/download/arm64/current"><strong>Arm64</strong></a>
     </td>
     <td valign="middle">
-      A self-contained Windows app - no SDK, no cloud setup. Current release: <strong>v0.15.9</strong>.<br>
+      A self-contained Windows app - no SDK, no cloud setup. Current release: <strong>v0.15.10</strong>.<br>
       <sub>macOS and Linux are not supported yet. Windows x64 and Windows ARM64 installers are available today.</sub><br><br>
       🛠️ <a href="docs/discovery-app/install.md">Install guide</a> - setup, verification, and upgrade steps.
     </td>
@@ -21,8 +21,8 @@
 
 | Version | Date | Platform | Installer |
 | --- | --- | --- | --- |
-| v0.15.8 _(previous)_ | 2026-07-27 | Windows x64 | [`Discovery-app-0.15.8-preview-win-x64.exe`](https://aka.ms/discovery/download/previous) |
-| v0.15.8 _(previous)_ | 2026-07-27 | Windows Arm64 | [`Discovery-app-0.15.8-preview-win-arm64.exe`](https://aka.ms/discovery/download/arm64/previous) |
+| v0.15.9 _(previous)_ | 2026-08-03 | Windows x64 | [`Discovery-app-0.15.9-preview-win-x64.exe`](https://aka.ms/discovery/download/previous) |
+| v0.15.9 _(previous)_ | 2026-08-03 | Windows Arm64 | [`Discovery-app-0.15.9-preview-win-arm64.exe`](https://aka.ms/discovery/download/arm64/previous) |
 
 ---
 
