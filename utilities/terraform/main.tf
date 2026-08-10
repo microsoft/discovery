@@ -33,6 +33,7 @@ module "platform" {
 
 module "supercomputer" {
   source = "./modules/control-plane/supercomputer"
+  count  = var.existing_supercomputer_id == null ? 1 : 0
 
   name              = local.supercomputer_name
   location          = var.location
@@ -61,6 +62,11 @@ module "supercomputer" {
   )
 }
 
+locals {
+  # Use the caller-provided Supercomputer when set (BYO); otherwise the one we create.
+  supercomputer_id = coalesce(var.existing_supercomputer_id, one(module.supercomputer[*].id))
+}
+
 module "workspace" {
   source = "./modules/control-plane/workspace"
 
@@ -69,7 +75,7 @@ module "workspace" {
   resource_group_id = module.platform.resource_group_id
 
   workspace_identity_id = module.platform.workspace_identity_id
-  supercomputer_ids     = [module.supercomputer.id]
+  supercomputer_ids     = [local.supercomputer_id]
 
   network_isolation          = var.network_isolation
   agent_subnet_id            = var.network_isolation ? module.platform.agent_subnet_id : null

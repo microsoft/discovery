@@ -252,7 +252,7 @@ modules/
 ```
 
 Deploy the whole stack with the root, or call any single module directly for a
-bring-your-own-dependency deployment (see [Deploy a single component](#deploy-a-single-component-byo)).
+bring-your-own-dependency deployment (see [Deployment modes](#deployment-modes)).
 
 ### 3.1 `providers.tf` -- pin both providers
 
@@ -606,8 +606,8 @@ Step 4: Delete the resource group
 
 The utility is built from reusable modules. The root ([main.tf](main.tf))
 assembles them into a single-apply end-to-end deployment. For
-bring-your-own-dependency scenarios you call the **same** modules directly with
-your own resource IDs (see [Deploy a single component](#deploy-a-single-component-byo)).
+bring-your-own-dependency scenarios you supply an existing resource ID and the
+root links the rest around it (see [Deployment modes](#deployment-modes)).
 There is one definition of each resource, so the paths cannot drift. Everything
 targets the `2026-06-01` API contract.
 
@@ -633,29 +633,45 @@ Ownership boundaries keep the composition acyclic:
   children. They consume prerequisite IDs and never create platform resources.
 * **The root** wires the platform outputs into the control-plane modules to
   produce the full topology in one apply, with Bookshelf behind `enable_bookshelf`.
-* **BYO deployments** call any module directly with your own resource IDs; the
-  control-plane modules consume IDs and never create platform resources, so
-  nothing is duplicated.
+* **BYO deployments** reuse resources you already own: give the root an existing
+  resource ID and it skips creating that resource, wiring your ID into the rest.
 * Every module requires an existing resource group; none creates it.
 * Children (node pools, chat model deployments, projects, tools) use stable
   `for_each` keys so adding or removing one never renumbers unrelated resources.
 
-### Deploy a single component (BYO)
+### Deployment modes
 
-The end-to-end root creates everything. To deploy one control-plane resource
-against dependencies you already manage, call its module directly and pass your
-existing resource IDs. The control-plane modules only consume IDs -- they never
-create networks, identities, or storage -- so there is no duplicated state:
+Both modes run through the same root ([main.tf](main.tf)); the only difference is
+whether you hand it an existing resource ID.
+
+**1. Full stack (default).** `terraform apply` creates the platform,
+Supercomputer, Workspace (+ chat model + project), and optional Bookshelf in one
+apply. Terraform orders the modules automatically.
+
+**2. Reuse an existing resource (BYO).** Supply the resource's ID; the root skips
+its module and links the rest to your resource. For an existing Supercomputer:
+
+```hcl
+# terraform.tfvars
+existing_supercomputer_id = "/subscriptions/.../providers/Microsoft.Discovery/supercomputers/sc-prod"
+```
+
+`terraform apply` then creates the platform, Workspace, and Bookshelf and links
+the Workspace to your Supercomputer -- the Supercomputer module is not invoked.
+
+**Advanced: call a module standalone.** Because the control-plane modules only
+consume IDs (they never create platform resources), you can also call one
+directly from your own configuration:
 
 ```hcl
 module "supercomputer" {
   source = "./modules/control-plane/supercomputer"
 
-  name              = "sc-prod" # your name
+  name              = "sc-prod"
   location          = "uksouth"
   resource_group_id = "/subscriptions/.../resourceGroups/rg-mine"
 
-  system_subnet_id      = "/subscriptions/.../subnets/aks" # your subnet
+  system_subnet_id      = "/subscriptions/.../subnets/aks"
   cluster_identity_id   = "/subscriptions/.../userAssignedIdentities/uami-cluster"
   kubelet_identity_id   = "/subscriptions/.../userAssignedIdentities/uami-kubelet"
   workload_identity_ids = ["/subscriptions/.../userAssignedIdentities/uami-workload"]
@@ -670,10 +686,7 @@ module "supercomputer" {
 }
 ```
 
-The same pattern applies to `workspace` (pass an existing `supercomputer_ids`),
-`bookshelf`, and `platform`. To create the shared prerequisites too, call
-`modules/platform` first and feed its outputs in -- which is exactly what the
-root does. Each module's inputs are documented in its own `README.md`.
+Each module's inputs are documented in its own `README.md`.
 
 ### Tag model and precedence
 

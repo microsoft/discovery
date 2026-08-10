@@ -46,6 +46,14 @@ variable "bookshelf_managed_resource_group_location" {
   default     = null
 }
 
+# ---- bring your own resources -----------------------------------------------
+
+variable "existing_supercomputer_id" {
+  description = "Resource ID of an existing Discovery Supercomputer to link the Workspace to. When set, the Supercomputer module is skipped and the rest of the stack is created around it."
+  type        = string
+  default     = null
+}
+
 # ---- tags -------------------------------------------------------------------
 
 variable "common_tags" {

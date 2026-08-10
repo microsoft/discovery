@@ -6,13 +6,13 @@
 # -----------------------------------------------------------------------------
 
 output "supercomputer_id" {
-  description = "Resource ID of the Discovery Supercomputer."
-  value       = module.supercomputer.id
+  description = "Resource ID of the Discovery Supercomputer (created, or the existing one supplied via existing_supercomputer_id)."
+  value       = local.supercomputer_id
 }
 
 output "node_pool_ids" {
-  description = "Resource IDs of the Supercomputer node pools keyed by name."
-  value       = module.supercomputer.node_pool_ids
+  description = "Resource IDs of the Supercomputer node pools keyed by name (empty when reusing an existing Supercomputer)."
+  value       = try(module.supercomputer[0].node_pool_ids, {})
 }
 
 output "workspace_id" {
