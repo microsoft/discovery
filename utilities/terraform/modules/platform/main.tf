@@ -48,6 +48,8 @@ resource "azurerm_virtual_network" "workspace" {
 }
 
 resource "azurerm_virtual_network" "supercomputer" {
+  count = var.create_supercomputer_network ? 1 : 0
+
   name                = local.supercomputer_vnet_name
   location            = var.supercomputer_infrastructure_location
   resource_group_name = data.azurerm_resource_group.rg.name
@@ -56,31 +58,39 @@ resource "azurerm_virtual_network" "supercomputer" {
 }
 
 resource "azurerm_virtual_network_peering" "workspace_to_supercomputer" {
+  count = var.create_supercomputer_network ? 1 : 0
+
   name                      = "workspace-to-supercomputer"
   resource_group_name       = data.azurerm_resource_group.rg.name
   virtual_network_name      = azurerm_virtual_network.workspace.name
-  remote_virtual_network_id = azurerm_virtual_network.supercomputer.id
+  remote_virtual_network_id = azurerm_virtual_network.supercomputer[0].id
 }
 
 resource "azurerm_virtual_network_peering" "supercomputer_to_workspace" {
+  count = var.create_supercomputer_network ? 1 : 0
+
   name                      = "supercomputer-to-workspace"
   resource_group_name       = data.azurerm_resource_group.rg.name
-  virtual_network_name      = azurerm_virtual_network.supercomputer.name
+  virtual_network_name      = azurerm_virtual_network.supercomputer[0].name
   remote_virtual_network_id = azurerm_virtual_network.workspace.id
 }
 
 resource "azurerm_subnet" "aks" {
+  count = var.create_supercomputer_network ? 1 : 0
+
   name                            = "aksSubnet"
   resource_group_name             = data.azurerm_resource_group.rg.name
-  virtual_network_name            = azurerm_virtual_network.supercomputer.name
+  virtual_network_name            = azurerm_virtual_network.supercomputer[0].name
   address_prefixes                = [var.aks_subnet_prefix]
   default_outbound_access_enabled = false
 }
 
 resource "azurerm_subnet" "supercomputer_nodepool" {
+  count = var.create_supercomputer_network ? 1 : 0
+
   name                            = "supercomputerNodepoolSubnet"
   resource_group_name             = data.azurerm_resource_group.rg.name
-  virtual_network_name            = azurerm_virtual_network.supercomputer.name
+  virtual_network_name            = azurerm_virtual_network.supercomputer[0].name
   address_prefixes                = [var.supercomputer_nodepool_subnet_prefix]
   default_outbound_access_enabled = false
 }
@@ -218,10 +228,12 @@ resource "azurerm_private_dns_zone_virtual_network_link" "blob" {
 }
 
 resource "azurerm_private_dns_zone_virtual_network_link" "blob_supercomputer" {
+  count = var.create_supercomputer_network ? 1 : 0
+
   name                  = "link-blob-${local.supercomputer_vnet_name}"
   resource_group_name   = data.azurerm_resource_group.rg.name
   private_dns_zone_name = azurerm_private_dns_zone.blob.name
-  virtual_network_id    = azurerm_virtual_network.supercomputer.id
+  virtual_network_id    = azurerm_virtual_network.supercomputer[0].id
   registration_enabled  = false
 }
 
@@ -278,7 +290,9 @@ resource "azurerm_role_assignment" "workspace_storage_blob_data_contributor" {
 }
 
 resource "azurerm_role_assignment" "cluster_network_contributor" {
-  scope              = azurerm_subnet.aks.id
+  count = var.create_supercomputer_network ? 1 : 0
+
+  scope              = azurerm_subnet.aks[0].id
   role_definition_id = "${local.subscription_id_scope}/providers/Microsoft.Authorization/roleDefinitions/${local.role_id_network_contributor}"
   principal_id       = azurerm_user_assigned_identity.cluster.principal_id
   principal_type     = "ServicePrincipal"

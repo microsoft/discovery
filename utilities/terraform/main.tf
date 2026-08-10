@@ -29,6 +29,8 @@ module "platform" {
   search_subnet_prefix                 = var.search_subnet_prefix
   aks_subnet_prefix                    = var.aks_subnet_prefix
   supercomputer_nodepool_subnet_prefix = var.supercomputer_nodepool_subnet_prefix
+
+  create_supercomputer_network = var.existing_supercomputer_id == null
 }
 
 module "supercomputer" {
@@ -63,12 +65,15 @@ module "supercomputer" {
 }
 
 locals {
-  # Use the caller-provided Supercomputer when set (BYO); otherwise the one we create.
+  # Use the caller-provided resource when set (BYO); otherwise the one we create.
   supercomputer_id = coalesce(var.existing_supercomputer_id, one(module.supercomputer[*].id))
+  workspace_id     = coalesce(var.existing_workspace_id, one(module.workspace[*].id))
+  bookshelf_id     = var.existing_bookshelf_id != null ? var.existing_bookshelf_id : one(module.bookshelf[*].id)
 }
 
 module "workspace" {
   source = "./modules/control-plane/workspace"
+  count  = var.existing_workspace_id == null ? 1 : 0
 
   name              = local.workspace_name
   location          = var.location
@@ -109,7 +114,7 @@ module "workspace" {
 
 module "bookshelf" {
   source = "./modules/control-plane/bookshelf"
-  count  = var.enable_bookshelf ? 1 : 0
+  count  = var.enable_bookshelf && var.existing_bookshelf_id == null ? 1 : 0
 
   name              = local.bookshelf_name
   location          = var.location

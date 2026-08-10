@@ -16,18 +16,18 @@ output "node_pool_ids" {
 }
 
 output "workspace_id" {
-  description = "Resource ID of the Discovery Workspace."
-  value       = module.workspace.id
+  description = "Resource ID of the Discovery Workspace (created, or the existing one supplied via existing_workspace_id)."
+  value       = local.workspace_id
 }
 
 output "chat_model_deployment_ids" {
-  description = "Resource IDs of the chat model deployments keyed by name."
-  value       = module.workspace.chat_model_deployment_ids
+  description = "Resource IDs of the chat model deployments keyed by name (empty when reusing an existing Workspace)."
+  value       = try(module.workspace[0].chat_model_deployment_ids, {})
 }
 
 output "project_ids" {
-  description = "Resource IDs of the Discovery projects keyed by name."
-  value       = module.workspace.project_ids
+  description = "Resource IDs of the Discovery projects keyed by name (empty when reusing an existing Workspace)."
+  value       = try(module.workspace[0].project_ids, {})
 }
 
 output "storage_container_id" {
@@ -36,8 +36,8 @@ output "storage_container_id" {
 }
 
 output "bookshelf_id" {
-  description = "Resource ID of the optional Discovery Bookshelf."
-  value       = try(module.bookshelf[0].id, null)
+  description = "Resource ID of the optional Discovery Bookshelf (created, or the existing one supplied via existing_bookshelf_id)."
+  value       = local.bookshelf_id
 }
 
 output "managed_identity_id" {

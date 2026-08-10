@@ -648,16 +648,23 @@ whether you hand it an existing resource ID.
 Supercomputer, Workspace (+ chat model + project), and optional Bookshelf in one
 apply. Terraform orders the modules automatically.
 
-**2. Reuse an existing resource (BYO).** Supply the resource's ID; the root skips
-its module and links the rest to your resource. For an existing Supercomputer:
+**2. Reuse existing resources (BYO).** Supply a resource's ID and the root skips
+its module, wiring your resource into the rest. Each control-plane resource has
+its own knob:
+
+| Variable | Effect when set |
+| --- | --- |
+| `existing_supercomputer_id` | Skip the Supercomputer module **and its network** (VNet, AKS/node-pool subnets, peering); link the Workspace to your Supercomputer. |
+| `existing_workspace_id` | Skip the Workspace module and its chat model deployments and projects. |
+| `existing_bookshelf_id` | Skip the Bookshelf module. |
 
 ```hcl
-# terraform.tfvars
-existing_supercomputer_id = "/subscriptions/.../providers/Microsoft.Discovery/supercomputers/sc-prod"
+# terraform.tfvars -- reuse a supercomputer, create everything else
+existing_supercomputer_id = "/subscriptions/.../Microsoft.Discovery/supercomputers/sc-prod"
 ```
 
-`terraform apply` then creates the platform, Workspace, and Bookshelf and links
-the Workspace to your Supercomputer -- the Supercomputer module is not invoked.
+Anything you don't pass is created normally, so you can mix created and existing
+resources in a single apply.
 
 **Advanced: call a module standalone.** Because the control-plane modules only
 consume IDs (they never create platform resources), you can also call one

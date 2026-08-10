@@ -33,6 +33,12 @@ variable "common_tags" {
   default     = {}
 }
 
+variable "create_supercomputer_network" {
+  description = "Whether to create the Supercomputer VNet, AKS/node-pool subnets, peering, and DNS link. Set false when bringing your own Supercomputer."
+  type        = bool
+  default     = true
+}
+
 variable "blob_container_name" {
   description = "Blob container Discovery mounts for outputs."
   type        = string

@@ -54,6 +54,18 @@ variable "existing_supercomputer_id" {
   default     = null
 }
 
+variable "existing_workspace_id" {
+  description = "Resource ID of an existing Discovery Workspace. When set, the Workspace module (and its chat model deployments and projects) is skipped."
+  type        = string
+  default     = null
+}
+
+variable "existing_bookshelf_id" {
+  description = "Resource ID of an existing Discovery Bookshelf. When set, the Bookshelf module is skipped."
+  type        = string
+  default     = null
+}
+
 # ---- tags -------------------------------------------------------------------
 
 variable "common_tags" {
