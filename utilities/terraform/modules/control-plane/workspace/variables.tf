@@ -104,8 +104,9 @@ variable "enable_extensions" {
 }
 
 variable "chat_model_deployments" {
-  description = "Chat model deployments keyed by stable deployment name"
+  description = "Chat model deployments keyed by a stable logical key; the Azure name defaults to the key."
   type = map(object({
+    name          = optional(string)
     model_format  = string
     model_name    = string
     model_version = optional(string)
@@ -117,8 +118,8 @@ variable "chat_model_deployments" {
 
   validation {
     condition = alltrue([
-      for name, deployment in var.chat_model_deployments :
-      can(regex("^[a-zA-Z0-9-]{3,24}$", name)) &&
+      for key, deployment in var.chat_model_deployments :
+      can(regex("^[a-zA-Z0-9-]{3,24}$", coalesce(deployment.name, key))) &&
       (deployment.capacity == null || deployment.capacity >= 1)
     ])
     error_message = "Chat model names must contain 3 to 24 alphanumeric or hyphen characters, and capacity must be at least 1."
@@ -126,8 +127,9 @@ variable "chat_model_deployments" {
 }
 
 variable "projects" {
-  description = "Projects keyed by stable project name"
+  description = "Projects keyed by a stable logical key; the Azure name defaults to the key."
   type = map(object({
+    name                  = optional(string)
     storage_container_ids = optional(list(string), [])
     behavior_preferences  = optional(string)
     tags                  = optional(map(string), {})
@@ -136,8 +138,8 @@ variable "projects" {
 
   validation {
     condition = alltrue([
-      for name, project in var.projects :
-      can(regex("^[a-zA-Z0-9-]{3,24}$", name)) &&
+      for key, project in var.projects :
+      can(regex("^[a-zA-Z0-9-]{3,24}$", coalesce(project.name, key))) &&
       (project.behavior_preferences == null || length(project.behavior_preferences) <= 5000)
     ])
     error_message = "Project names must contain 3 to 24 alphanumeric or hyphen characters, and behavior preferences cannot exceed 5000 characters."

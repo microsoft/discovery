@@ -91,7 +91,8 @@ module "workspace" {
   enable_extensions       = var.enable_extensions
 
   chat_model_deployments = {
-    (var.chat_model_deployment_name) = {
+    default = {
+      name         = var.chat_model_deployment_name
       model_format = var.chat_model_format
       model_name   = var.chat_model_name
       tags         = merge(var.common_tags, var.chat_model_deployment_tags)
@@ -99,7 +100,8 @@ module "workspace" {
   }
 
   projects = {
-    (local.project_name) = {
+    default = {
+      name                  = local.project_name
       storage_container_ids = [module.platform.storage_container_id]
       tags                  = merge(var.common_tags, var.project_tags)
     }

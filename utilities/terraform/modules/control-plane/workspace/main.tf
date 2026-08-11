@@ -75,7 +75,7 @@ resource "azapi_resource" "chat_model_deployment" {
   for_each = var.chat_model_deployments
 
   type      = "Microsoft.Discovery/workspaces/chatModelDeployments@2026-06-01"
-  name      = each.key
+  name      = coalesce(each.value.name, each.key)
   location  = var.location
   parent_id = azapi_resource.main.id
   tags      = each.value.tags
@@ -97,7 +97,7 @@ resource "azapi_resource" "project" {
   for_each = var.projects
 
   type      = "Microsoft.Discovery/workspaces/projects@2026-06-01"
-  name      = each.key
+  name      = coalesce(each.value.name, each.key)
   location  = var.location
   parent_id = azapi_resource.main.id
   tags      = each.value.tags
