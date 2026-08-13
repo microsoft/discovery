@@ -1,7 +1,7 @@
 # -----------------------------------------------------------------------------
 # providers.tf
 #
-# We use TWO Terraform providers on purpose (see docs/adr-terraform-phase-0-plan.md):
+# We use TWO Terraform providers on purpose (see docs/adr/0001-network-isolation-posture.md):
 #
 #   * azurerm  -> stable, typed resources for every non-Discovery primitive
 #                 (VNet, subnets, UAMI, storage account, blob CORS, role

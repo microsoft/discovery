@@ -13,12 +13,18 @@ variable "resource_group_name" {
 }
 
 variable "location" {
-  description = "Azure region. Must be a Discovery-supported region."
+  description = "Azure region. Must be a Discovery-supported region that actually accepts new creates."
   type        = string
 
+  # eastus2 is intentionally excluded: the Discovery RP advertises support in
+  # metadata but rejects new supercomputer creates there, so an apply fails
+  # ~30m in. Keeping it out of this allowlist makes `terraform validate` fail
+  # fast instead. This mirrors preflight.sh's KNOWN_BAD_REGIONS blocklist and
+  # preflight-checks/06-approved-regions.sh's positive allowlist. See the region
+  # table in README.md Step 1.4 before changing this list.
   validation {
-    condition     = contains(["eastus", "eastus2", "uksouth", "swedencentral"], var.location)
-    error_message = "Location must be one of: eastus, eastus2, uksouth, swedencentral."
+    condition     = contains(["eastus", "uksouth", "swedencentral"], var.location)
+    error_message = "Location must be one of: eastus, uksouth, swedencentral. (eastus2 is Discovery-advertised but blocked; see README Step 1.4.)"
   }
 }
 

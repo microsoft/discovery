@@ -68,7 +68,11 @@ locals {
   # Use the caller-provided resource when set (BYO); otherwise the one we create.
   supercomputer_id = coalesce(var.existing_supercomputer_id, one(module.supercomputer[*].id))
   workspace_id     = coalesce(var.existing_workspace_id, one(module.workspace[*].id))
-  bookshelf_id     = var.existing_bookshelf_id != null ? var.existing_bookshelf_id : one(module.bookshelf[*].id)
+  # bookshelf uses a ternary rather than coalesce because the bookshelf is
+  # optional: when it's disabled, both the BYO id and the module output are
+  # null, and coalesce() errors when every argument is null. The ternary lets
+  # bookshelf_id resolve to null cleanly in that case.
+  bookshelf_id = var.existing_bookshelf_id != null ? var.existing_bookshelf_id : one(module.bookshelf[*].id)
 }
 
 module "workspace" {

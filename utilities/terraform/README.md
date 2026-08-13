@@ -78,7 +78,7 @@ Azure requirements (verified in Step 1 below):
 * An Azure subscription in a tenant where you can sign in with `az login`.
 * Permission to create resources and role assignments in that subscription. `Owner` or the combination of `Contributor` plus `Role Based Access Control Administrator` at subscription scope both work. Plain `Contributor` will fail on the seven role assignments the module creates.
 * The `Microsoft.Discovery`, `Microsoft.Network`, `Microsoft.ManagedIdentity`, `Microsoft.Storage`, `Microsoft.Authorization`, and `Microsoft.App` resource providers registered on the subscription.
-* Deployment region set to one of the Discovery-supported regions: `eastus`, `eastus2`, `uksouth`, or `swedencentral`.
+* Deployment region set to one of the regions the module accepts: `eastus`, `uksouth`, or `swedencentral`. (`eastus2` is advertised by the Discovery RP but blocked because it rejects new supercomputer creates — see the region table in Step 1.4. `terraform validate` rejects it.)
 
 ## Step 1: Sign in and verify permissions
 
@@ -168,7 +168,7 @@ az provider show -n Microsoft.Discovery \
 > | `uksouth` | ✅ **recommended** | — |
 > | `swedencentral` | ⚠️ use with fallback | Hit `AKSCapacityHeavyUsage` on 2026-07-09; likely transient but not queryable in advance |
 > | `eastus` | ❌ avoid unless SKU is allowlisted | Subscription-level: all `Standard_D4s_v*` SKUs return `NotAvailableForSubscription`. The Discovery RP internally provisions AKS with `Standard_D4s_v6`, so the SC create is rejected. Fix requires an Azure support ticket to enable D-series compute in this region. |
-> | `eastus2` | ❌ avoid | Discovery RP **region gate**: metadata claims support, but the PUT handler rejects new supercomputer creates with `"Creation of new Supercomputer resources is not supported in region 'eastus2'"`. Not transient — will fail every attempt until Microsoft ships an RP update. Re-check this note periodically. |
+> | `eastus2` | ❌ avoid | Discovery RP **region gate**: metadata claims support, but the PUT handler rejects new supercomputer creates with `"Creation of new Supercomputer resources is not supported in region 'eastus2'"`. Not transient — will fail every attempt until Microsoft ships an RP update. The `location` variable validation rejects it up front, so `terraform validate` fails fast. Re-check this note periodically. |
 >
 > The `preflight.sh` script (Step 6.4) checks the deterministic failure modes (registration, SKU
 > availability, quota) automatically. The RP region gate on `eastus2` cannot be detected via any
@@ -711,8 +711,8 @@ tags = merge(
 Required Discovery tags win over caller values when changing them would create an
 invalid deployment; all other tags pass through unchanged. The
 `discovery.overridemrgregion` tag is exposed for every managed-resource-group-producing
-resource and its value is constrained to the supported Discovery region allowlist
-(`eastus`, `eastus2`, `uksouth`, `swedencentral`), not an arbitrary Azure region.
+resource and its value is constrained to the region allowlist the `location` variable
+accepts (`eastus`, `uksouth`, `swedencentral`), not an arbitrary Azure region.
 
 ### API and provider version policy
 
