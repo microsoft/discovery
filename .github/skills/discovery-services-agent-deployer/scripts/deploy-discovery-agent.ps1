@@ -1145,7 +1145,13 @@ if ($Ctx.ContainsKey('hasTool') -and -not [bool]$Ctx.hasTool) {
   return
 }
 
-(Get-Content $Ctx.tempToolYaml) -replace '\{name\}\.azurecr\.io', "$($Config.acrName).azurecr.io" | Set-Content $Ctx.tempToolYaml -Encoding UTF8
+# Substitute the {name} registry placeholder with the ACR login server.
+# Handle both the fully-qualified form '{name}.azurecr.io/...' and the bare
+# form '{name}/...' that tool.yaml files use for the image reference.
+$AcrLoginServer = "$($Config.acrName).azurecr.io"
+(Get-Content $Ctx.tempToolYaml) `
+  -replace '\{name\}\.azurecr\.io', $AcrLoginServer `
+  -replace '\{name\}', $AcrLoginServer | Set-Content $Ctx.tempToolYaml -Encoding UTF8
 
 python -c "import yaml" 2>$null
 if ($LASTEXITCODE -ne 0) { python -m pip install --quiet pyyaml | Out-Null }
@@ -1852,7 +1858,7 @@ if not conv_name:
 
 def wait_for_completion(conversation_name, text_prompt, wait_seconds):
   t_local = token()
-  resp = call_with_retries("POST", f"{base}/conversations/{conversation_name}/openai/responses?api-version={api}", headers=headers(t_local), json={
+  resp = call_with_retries("POST", f"{base}/conversations/{conversation_name}/openai/v1/responses", headers=headers(t_local), json={
     "input": [{"type": "message", "role": "user", "content": [{"type": "input_text", "text": text_prompt}]}],
     "agent": {"type": "agent_reference", "name": agent_name},
   })
@@ -1876,7 +1882,7 @@ def wait_for_completion(conversation_name, text_prompt, wait_seconds):
     elapsed = int(time.time() - start_time)
     print(f"[validation] Polling attempt {poll_count}, elapsed {elapsed}s, status={status_local}...", flush=True)
     t_local = token()
-    poll = call_with_retries("GET", f"{base}/conversations/{conversation_name}/openai/responses/{rid_local}?api-version={api}", headers=headers(t_local))
+    poll = call_with_retries("GET", f"{base}/conversations/{conversation_name}/openai/v1/responses/{rid_local}", headers=headers(t_local))
     poll.raise_for_status()
     body_local = poll.json()
     status_local = body_local.get("status", "")
