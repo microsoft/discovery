@@ -27,6 +27,7 @@ from pathlib import Path
 
 try:
     import jsonschema
+    from referencing import Registry, Resource
 except ImportError:
     print("ERROR: jsonschema not installed. Run: pip install jsonschema", file=sys.stderr)
     sys.exit(1)
@@ -118,6 +119,7 @@ def validate_kit(
     kit_rel_path: str,
     manifest: dict,
     kit_schema: dict,
+    schema_registry: Registry,
     agent_paths: set[str],
     added_kit_relpaths: set[str],
     errors: list[str],
@@ -128,7 +130,11 @@ def validate_kit(
 
     # SKT-SCH-001: JSON Schema validation
     try:
-        validator = jsonschema.Draft7Validator(kit_schema)
+        validator = jsonschema.Draft7Validator(
+            kit_schema,
+            registry=schema_registry,
+            format_checker=jsonschema.FormatChecker(),
+        )
         schema_errors = sorted(validator.iter_errors(manifest), key=lambda e: list(e.path))
         for err in schema_errors:
             path_str = " -> ".join(str(p) for p in err.absolute_path) or "(root)"
@@ -216,9 +222,13 @@ def run_validations(repo_root: Path, changed_kit_relpaths: list[str] | None) -> 
     # Load schemas
     try:
         kit_schema = load_schema(repo_root, "starter-kit-schema.json")
+        common_schema = load_schema(repo_root, "common-schema.json")
     except FileNotFoundError as e:
         print(f"ERROR: {e}", file=sys.stderr)
         return 1
+    schema_registry = Registry().with_resource(
+        "common-schema.json", Resource.from_contents(common_schema)
+    )
 
     # Build dry-run registry once for all kits
     print("Building dry-run registry from current checkout...")
@@ -278,7 +288,7 @@ def run_validations(repo_root: Path, changed_kit_relpaths: list[str] | None) -> 
             # Already reported as parse error above
             continue
         validate_kit(
-            kit_dir, kit_relpath, manifest_entry, kit_schema,
+            kit_dir, kit_relpath, manifest_entry, kit_schema, schema_registry,
             agent_paths, added_kit_relpaths_set, errors, warnings,
         )
 

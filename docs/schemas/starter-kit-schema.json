@@ -1,6 +1,6 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "$id": "https://github.com/microsoft/discovery/schemas/starter-kit-schema.json",
+  "$id": "starter-kit-schema.json",
   "title": "Discovery Catalog Starter Kit Manifest",
   "description": "Schema for starter-kits/<name>/kit.json.",
   "type": "object",
@@ -9,17 +9,17 @@
   "properties": {
     "$schema": {
       "type": "string",
+      "format": "uri-reference",
+      "maxLength": 2048,
       "description": "JSON Schema reference URI."
     },
     "name": {
-      "type": "string",
-      "pattern": "^[a-z0-9][a-z0-9-]*[a-z0-9]$",
+      "allOf": [{ "$ref": "common-schema.json#/definitions/kebabCaseString" }],
       "maxLength": 64,
       "description": "Kebab-case identifier. Must equal the parent directory name."
     },
     "version": {
-      "type": "string",
-      "pattern": "^\\d+\\.\\d+\\.\\d+$",
+      "allOf": [{ "$ref": "common-schema.json#/definitions/semanticVersion" }],
       "description": "Semantic version, e.g. 1.0.0. Bump on meaningful content changes."
     },
     "description": {
@@ -33,19 +33,28 @@
       "additionalProperties": false,
       "required": ["name", "email"],
       "properties": {
-        "name": { "type": "string" },
-        "email": { "type": "string" },
-        "url": { "type": "string" }
+        "name": { "type": "string", "minLength": 1, "maxLength": 200 },
+        "email": { "$ref": "common-schema.json#/definitions/emailAddress" },
+        "url": { "$ref": "common-schema.json#/definitions/httpsUrl" }
       }
     },
     "license": {
       "type": "string",
+      "minLength": 1,
+      "maxLength": 128,
       "description": "SPDX identifier, e.g. MIT."
     },
     "keywords": {
       "type": "array",
-      "items": { "type": "string" },
+      "items": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 64,
+        "pattern": "^[a-z0-9](?:[a-z0-9 +./-]{0,62}[a-z0-9])?$"
+      },
       "minItems": 1,
+      "maxItems": 32,
+      "uniqueItems": true,
       "description": "Lowercase search/filter terms."
     },
     "category": {
@@ -54,25 +63,26 @@
       "description": "Primary display category."
     },
     "homepage": {
-      "type": "string",
+      "allOf": [{ "$ref": "common-schema.json#/definitions/httpsUrl" }],
       "description": "URL for more information."
     },
     "repository": {
-      "type": "string",
+      "allOf": [{ "$ref": "common-schema.json#/definitions/httpsUrl" }],
       "description": "Source repository URL."
     },
     "party": {
-      "type": "string",
-      "enum": ["1p", "3p"],
+      "allOf": [{ "$ref": "common-schema.json#/definitions/party" }],
       "description": "Optional. '1p' = Microsoft first-party authored; '3p' = third-party / partner. Used to drive the 1p-contribution / 3p-contribution PR labels; not validated against folder path."
     },
     "lifecycle": {
-      "type": "string",
-      "enum": ["active", "archived"],
+      "allOf": [{ "$ref": "common-schema.json#/definitions/lifecycle" }],
       "description": "Authored lifecycle state. Never set to 'degraded' (that is computed)."
     },
     "featureFlag": {
       "type": "string",
+      "minLength": 1,
+      "maxLength": 128,
+      "pattern": "^[A-Za-z][A-Za-z0-9._-]{0,127}$",
       "description": "If set, kit is only surfaced in Discovery UI when this feature flag is enabled."
     },
     "displayName": {
@@ -84,37 +94,42 @@
     "longDescription": {
       "type": "string",
       "minLength": 50,
+      "maxLength": 50000,
       "description": "Markdown body for the detail view."
     },
     "logo": {
-      "type": "string",
-      "pattern": "^https://",
+      "allOf": [{ "$ref": "common-schema.json#/definitions/httpsUrl" }],
       "description": "HTTPS URL to the kit logo image. Kit folders may only contain kit.json (see SKT-STR-008), so assets must be hosted externally and linked via HTTPS."
     },
     "screenshots": {
       "type": "array",
+      "maxItems": 20,
+      "uniqueItems": true,
       "items": {
-        "type": "string",
-        "pattern": "^https://"
+        "$ref": "common-schema.json#/definitions/httpsUrl"
       },
       "description": "HTTPS URLs to screenshot images. Kit folders may only contain kit.json (see SKT-STR-008), so assets must be hosted externally and linked via HTTPS."
     },
     "websiteURL": {
-      "type": "string"
+      "$ref": "common-schema.json#/definitions/httpsUrl"
     },
     "privacyPolicyURL": {
-      "type": "string"
+      "$ref": "common-schema.json#/definitions/httpsUrl"
     },
     "agentRefs": {
       "type": "array",
       "items": { "$ref": "#/definitions/agentRef" },
       "minItems": 1,
+      "maxItems": 32,
+      "uniqueItems": true,
       "description": "All agents used by this kit. Exactly one must have role:primary and required:true."
     },
     "samplePrompts": {
       "type": "array",
       "items": { "$ref": "#/definitions/samplePrompt" },
       "minItems": 1,
+      "maxItems": 32,
+      "uniqueItems": true,
       "description": "Rich UI prompts with difficulty and expected output. Required for lifecycle:active kits."
     },
     "riskProfile": {
@@ -139,13 +154,11 @@
       "required": ["ref", "role", "required"],
       "properties": {
         "ref": {
-          "type": "string",
-          "pattern": "^agents/[a-z0-9][a-z0-9-]*$",
+          "allOf": [{ "$ref": "common-schema.json#/definitions/agentPath" }],
           "description": "Relative path matching entries[].path in .auto-registry/agent-registry.json."
         },
         "role": {
-          "type": "string",
-          "enum": ["primary", "supporting"],
+          "allOf": [{ "$ref": "common-schema.json#/definitions/agentRole" }],
           "description": "primary: the launch agent for this kit. supporting: auxiliary agent."
         },
         "required": {
@@ -154,6 +167,7 @@
         },
         "description": {
           "type": "string",
+          "maxLength": 500,
           "description": "Human-readable description of this agent's role in the kit."
         }
       }
@@ -165,11 +179,15 @@
       "properties": {
         "id": {
           "type": "string",
+          "maxLength": 64,
+          "pattern": "^sp-[a-z0-9](?:[a-z0-9-]{0,59}[a-z0-9])?$",
           "description": "Stable identifier for this prompt, e.g. sp-1."
         },
-        "title": { "type": "string" },
+        "title": { "type": "string", "minLength": 1, "maxLength": 120 },
         "prompt": {
           "type": "string",
+          "minLength": 1,
+          "maxLength": 8000,
           "description": "Full prompt text shown in the Discovery UI 'Try it' tile."
         },
         "difficulty": {
@@ -178,6 +196,7 @@
         },
         "expectedOutput": {
           "type": "string",
+          "maxLength": 1000,
           "description": "Description of what the user should expect as output."
         }
       }
@@ -193,6 +212,7 @@
         },
         "dataResidency": {
           "type": "string",
+          "maxLength": 500,
           "description": "Freeform description of data residency. E.g. 'user-managed Azure subscription'."
         }
       }

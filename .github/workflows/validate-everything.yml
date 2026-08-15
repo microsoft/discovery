@@ -27,7 +27,7 @@ jobs:
           python-version: "3.12"
 
       - name: Install dependencies
-        run: pip install jsonschema pyyaml onnx picklescan
+        run: pip install --index-url https://packagefeedproxy.microsoft.io/pypi/simple/ jsonschema pyyaml onnx picklescan dnspython==2.8.0
 
       - name: Build full file list and run validate_pr.py
         run: |

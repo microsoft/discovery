@@ -59,6 +59,16 @@ Code contributions to the Microsoft Discovery app itself — its plugin, MCP too
 4. Automated checks will run on your PR. If anything fails, the bot adds an inline comment with the rule ID and how to fix it — address every finding before requesting human review.
 5. When the pr-review validator passes, the `pr-validation-passed` label is applied and the [CODEOWNERS](.github/CODEOWNERS) maintainers are auto-requested for review. Other status checks (unit tests, schema regression, etc.) report independently — see the PR status rollup for the full picture. **One CODEOWNERS approval** is required to merge.
 
+The PR review also spellchecks changed agent and starter-kit prose. `SPELL-001`
+annotations are advisory warnings: they never block merge, and code, identifiers,
+URLs, and fenced Markdown examples are excluded from the check.
+
+After merge, the weekly security scan submits declared catalog webpage URLs as
+exact strings to the [URLhaus](https://urlhaus.abuse.ch/) malware-reputation API
+and the [PhishTank](https://www.phishtank.com/) phishing-reputation API. The
+audit queries those databases only; it does not visit listed catalog webpages
+or download remote content.
+
 ### Required files
 
 #### For an agent (`agents/<agent-name>/`)
@@ -86,7 +96,7 @@ Before opening a PR, verify:
 - [ ] Folder name matches `metadata.yaml.name` (or `kit.json.name`).
 - [ ] `version` follows SemVer (`MAJOR.MINOR.PATCH`).
 - [ ] `tags` are lowercase, hyphen-separated, and non-empty.
-- [ ] `publisher.contact` is a valid email and `publisher.support_url` is HTTPS.
+- [ ] Contact email domains resolve in DNS and webpage URLs return public HTML pages over HTTPS.
 - [ ] `README.md` includes all required sections.
 - [ ] No placeholder markers (`TODO`, `FIXME`, `XXX`) in metadata, agent definition, or README.
 - [ ] No duplicate mapping keys in any YAML file.
@@ -98,6 +108,23 @@ Before opening a PR, verify:
 ### Schema changes
 
 > **Microsoft maintainers only.** Edits under `docs/schemas/` define the contract every agent and kit in the repo must satisfy. **This is enforced by `.github/CODEOWNERS` plus branch protection's "Require review from Code Owners"** — a schema PR cannot land without a Microsoft maintainer's approval, regardless of who opened it. If you are an external contributor and need a schema change, please [open an Idea in Discussions](https://github.com/microsoft/discovery/discussions/categories/ideas) describing the use case so a Microsoft maintainer can land the change.
+
+### Test model
+
+Repository-owned validator tests live under `.github/tests/` and run together in
+the `Unit Tests` workflow with `python -m pytest .github/tests/ -v`. This suite
+covers agents and starter kits through trusted schema, policy, registry, and
+validator code.
+
+Agent tool authors may place focused `test_*.py` or `*_test.py` files beside a
+tool. The registry records their presence as `auto:has-tests`, but privileged PR
+workflows do not execute submitted test code. Tool tests may invoke subprocesses,
+download models, require GPUs, or otherwise cross the untrusted-code boundary;
+authors must run them in their own isolated environment or CI before submission.
+
+Starter-kit folders cannot contain test files because they may contain only
+`kit.json`. Starter-kit behavior is covered by the trusted schema-security and
+starter-kit validator suites instead.
 
 ---
 

@@ -4,9 +4,86 @@
   "description": "Agent definition schema based on Microsoft AgentSchema (https://microsoft.github.io/AgentSchema/reference/agentdefinition/) extended with Discovery-specific properties under discoveryExtensions. Only prompt agents are supported.",
   "$ref": "#/$defs/PromptAgent",
   "$defs": {
+    "BoundedJsonScalar": {
+      "description": "A size-bounded JSON scalar accepted by AgentSchema extension points.",
+      "oneOf": [
+        { "type": "string", "maxLength": 65536 },
+        { "type": "number", "minimum": -1000000000000000, "maximum": 1000000000000000 },
+        { "type": "boolean" },
+        { "type": "null" }
+      ]
+    },
+
+    "BoundedJsonLevel1": {
+      "description": "A bounded JSON value with at most one container level.",
+      "oneOf": [
+        { "$ref": "#/$defs/BoundedJsonScalar" },
+        {
+          "type": "array",
+          "maxItems": 128,
+          "items": { "$ref": "#/$defs/BoundedJsonScalar" }
+        },
+        {
+          "type": "object",
+          "maxProperties": 64,
+          "propertyNames": {
+            "type": "string",
+            "maxLength": 128,
+            "pattern": "^[A-Za-z0-9_.:-]+$"
+          },
+          "additionalProperties": { "$ref": "#/$defs/BoundedJsonScalar" }
+        }
+      ]
+    },
+
+    "BoundedJsonLevel2": {
+      "description": "A bounded JSON value with at most two container levels.",
+      "oneOf": [
+        { "$ref": "#/$defs/BoundedJsonScalar" },
+        {
+          "type": "array",
+          "maxItems": 128,
+          "items": { "$ref": "#/$defs/BoundedJsonLevel1" }
+        },
+        {
+          "type": "object",
+          "maxProperties": 64,
+          "propertyNames": {
+            "type": "string",
+            "maxLength": 128,
+            "pattern": "^[A-Za-z0-9_.:-]+$"
+          },
+          "additionalProperties": { "$ref": "#/$defs/BoundedJsonLevel1" }
+        }
+      ]
+    },
+
+    "BoundedJsonValue": {
+      "description": "A bounded JSON value with at most three container levels.",
+      "oneOf": [
+        { "$ref": "#/$defs/BoundedJsonScalar" },
+        {
+          "type": "array",
+          "maxItems": 128,
+          "items": { "$ref": "#/$defs/BoundedJsonLevel2" }
+        },
+        {
+          "type": "object",
+          "maxProperties": 64,
+          "propertyNames": {
+            "type": "string",
+            "maxLength": 128,
+            "pattern": "^[A-Za-z0-9_.:-]+$"
+          },
+          "additionalProperties": { "$ref": "#/$defs/BoundedJsonLevel2" }
+        }
+      ]
+    },
+
     "AgentDefinitionBase": {
       "type": "object",
       "description": "Base properties shared by all agent types (AgentDefinition).",
+      "maxProperties": 64,
       "properties": {
         "kind": {
           "type": "string",
@@ -16,11 +93,13 @@
         "name": {
           "type": "string",
           "description": "Human-readable name of the agent.",
-          "pattern": "^[A-Za-z][A-Za-z0-9_-]*$"
+          "maxLength": 64,
+          "pattern": "^[A-Za-z][A-Za-z0-9_-]{0,62}[A-Za-z0-9]$"
         },
         "displayName": {
           "type": "string",
-          "description": "Display name of the agent for UI purposes."
+          "description": "Display name of the agent for UI purposes.",
+          "maxLength": 100
         },
         "description": {
           "type": "string",
@@ -29,14 +108,21 @@
         },
         "metadata": {
           "type": "object",
-          "description": "Additional metadata including authors, tags, and other arbitrary properties.",
-          "additionalProperties": true
+          "description": "Additional metadata including authors and tags. Keys and nested values are bounded.",
+          "maxProperties": 64,
+          "propertyNames": {
+            "type": "string",
+            "maxLength": 128,
+            "pattern": "^[A-Za-z0-9_.:-]+$"
+          },
+          "additionalProperties": { "$ref": "#/$defs/BoundedJsonValue" }
         },
         "inputSchema": { "$ref": "#/$defs/PropertySchema" },
         "outputSchema": { "$ref": "#/$defs/PropertySchema" },
         "discoveryExtensions": { "$ref": "#/$defs/DiscoveryExtensions" }
       },
-      "required": ["kind", "name"]
+      "required": ["kind", "name"],
+      "additionalProperties": { "$ref": "#/$defs/BoundedJsonValue" }
     },
 
     "PromptAgent": {
@@ -45,25 +131,30 @@
         { "$ref": "#/$defs/AgentDefinitionBase" },
         {
           "type": "object",
+          "maxProperties": 64,
           "properties": {
             "kind": { "const": "prompt" },
             "model": { "$ref": "#/$defs/Model" },
             "tools": {
               "type": "array",
               "description": "Tools available to the agent for extended functionality.",
+              "maxItems": 64,
               "items": { "$ref": "#/$defs/Tool" }
             },
             "template": { "$ref": "#/$defs/Template" },
             "instructions": {
               "type": "string",
+              "maxLength": 32000,
               "description": "System prompt / instructions for the agent. Must be less than 32,000 characters. Use YAML block scalar (|) for multi-line."
             },
             "additionalInstructions": {
               "type": "string",
+              "maxLength": 16000,
               "description": "Additional instructions or context for the agent."
             }
           },
-          "required": ["model", "instructions"]
+          "required": ["model", "instructions"],
+          "additionalProperties": { "$ref": "#/$defs/BoundedJsonValue" }
         }
       ]
     },
@@ -71,20 +162,26 @@
     "Model": {
       "description": "AI model configuration. Supports shorthand (just a string ID) or full object.",
       "oneOf": [
-        { "type": "string", "description": "Model ID shorthand (e.g., 'gpt-5-1')." },
+        { "type": "string", "maxLength": 128, "description": "Model ID shorthand (e.g., 'gpt-5-1')." },
         {
           "type": "object",
+          "additionalProperties": false,
           "properties": {
             "id": {
               "type": "string",
+              "maxLength": 128,
               "description": "The unique identifier / deployment name of the model."
             },
             "provider": {
               "type": "string",
+              "maxLength": 64,
+              "pattern": "^[A-Za-z][A-Za-z0-9_.-]{0,63}$",
               "description": "The provider of the model (e.g., 'openai', 'azure', 'anthropic')."
             },
             "apiType": {
               "type": "string",
+              "maxLength": 64,
+              "pattern": "^[A-Za-z][A-Za-z0-9_.-]{0,63}$",
               "description": "The type of API to use (e.g., 'chat', 'response')."
             },
             "connection": { "$ref": "#/$defs/Connection" },
@@ -98,31 +195,41 @@
     "Connection": {
       "type": "object",
       "description": "Connection configuration for models or tools.",
+      "maxProperties": 32,
       "properties": {
-        "kind": { "type": "string", "description": "Connection type (e.g., 'key', 'reference', 'foundry')." },
-        "authenticationMode": { "type": "string" },
-        "usageDescription": { "type": "string" },
-        "endpoint": { "type": "string" },
-        "key": { "type": "string" }
+        "kind": { "type": "string", "maxLength": 64, "pattern": "^[A-Za-z][A-Za-z0-9_.-]{0,63}$", "description": "Connection type (e.g., 'key', 'reference', 'foundry')." },
+        "authenticationMode": { "type": "string", "maxLength": 64 },
+        "usageDescription": { "type": "string", "maxLength": 1000 },
+        "endpoint": { "type": "string", "maxLength": 2048 },
+        "key": { "type": "string", "maxLength": 8192 }
       },
       "required": ["kind"],
-      "additionalProperties": true
+      "additionalProperties": { "$ref": "#/$defs/BoundedJsonValue" }
     },
 
     "ModelOptions": {
       "type": "object",
       "description": "Additional options for model behavior.",
       "properties": {
-        "frequencyPenalty": { "type": "number" },
-        "maxOutputTokens": { "type": "integer" },
-        "presencePenalty": { "type": "number" },
-        "seed": { "type": "integer" },
+        "frequencyPenalty": { "type": "number", "minimum": -2, "maximum": 2 },
+        "maxOutputTokens": { "type": "integer", "minimum": 1, "maximum": 1000000 },
+        "presencePenalty": { "type": "number", "minimum": -2, "maximum": 2 },
+        "seed": { "type": "integer", "minimum": -2147483648, "maximum": 2147483647 },
         "temperature": { "type": "number", "minimum": 0, "maximum": 2 },
-        "topK": { "type": "integer" },
+        "topK": { "type": "integer", "minimum": 1, "maximum": 1000000 },
         "topP": { "type": "number", "minimum": 0, "maximum": 1 },
-        "stopSequences": { "type": "array", "items": { "type": "string" } },
+        "stopSequences": {
+          "type": "array",
+          "maxItems": 32,
+          "uniqueItems": true,
+          "items": { "type": "string", "maxLength": 256 }
+        },
         "allowMultipleToolCalls": { "type": "boolean" },
-        "additionalProperties": { "type": "object" }
+        "additionalProperties": {
+          "type": "object",
+          "maxProperties": 32,
+          "additionalProperties": { "$ref": "#/$defs/BoundedJsonValue" }
+        }
       },
       "additionalProperties": false
     },
@@ -130,18 +237,20 @@
     "Tool": {
       "type": "object",
       "description": "Tool available to the agent. Subtypes: function, custom, web_search, file_search, mcp, openapi, code_interpreter.",
+      "maxProperties": 64,
       "properties": {
-        "name": { "type": "string", "description": "Name of the tool." },
-        "kind": { "type": "string", "description": "The kind identifier (e.g., 'function', 'custom', 'mcp', 'openapi', 'web_search', 'file_search', 'code_interpreter')." },
-        "description": { "type": "string", "description": "A short description of the tool." },
+        "name": { "type": "string", "maxLength": 128, "description": "Name of the tool." },
+        "kind": { "type": "string", "maxLength": 64, "pattern": "^[A-Za-z][A-Za-z0-9_-]{0,63}$", "description": "The kind identifier (e.g., 'function', 'custom', 'mcp', 'openapi', 'web_search', 'file_search', 'code_interpreter')." },
+        "description": { "type": "string", "maxLength": 1000, "description": "A short description of the tool." },
         "bindings": {
           "type": "array",
           "description": "Tool argument bindings to input properties.",
+          "maxItems": 64,
           "items": {
             "type": "object",
             "properties": {
-              "name": { "type": "string" },
-              "input": { "type": "string" }
+              "name": { "type": "string", "maxLength": 128 },
+              "input": { "type": "string", "maxLength": 128 }
             },
             "additionalProperties": false
           }
@@ -149,18 +258,27 @@
         "parameters": { "$ref": "#/$defs/PropertySchema" },
         "strict": { "type": "boolean" },
         "connection": { "$ref": "#/$defs/Connection" },
-        "options": { "type": "object", "additionalProperties": true }
+        "options": {
+          "type": "object",
+          "maxProperties": 64,
+          "propertyNames": {
+            "type": "string",
+            "maxLength": 128,
+            "pattern": "^[A-Za-z0-9_.:-]+$"
+          },
+          "additionalProperties": { "$ref": "#/$defs/BoundedJsonValue" }
+        }
       },
       "required": ["name", "kind"],
-      "additionalProperties": true
+      "additionalProperties": { "$ref": "#/$defs/BoundedJsonValue" }
     },
 
     "Template": {
       "type": "object",
       "description": "Template configuration for prompt rendering.",
       "properties": {
-        "format": { "type": "string", "description": "Template format (e.g., 'mustache', 'jinja2')." },
-        "parser": { "type": "string", "description": "Template parser (e.g., 'prompty')." }
+        "format": { "type": "string", "maxLength": 64, "pattern": "^[A-Za-z][A-Za-z0-9_.-]{0,63}$", "description": "Template format (e.g., 'mustache', 'jinja2')." },
+        "parser": { "type": "string", "maxLength": 64, "pattern": "^[A-Za-z][A-Za-z0-9_.-]{0,63}$", "description": "Template parser (e.g., 'prompty')." }
       },
       "additionalProperties": false
     },
@@ -171,23 +289,36 @@
       "properties": {
         "examples": {
           "type": "array",
-          "items": { "type": "object", "additionalProperties": true }
+          "maxItems": 32,
+          "items": { "$ref": "#/$defs/BoundedJsonValue" }
         },
         "strict": { "type": "boolean" },
         "properties": {
           "type": "object",
+          "maxProperties": 128,
+          "propertyNames": {
+            "type": "string",
+            "maxLength": 128,
+            "pattern": "^[A-Za-z][A-Za-z0-9_.-]{0,127}$"
+          },
           "additionalProperties": {
             "type": "object",
+            "maxProperties": 32,
             "properties": {
-              "kind": { "type": "string" },
-              "description": { "type": "string" },
+              "kind": { "type": "string", "maxLength": 64 },
+              "description": { "type": "string", "maxLength": 2000 },
               "required": { "type": "boolean" },
-              "default": {},
-              "example": {},
-              "value": {},
-              "enumValues": { "type": "array" }
+              "default": { "$ref": "#/$defs/BoundedJsonValue" },
+              "example": { "$ref": "#/$defs/BoundedJsonValue" },
+              "value": { "$ref": "#/$defs/BoundedJsonValue" },
+              "enumValues": {
+                "type": "array",
+                "maxItems": 128,
+                "uniqueItems": true,
+                "items": { "$ref": "#/$defs/BoundedJsonScalar" }
+              }
             },
-            "additionalProperties": true
+            "additionalProperties": { "$ref": "#/$defs/BoundedJsonValue" }
           }
         }
       },
@@ -197,6 +328,7 @@
     "DiscoveryExtensions": {
       "type": "object",
       "description": "Discovery-specific extensions. These properties are mapped to Discovery Agent API fields at deploy time and are not part of the standard Microsoft AgentSchema.",
+      "maxProperties": 32,
       "properties": {
         "humanInTheLoop": {
           "type": "string",
@@ -207,6 +339,7 @@
         "tools": {
           "type": "array",
           "description": "Discovery-managed tools (external computation tools like RDKit, simulation engines). Separate from AgentSchema tools to avoid overlap with Foundry-native tools.",
+          "maxItems": 64,
           "items": {
             "type": "object",
             "required": ["toolId"],
@@ -214,6 +347,8 @@
             "properties": {
               "toolId": {
                 "type": "string",
+                "maxLength": 512,
+                "pattern": "^(?:\\{\\{[A-Za-z][A-Za-z0-9]*\\}\\}|/subscriptions/[A-Za-z0-9-]+/resourceGroups/[A-Za-z0-9._()-]+/providers/Microsoft\\.Discovery/tools/[A-Za-z0-9._-]+)$",
                 "description": "ARM resource ID of the Discovery tool."
               },
               "confirmation": {
@@ -228,6 +363,7 @@
         "knowledgeBases": {
           "type": "array",
           "description": "Discovery-managed knowledge bases for retrieval-augmented context.",
+          "maxItems": 32,
           "items": {
             "type": "object",
             "required": ["knowledgeBaseId"],
@@ -236,7 +372,8 @@
               "knowledgeBaseId": {
                 "type": "string",
                 "description": "Discovery knowledge base resource ID. Format: /bookshelves/{bookshelf_name}/knowledgeBases/{knowledgebase_name}/versions/{version}",
-                "pattern": "^/bookshelves/[^/]+/knowledgeBases/[^/]+/versions/[^/]+$"
+                "maxLength": 512,
+                "pattern": "^/bookshelves/[A-Za-z0-9][A-Za-z0-9._-]{0,127}/knowledgeBases/[A-Za-z0-9][A-Za-z0-9._-]{0,127}/versions/[A-Za-z0-9][A-Za-z0-9._-]{0,63}$"
               }
             }
           }
@@ -252,7 +389,7 @@
           "description": "When true, all Discovery-injected tools are disabled."
         }
       },
-      "additionalProperties": true
+      "additionalProperties": { "$ref": "#/$defs/BoundedJsonValue" }
     }
   }
 }

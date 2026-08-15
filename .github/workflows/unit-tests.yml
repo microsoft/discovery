@@ -1,13 +1,14 @@
 name: Unit Tests
 
-# Runs the .github/tests/ pytest suites that guard the POL-009 model-weight
-# sniffer logic and the picklescan integration inside validate_pr.py.
+# Runs the .github/tests/ pytest suites: the POL-009 model-weight sniffer, the
+# picklescan integration inside validate_pr.py, and the per-rule suites under
+# .github/tests/rules/ that cover the modular rule engine.
 #
 # This workflow is a *required* status check on `main`. GitHub treats a
 # non-triggered required check as "expected, never reported" which blocks PRs
 # that don't touch the relevant paths. To avoid that, the workflow runs on
 # every PR and a "Detect relevant changes" guard step skips the real work
-# (but still reports success) when no scripts/tests/workflow files changed.
+# (but still reports success) when no scripts/tests/policy/schema/workflow files changed.
 
 on:
   pull_request:
@@ -17,7 +18,9 @@ on:
     paths:
       - ".github/scripts/**"
       - ".github/tests/**"
+      - ".github/policy/**"
       - ".github/workflows/unit-tests.yml"
+      - "docs/schemas/**"
   workflow_dispatch:
 
 permissions:
@@ -40,11 +43,11 @@ jobs:
           FILES=$(gh api \
             "repos/${GITHUB_REPOSITORY}/pulls/${{ github.event.pull_request.number }}/files" \
             --paginate --jq '.[].filename')
-          if echo "$FILES" | grep -E '^\.github/(scripts|tests)/|^\.github/workflows/unit-tests\.yml$' >/dev/null; then
+          if echo "$FILES" | grep -E '^\.github/(scripts|tests|policy)/|^\.github/workflows/unit-tests\.yml$|^docs/schemas/' >/dev/null; then
             echo "relevant=true" >> "$GITHUB_OUTPUT"
           else
             echo "relevant=false" >> "$GITHUB_OUTPUT"
-            echo "::notice::No scripts/tests/unit-tests-workflow paths changed; reporting success without running pytest."
+            echo "::notice::No scripts/tests/policy/schema/unit-tests-workflow paths changed; reporting success without running pytest."
           fi
 
       - name: Checkout
@@ -59,8 +62,20 @@ jobs:
 
       - name: Install dependencies
         if: github.event_name != 'pull_request' || steps.changes.outputs.relevant == 'true'
-        run: pip install pytest jsonschema pyyaml picklescan onnx
+        run: pip install --index-url https://packagefeedproxy.microsoft.io/pypi/simple/ pytest jsonschema pyyaml picklescan onnx dnspython==2.8.0 codespell==2.4.1
 
       - name: Run unit tests
         if: github.event_name != 'pull_request' || steps.changes.outputs.relevant == 'true'
         run: python -m pytest .github/tests/ -v
+
+      # A rule or policy change can silently start firing on legacy content.
+      # This fails when the catalog has violations the ratchet baseline does
+      # not already record, forcing an explicit decision instead of a surprise
+      # failure on an unrelated contributor's PR.
+      - name: Ratchet baseline drift
+        if: github.event_name != 'pull_request' || steps.changes.outputs.relevant == 'true'
+        run: python .github/scripts/generate_baseline.py --check
+
+      - name: Rule documentation drift
+        if: github.event_name != 'pull_request' || steps.changes.outputs.relevant == 'true'
+        run: python .github/scripts/generate_rule_docs.py --check

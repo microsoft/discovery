@@ -28,7 +28,7 @@ jobs:
           FILES=$(gh api \
             "repos/${GITHUB_REPOSITORY}/pulls/${{ github.event.pull_request.number }}/files" \
             --paginate --jq '.[].filename')
-          if echo "$FILES" | grep -E '^starter-kits/|^docs/schemas/starter-kit-schema\.json$' >/dev/null; then
+          if echo "$FILES" | grep -E '^starter-kits/|^docs/schemas/(common-schema|starter-kit-schema)\.json$' >/dev/null; then
             echo "relevant=true" >> "$GITHUB_OUTPUT"
           else
             echo "relevant=false" >> "$GITHUB_OUTPUT"

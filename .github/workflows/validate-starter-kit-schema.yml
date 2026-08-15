@@ -34,7 +34,7 @@ jobs:
           FILES=$(gh api \
             "repos/${GITHUB_REPOSITORY}/pulls/${{ github.event.pull_request.number }}/files" \
             --paginate --jq '.[].filename')
-          if echo "$FILES" | grep -E '^docs/schemas/(starter-kit-schema|starter-kit-registry-schema)\.json$' >/dev/null; then
+          if echo "$FILES" | grep -E '^docs/schemas/(common-schema|starter-kit-schema|starter-kit-registry-schema)\.json$' >/dev/null; then
             echo "relevant=true" >> "$GITHUB_OUTPUT"
           else
             echo "relevant=false" >> "$GITHUB_OUTPUT"
@@ -61,6 +61,7 @@ jobs:
           python -c "
           import json, sys
           for f in [
+              'docs/schemas/common-schema.json',
               'docs/schemas/starter-kit-schema.json',
               'docs/schemas/starter-kit-registry-schema.json',
           ]:
@@ -79,6 +80,7 @@ jobs:
           python -c "
           import json, sys, jsonschema
           for f in [
+              'docs/schemas/common-schema.json',
               'docs/schemas/starter-kit-schema.json',
               'docs/schemas/starter-kit-registry-schema.json',
           ]:
@@ -97,9 +99,17 @@ jobs:
         run: |
           python -c "
           import json, sys, glob, jsonschema
+          from referencing import Registry, Resource
+          with open('docs/schemas/common-schema.json') as f:
+              common_schema = json.load(f)
           with open('docs/schemas/starter-kit-schema.json') as f:
               schema = json.load(f)
-          validator = jsonschema.Draft7Validator(schema)
+          schema_registry = Registry().with_resource(
+              'common-schema.json', Resource.from_contents(common_schema)
+          )
+          validator = jsonschema.Draft7Validator(
+              schema, registry=schema_registry, format_checker=jsonschema.FormatChecker()
+          )
           failed = False
           paths = sorted(glob.glob('starter-kits/*/kit.json'))
           for plugin_path in paths:

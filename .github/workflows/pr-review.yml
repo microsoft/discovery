@@ -110,7 +110,7 @@ jobs:
           python-version: "3.12"
 
       - name: Install dependencies
-        run: pip install jsonschema pyyaml onnx picklescan
+        run: pip install --index-url https://packagefeedproxy.microsoft.io/pypi/simple/ jsonschema pyyaml onnx picklescan dnspython==2.8.0 codespell==2.4.1
 
       - name: Write changed files list
         env:
@@ -124,6 +124,16 @@ jobs:
             > /tmp/changed-files.txt
           echo "Changed files:"
           cat /tmp/changed-files.txt
+
+      - name: Spellcheck changed catalog prose (non-blocking)
+        continue-on-error: true
+        run: |
+          # Run trusted base-branch code against PR content as data. The script
+          # extracts only approved prose fields and Markdown outside code fences.
+          python trusted/.github/scripts/spellcheck_prose.py \
+            --changed-files /tmp/changed-files.txt \
+            --repo-root "$GITHUB_WORKSPACE/pr" \
+            --output /tmp/spellcheck-results.json
 
       - name: Run validation
         id: run_validator
@@ -175,6 +185,14 @@ jobs:
         with:
           name: validation-results
           path: /tmp/validation-results.json
+
+      - name: Upload spellcheck results
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: spellcheck-results
+          path: /tmp/spellcheck-results.json
+          if-no-files-found: ignore
 
   # ── Stage 5: Secret scan ───────────────────────────────────────────────────
   secret-scan:
@@ -295,6 +313,7 @@ jobs:
               '1p-contribution',
               '3p-contribution',
               'docs-only',
+              'needs-image-review',
             ];
 
             const currentLabels = await github.rest.issues.listLabelsOnIssue({
@@ -315,6 +334,7 @@ jobs:
               '1p-contribution':          { color: '1d76db', description: "Authored by Microsoft (party='1p' in metadata)" },
               '3p-contribution':          { color: 'bfd4f2', description: "Authored by a third-party partner (party='3p' in metadata)" },
               'docs-only':                { color: 'c5def5', description: 'Changes only affect documentation or schemas' },
+              'needs-image-review':       { color: 'd4c5f9', description: 'PR adds or modifies image files — a maintainer must inspect them before merge' },
             };
             async function ensureLabel(name) {
               try {
@@ -335,6 +355,12 @@ jobs:
             if (results.has_3p) labelsToAdd.push('3p-contribution');
             if (results.has_docs_only) labelsToAdd.push('docs-only');
 
+            // Images always get a human look. POL-016 proves a file is the
+            // format it claims to be; it cannot judge whether the picture is
+            // appropriate, correctly licensed, or carries unreviewed text.
+            const imageFiles = results.image_files || [];
+            if (results.has_images) labelsToAdd.push('needs-image-review');
+
             // ── 3. Apply pass/fail labels ──────────────────────────
             if (allPassed) {
               labelsToAdd.push('pr-validation-passed');
@@ -347,6 +373,37 @@ jobs:
               await github.rest.issues.addLabels({
                 owner, repo, issue_number: prNumber, labels: labelsToAdd
               });
+            }
+
+            // ── 3b. Image review notice ───────────────────────────
+            if (imageFiles.length > 0) {
+              const rows = imageFiles.map(f => `| \`${f}\` |`).join('\n');
+              const body = [
+                '## 🖼️ Image review required',
+                '',
+                `This PR adds or modifies ${imageFiles.length} image file(s). Automated checks confirm each file is the format its name claims (POL-016) and that SVGs contain no scripts, event handlers, or remote references — but a maintainer must still look at them.`,
+                '',
+                '| File |',
+                '|------|',
+                rows,
+                '',
+                '**Reviewer checklist**',
+                '',
+                '- [ ] The image renders as expected and shows what the PR claims',
+                '- [ ] No embedded text containing credentials, internal URLs, or unreleased information',
+                '- [ ] Content is appropriate and the contributor has the right to publish it',
+                '- [ ] Licensing and attribution are correct for third-party artwork',
+                '- [ ] The image is genuinely needed — prefer diagrams as text (Mermaid) or linked external assets',
+                '',
+                'Remove the `needs-image-review` label to clear this gate. Pushing a new commit re-applies it.',
+              ].join('\n');
+              try {
+                await github.rest.issues.createComment({
+                  owner, repo, issue_number: prNumber, body
+                });
+              } catch (e) {
+                console.log(`Could not post image review notice: ${e.message}`);
+              }
             }
 
             // ── 4. Post inline review comments (one per failure) ───

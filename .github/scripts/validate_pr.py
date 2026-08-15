@@ -28,21 +28,16 @@ from typing import Any
 
 import jsonschema
 import yaml
+from referencing import Registry, Resource
 
 from model_weights_sniffer import MODEL_WEIGHT_EXTENSIONS, sniff
+from image_inspector import is_image_path
+from rules.registry import build_context, run_rules
 
 # ── Constants ────────────────────────────────────────────
 
-# Binaries blocked outright by POL-008. Model-weight formats are validated
-# instead by POL-009 (see model_weights_sniffer.py).
-_ALL_BLOCKED_BINARIES = {
-    ".exe", ".dll", ".bin", ".zip", ".tar", ".gz", ".tgz", ".7z",
-    ".rar", ".iso", ".img", ".dmg", ".pkg", ".deb", ".rpm",
-    ".pt", ".pth", ".ckpt", ".safetensors", ".onnx", ".pb",
-    ".h5", ".hdf5", ".pkl", ".joblib", ".npy", ".npz",
-    ".gguf", ".tflite", ".engine", ".weights",
-}
-BLOCKED_BINARY_EXTENSIONS = _ALL_BLOCKED_BINARIES - set(MODEL_WEIGHT_EXTENSIONS)
+# POL-008 (binaries) now lives in rules/pol_008.py and classifies by CONTENT.
+# An extension denylist was trivially bypassed by renaming the file.
 
 # Model-weight payload size cap (POL-009). Files larger than this should
 # live in container images or external storage, not in the catalog repo.
@@ -143,11 +138,18 @@ def _is_env_artefact(rel: str) -> bool:
     return name == ".env" or name.startswith(".env.")
 
 
-def validate_against_schema(data: Any, schema: dict) -> list[str]:
+def validate_against_schema(
+    data: Any,
+    schema: dict,
+    schema_registry: Registry | None = None,
+) -> list[str]:
     errors = []
     try:
         # B1: enable FormatChecker so format: email / format: uri actually fire.
-        v = jsonschema.Draft7Validator(schema, format_checker=jsonschema.FormatChecker())
+        validator_kwargs = {"format_checker": jsonschema.FormatChecker()}
+        if schema_registry is not None:
+            validator_kwargs["registry"] = schema_registry
+        v = jsonschema.Draft7Validator(schema, **validator_kwargs)
         for error in sorted(v.iter_errors(data), key=lambda e: list(e.path)):
             path = ".".join(str(p) for p in error.path) or "(root)"
             errors.append(f"{path}: {error.message}")
@@ -184,11 +186,13 @@ def readme_has_section(content: str, *headings: str) -> bool:
 # ── Failure collector ─────────────────────────────────────────────────────────
 
 class Failure:
-    def __init__(self, rule_id: str, file: str, message: str, line: int = 1):
+    def __init__(self, rule_id: str, file: str, message: str, line: int = 1,
+                 severity: str = "error"):
         self.rule_id = rule_id
         self.file = file
         self.line = line
         self.message = message
+        self.severity = severity
 
     def to_dict(self) -> dict:
         return {
@@ -196,6 +200,7 @@ class Failure:
             "file": self.file,
             "line": self.line,
             "message": self.message,
+            "severity": self.severity,
         }
 
 
@@ -305,7 +310,14 @@ def check_structural(repo: Path, folders: set[Path], changed_files: list[str]) -
     return failures
 
 
-def check_schema(repo: Path, folders: set[Path], agent_schema: dict | None, tool_schema: dict | None, metadata_schema: dict | None = None) -> list[Failure]:
+def check_schema(
+    repo: Path,
+    folders: set[Path],
+    agent_schema: dict | None,
+    tool_schema: dict | None,
+    metadata_schema: dict | None = None,
+    schema_registry: Registry | None = None,
+) -> list[Failure]:
     failures = []
     valid_regions = load_valid_regions(repo)
 
@@ -325,7 +337,7 @@ def check_schema(repo: Path, folders: set[Path], agent_schema: dict | None, tool
 
             # SCH-001: full schema validation against docs/schemas/metadata-schema.json
             if metadata_schema:
-                for schema_err in validate_against_schema(data, metadata_schema):
+                for schema_err in validate_against_schema(data, metadata_schema, schema_registry):
                     failures.append(Failure("SCH-001", meta_rel,
                         f"metadata.yaml does not conform to docs/schemas/metadata-schema.json: {schema_err}"))
 
@@ -446,7 +458,7 @@ def check_schema(repo: Path, folders: set[Path], agent_schema: dict | None, tool
                 failures.append(Failure("SCH-010", agent_rel, f"agent.yaml could not be parsed: {err}"))
             else:
                 # SCH-010: full schema validation
-                schema_errors = validate_against_schema(data, agent_schema)
+                schema_errors = validate_against_schema(data, agent_schema, schema_registry)
                 for se in schema_errors:
                     failures.append(Failure(
                         "SCH-010", agent_rel,
@@ -516,7 +528,7 @@ def check_schema(repo: Path, folders: set[Path], agent_schema: dict | None, tool
                         continue
 
                     # SCH-014: full schema validation
-                    schema_errors = validate_against_schema(data, tool_schema)
+                    schema_errors = validate_against_schema(data, tool_schema, schema_registry)
                     for se in schema_errors:
                         failures.append(Failure(
                             "SCH-014", tool_rel,
@@ -657,17 +669,8 @@ def check_policy(repo: Path, folders: set[Path], changed_files: list[str]) -> li
                     "README.md appears to be empty or too short. Provide a meaningful usage guide."
                 ))
 
-    # POL-008: no binary files (except validated model weights, see POL-009)
-    for f in changed_files:
-        ext = Path(f).suffix.lower()
-        if ext in BLOCKED_BINARY_EXTENSIONS:
-            failures.append(Failure(
-                "POL-008", f,
-                f"Binary file '{Path(f).name}' is not permitted in this repository. "
-                "Container images must be hosted externally. "
-                "Model weights may be checked in only as one of the formats listed "
-                "in docs/authoring-guide.md (POL-009)."
-            ))
+    # POL-008 (binaries) and POL-015 (approved file types) are enforced by the
+    # modular rule engine in rules/ — see run_rules() in main().
 
     # POL-009: model-weight files must be (a) Git-LFS tracked, (b) under the
     # size cap, (c) header-validated against their declared extension, and
@@ -1018,6 +1021,14 @@ def discover_folders(repo: Path, changed_files: list[str]) -> set[Path]:
 # ── Main ──────────────────────────────────────────────────────────────────────
 
 def main():
+    # Windows consoles default to cp1252, which cannot encode the status glyphs
+    # below and would crash the run instead of reporting the findings.
+    for stream in (sys.stdout, sys.stderr):
+        try:
+            stream.reconfigure(encoding="utf-8", errors="replace")
+        except (AttributeError, ValueError):
+            pass
+
     parser = argparse.ArgumentParser(description="Validate a Discovery Catalog PR.")
     parser.add_argument("--changed-files", required=True,
                         help="Newline-delimited file listing changed paths (relative to repo root).")
@@ -1036,6 +1047,12 @@ def main():
     agent_schema = load_json_schema(repo / "docs" / "schemas" / "agent-schema-v2.json")
     tool_schema = load_json_schema(repo / "docs" / "schemas" / "tool-definition-schema.json")
     metadata_schema = load_json_schema(repo / "docs" / "schemas" / "metadata-schema.json")
+    common_schema = load_json_schema(repo / "docs" / "schemas" / "common-schema.json")
+    schema_registry = None
+    if common_schema is not None:
+        schema_registry = Registry().with_resource(
+            "common-schema.json", Resource.from_contents(common_schema)
+        )
 
     if agent_schema is None:
         print("WARNING: docs/schemas/agent-schema-v2.json could not be loaded. SCH-010–013 skipped.", file=sys.stderr)
@@ -1043,15 +1060,33 @@ def main():
         print("WARNING: docs/schemas/tool-definition-schema.json could not be loaded. SCH-014–015 skipped.", file=sys.stderr)
     if metadata_schema is None:
         print("WARNING: docs/schemas/metadata-schema.json could not be loaded. Full metadata schema validation skipped.", file=sys.stderr)
+    if common_schema is None:
+        print("WARNING: docs/schemas/common-schema.json could not be loaded. External schema references may not resolve.", file=sys.stderr)
 
     folders = discover_folders(repo, changed_files)
 
     # Run ALL checks — collect everything before reporting
     failures: list[Failure] = []
     failures += check_structural(repo, folders, changed_files)
-    failures += check_schema(repo, folders, agent_schema, tool_schema, metadata_schema)
+    failures += check_schema(
+        repo, folders, agent_schema, tool_schema, metadata_schema, schema_registry
+    )
     failures += check_policy(repo, folders, changed_files)
     failures += check_documentation(repo, folders)
+
+    # Modular rule engine (rules/). Findings already have waivers and the
+    # ratchet baseline applied, so warnings here are non-blocking by design.
+    engine = run_rules(build_context(repo, changed_files))
+    for cfg_err in engine.config_errors:
+        failures.append(Failure("CFG-001", ".github/policy/waivers.yaml", cfg_err))
+    for finding in engine.findings:
+        failures.append(Failure(
+            finding.rule_id, finding.file, finding.message, finding.line,
+            severity=finding.severity.value,
+        ))
+
+    blocking = [f for f in failures if f.severity == "error"]
+    warnings = [f for f in failures if f.severity != "error"]
 
     # Classify contribution type
     has_agents = any(is_agent_path(f) for f in changed_files)
@@ -1096,23 +1131,43 @@ def main():
             except Exception:
                 pass
 
+    # Images get a mandatory human look regardless of whether POL-016 passed.
+    # Format validation proves a PNG is a PNG; it cannot tell you the picture
+    # is appropriate, correctly licensed, or free of embedded text nobody
+    # reviewed. Only additions and modifications matter — deletions are safe.
+    image_files = sorted(
+        f for f in changed_files
+        if f.replace("\\", "/").startswith(("agents/", "starter-kits/"))
+        and is_image_path(f)
+        and (repo / f).is_file()
+    )
+
     results = {
-        "passed": len(failures) == 0,
-        "failure_count": len(failures),
+        "passed": len(blocking) == 0,
+        "failure_count": len(blocking),
+        "warning_count": len(warnings),
         "has_agents": has_agents,
         "has_docs_only": has_docs_only,
         "has_1p": has_1p,
         "has_3p": has_3p,
-        "failures": [f.to_dict() for f in failures],
+        "has_images": len(image_files) > 0,
+        "image_files": image_files,
+        "failures": [f.to_dict() for f in blocking],
+        "warnings": [f.to_dict() for f in warnings],
     }
 
     with open(args.output, "w", encoding="utf-8") as f:
         json.dump(results, f, indent=2)
 
     # Print summary to stdout for CI logs
-    if failures:
-        print(f"\n❌ Validation failed — {len(failures)} issue(s) found:\n")
-        for fail in failures:
+    if warnings:
+        print(f"\n⚠️  {len(warnings)} non-blocking warning(s):\n")
+        for warn in warnings:
+            print(f"  [{warn.rule_id}] {warn.file}:{warn.line} — {warn.message}")
+
+    if blocking:
+        print(f"\n❌ Validation failed — {len(blocking)} issue(s) found:\n")
+        for fail in blocking:
             print(f"  [{fail.rule_id}] {fail.file}:{fail.line} — {fail.message}")
         sys.exit(1)
     else:

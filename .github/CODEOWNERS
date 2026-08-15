@@ -14,6 +14,11 @@
 /.github/scripts/                       @mukesh-dua @charwen @leijgao @karthikananth @anzaman @surajmb @prashney @umamaheshmsft @cjtozer @yousefi-msft @ryansok
 /.github/CODEOWNERS                     @mukesh-dua @charwen @leijgao @karthikananth @anzaman @surajmb @prashney @umamaheshmsft @cjtozer @yousefi-msft @ryansok
 
+# Validation policy — the approved base images, source allowlist, tag taxonomy,
+# rule waivers, and ratchet baseline. Editing these changes what the catalog
+# will accept, so the gate must be explicit rather than inherited from `*`.
+/.github/policy/                        @mukesh-dua @charwen @leijgao @karthikananth @anzaman @surajmb @prashney @umamaheshmsft @cjtozer @yousefi-msft @ryansok
+
 # Schema files — changes here can break every agent/kit in the catalog.
 /docs/schemas/                          @mukesh-dua @charwen @leijgao @karthikananth @anzaman @surajmb @prashney @umamaheshmsft @cjtozer @yousefi-msft @ryansok
 
