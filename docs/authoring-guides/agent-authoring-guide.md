@@ -51,7 +51,8 @@ agents/
     └── tools/              ← Optional; only if your agent uses custom containerised tools
         └── <tool-name>/
             ├── tool.yaml
-            └── Dockerfile
+          ├── Dockerfile
+          └── test_<tool-name>.py  ← Optional; run in your own isolated CI
 ```
 
 **Folder-name rules**
@@ -110,8 +111,8 @@ compliance:                           # Optional — include only if certified
 | `type` | ✅ | Always `agent`. |
 | `version` | ✅ | SemVer (`MAJOR.MINOR.PATCH`). Bump on meaningful change. |
 | `publisher.name` | ✅ | Display name of the publishing team or company. |
-| `publisher.contact` | ✅ | Valid email address. |
-| `publisher.support_url` | ✅ | HTTPS URL (issue tracker or support page). |
+| `publisher.contact` | ✅ | Valid email address whose domain has usable MX, A, or AAAA DNS records. This does not prove mailbox ownership. |
+| `publisher.support_url` | ✅ | Reachable public HTTPS webpage (issue tracker or support page) that returns HTML. |
 | `publisher.party` | optional | `1p` (Microsoft) or `3p` (third-party). Used only for the contribution-source PR label; not validated against folder location. |
 | `description` | ✅ | Plain-language description, up to 500 characters. |
 | `tags` | ✅ | Non-empty array of kebab-case strings. |
@@ -229,6 +230,7 @@ actions:
 - Container image references must use the deployer-substituted ACR placeholder format `{name}.azurecr.io/<image>:<tag>`; do not hardcode a registry name such as `myregistry.azurecr.io`.
 - Every tool subfolder must contain both `tool.yaml` and `Dockerfile`.
 - If a `tools/` directory exists, `agent.yaml.discoveryExtensions` must declare the corresponding tools so they are wired up at deploy time.
+- Optional tool tests must use `test_*.py` or `*_test.py` naming. Their presence is published as `auto:has-tests`, but the repository's privileged PR workflows do not execute submitted code; run these tests in your own isolated environment or CI before submission.
 
 ---
 

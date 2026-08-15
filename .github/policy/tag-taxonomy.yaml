@@ -1,0 +1,174 @@
+# Tag taxonomy — TAG-001 / TAG-002 / TAG-003
+#
+# Tags are how researchers find agents in the catalog. Free-text tags degrade
+# fast: `protein-structure` and `protein_structures` and `ProteinStructure` all
+# mean the same thing and none of them find each other. So the vocabulary is
+# controlled, and adding to it is a reviewed act.
+#
+# Two kinds of tag exist:
+#
+#   DECLARED  — written by the author in metadata.yaml `tags:`. Must appear in
+#               the `domains` vocabulary below.
+#   COMPUTED  — derived by CI from what the agent actually contains, and
+#               published in .auto-registry/. Authors must never declare these;
+#               a self-assigned `has-tests` tag would be a claim, not a fact.
+#
+# To add a domain tag: open a PR against this file. It is CODEOWNERS-gated.
+# Prefer an existing tag over a near-synonym.
+
+# ── Declared vocabulary ─────────────────────────────────────────────────────
+domains:
+
+  life-sciences:
+    - alphafold
+    - bioactivity
+    - bioinformatics
+    - biomedical
+    - biomolecular-simulation
+    - clinical-trials
+    - dna-analysis
+    - esm2
+    - genomics
+    - protein
+    - protein-design
+    - protein-folding
+    - protein-structure
+    - rna-seq
+    - structural-biology
+    - structure-prediction
+    - transcriptomics
+
+  drug-discovery:
+    - binding-affinity
+    - compound-search
+    - de-novo
+    - drug-discovery
+    - molecule-docking
+    - safety-assessment
+    - safety-screening
+    - toxicology
+    - virtual-screening
+
+  chemistry:
+    - ab-initio
+    - cheminformatics
+    - chemistry
+    - chemprop
+    - computational-chemistry
+    - conformational-search
+    - dft
+    - functional-groups
+    - molecular-design
+    - molecular-dynamics
+    - molecular-generation
+    - molecular-properties
+    - molecular-property-prediction
+    - molecular-science
+    - natural-products
+    - quantum-chemistry
+    - rdkit
+    - reaction-prediction
+    - retrosynthesis
+    - selfies
+    - semiempirical
+
+  materials:
+    - crystal-structure
+    - inverse-design
+    - materials-discovery
+    - materials-science
+
+  physics-and-engineering:
+    - cfd
+    - computational-fluid-dynamics
+    - engineering
+    - heat-transfer-fluid
+    - openfoam
+    - simulation
+    - transient
+
+  silicon-and-eda:
+    - analog
+    - asic
+    - circuit-simulation
+    - digital-design
+    - eda
+    - gf180mcu
+    - hardware-design
+    - iverilog
+    - linting
+    - netlist
+    - rtl
+    - sky130
+    - spice
+    - sta
+    - static-timing-analysis
+    - synthesis
+    - systemverilog
+    - timing
+    - verilog
+    - xyce
+
+  machine-learning:
+    - d-mpnn
+    - diffusion-model
+    - embedding-model
+    - embeddings
+    - generative
+    - generative-model
+    - genetic-algorithm
+    - gnn
+    - language-model
+    - property-prediction
+    - representation-learning
+    - trained-model
+    - transformer
+
+  data-and-research:
+    - climate
+    - data-analysis
+    - database
+    - hypothesis-testing
+    - knowledge-base
+    - legal-tech
+    - literature-review
+    - literature-search
+    - patent-analysis
+    - prior-art
+    - research
+    - statistics
+
+  environment:
+    - atmospheric-lifetime
+    - gwp
+
+  platform:
+    - gpu
+    - python
+
+# ── Computed namespace ──────────────────────────────────────────────────────
+#
+# Tags carrying any of these prefixes are emitted by CI only. A contributor who
+# declares one is asserting something the catalog is supposed to verify.
+reserved_prefixes:
+  - "auto:"
+  - "tier:"
+  - "party:"
+  - "capability:"
+
+# Tags CI derives, documented here so the vocabulary is discoverable. Generated
+# by .github/scripts/compute_tags.py into .auto-registry/agent-tags.json.
+computed:
+  - auto:has-tools           # agent ships one or more tools/
+  - auto:no-tools            # prompt-only agent
+  - auto:has-tests           # at least one test_*.py alongside a tool
+  - auto:has-example-inputs  # ships example-input-files/
+  - auto:third-party-notices # ships THIRD_PARTY_NOTICES.md
+  - auto:gpu-required        # a tool requests gpu > 0
+  - auto:official-base-image # every base image is a Docker Official Image
+  - auto:pinned-base-image   # no floating base image tags
+  - party:1p                 # publisher.party == 1p
+  - party:3p                 # publisher.party == 3p
+  - tier:bronze              # required rules pass
+  - tier:silver              # bronze + tests + pinned base image
+  - tier:gold                # silver + notices + example inputs

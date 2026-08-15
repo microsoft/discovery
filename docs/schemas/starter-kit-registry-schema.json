@@ -1,6 +1,6 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "$id": "https://github.com/microsoft/discovery/blob/main/docs/schemas/starter-kit-registry-schema.json",
+  "$id": "starter-kit-registry-schema.json",
   "title": "Discovery Starter-Kit Registry",
   "description": "Auto-generated aggregate of every starter-kits/<name>/kit.json in the repository, produced by .github/scripts/update_starter_kits_registry.py and written to .auto-registry/starter-kit-registry.json. Each entry in 'kits' is the full kit.json manifest (which must independently validate against docs/schemas/starter-kit-schema.json before merge) augmented with four computed fields and per-ref agent metadata. This schema validates the wrapper plus the augmentation fields; the upstream per-kit schema enforces kit.json correctness.",
   "type": "object",
@@ -13,31 +13,38 @@
       "description": "Schema version of this registry file."
     },
     "generatedAt": {
-      "type": "string",
-      "format": "date-time",
+      "allOf": [{ "$ref": "common-schema.json#/definitions/dateTime" }],
       "description": "UTC timestamp of when this registry was generated."
     },
     "commitSha": {
       "type": "string",
       "minLength": 7,
+      "maxLength": 64,
+      "pattern": "^[0-9a-fA-F]{7,64}$",
       "description": "Git commit SHA of the repository state used to generate this registry."
     },
     "kits": {
       "type": "array",
       "description": "One entry per starter-kits/<name>/kit.json in the repository.",
+      "maxItems": 1000,
       "items": { "$ref": "#/definitions/RegistryKitEntry" }
     }
   },
   "definitions": {
     "RegistryKitEntry": {
       "type": "object",
-      "description": "A single starter-kit registry entry. Contains every field from the source kit.json (validated upstream by docs/schemas/starter-kit-schema.json) plus the augmentation fields below. additionalProperties is true so that kit.json fields pass through without duplicating the per-kit schema here.",
-      "additionalProperties": true,
+      "description": "A validated starter-kit manifest augmented with computed registry fields.",
+      "additionalProperties": false,
       "required": [
         "name",
         "version",
+        "description",
+        "author",
+        "keywords",
+        "category",
         "displayName",
         "lifecycle",
+        "longDescription",
         "agentRefs",
         "availability",
         "missingAgents",
@@ -45,31 +52,80 @@
         "kitPath"
       ],
       "properties": {
+        "$schema": {
+          "$ref": "starter-kit-schema.json#/properties/$schema"
+        },
         "name": {
-          "type": "string",
-          "pattern": "^[a-z0-9][a-z0-9-]*[a-z0-9]$",
+          "allOf": [{ "$ref": "common-schema.json#/definitions/kebabCaseString" }],
+          "maxLength": 64,
           "description": "Kebab-case identifier; equals the parent directory name."
         },
         "version": {
-          "type": "string",
-          "pattern": "^\\d+\\.\\d+\\.\\d+$"
+          "$ref": "common-schema.json#/definitions/semanticVersion"
+        },
+        "description": {
+          "$ref": "starter-kit-schema.json#/properties/description"
+        },
+        "author": {
+          "$ref": "starter-kit-schema.json#/properties/author"
+        },
+        "license": {
+          "$ref": "starter-kit-schema.json#/properties/license"
+        },
+        "keywords": {
+          "$ref": "starter-kit-schema.json#/properties/keywords"
+        },
+        "category": {
+          "$ref": "starter-kit-schema.json#/properties/category"
+        },
+        "homepage": {
+          "$ref": "starter-kit-schema.json#/properties/homepage"
+        },
+        "repository": {
+          "$ref": "starter-kit-schema.json#/properties/repository"
         },
         "displayName": {
           "type": "string",
-          "minLength": 1
+          "minLength": 1,
+          "maxLength": 80
         },
         "lifecycle": {
-          "type": "string",
-          "enum": ["active", "archived"]
+          "$ref": "common-schema.json#/definitions/lifecycle"
         },
         "party": {
-          "type": "string",
-          "enum": ["1p", "3p"]
+          "$ref": "common-schema.json#/definitions/party"
+        },
+        "featureFlag": {
+          "$ref": "starter-kit-schema.json#/properties/featureFlag"
+        },
+        "longDescription": {
+          "$ref": "starter-kit-schema.json#/properties/longDescription"
+        },
+        "logo": {
+          "$ref": "starter-kit-schema.json#/properties/logo"
+        },
+        "screenshots": {
+          "$ref": "starter-kit-schema.json#/properties/screenshots"
+        },
+        "websiteURL": {
+          "$ref": "starter-kit-schema.json#/properties/websiteURL"
+        },
+        "privacyPolicyURL": {
+          "$ref": "starter-kit-schema.json#/properties/privacyPolicyURL"
         },
         "agentRefs": {
           "type": "array",
           "description": "Top-level agentRefs from kit.json, with each entry optionally enriched with an agentMeta object describing the referenced agent.",
+          "minItems": 1,
+          "maxItems": 32,
+          "uniqueItems": true,
           "items": { "$ref": "#/definitions/EnrichedAgentRef" }
+        },
+        "samplePrompts": {
+          "$ref": "starter-kit-schema.json#/properties/samplePrompts"
+        },
+        "riskProfile": {
+          "$ref": "starter-kit-schema.json#/properties/riskProfile"
         },
         "availability": {
           "type": "string",
@@ -78,20 +134,33 @@
         },
         "missingAgents": {
           "type": "array",
-          "items": { "type": "string" },
+          "maxItems": 32,
+          "uniqueItems": true,
+          "items": { "$ref": "common-schema.json#/definitions/agentPath" },
           "description": "Computed: list of agentRef strings (both required and optional) not found in the agent registry at registry-generation time."
         },
         "computedAt": {
-          "type": "string",
-          "format": "date-time",
+          "allOf": [{ "$ref": "common-schema.json#/definitions/dateTime" }],
           "description": "Computed: ISO-8601 UTC timestamp this entry was generated. Equal to the top-level generatedAt."
         },
         "kitPath": {
           "type": "string",
+          "maxLength": 128,
           "pattern": "^starter-kits/[a-z0-9][a-z0-9-]*[a-z0-9]$",
           "description": "Computed: repo-relative path to the source kit directory."
         }
-      }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": { "lifecycle": { "const": "active" } },
+            "required": ["lifecycle"]
+          },
+          "then": {
+            "required": ["samplePrompts"]
+          }
+        }
+      ]
     },
     "EnrichedAgentRef": {
       "type": "object",
@@ -100,19 +169,18 @@
       "additionalProperties": false,
       "properties": {
         "ref": {
-          "type": "string",
-          "pattern": "^agents/[a-z0-9][a-z0-9-]*[a-z0-9]$",
+          "allOf": [{ "$ref": "common-schema.json#/definitions/agentPath" }],
           "description": "Path to the referenced agent directory, e.g. agents/my-agent."
         },
         "role": {
-          "type": "string",
-          "enum": ["primary", "supporting"]
+          "$ref": "common-schema.json#/definitions/agentRole"
         },
         "required": {
           "type": "boolean"
         },
         "description": {
-          "type": "string"
+          "type": "string",
+          "maxLength": 500
         },
         "agentMeta": {
           "type": "object",
@@ -120,14 +188,19 @@
           "additionalProperties": false,
           "required": ["name"],
           "properties": {
-            "name": { "type": "string" },
-            "displayName": { "type": "string" },
-            "version": { "type": "string" },
+            "name": {
+              "allOf": [{ "$ref": "common-schema.json#/definitions/kebabCaseString" }],
+              "maxLength": 64
+            },
+            "displayName": { "type": "string", "maxLength": 100 },
+            "version": { "$ref": "common-schema.json#/definitions/semanticVersion" },
             "tags": {
               "type": "array",
-              "items": { "type": "string" }
+              "maxItems": 64,
+              "uniqueItems": true,
+              "items": { "$ref": "common-schema.json#/definitions/kebabCaseString" }
             },
-            "description": { "type": "string" }
+            "description": { "type": "string", "maxLength": 500 }
           }
         }
       }

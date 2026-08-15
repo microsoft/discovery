@@ -1,0 +1,22 @@
+{
+  "_comment": "Pre-existing rule violations recorded at ruleset rollout. Entries here are reported as warnings instead of blocking. Do not add to this file by hand \u2014 fix the violation, or request a waiver in .github/policy/waivers.yaml. Regenerate with python .github/scripts/generate_baseline.py",
+  "count": 4,
+  "violations": [
+    {
+      "rule_id": "POL-008",
+      "file": "agents/gwp-predictor/training/results/parity_holdout_al.png"
+    },
+    {
+      "rule_id": "POL-015",
+      "file": "agents/gwp-predictor/training/results/gwp_predictor_overview.html"
+    },
+    {
+      "rule_id": "POL-015",
+      "file": "agents/gwp-predictor/training/results/parity_holdout_al.png"
+    },
+    {
+      "rule_id": "POL-015",
+      "file": "agents/rtl-yosys-syn/.test"
+    }
+  ]
+}

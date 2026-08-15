@@ -1,6 +1,6 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "$id": "https://github.com/microsoft/discovery/blob/main/schemas/metadata-schema.json",
+  "$id": "metadata-schema.json",
   "title": "Discovery Catalog — metadata.yaml",
   "description": "Schema for the metadata.yaml file required in every agent folder.",
   "type": "object",
@@ -8,36 +8,38 @@
   "additionalProperties": false,
   "properties": {
     "name": {
-      "type": "string",
+      "allOf": [{ "$ref": "common-schema.json#/definitions/kebabCaseString" }],
       "description": "Kebab-case unique identifier for this agent.",
-      "pattern": "^[a-z0-9][a-z0-9-]*$",
       "maxLength": 64
     },
     "type": {
-      "type": "string",
-      "enum": ["agent"],
+      "allOf": [{ "$ref": "common-schema.json#/definitions/agentType" }],
       "description": "Must be 'agent'."
     },
     "version": {
-      "type": "string",
+      "allOf": [{ "$ref": "common-schema.json#/definitions/semanticVersion" }],
       "description": "Semantic version string (MAJOR.MINOR.PATCH).",
-      "pattern": "^\\d+\\.\\d+\\.\\d+$"
+      "examples": ["1.0.0"]
     },
     "associated_tools": {
       "type": "array",
       "description": "Relative paths (from repo root) to each tool sub-folder under this agent's tools/ directory.",
+      "maxItems": 64,
+      "uniqueItems": true,
       "items": {
         "type": "string",
-        "pattern": "^agents/[a-z0-9][a-z0-9-]*/tools/[a-zA-Z0-9][a-zA-Z0-9_-]*/?$"
+        "maxLength": 256,
+        "pattern": "^agents/[a-z0-9][a-z0-9-]*/tools/[a-zA-Z0-9][a-zA-Z0-9_-]*[a-zA-Z0-9]/?$"
       },
       "default": []
     },
     "associated_agents": {
       "type": "array",
       "description": "Relative paths to agent folders in this repository that this agent depends on at runtime.",
+      "maxItems": 64,
+      "uniqueItems": true,
       "items": {
-        "type": "string",
-        "pattern": "^agents/[a-z0-9][a-z0-9-]*$"
+        "$ref": "common-schema.json#/definitions/agentPath"
       },
       "default": []
     },
@@ -48,21 +50,20 @@
       "properties": {
         "name": {
           "type": "string",
-          "description": "Display name of the publishing team or organisation."
+          "description": "Display name of the publishing team or organisation.",
+          "minLength": 1,
+          "maxLength": 200
         },
         "contact": {
-          "type": "string",
-          "format": "email",
-          "description": "Primary contact email for this agent."
+          "allOf": [{ "$ref": "common-schema.json#/definitions/emailAddress" }],
+          "description": "Primary contact email for this agent. RFC 5322 compliant."
         },
         "support_url": {
-          "type": "string",
-          "format": "uri",
-          "description": "URL to the support page or issue tracker for this agent."
+          "allOf": [{ "$ref": "common-schema.json#/definitions/httpsUrl" }],
+          "description": "URL to the support page or issue tracker for this agent. https required."
         },
         "party": {
-          "type": "string",
-          "enum": ["1p", "3p"],
+          "allOf": [{ "$ref": "common-schema.json#/definitions/party" }],
           "description": "Optional. '1p' = Microsoft first-party authored; '3p' = ISV / external partner. Drives the 1p-contribution / 3p-contribution PR labels."
         }
       }
@@ -70,27 +71,31 @@
     "description": {
       "type": "string",
       "description": "Plain-language description of what this agent or project does. Maximum 500 characters.",
+      "minLength": 1,
       "maxLength": 500
     },
     "tags": {
       "type": "array",
       "description": "One or more tags for discoverability in Discovery Studio.",
       "minItems": 1,
+      "maxItems": 64,
+      "uniqueItems": true,
       "items": {
-        "type": "string",
-        "pattern": "^[a-z0-9][a-z0-9-]*$"
+        "$ref": "common-schema.json#/definitions/kebabCaseString"
       }
     },
     "path": {
-      "type": "string",
+      "allOf": [{ "$ref": "common-schema.json#/definitions/agentPath" }],
       "description": "Relative path from repo root to this folder (e.g. agents/my-agent). Auto-derived from folder structure if omitted.",
-      "pattern": "^agents/[a-z0-9][a-z0-9-]*$"
+      "examples": ["agents/my-agent"]
     },
     "supported_regions": {
       "type": "array",
       "description": "Azure region ARM aliases where this agent is supported. If omitted, the agent is considered globally available.",
+      "maxItems": 100,
+      "uniqueItems": true,
       "items": {
-        "type": "string"
+        "$ref": "common-schema.json#/definitions/azureRegion"
       },
       "default": []
     },
