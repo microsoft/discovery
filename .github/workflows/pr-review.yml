@@ -26,8 +26,43 @@ jobs:
       changed_files: ${{ steps.changed.outputs.all_changed_files }}
       has_agents: ${{ steps.classify.outputs.has_agents }}
       has_docs_only: ${{ steps.classify.outputs.has_docs_only }}
+      author_permission: ${{ steps.author_permission.outputs.permission }}
     steps:
-      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+      - name: Resolve PR author repository permission
+        id: author_permission
+        uses: actions/github-script@v9
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const username = context.payload.pull_request.user.login;
+            const knownPermissions = new Set([
+              'admin', 'maintain', 'write', 'triage', 'read', 'none'
+            ]);
+            let permission = 'unknown';
+
+            try {
+              const response = await github.rest.repos.getCollaboratorPermissionLevel({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                username,
+              });
+              const reported = String(response.data.permission || '').toLowerCase();
+              permission = knownPermissions.has(reported) ? reported : 'unknown';
+            } catch (error) {
+              if (error.status === 404) {
+                permission = 'none';
+              } else {
+                core.warning(
+                  `Could not resolve repository permission for @${username}; ` +
+                  `applying public-contributor scope. ${error.message}`
+                );
+              }
+            }
+
+            core.info(`Repository permission for @${username}: ${permission}`);
+            core.setOutput('permission', permission);
+
+      - uses: actions/checkout@v6
         with:
           ref: ${{ github.event.pull_request.head.sha }}
           allow-unsafe-pr-checkout: true
@@ -110,7 +145,7 @@ jobs:
           python-version: "3.12"
 
       - name: Install dependencies
-        run: pip install --index-url https://packagefeedproxy.microsoft.io/pypi/simple/ jsonschema pyyaml onnx picklescan dnspython==2.8.0 codespell==2.4.1
+        run: pip install --index-url https://packagefeedproxy.microsoft.io/pypi/simple/ -r trusted/.github/requirements-ci.txt
 
       - name: Write changed files list
         env:
@@ -143,6 +178,9 @@ jobs:
           # Exempt requires BOTH author and head ref to match.
           PR_AUTHOR: ${{ github.event.pull_request.user.login }}
           PR_HEAD_REF: ${{ github.event.pull_request.head.ref }}
+          # POL-021 treats an absent or failed lookup as public scope. Only
+          # admin/maintain/write can modify paths outside the catalog roots.
+          PR_AUTHOR_PERMISSION: ${{ needs.classify.outputs.author_permission || 'unknown' }}
         run: |
           # Invoke validator from the trusted checkout (base SHA) against PR content.
           python trusted/.github/scripts/validate_pr.py \
@@ -224,9 +262,10 @@ jobs:
           BASE_SHA: ${{ github.event.pull_request.base.sha }}
           HEAD_SHA: ${{ github.event.pull_request.head.sha }}
         run: |
-          # Install TruffleHog directly — avoids org-level action allowlist restrictions
-          curl -sSfL https://raw.githubusercontent.com/trufflesecurity/trufflehog/main/scripts/install.sh \
-            | sh -s -- -b /usr/local/bin
+          # Install directly to avoid org-level action allowlist restrictions.
+          # The immutable installer verifies the selected release checksum.
+          curl -sSfL https://raw.githubusercontent.com/trufflesecurity/trufflehog/bcfcf73aaf4759d4dadc2783177c245a02792318/scripts/install.sh \
+            | sh -s -- -b /usr/local/bin v3.97.0
           trufflehog git file://. \
             --since-commit "$BASE_SHA" \
             --branch "$HEAD_SHA" \

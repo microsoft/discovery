@@ -1,0 +1,10 @@
+# Direct dependencies for trusted validators, generators, and their tests.
+# Keep versions here so Dependabot can update them and workflows cannot drift.
+codespell==2.4.1
+dnspython==2.8.0
+jsonschema==4.23.0
+onnx==1.22.0
+picklescan==1.0.5
+pytest==9.0.3
+pyyaml==6.0.2
+referencing==0.35.1

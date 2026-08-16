@@ -10,7 +10,6 @@ from __future__ import annotations
 import argparse
 import json
 import os
-import re
 import socket
 from dataclasses import asdict, dataclass
 from datetime import datetime, timezone
@@ -21,6 +20,8 @@ from urllib.parse import urlencode
 from urllib.request import Request, urlopen
 
 import yaml
+
+from source_locations import line_for_key_path_in_file
 
 URLHAUS_ENDPOINT = "https://urlhaus-api.abuse.ch/v1/url/"
 PHISHTANK_ENDPOINT = "https://checkurl.phishtank.com/checkurl/"
@@ -55,28 +56,16 @@ class ReputationFinding:
     locations: tuple[CatalogLocation, ...]
 
 
-def _line_for_key(path: Path, key: str) -> int:
-    try:
-        text = path.read_text(encoding="utf-8")
-    except (OSError, UnicodeDecodeError):
-        return 1
-    pattern = re.compile(rf'^\s*["\']?{re.escape(key)}["\']?\s*:')
-    for line_number, line in enumerate(text.splitlines(), start=1):
-        if pattern.match(line):
-            return line_number
-    return 1
-
-
 def collect_catalog_urls(repo: Path) -> list[CatalogUrl]:
     """Collect and deduplicate the webpage fields governed by POL-018."""
     found: dict[str, list[CatalogLocation]] = {}
 
-    def add(path: Path, field: str, key: str, value: object) -> None:
+    def add(path: Path, field: str, key_path: tuple[str, ...], value: object) -> None:
         if not isinstance(value, str) or not value:
             return
         rel = path.relative_to(repo).as_posix()
         found.setdefault(value, []).append(
-            CatalogLocation(rel, field, _line_for_key(path, key))
+            CatalogLocation(rel, field, line_for_key_path_in_file(path, key_path))
         )
 
     for path in sorted((repo / "agents").glob("*/metadata.yaml")):
@@ -86,7 +75,12 @@ def collect_catalog_urls(repo: Path) -> list[CatalogUrl]:
             continue
         publisher = data.get("publisher") if isinstance(data, dict) else None
         if isinstance(publisher, dict):
-            add(path, "publisher.support_url", "support_url", publisher.get("support_url"))
+            add(
+                path,
+                "publisher.support_url",
+                ("publisher", "support_url"),
+                publisher.get("support_url"),
+            )
 
     for path in sorted((repo / "starter-kits").glob("*/kit.json")):
         try:
@@ -97,9 +91,9 @@ def collect_catalog_urls(repo: Path) -> list[CatalogUrl]:
             continue
         author = data.get("author")
         if isinstance(author, dict):
-            add(path, "author.url", "url", author.get("url"))
+            add(path, "author.url", ("author", "url"), author.get("url"))
         for key in ("homepage", "repository"):
-            add(path, key, key, data.get(key))
+            add(path, key, (key,), data.get(key))
 
     return [
         CatalogUrl(url, tuple(locations))

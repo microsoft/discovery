@@ -8,7 +8,8 @@ name: Unit Tests
 # non-triggered required check as "expected, never reported" which blocks PRs
 # that don't touch the relevant paths. To avoid that, the workflow runs on
 # every PR and a "Detect relevant changes" guard step skips the real work
-# (but still reports success) when no scripts/tests/policy/schema/workflow files changed.
+# (but still reports success) when no trusted code, policy, schema, or security
+# automation files changed.
 
 on:
   pull_request:
@@ -16,9 +17,14 @@ on:
     branches:
       - main
     paths:
+      - ".github/codeql/**"
+      - ".github/dependabot.yml"
+      - ".github/requirements-ci.txt"
       - ".github/scripts/**"
       - ".github/tests/**"
       - ".github/policy/**"
+      - ".github/workflows/code-scan.yml"
+      - ".github/workflows/dependency-review.yml"
       - ".github/workflows/unit-tests.yml"
       - "docs/schemas/**"
   workflow_dispatch:
@@ -43,11 +49,11 @@ jobs:
           FILES=$(gh api \
             "repos/${GITHUB_REPOSITORY}/pulls/${{ github.event.pull_request.number }}/files" \
             --paginate --jq '.[].filename')
-          if echo "$FILES" | grep -E '^\.github/(scripts|tests|policy)/|^\.github/workflows/unit-tests\.yml$|^docs/schemas/' >/dev/null; then
+          if echo "$FILES" | grep -E '^\.github/(scripts|tests|policy|codeql)/|^\.github/(dependabot\.yml|requirements-ci\.txt)$|^\.github/workflows/(code-scan|dependency-review|unit-tests)\.yml$|^docs/schemas/' >/dev/null; then
             echo "relevant=true" >> "$GITHUB_OUTPUT"
           else
             echo "relevant=false" >> "$GITHUB_OUTPUT"
-            echo "::notice::No scripts/tests/policy/schema/unit-tests-workflow paths changed; reporting success without running pytest."
+            echo "::notice::No trusted code, policy, schema, or security automation paths changed; reporting success without running pytest."
           fi
 
       - name: Checkout
@@ -62,7 +68,7 @@ jobs:
 
       - name: Install dependencies
         if: github.event_name != 'pull_request' || steps.changes.outputs.relevant == 'true'
-        run: pip install --index-url https://packagefeedproxy.microsoft.io/pypi/simple/ pytest jsonschema pyyaml picklescan onnx dnspython==2.8.0 codespell==2.4.1
+        run: pip install --index-url https://packagefeedproxy.microsoft.io/pypi/simple/ -r .github/requirements-ci.txt
 
       - name: Run unit tests
         if: github.event_name != 'pull_request' || steps.changes.outputs.relevant == 'true'

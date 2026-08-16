@@ -44,6 +44,20 @@ def test_starter_kit_webpages_are_checked_once_per_unique_url(repo, monkeypatch)
     assert checked == ["https://example.com", "https://github.com/example/demo"]
 
 
+def test_starter_kit_author_url_reports_its_nested_source_line(repo, monkeypatch):
+    rel = write(
+        repo,
+        "starter-kits/demo/kit.json",
+        '{\n  "url": "https://example.com/unrelated",\n'
+        '  "author": {\n    "url": "https://example.invalid/author"\n  }\n}\n',
+    )
+    monkeypatch.setattr(pol_018, "validate_webpage", lambda *_: "host does not exist")
+
+    result = run_rule(repo, pol_018.RULE, [rel])
+
+    assert result.findings[0].line == 4
+
+
 def test_untouched_catalog_entries_are_not_checked(repo, monkeypatch):
     write(
         repo,

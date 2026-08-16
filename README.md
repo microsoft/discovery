@@ -47,7 +47,7 @@ In addition, this repository hosts the **public Discovery Catalog** — the cano
 
 The canonical conceptual reference for both the app and the services is [Microsoft Discovery on Microsoft Learn](https://learn.microsoft.com/en-us/azure/microsoft-discovery/). The starting points most users want:
 
-- [Microsoft Discovery & the Microsoft Discovery app](https://learn.microsoft.com/azure/microsoft-discovery/concept-discovery-and-discovery-app) - detailed comparison of Discovery experiences 
+- [Microsoft Discovery & the Microsoft Discovery app](https://learn.microsoft.com/azure/microsoft-discovery/concept-discovery-and-discovery-app) - detailed comparison of Discovery experiences
 - [Discovery Agent concepts](https://learn.microsoft.com/azure/microsoft-discovery/concept-discovery-agent) — what an agent is and how it's invoked
 - [Discovery Engine overview](https://learn.microsoft.com/azure/microsoft-discovery/concept-discovery-engine) — the cognition layer
 - [Bookshelf and Knowledge Bases](https://learn.microsoft.com/azure/microsoft-discovery/concept-bookshelf-knowledge-bases) — how indexing and retrieval work
@@ -74,7 +74,7 @@ For an app-specific 15-minute hands-on tour, see [`docs/discovery-app/quickstart
 
 ### Install and use the Discovery app
 
-The Microsoft Discovery app is a **self-contained Windows application** — no SDK, no cloud setup, no IT ticket. Download the latest release installer and follow the [Quickstart guide](docs/discovery-app/quickstart.md) to get started. 
+The Microsoft Discovery app is a **self-contained Windows application** — no SDK, no cloud setup, no IT ticket. Download the latest release installer and follow the [Quickstart guide](docs/discovery-app/quickstart.md) to get started.
 
 **Have feedback?** See [`docs/discovery-app/feedback.md`](docs/discovery-app/feedback.md).
 
@@ -90,11 +90,16 @@ The Microsoft Discovery app is a **self-contained Windows application** — no S
 
 All contributions — from Microsoft engineers and external partners — arrive via **pull request from a fork**. Direct pushes to `main` are not permitted.
 
+Public contributors may submit catalog content and documentation directly by
+pull request. Trusted automation, repository configuration, schemas, generated
+output, and executable utilities must be authored by a maintainer; propose
+those changes through the matching Discussions category.
+
 | Type | Goes to | First read |
 | --- | --- | --- |
 | **New agent** | `agents/<agent-name>/` | [Agent authoring guide](docs/authoring-guides/agent-authoring-guide.md) |
 | **New starter kit** | `starter-kits/<kit-name>/` | [Starter-kit authoring guide](docs/authoring-guides/starter-kit-authoring-guide.md) |
-| **Documentation fix** | `docs/`, `README.md`, etc. | [`CONTRIBUTING.md`](CONTRIBUTING.md) |
+| **Documentation fix** | Pull request changing Markdown or content under `docs/` | [`CONTRIBUTING.md`](CONTRIBUTING.md) |
 | **Idea / feature request** | [Discussions → Ideas](https://github.com/microsoft/discovery/discussions/categories/ideas) | — |
 | **Bug** | [Discussions → Bugs](https://github.com/microsoft/discovery/discussions/categories/bugs) | — |
 | **Question** | [Discussions → Q&A](https://github.com/microsoft/discovery/discussions/categories/q-a) | — |
