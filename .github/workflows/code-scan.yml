@@ -3,15 +3,17 @@ name: Code Scan
 # Static analysis of contributed code, using Microsoft and GitHub tooling
 # rather than bespoke rules:
 #
-#   CodeQL              — dataflow analysis of contributed Python.
+#   CodeQL              — dataflow analysis of contributed Python, trusted
+#                         repository Python, and GitHub Actions workflows.
 #   DevSkim             — Microsoft's security linter (microsoft/DevSkim).
 #   ApplicationInspector— Microsoft's characterization scanner. Answers "what
 #                         does this code actually DO" (network, shell, crypto,
 #                         file I/O), which is the question a reviewer of an
 #                         untrusted scientific tool most needs answered.
 #
-# Everything here is scoped to agents/ and starter-kits/. Maintainer-owned
-# tooling is reviewed through a different path and would only add noise.
+# Contributor and maintainer code are analyzed as separate CodeQL categories so
+# findings retain a clear owner. DevSkim and Application Inspector remain scoped
+# to contributed catalog code, where their broad characterization is useful.
 #
 # Rollout posture: reporting, not gating. Pointing three new analyzers at 46
 # pre-existing agents would produce a flood of findings that blocks unrelated
@@ -22,13 +24,23 @@ name: Code Scan
 on:
   pull_request:
     paths:
+      - ".github/codeql/**"
+      - ".github/scripts/**"
+      - ".github/tests/**"
+      - ".github/workflows/**"
       - "agents/**"
       - "starter-kits/**"
+      - "utilities/**"
   push:
     branches: [main]
     paths:
+      - ".github/codeql/**"
+      - ".github/scripts/**"
+      - ".github/tests/**"
+      - ".github/workflows/**"
       - "agents/**"
       - "starter-kits/**"
+      - "utilities/**"
   workflow_dispatch:
 
 permissions:
@@ -40,24 +52,37 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  # ── CodeQL over contributed Python ────────────────────────────────────────
+  # ── CodeQL over contributed and repository-owned code ────────────────────
   codeql:
-    name: CodeQL (python)
+    name: CodeQL (${{ matrix.scope }})
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - language: python
+            scope: catalog-python
+            config: ./.github/codeql/codeql-config.yml
+          - language: python
+            scope: repository-python
+            config: ./.github/codeql/repository-config.yml
+          - language: actions
+            scope: workflows
+            config: ./.github/codeql/actions-config.yml
     steps:
       - uses: actions/checkout@v6
 
       - name: Initialize CodeQL
-        uses: github/codeql-action/init@v3
+        uses: github/codeql-action/init@v4
         with:
-          languages: python
-          config-file: ./.github/codeql/codeql-config.yml
+          languages: ${{ matrix.language }}
+          config-file: ${{ matrix.config }}
 
       - name: Analyze
-        uses: github/codeql-action/analyze@v3
+        uses: github/codeql-action/analyze@v4
         with:
-          category: "/language:python"
+          category: "/language:${{ matrix.language }}/scope:${{ matrix.scope }}"
 
   # ── DevSkim security lint ─────────────────────────────────────────────────
   devskim:
@@ -89,7 +114,7 @@ jobs:
       - name: Upload agents SARIF
         if: ${{ github.event.pull_request.head.repo.full_name == github.repository || github.event_name != 'pull_request' }}
         continue-on-error: true
-        uses: github/codeql-action/upload-sarif@v3
+        uses: github/codeql-action/upload-sarif@v4
         with:
           sarif_file: devskim-agents.sarif
           category: devskim-agents
@@ -97,7 +122,7 @@ jobs:
       - name: Upload starter-kits SARIF
         if: ${{ github.event.pull_request.head.repo.full_name == github.repository || github.event_name != 'pull_request' }}
         continue-on-error: true
-        uses: github/codeql-action/upload-sarif@v3
+        uses: github/codeql-action/upload-sarif@v4
         with:
           sarif_file: devskim-starter-kits.sarif
           category: devskim-starter-kits
@@ -149,8 +174,8 @@ jobs:
         with:
           dotnet-version: "8.0"
 
-      - name: Install Application Inspector
-        run: dotnet tool install --global Microsoft.CST.ApplicationInspector.CLI
+      - name: Restore Application Inspector
+        run: dotnet tool restore
 
       # Application Inspector reports features rather than defects: network
       # calls, shell execution, cryptography, file and cloud APIs. For an
@@ -165,7 +190,7 @@ jobs:
           scan() {
             local dir="$1"; local out="$2"
             [ -d "$dir" ] || { echo "_No $dir directory._" > "$out"; return; }
-            appinspector analyze \
+            dotnet tool run appinspector analyze \
               -s "$dir" \
               -f markdown \
               -o "$out" \

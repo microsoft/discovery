@@ -4,21 +4,12 @@
 from __future__ import annotations
 
 import json
-import re
 
 from contact_network_validator import ContactNetworkPolicy, validate_webpage
 from rules.base import Finding, Rule, RuleContext, Scope
+from source_locations import line_for_key_path
 
 POLICY_PATH = ".github/policy/contact-network.json"
-
-
-def _line_for_key(ctx: RuleContext, rel: str, key: str) -> int:
-    text = ctx.read_text(rel) or ""
-    pattern = re.compile(rf'^\s*["\']?{re.escape(key)}["\']?\s*:')
-    for line_number, line in enumerate(text.splitlines(), start=1):
-        if pattern.match(line):
-            return line_number
-    return 1
 
 
 def _targets(ctx: RuleContext) -> list[tuple[str, str, str, int]]:
@@ -34,7 +25,8 @@ def _targets(ctx: RuleContext) -> list[tuple[str, str, str, int]]:
             continue
         value = publisher.get("support_url")
         if isinstance(value, str) and value:
-            targets.append((rel, "publisher.support_url", value, _line_for_key(ctx, rel, "support_url")))
+            line = line_for_key_path(ctx.read_text(rel) or "", ("publisher", "support_url"))
+            targets.append((rel, "publisher.support_url", value, line))
 
     for folder in sorted(ctx.kit_folders):
         rel = (folder / "kit.json").as_posix()
@@ -46,12 +38,14 @@ def _targets(ctx: RuleContext) -> list[tuple[str, str, str, int]]:
         if isinstance(author, dict):
             value = author.get("url")
             if isinstance(value, str) and value:
-                targets.append((rel, "author.url", value, _line_for_key(ctx, rel, "url")))
+                line = line_for_key_path(ctx.read_text(rel) or "", ("author", "url"))
+                targets.append((rel, "author.url", value, line))
 
         for key in ("homepage", "repository"):
             value = data.get(key)
             if isinstance(value, str) and value:
-                targets.append((rel, key, value, _line_for_key(ctx, rel, key)))
+                line = line_for_key_path(ctx.read_text(rel) or "", (key,))
+                targets.append((rel, key, value, line))
 
     return targets
 

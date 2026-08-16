@@ -90,14 +90,35 @@ def load_existing(repo: Path) -> list[dict]:
     if not path.exists():
         return []
     try:
-        return json.loads(path.read_text(encoding="utf-8")).get("violations", [])
-    except (json.JSONDecodeError, OSError):
-        return []
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except (json.JSONDecodeError, OSError) as exc:
+        raise ValueError(f"could not read {BASELINE_PATH}: {exc}") from exc
+
+    violations = payload.get("violations") if isinstance(payload, dict) else None
+    if not isinstance(violations, list):
+        raise ValueError(f"{BASELINE_PATH} must contain a 'violations' array")
+
+    pairs: list[tuple[str, str]] = []
+    for index, violation in enumerate(violations):
+        if not isinstance(violation, dict):
+            raise ValueError(f"{BASELINE_PATH} violations[{index}] must be an object")
+        rule_id = violation.get("rule_id")
+        file = violation.get("file")
+        if not isinstance(rule_id, str) or not rule_id or not isinstance(file, str) or not file:
+            raise ValueError(
+                f"{BASELINE_PATH} violations[{index}] requires non-empty rule_id and file"
+            )
+        pairs.append((rule_id, file))
+
+    if len(pairs) != len(set(pairs)):
+        raise ValueError(f"{BASELINE_PATH} contains duplicate rule_id/file entries")
+    return violations
 
 
 def write_baseline(repo: Path, violations: list[dict]) -> None:
     path = repo / BASELINE_PATH
     path.parent.mkdir(parents=True, exist_ok=True)
+    pairs = sorted({(v["rule_id"], v["file"]) for v in violations})
     payload = {
         "_comment": (
             "Pre-existing rule violations recorded at ruleset rollout. Entries "
@@ -106,9 +127,9 @@ def write_baseline(repo: Path, violations: list[dict]) -> None:
             ".github/policy/waivers.yaml. Regenerate with "
             "python .github/scripts/generate_baseline.py"
         ),
-        "count": len(violations),
+        "count": len(pairs),
         "violations": [
-            {"rule_id": v["rule_id"], "file": v["file"]} for v in violations
+            {"rule_id": rule_id, "file": file} for rule_id, file in pairs
         ],
     }
     path.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
@@ -152,7 +173,12 @@ def main() -> int:
         return 0
 
     if args.check:
-        recorded = {(v["rule_id"], v["file"]) for v in load_existing(repo)}
+        try:
+            existing = load_existing(repo)
+        except ValueError as exc:
+            print(f"BASELINE ERROR: {exc}", file=sys.stderr)
+            return 1
+        recorded = {(v["rule_id"], v["file"]) for v in existing}
         current = {(v["rule_id"], v["file"]) for v in violations}
         added = sorted(current - recorded)
         if added:

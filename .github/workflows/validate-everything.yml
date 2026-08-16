@@ -27,7 +27,7 @@ jobs:
           python-version: "3.12"
 
       - name: Install dependencies
-        run: pip install --index-url https://packagefeedproxy.microsoft.io/pypi/simple/ jsonschema pyyaml onnx picklescan dnspython==2.8.0
+        run: pip install --index-url https://packagefeedproxy.microsoft.io/pypi/simple/ -r .github/requirements-ci.txt
 
       - name: Build full file list and run validate_pr.py
         run: |
@@ -76,7 +76,7 @@ jobs:
           python-version: "3.11"
 
       - name: Install dependencies
-        run: pip install jsonschema pyyaml
+        run: pip install -c .github/requirements-ci.txt jsonschema pyyaml
 
       - name: Run validate_starter_kits.py against all kits
         run: |

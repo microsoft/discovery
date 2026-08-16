@@ -4,21 +4,12 @@
 from __future__ import annotations
 
 import json
-import re
 
 from contact_network_validator import ContactNetworkPolicy, validate_email_domain
 from rules.base import Finding, Rule, RuleContext, Scope
+from source_locations import line_for_key_path
 
 POLICY_PATH = ".github/policy/contact-network.json"
-
-
-def _line_for_key(ctx: RuleContext, rel: str, key: str) -> int:
-    text = ctx.read_text(rel) or ""
-    pattern = re.compile(rf'^\s*["\']?{re.escape(key)}["\']?\s*:')
-    for line_number, line in enumerate(text.splitlines(), start=1):
-        if pattern.match(line):
-            return line_number
-    return 1
 
 
 def _targets(ctx: RuleContext) -> list[tuple[str, str, str, int]]:
@@ -34,7 +25,8 @@ def _targets(ctx: RuleContext) -> list[tuple[str, str, str, int]]:
             continue
         value = publisher.get("contact")
         if isinstance(value, str) and value:
-            targets.append((rel, "publisher.contact", value, _line_for_key(ctx, rel, "contact")))
+            line = line_for_key_path(ctx.read_text(rel) or "", ("publisher", "contact"))
+            targets.append((rel, "publisher.contact", value, line))
 
     for folder in sorted(ctx.kit_folders):
         rel = (folder / "kit.json").as_posix()
@@ -46,7 +38,8 @@ def _targets(ctx: RuleContext) -> list[tuple[str, str, str, int]]:
             continue
         value = author.get("email")
         if isinstance(value, str) and value:
-            targets.append((rel, "author.email", value, _line_for_key(ctx, rel, "email")))
+            line = line_for_key_path(ctx.read_text(rel) or "", ("author", "email"))
+            targets.append((rel, "author.email", value, line))
 
     return targets
 

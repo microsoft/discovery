@@ -1,0 +1,12 @@
+# CodeQL configuration for trusted repository automation and utilities.
+# Kept separate from contributed catalog code so alerts have a clear owner.
+
+name: "Discovery repository Python"
+
+paths:
+  - .github/scripts
+  - .github/tests
+  - utilities
+
+queries:
+  - uses: security-and-quality

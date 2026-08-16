@@ -50,7 +50,7 @@ jobs:
 
       - name: Install dependencies
         if: steps.changes.outputs.relevant == 'true'
-        run: pip install pyyaml
+        run: pip install -c .github/requirements-ci.txt pyyaml
 
       - name: Detect fork PR
         if: steps.changes.outputs.relevant == 'true'

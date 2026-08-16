@@ -54,7 +54,7 @@ jobs:
           python-version: "3.12"
 
       - name: Install dependencies
-        run: pip install --index-url https://packagefeedproxy.microsoft.io/pypi/simple/ jsonschema pyyaml onnx picklescan dnspython==2.8.0
+        run: pip install --index-url https://packagefeedproxy.microsoft.io/pypi/simple/ -r .github/requirements-ci.txt
 
       - name: Audit every agent and starter kit
         id: audit
@@ -114,7 +114,7 @@ jobs:
           python-version: "3.12"
 
       - name: Install dependencies
-        run: pip install --index-url https://packagefeedproxy.microsoft.io/pypi/simple/ pyyaml
+        run: pip install --index-url https://packagefeedproxy.microsoft.io/pypi/simple/ -c .github/requirements-ci.txt pyyaml
 
       # Configure both as repository Actions secrets. The script sends the
       # URLhaus key in Auth-Key and the PhishTank key in a POST body; neither
@@ -178,7 +178,7 @@ jobs:
           python-version: "3.12"
 
       - name: Install dependencies
-        run: pip install --index-url https://packagefeedproxy.microsoft.io/pypi/simple/ pyyaml
+        run: pip install --index-url https://packagefeedproxy.microsoft.io/pypi/simple/ -c .github/requirements-ci.txt pyyaml
 
       - name: Enumerate distinct base images
         id: list
@@ -222,8 +222,9 @@ jobs:
           IMAGE: ${{ matrix.image }}
         run: |
           set -uo pipefail
-          curl -fsSL https://raw.githubusercontent.com/docker/scout-cli/main/install.sh \
-            | sh -s -- -b "$HOME/.docker/scout"
+          # The immutable installer verifies the selected release checksum.
+          curl -fsSL https://raw.githubusercontent.com/docker/scout-cli/c7ac4ce317eafa536bf2421d1c223908e2200dce/install.sh \
+            | sh -s -- -b "$HOME/.docker/scout" v1.24.0
           export PATH="$HOME/.docker/scout:$PATH"
 
           # Image reference comes from repository content, so pass it through
@@ -280,15 +281,14 @@ jobs:
       - name: Run Microsoft Security DevOps
         id: msdo
         continue-on-error: true
-        # `@latest` is the reference the action's own documentation uses.
-        uses: microsoft/security-devops-action@latest
+        uses: microsoft/security-devops-action@08976cb623803b1b36d7112d4ff9f59eae704de0 # v1.12.0
         with:
           tools: bandit,checkov,trivy,antimalware
 
       - name: Upload results to the Security tab
         if: ${{ steps.msdo.outputs.sarifFile != '' }}
         continue-on-error: true
-        uses: github/codeql-action/upload-sarif@v3
+        uses: github/codeql-action/upload-sarif@v4
         with:
           sarif_file: ${{ steps.msdo.outputs.sarifFile }}
           category: msdo

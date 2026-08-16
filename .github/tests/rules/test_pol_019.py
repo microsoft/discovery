@@ -47,6 +47,22 @@ def test_same_email_domain_is_resolved_once(repo, monkeypatch):
     assert checked == ["agent@example.com"]
 
 
+def test_starter_kit_author_email_reports_its_nested_source_line(repo, monkeypatch):
+    rel = write(
+        repo,
+        "starter-kits/demo/kit.json",
+        '{\n  "email": "unrelated@example.com",\n'
+        '  "author": {\n    "email": "owner@example.invalid"\n  }\n}\n',
+    )
+    monkeypatch.setattr(
+        pol_019, "validate_email_domain", lambda *_: "domain does not exist"
+    )
+
+    result = run_rule(repo, pol_019.RULE, [rel])
+
+    assert result.findings[0].line == 4
+
+
 def test_untouched_catalog_entries_are_not_checked(repo, monkeypatch):
     write(
         repo,

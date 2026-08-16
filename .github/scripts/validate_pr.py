@@ -204,6 +204,86 @@ class Failure:
         }
 
 
+_MAINTAINER_PERMISSIONS = frozenset({"admin", "maintain", "write"})
+_PUBLIC_CATALOG_ROOTS = frozenset({"agents", "starter-kits"})
+_PROTECTED_ROOTS = frozenset({".auto-registry", ".github", ".vscode"})
+_PROTECTED_PATHS = frozenset({"docs/validation-rules.md"})
+_REGISTRY_REFRESH_BOT_AUTHORS = frozenset({
+    "github-actions[bot]",
+    "discovery-registry-bot[bot]",
+})
+
+
+def _is_trusted_registry_refresh(author: str, head_ref: str) -> bool:
+    return (
+        head_ref.startswith("chore/registry-refresh")
+        and author in _REGISTRY_REFRESH_BOT_AUTHORS
+    )
+
+
+def _is_public_contribution_path(path: str) -> bool:
+    normalized = path.replace("\\", "/")
+    parts = normalized.split("/")
+    if not parts or any(part in {"", ".", ".."} for part in parts):
+        return False
+
+    if normalized in _PROTECTED_PATHS or parts[0] in _PROTECTED_ROOTS:
+        return False
+    if len(parts) >= 2 and parts[:2] == ["docs", "schemas"]:
+        return False
+
+    if len(parts) >= 2 and parts[0] in _PUBLIC_CATALOG_ROOTS:
+        return True
+    if len(parts) >= 2 and parts[0] == "docs":
+        return True
+    if len(parts) >= 3 and parts[:2] == ["includes", "media"]:
+        return True
+
+    # Documentation next to maintained utilities is still documentation; other
+    # utility files and unknown repository paths fail closed as executable code.
+    return normalized.lower().endswith(".md")
+
+
+def check_contributor_scope(
+    changed_files: list[str],
+    author_permission: str | None,
+    author: str = "",
+    head_ref: str = "",
+) -> list[Failure]:
+    """Protect trusted code and configuration from non-maintainer PRs.
+
+    ``author_permission`` is supplied by the trusted PR workflow after a GitHub
+    API lookup. An absent value disables this PR-context-only check for local
+    and scheduled whole-repository validation. Unknown permissions fail closed
+    and receive the same least-privilege scope as public contributors. Catalog
+    content and documentation remain open to public pull requests.
+    """
+    if author_permission is None:
+        return []
+
+    permission = author_permission.strip().lower() or "unknown"
+    if (
+        permission in _MAINTAINER_PERMISSIONS
+        or _is_trusted_registry_refresh(author, head_ref)
+    ):
+        return []
+
+    actor = f"@{author}" if author else "The PR author"
+    failures: list[Failure] = []
+    for changed_file in changed_files:
+        if not _is_public_contribution_path(changed_file):
+            failures.append(Failure(
+                "POL-021",
+                changed_file,
+                f"{actor} has repository permission '{permission}'. Public contributors "
+                "may modify catalog content and documentation, but trusted automation, "
+                "repository configuration, schemas, generated output, and executable "
+                "utilities require a maintainer-authored change. Remove this file from "
+                "the PR or ask a repository maintainer to author the change.",
+            ))
+    return failures
+
+
 # ── Checks ────────────────────────────────────────────────────────────────────
 
 def check_structural(repo: Path, folders: set[Path], changed_files: list[str]) -> list[Failure]:
@@ -708,10 +788,7 @@ def check_policy(repo: Path, folders: set[Path], changed_files: list[str]) -> li
     # 'chore/registry-refresh'.
     pr_author = os.environ.get("PR_AUTHOR", "")
     pr_head_ref = os.environ.get("PR_HEAD_REF", "")
-    is_bot_registry_refresh = (
-        pr_head_ref.startswith("chore/registry-refresh")
-        and pr_author in {"github-actions[bot]", "discovery-registry-bot[bot]"}
-    )
+    is_bot_registry_refresh = _is_trusted_registry_refresh(pr_author, pr_head_ref)
     if not is_bot_registry_refresh:
         for f in changed_files:
             rel_posix = f.replace("\\", "/")
@@ -1067,6 +1144,12 @@ def main():
 
     # Run ALL checks — collect everything before reporting
     failures: list[Failure] = []
+    failures += check_contributor_scope(
+        changed_files,
+        os.environ.get("PR_AUTHOR_PERMISSION"),
+        os.environ.get("PR_AUTHOR", ""),
+        os.environ.get("PR_HEAD_REF", ""),
+    )
     failures += check_structural(repo, folders, changed_files)
     failures += check_schema(
         repo, folders, agent_schema, tool_schema, metadata_schema, schema_registry

@@ -49,7 +49,7 @@ jobs:
 
       - name: Install dependencies
         if: steps.changes.outputs.relevant == 'true'
-        run: pip install jsonschema pyyaml
+        run: pip install -c .github/requirements-ci.txt jsonschema pyyaml
 
       - name: Determine changed starter kits
         if: steps.changes.outputs.relevant == 'true'

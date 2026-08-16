@@ -42,7 +42,7 @@ jobs:
           python-version: "3.11"
 
       - name: Install dependencies
-        run: pip install pyyaml jsonschema
+        run: pip install -c .github/requirements-ci.txt pyyaml jsonschema referencing
 
       - name: Rebuild .auto-registry/agent-registry.json
         run: python .github/scripts/update_registry.py --repo-root . --output .auto-registry/agent-registry.json

@@ -39,6 +39,20 @@ def test_collect_catalog_urls_deduplicates_and_preserves_locations(tmp_path: Pat
     assert urls[1].locations[0].line == 2
 
 
+def test_collect_catalog_urls_uses_nested_author_url_line(tmp_path: Path):
+    kit = tmp_path / "starter-kits" / "demo" / "kit.json"
+    kit.parent.mkdir(parents=True)
+    kit.write_text(
+        '{\n  "url": "https://example.com/unrelated",\n'
+        '  "author": {\n    "url": "https://example.com/author"\n  }\n}\n',
+        encoding="utf-8",
+    )
+
+    urls = audit.collect_catalog_urls(tmp_path)
+
+    assert urls[0].locations[0].line == 4
+
+
 def test_audit_checks_each_url_with_both_providers():
     checked: list[tuple[str, str, str]] = []
 
