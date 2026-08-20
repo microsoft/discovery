@@ -3,16 +3,16 @@
 Use the manually dispatched **Validate Everything** workflow to test pipeline
 changes without modifying an open pull request. The workflow has two modes.
 
+The repository helper is the preferred interface. It uses the current branch by
+default and requires an authenticated GitHub CLI session (`gh auth login`).
+
 ## Test a candidate branch
 
 Leave `pr_number` blank. Both full-catalog jobs run from the selected branch and
 fail normally when the branch's validators, schemas, or tests find a problem.
 
 ```console
-gh workflow run validate-everything.yml \
-  --repo microsoft/discovery \
-  --ref users/yousefi-msft/community-review-pipeline \
-  -f reason="Candidate branch smoke test"
+python .github/scripts/run_validation_workflow.py --reason="Candidate branch smoke test"
 ```
 
 ## Shadow-test an open pull request
@@ -22,12 +22,10 @@ branches and external forks use the same command because the workflow resolves
 the PR head repository through the GitHub API.
 
 ```console
-gh workflow run validate-everything.yml \
-  --repo microsoft/discovery \
-  --ref users/yousefi-msft/community-review-pipeline \
-  -f reason="Queued PR canary" \
-  -f pr_number=123
+python .github/scripts/run_validation_workflow.py --pr-number=123 --reason="Queued PR canary"
 ```
+
+Pass `--ref <branch-or-sha>` to test a pushed ref other than the current branch.
 
 The shadow job executes validator code only from the selected repository branch.
 It checks out the PR head separately as untrusted data, disables persisted Git
