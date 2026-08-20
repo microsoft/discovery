@@ -1,146 +1,193 @@
-"""content_sniffer — magic-byte and text-heuristic classification.
-
-These tests pin the behaviour POL-008 depends on: a binary must be detected
-from its bytes, and an ASCII-looking signature must not misclassify real text.
-"""
+"""content_sniffer - file/libmagic classification and policy adaptation."""
 
 from __future__ import annotations
 
+import shutil
+import subprocess
+
+import content_sniffer
 import pytest
-from conftest import (
-    ELF_BYTES,
-    GZIP_BYTES,
-    PDF_BYTES,
-    PE_BYTES,
-    PNG_BYTES,
-    SQLITE_BYTES,
-    WASM_BYTES,
-    ZIP_BYTES,
-    write,
-)
+from conftest import write
 
-from content_sniffer import (
-    PRINTABLE_RATIO_THRESHOLD,
-    classify,
-    classify_bytes,
-)
+from content_sniffer import FILE_MAX_BYTES, Classification, classify
 
 
-def _classify_bytes(payload: bytes, suffix: str = ""):
-    return classify_bytes(payload[:512], payload, suffix)
+def _mock_file(monkeypatch, output: str, *, returncode: int = 0):
+    calls: list[list[str]] = []
+
+    def run(command, **kwargs):
+        calls.append(command)
+        return subprocess.CompletedProcess(
+            command,
+            returncode,
+            stdout=output,
+            stderr="libmagic failed" if returncode else "",
+        )
+
+    monkeypatch.setattr(content_sniffer.subprocess, "run", run)
+    return calls
 
 
-# ── Magic signatures ─────────────────────────────────────────────────────────
+def test_file_invocation_is_bounded_and_does_not_decompress(repo, monkeypatch):
+    rel = write(repo, "sample.py", "print('hello')\n")
+    calls = _mock_file(monkeypatch, "text/x-script.python; charset=us-ascii\n")
 
-@pytest.mark.parametrize("payload,expected_format", [
-    (ELF_BYTES, "elf"),
-    (PE_BYTES, "pe"),
-    (ZIP_BYTES, "zip"),
-    (GZIP_BYTES, "gzip"),
-    (PNG_BYTES, "png"),
-    (PDF_BYTES, "pdf"),
-    (SQLITE_BYTES, "sqlite"),
-    (WASM_BYTES, "wasm"),
-    (b"BZh91AY&SY" + b"\x00" * 20, "bzip2"),
-    (b"\xfd7zXZ\x00" + b"\x00" * 20, "xz"),
-    (b"7z\xbc\xaf\x27\x1c" + b"\x00" * 20, "7z"),
-    (b"Rar!\x1a\x07\x00" + b"\x00" * 20, "rar"),
-    (b"\x93NUMPY\x01\x00" + b"\x00" * 20, "npy"),
-    (b"\x89HDF\r\n\x1a\n" + b"\x00" * 20, "hdf5"),
-    (b"\xed\xab\xee\xdb" + b"\x00" * 20, "rpm"),
-    (b"!<arch>\n" + b"\x00" * 20, "ar"),
-])
-def test_known_binary_formats_are_identified(payload, expected_format):
-    result = _classify_bytes(payload)
-    assert result.is_binary
-    assert result.format == expected_format
-
-
-def test_iso_signature_beyond_the_sample_window_is_detected(repo):
-    rel = write(repo, "sample.txt", b"A" * 32769 + b"CD001" + b"A" * 100)
     result = classify(repo / rel)
-    assert result.is_binary
-    assert result.format == "iso"
 
-
-# ── ASCII-ambiguous signatures must not eat legitimate text ──────────────────
-
-@pytest.mark.parametrize("text", [
-    "MZ is the two-letter prefix used by DOS executables.\n",
-    "RIFF containers are described in the multimedia section.\n",
-    "ID3 tags store MP3 metadata.\n",
-    "BM is the BMP magic; this document merely mentions it.\n",
-    "GIF87a and GIF89a are the two GIF versions.\n",
-    "GGUF is the llama.cpp weight format.\n",
-])
-def test_text_beginning_with_an_ascii_signature_stays_text(text):
-    result = _classify_bytes(text.encode("utf-8"), ".md")
     assert result.kind == "text"
-    assert not result.spoofed
+    assert calls == [[
+        "file",
+        "--brief",
+        "--mime",
+        "--parameter",
+        f"bytes={FILE_MAX_BYTES}",
+        "--",
+        str(repo / rel),
+    ]]
 
 
-def test_real_pe_binary_is_still_caught_despite_ascii_magic():
-    result = _classify_bytes(PE_BYTES, ".txt")
-    assert result.is_binary
+@pytest.mark.parametrize("mime_type", [
+    "application/x-executable",
+    "application/x-java-serialized-object",
+    "image/avif",
+    "image/tiff",
+])
+def test_libmagic_binary_formats_are_blockable(repo, monkeypatch, mime_type):
+    rel = write(repo, "payload.txt", b"binary payload")
+    _mock_file(monkeypatch, f"{mime_type}; charset=binary\n")
+
+    result = classify(repo / rel)
+
+    assert result == Classification(
+        kind="binary",
+        format=mime_type,
+        detail=f"Content identified by libmagic as {mime_type}.",
+        spoofed=True,
+    )
+
+
+def test_binary_extension_is_not_reported_as_disguised(repo, monkeypatch):
+    rel = write(repo, "image.tiff", b"binary payload")
+    _mock_file(monkeypatch, "image/tiff; charset=binary\n")
+
+    assert not classify(repo / rel).spoofed
+
+
+def test_text_with_binary_extension_is_reported_as_disguised(repo, monkeypatch):
+    rel = write(repo, "image.png", b"plain text\n")
+    _mock_file(monkeypatch, "text/plain; charset=us-ascii\n")
+
+    result = classify(repo / rel)
+
+    assert result.kind == "text"
     assert result.spoofed
 
 
-# ── Text heuristics ──────────────────────────────────────────────────────────
+@pytest.mark.parametrize("mime_type", [
+    "application/javascript",
+    "application/x-wine-extension-ini",
+])
+def test_libmagic_text_application_types_are_accepted(
+    repo, monkeypatch, mime_type
+):
+    rel = write(repo, "source.txt", b"plain text\n")
+    _mock_file(monkeypatch, f"{mime_type}; charset=us-ascii\n")
 
-def test_plain_ascii_source_is_text():
-    result = _classify_bytes(b"def main():\n    return 1\n", ".py")
-    assert result.kind == "text"
+    assert classify(repo / rel).kind == "text"
 
 
-def test_multibyte_utf8_is_text():
-    payload = "# Démo — Ångström\n中文说明。\nΔG = -12.4 kJ/mol\n".encode("utf-8")
-    result = _classify_bytes(payload, ".md")
-    assert result.kind == "text"
+def test_non_utf8_charset_is_deferred_to_pol_020(repo, monkeypatch):
+    rel = write(repo, "legacy.txt", b"legacy content")
+    _mock_file(monkeypatch, "text/plain; charset=iso-8859-1\n")
 
+    result = classify(repo / rel)
 
-def test_nul_byte_makes_content_binary():
-    result = _classify_bytes(b"looks like text\x00but is not", ".txt")
     assert result.is_binary
-    assert "NUL" in result.detail
+    assert result.format == "unknown-binary"
 
 
-def test_invalid_utf8_is_binary():
-    result = _classify_bytes(b"\xc3\x28\xa0\xa1\xf0\x28\x8c\x28" * 8, ".txt")
+def test_binary_mime_wins_over_textual_charset(repo, monkeypatch):
+    rel = write(repo, "document.txt", b"PDF content")
+    _mock_file(monkeypatch, "application/pdf; charset=iso-8859-1\n")
+
+    result = classify(repo / rel)
+
     assert result.is_binary
+    assert result.format == "application/pdf"
 
 
-def test_low_printable_ratio_is_binary():
-    # Valid UTF-8 made almost entirely of control characters.
-    payload = bytes([0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x0B]) * 64
-    result = _classify_bytes(payload.replace(b"\x00", b"\x01"), ".txt")
+def test_generic_binary_data_is_deferred_to_pol_020(repo, monkeypatch):
+    rel = write(repo, "source.md", b"text with an unsafe byte")
+    _mock_file(monkeypatch, "application/octet-stream; charset=binary\n")
+
+    result = classify(repo / rel)
+
     assert result.is_binary
+    assert result.format == "unknown-binary"
 
 
-def test_threshold_is_a_meaningful_value():
-    assert 0.5 < PRINTABLE_RATIO_THRESHOLD <= 1.0
+def test_empty_file_does_not_invoke_libmagic(repo, monkeypatch):
+    rel = write(repo, "empty.txt", b"")
+    monkeypatch.setattr(
+        content_sniffer.subprocess,
+        "run",
+        lambda *_args, **_kwargs: pytest.fail("file should not be invoked"),
+    )
 
+    result = classify(repo / rel)
 
-def test_empty_content_is_neither_text_nor_binary():
-    result = _classify_bytes(b"")
     assert result.kind == "empty"
-    assert not result.is_binary
 
 
-# ── Spoofing signal ──────────────────────────────────────────────────────────
+def test_missing_file_command_fails_closed(repo, monkeypatch):
+    rel = write(repo, "sample.txt", b"content")
 
-def test_binary_with_binary_extension_is_not_marked_spoofed():
-    assert not _classify_bytes(PNG_BYTES, ".png").spoofed
+    def missing(*_args, **_kwargs):
+        raise FileNotFoundError("file command was not found")
+
+    monkeypatch.setattr(content_sniffer.subprocess, "run", missing)
+
+    result = classify(repo / rel)
+
+    assert result.is_binary
+    assert result.format == "classifier-error"
+    assert "file command was not found" in result.detail
 
 
-def test_binary_with_text_extension_is_marked_spoofed():
-    assert _classify_bytes(PNG_BYTES, ".md").spoofed
+def test_libmagic_failure_fails_closed(repo, monkeypatch):
+    rel = write(repo, "sample.txt", b"content")
+    _mock_file(monkeypatch, "", returncode=1)
+
+    result = classify(repo / rel)
+
+    assert result.is_binary
+    assert result.format == "classifier-error"
+    assert "libmagic failed" in result.detail
 
 
-def test_text_with_binary_extension_is_marked_spoofed():
-    assert _classify_bytes(b"just text\n", ".png").spoofed
+def test_unexpected_libmagic_output_fails_closed(repo, monkeypatch):
+    rel = write(repo, "sample.txt", b"content")
+    _mock_file(monkeypatch, "text/plain\n")
+
+    result = classify(repo / rel)
+
+    assert result.is_binary
+    assert result.format == "classifier-error"
+
+
+@pytest.mark.skipif(shutil.which("file") is None, reason="requires file/libmagic")
+def test_real_libmagic_identifies_tiff_beyond_old_signature_table(repo):
+    rel = write(repo, "payload.txt", b"II*\x00\x08\x00\x00\x00\x00\x00")
+
+    result = classify(repo / rel)
+
+    assert result.is_binary
+    assert result.format == "image/tiff"
+    assert result.spoofed
 
 
 def test_unreadable_path_is_reported_not_raised(tmp_path):
     result = classify(tmp_path / "does-not-exist.txt")
+
     assert result.is_binary
-    assert result.format == "unreadable"
+    assert result.format == "classifier-error"

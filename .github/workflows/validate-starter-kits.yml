@@ -16,24 +16,34 @@ permissions:
 jobs:
   validate:
     name: Validate starter kit manifests
-    runs-on: ubuntu-latest
-    timeout-minutes: 20
+    runs-on: ubuntu-slim
+    timeout-minutes: 15
     steps:
       - name: Detect relevant changes
         id: changes
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          set -euo pipefail
-          FILES=$(gh api \
-            "repos/${GITHUB_REPOSITORY}/pulls/${{ github.event.pull_request.number }}/files" \
-            --paginate --jq '.[].filename')
-          if echo "$FILES" | grep -E '^starter-kits/|^docs/schemas/(common-schema|starter-kit-schema)\.json$' >/dev/null; then
-            echo "relevant=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "relevant=false" >> "$GITHUB_OUTPUT"
-            echo "::notice::No starter-kits/** or starter-kit-schema.json changes; reporting success without running validation."
-          fi
+        uses: actions/github-script@v9
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const files = await github.paginate(github.rest.pulls.listFiles, {
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: context.issue.number,
+              per_page: 100,
+            });
+            const schemaPattern = /^docs\/schemas\/(common-schema|starter-kit-schema)\.json$/;
+            const relevant = files.some(({ filename }) =>
+              filename.startsWith('starter-kits/') || schemaPattern.test(filename)
+            );
+            const addedKits = files.flatMap(({ filename, status }) => {
+              const match = /^starter-kits\/([^/]+)\/kit\.json$/.exec(filename);
+              return status === 'added' && match ? [match[1]] : [];
+            });
+            core.setOutput('relevant', String(relevant));
+            core.setOutput('added-kits', [...new Set(addedKits)].join(' '));
+            if (!relevant) {
+              core.notice('No starter-kits/** or starter-kit-schema.json changes; reporting success without running validation.');
+            }
 
       - name: Checkout PR branch
         if: steps.changes.outputs.relevant == 'true'
@@ -45,28 +55,24 @@ jobs:
         if: steps.changes.outputs.relevant == 'true'
         uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6.3.0
         with:
-          python-version: "3.11"
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: .github/requirements-ci.txt
 
       - name: Install dependencies
         if: steps.changes.outputs.relevant == 'true'
-        run: pip install -c .github/requirements-ci.txt jsonschema pyyaml
-
-      - name: Determine changed starter kits
-        if: steps.changes.outputs.relevant == 'true'
-        id: changed
-        run: |
-          CHANGED=$(git diff --name-only origin/${{ github.base_ref }}...HEAD \
-            | grep '^starter-kits/' \
-            | awk -F/ 'NF >= 2 { print $2 }' \
-            | sort -u | tr '\n' ' ')
-          echo "kits=$CHANGED" >> "$GITHUB_OUTPUT"
+        run: >-
+          python -m pip install -c .github/requirements-ci.txt
+          jsonschema pyyaml referencing
 
       - name: Run validation
         if: steps.changes.outputs.relevant == 'true'
+        env:
+          ADDED_KITS: ${{ steps.changes.outputs.added-kits }}
         run: |
-          KITS="${{ steps.changed.outputs.kits }}"
-          ARGS=""
-          if [ -n "$KITS" ]; then
-            ARGS="--changed-kits $KITS"
+          args=(--repo-root . --added-kits)
+          if [[ -n "$ADDED_KITS" ]]; then
+            read -r -a added_kits <<< "$ADDED_KITS"
+            args+=("${added_kits[@]}")
           fi
-          python .github/scripts/validate_starter_kits.py --repo-root . $ARGS
+          python .github/scripts/validate_starter_kits.py "${args[@]}"

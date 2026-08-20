@@ -2,7 +2,8 @@
 #
 # `agents/` and `starter-kits/` accept SOURCE CODE ONLY. Every added file in
 # those trees must (a) carry an extension or filename listed here, and (b) pass
-# content-based classification as UTF-8 text (see .github/scripts/content_sniffer.py).
+# file/libmagic content classification plus strict UTF-8 validation (see
+# .github/scripts/content_sniffer.py and rules/pol_020.py).
 #
 # Both gates must pass. The extension list alone is not a security control —
 # it exists so the tree stays reviewable; the content sniffer is what stops a

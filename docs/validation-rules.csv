@@ -1,0 +1,93 @@
+rule_id,name,purpose,implementation_source
+CFG-001,Policy configuration validity,"Blocks malformed, expired, or overlong policy waivers so validation cannot fail open.",.github/scripts/catalog_validation/runner.py; .github/scripts/rules/registry.py; .github/policy/waivers.yaml
+STR-001,Required agent metadata,Requires every touched agent folder to contain metadata.yaml.,.github/scripts/catalog_validation/structural.py
+STR-002,Required agent README,Requires every touched agent folder to contain README.md.,.github/scripts/catalog_validation/structural.py
+STR-003,Required agent definition,Requires every touched agent folder to contain agent.yaml.,.github/scripts/catalog_validation/structural.py
+STR-005,Required tool definition,Requires tool.yaml in every agent tools subfolder.,.github/scripts/catalog_validation/structural.py
+STR-006,Required tool Dockerfile,Requires Dockerfile in every agent tools subfolder.,.github/scripts/catalog_validation/structural.py
+STR-009,Canonical tools directory name,Detects tool content placed under a directory not named exactly tools.,.github/scripts/catalog_validation/structural.py
+STR-010,Agent folder and metadata name match,Requires metadata.yaml name to equal the agent folder name.,.github/scripts/catalog_validation/structural.py
+STR-011,Unique YAML mapping keys,Rejects duplicate mapping keys in agent metadata definitions and tool definitions.,.github/scripts/catalog_validation/structural.py; .github/scripts/catalog_validation/schemas.py
+SCH-001,Agent metadata schema,Parses metadata.yaml and validates it against the metadata schema and required fields.,.github/scripts/catalog_validation/schema_checks.py; .github/scripts/catalog_validation/schemas.py; docs/schemas/metadata-schema.json
+SCH-002,Agent metadata type,Requires metadata.yaml type to be agent.,.github/scripts/catalog_validation/schema_checks.py; docs/schemas/metadata-schema.json; docs/schemas/common-schema.json
+SCH-004,Non-empty metadata tags,Requires at least one discovery tag in metadata.yaml.,.github/scripts/catalog_validation/schema_checks.py; docs/schemas/metadata-schema.json
+SCH-005,Metadata tag syntax,Requires metadata tags to use lowercase hyphen-separated syntax.,.github/scripts/catalog_validation/schema_checks.py; docs/schemas/metadata-schema.json; docs/schemas/common-schema.json
+SCH-006,Supported Azure region,Requires supported_regions values to use recognized Azure region aliases.,.github/scripts/catalog_validation/schema_checks.py; docs/schemas/metadata-schema.json; docs/schemas/common-schema.json
+SCH-008,Publisher contact email,Requires publisher.contact to be a syntactically valid email address.,.github/scripts/catalog_validation/schema_checks.py; docs/schemas/metadata-schema.json; docs/schemas/common-schema.json
+SCH-009,Publisher support URL,Requires publisher.support_url to use HTTPS.,.github/scripts/catalog_validation/schema_checks.py; docs/schemas/metadata-schema.json; docs/schemas/common-schema.json
+SCH-010,Agent definition schema,Parses agent.yaml and validates it against the agent definition schema.,.github/scripts/catalog_validation/schema_checks.py; .github/scripts/catalog_validation/schemas.py; docs/schemas/agent-schema-v2.json
+SCH-011,Prompt agent kind,Permits only prompt agent definitions.,.github/scripts/catalog_validation/schema_checks.py; docs/schemas/agent-schema-v2.json
+SCH-012,Required agent instructions,Requires non-empty instructions in agent.yaml.,.github/scripts/catalog_validation/schema_checks.py; docs/schemas/agent-schema-v2.json
+SCH-013,Agent name syntax,Requires an agent name that starts with a letter and contains only letters digits hyphens or underscores.,.github/scripts/catalog_validation/schema_checks.py; docs/schemas/agent-schema-v2.json
+SCH-014,Tool definition schema,Parses tool.yaml and validates it against the tool definition schema.,.github/scripts/catalog_validation/schema_checks.py; .github/scripts/catalog_validation/schemas.py; docs/schemas/tool-definition-schema.json
+SCH-015,Tool infrastructure references,Requires every action and code environment infra_node to reference an existing infra name.,.github/scripts/catalog_validation/schema_checks.py
+SCH-017,Semantic version syntax,Requires authored metadata agent and tool versions to use semantic version syntax.,.github/scripts/catalog_validation/schema_checks.py; docs/schemas/metadata-schema.json; docs/schemas/agent-schema-v2.json; docs/schemas/tool-definition-schema.json; docs/schemas/common-schema.json
+SCH-028,Associated tool path existence,Requires every metadata.yaml associated_tools path to identify an existing directory.,.github/scripts/catalog_validation/schema_checks.py
+SCH-029,Associated tool declaration completeness,Requires associated_tools and on-disk tools subfolders to agree.,.github/scripts/catalog_validation/schema_checks.py
+SCH-030,Discovery extensions for tools,Requires agent.yaml discoveryExtensions when the agent has a tools directory.,.github/scripts/catalog_validation/schema_checks.py
+SCH-031,Publisher party value,Restricts optional publisher.party to 1p or 3p.,.github/scripts/catalog_validation/schema_checks.py; docs/schemas/metadata-schema.json; docs/schemas/common-schema.json
+SCH-034,Unique tool identifiers,Rejects duplicate infra names action names output names and inline-file mount paths in tool.yaml.,.github/scripts/catalog_validation/schema_checks.py
+SCH-035,Defined required tool inputs,Requires every required action input to exist under input_schema.properties.,.github/scripts/catalog_validation/schema_checks.py
+SCH-036,Agent instruction size,Limits agent instructions to 32000 characters.,.github/scripts/catalog_validation/schema_checks.py; docs/schemas/agent-schema-v2.json
+SCH-037,Deployment-time ACR placeholder,Requires tool images to use the {name}.azurecr.io deployment placeholder instead of a hardcoded registry.,.github/scripts/catalog_validation/schema_checks.py; docs/schemas/tool-definition-schema.json
+POL-004,Metadata description length,Requires agent descriptions to contain between 10 and 500 characters.,.github/scripts/catalog_validation/policy_checks.py
+POL-005,Agent README minimum size,Rejects agent README files smaller than 100 bytes.,.github/scripts/catalog_validation/policy_checks.py
+POL-008,Content-based binary prohibition,Blocks binary files under agents and starter-kits by inspecting content rather than trusting the extension.,.github/scripts/rules/pol_008.py; .github/scripts/content_sniffer.py
+POL-009,Model weight safety,"Requires model weights to use Git LFS, remain within 5 GB, match their declared format, and pass pickle import checks where applicable.",.github/scripts/catalog_validation/policy_checks.py; .github/scripts/model_weights_sniffer.py
+POL-010,OS and editor artifact prohibition,Blocks hidden environment files and common OS or editor artifacts.,.github/scripts/catalog_validation/policy_checks.py
+POL-011,Generated registry integrity,Blocks hand edits to generated .auto-registry content except the trusted registry refresh bot flow.,.github/scripts/catalog_validation/policy_checks.py
+POL-012,Scratch artifact prohibition,Blocks deployer scratch content under agents/tmp and starter-kits/tmp.,.github/scripts/catalog_validation/policy_checks.py
+POL-014,Approved Docker base images,Requires Dockerfile base images to come from approved registries or publisher namespaces.,.github/scripts/rules/pol_014.py; .github/scripts/dockerfile_parser.py; .github/policy/base-images.yaml
+POL-015,Approved source file types,Requires contributed files to use an approved source extension filename or exempt directory.,.github/scripts/rules/pol_015.py; .github/policy/source-allowlist.yaml
+POL-016,Image and SVG safety,Requires images to match their filename format and rejects active or remote content in SVG files.,.github/scripts/rules/pol_016.py; .github/scripts/image_inspector.py
+POL-017,Pinned Docker base image tags,Warns when Dockerfile base images use floating tags instead of explicit versions.,.github/scripts/rules/pol_017.py; .github/scripts/dockerfile_parser.py
+POL-018,Public webpage reachability,"Requires governed catalog webpage URLs to use HTTPS, resolve only to public addresses, follow bounded redirects, and return HTML.",.github/scripts/rules/pol_018.py; .github/scripts/contact_network_validator.py; .github/policy/contact-network.json
+POL-019,Contact email domain DNS,Requires catalog contact domains to publish usable public mail or fallback DNS records.,.github/scripts/rules/pol_019.py; .github/scripts/contact_network_validator.py; .github/policy/contact-network.json
+POL-020,Safe UTF-8 source text,Rejects malformed UTF-8 and unsafe invisible control private-use or noncharacter code points.,.github/scripts/rules/pol_020.py; .github/scripts/content_sniffer.py
+POL-021,Contributor path scope,Restricts public contributors to catalog content and documentation while protecting trusted automation schemas configuration and utilities.,.github/scripts/catalog_validation/contributor_scope.py; .github/workflows/pr-review.yml
+DOC-001,README minimum content,Requires a non-empty README with at least 50 non-whitespace characters.,.github/scripts/catalog_validation/documentation.py
+DOC-002,README top-level heading,Requires an agent README to contain a top-level heading.,.github/scripts/catalog_validation/documentation.py
+DOC-003,README overview section,Requires an Overview or Description section.,.github/scripts/catalog_validation/documentation.py
+DOC-004,README usage section,Requires a Usage or Getting Started section.,.github/scripts/catalog_validation/documentation.py
+DOC-005,README prerequisites section,Requires a Prerequisites section.,.github/scripts/catalog_validation/documentation.py
+DOC-006,No unresolved placeholders,Rejects TODO FIXME and XXX markers outside fenced code in README and agent YAML files.,.github/scripts/catalog_validation/documentation.py
+DOC-101,README architecture section,Requires an Architecture or How it works section.,.github/scripts/catalog_validation/documentation.py
+DOC-102,README tools section,Requires a Tools section when an agent has a tools directory.,.github/scripts/catalog_validation/documentation.py
+DOC-103,README configuration section,Requires a Configuration or Parameters section.,.github/scripts/catalog_validation/documentation.py
+DOC-104,README limitations section,Requires a Known Limitations or Limitations section.,.github/scripts/catalog_validation/documentation.py
+DOC-105,README contributing guidance,Requires a Contributing section or a reference to CONTRIBUTING.md.,.github/scripts/catalog_validation/documentation.py
+TAG-001,Controlled tag vocabulary,Requires declared metadata tags to exist in the controlled vocabulary.,.github/scripts/rules/tag_001.py; .github/policy/tag-taxonomy.yaml
+TAG-002,Reserved computed tag namespaces,Prevents authors from declaring tags in namespaces computed by CI.,.github/scripts/rules/tag_002.py; .github/policy/tag-taxonomy.yaml
+SKT-SCH-001,Starter-kit manifest schema,Validates kit.json against the starter-kit JSON schema.,.github/scripts/validate_starter_kits.py; .github/scripts/catalog_validation/schemas.py; docs/schemas/starter-kit-schema.json; .github/workflows/validate-starter-kits.yml
+SKT-STR-001,Starter-kit folder and name match,Requires kit.json name to equal its parent directory name.,.github/scripts/validate_starter_kits.py; .github/workflows/validate-starter-kits.yml
+SKT-STR-003,Single required primary agent,Requires exactly one agentRef with role primary and required true.,.github/scripts/validate_starter_kits.py; .github/workflows/validate-starter-kits.yml
+SKT-STR-006,Unique starter-kit agent references,Rejects duplicate agentRef ref values.,.github/scripts/validate_starter_kits.py; .github/workflows/validate-starter-kits.yml
+SKT-STR-008,Starter-kit folder contents,Requires a starter-kit folder to contain only kit.json.,.github/scripts/validate_starter_kits.py; .github/workflows/validate-starter-kits.yml
+SKT-REF-001,Starter-kit agent reference integrity,Requires active starter-kit agent references to resolve in a dry-run agent registry and reports missing archived references as warnings.,.github/scripts/validate_starter_kits.py; .github/scripts/update_registry.py; .github/workflows/validate-starter-kits.yml
+SKT-POL-001,New starter-kit lifecycle,Requires newly added starter kits to use lifecycle active.,.github/scripts/validate_starter_kits.py; .github/workflows/validate-starter-kits.yml
+SKT-AST-001,Starter-kit remote asset URLs,Requires starter-kit logos and screenshots to use HTTPS URLs.,.github/scripts/validate_starter_kits.py; .github/workflows/validate-starter-kits.yml
+SKT-DUP-001,Globally unique starter-kit names,Rejects duplicate kit.json names across starter kits.,.github/scripts/validate_starter_kits.py; .github/workflows/validate-starter-kits.yml
+AS-001,Agent schema JSON syntax,Requires agent metadata tool and common schema files to be valid JSON.,.github/tests/test_schema_security.py
+AS-002,Agent schema Draft 7 validity,Requires agent metadata tool and common schemas to be valid JSON Schema Draft 7.,.github/tests/test_schema_security.py
+AS-003,Full metadata schema regression,Validates every existing agents/*/metadata.yaml against an updated metadata schema.,.github/tests/test_schema_security.py
+AS-004,Full agent schema regression,Validates every existing agents/*/agent.yaml against an updated agent schema.,.github/tests/test_schema_security.py
+AS-005,Full tool schema regression,Validates every existing agents/*/tools/*/tool.yaml against an updated tool schema.,.github/tests/test_schema_security.py
+SKS-001,Starter-kit schema JSON syntax,Requires starter-kit schema files to be valid JSON.,.github/tests/test_schema_security.py
+SKS-002,Starter-kit schema Draft 7 validity,Requires starter-kit schemas to be valid JSON Schema Draft 7.,.github/tests/test_schema_security.py
+SKS-003,Full starter-kit schema regression,Validates every existing starter-kit manifest against an updated starter-kit schema.,.github/tests/test_schema_security.py
+SEC-SCAN,Verified secret scan,Blocks a PR when TruffleHog identifies a verified credential in the changed history.,.github/workflows/pr-review.yml
+SEC-002,Unverified secret audit,Reports unverified or high-entropy TruffleHog findings without blocking the PR.,.github/workflows/pr-review.yml
+,PR validation orchestrator,"Runs contributor-scope, structural, schema, policy, documentation, and modular-rule checks against changed catalog content.",.github/scripts/validate_pr.py; .github/scripts/catalog_validation/runner.py; .github/workflows/pr-review.yml
+,Modular rule registry,Discovers modular rules and applies expiring waivers plus the pre-existing violation ratchet.,.github/scripts/rules/registry.py
+,Starter-kit validation orchestrator,Runs schema structural reference lifecycle asset and duplicate-name checks for changed starter kits.,.github/scripts/validate_starter_kits.py; .github/workflows/validate-starter-kits.yml
+,Agent removal impact validator,Blocks agent removals that leave required active starter-kit references unresolved.,.github/scripts/check_agent_removal_impact.py; .github/workflows/check-agent-removal-impact.yml
+,Dependency review,Blocks newly introduced vulnerable dependency changes according to GitHub dependency review policy.,.github/workflows/dependency-review.yml
+,CodeQL scan,Analyzes contributed Python and JavaScript or TypeScript for code security findings.,.github/workflows/code-scan.yml
+,DevSkim scan,Scans agent and starter-kit source for insecure coding patterns and publishes SARIF findings.,.github/workflows/code-scan.yml
+,Application Inspector capability report,Characterizes contributed code capabilities for reviewer visibility without acting as a blocking security verdict.,.github/workflows/code-scan.yml
+,Validator unit tests,Runs the validator pytest suites when validation implementation or governed policy changes.,.github/workflows/unit-tests.yml; .github/tests
+,Ratchet baseline drift check,Blocks unrecorded full-catalog rule violations from drifting beyond the checked-in baseline.,.github/scripts/generate_baseline.py; .github/workflows/unit-tests.yml
+,Generated rule documentation drift check,Requires generated modular rule documentation to match rule implementations.,.github/scripts/generate_rule_docs.py; .github/workflows/unit-tests.yml
+,Manual PR shadow validation,Runs trusted candidate-branch validators against an open internal or fork PR as untrusted data without changing its checks labels comments reviews or merge state.,.github/workflows/validate-everything.yml; docs/validation-workflow-testing.md
+,Weekly full catalog audit,Runs every modular rule against the full catalog and reports violations not recorded in the ratchet baseline.,.github/scripts/generate_baseline.py; .github/workflows/weekly-deep-scan.yml
+,URL reputation audit,Checks governed catalog URLs against URLhaus and PhishTank weekly and reports malware phishing or provider failures.,.github/scripts/url_reputation_audit.py; .github/workflows/weekly-deep-scan.yml

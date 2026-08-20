@@ -27,6 +27,8 @@ on:
       - ".github/workflows/dependency-review.yml"
       - ".github/workflows/unit-tests.yml"
       - "docs/schemas/**"
+      - "docs/validation-rules.csv"
+      - "docs/validation-rules.md"
   workflow_dispatch:
 
 permissions:
@@ -42,19 +44,29 @@ jobs:
       - name: Detect relevant changes
         id: changes
         if: github.event_name == 'pull_request'
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          set -euo pipefail
-          FILES=$(gh api \
-            "repos/${GITHUB_REPOSITORY}/pulls/${{ github.event.pull_request.number }}/files" \
-            --paginate --jq '.[].filename')
-          if echo "$FILES" | grep -E '^\.github/(scripts|tests|policy|codeql)/|^\.github/(dependabot\.yml|requirements-ci\.txt)$|^\.github/workflows/(code-scan|dependency-review|unit-tests)\.yml$|^docs/schemas/' >/dev/null; then
-            echo "relevant=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "relevant=false" >> "$GITHUB_OUTPUT"
-            echo "::notice::No trusted code, policy, schema, or security automation paths changed; reporting success without running pytest."
-          fi
+        uses: actions/github-script@v9
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const files = await github.paginate(github.rest.pulls.listFiles, {
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: context.issue.number,
+              per_page: 100,
+            });
+            const patterns = [
+              /^\.github\/(scripts|tests|policy|codeql)\//,
+              /^\.github\/(dependabot\.yml|requirements-ci\.txt)$/,
+              /^\.github\/workflows\/(code-scan|dependency-review|unit-tests)\.yml$/,
+              /^docs\/(schemas\/|validation-rules\.(csv|md)$)/,
+            ];
+            const relevant = files.some(({ filename }) =>
+              patterns.some((pattern) => pattern.test(filename))
+            );
+            core.setOutput('relevant', String(relevant));
+            if (!relevant) {
+              core.notice('No trusted code, policy, schema, or security automation paths changed; reporting success without running pytest.');
+            }
 
       - name: Checkout
         if: github.event_name != 'pull_request' || steps.changes.outputs.relevant == 'true'
@@ -65,10 +77,12 @@ jobs:
         uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6.3.0
         with:
           python-version: "3.12"
+          cache: pip
+          cache-dependency-path: .github/requirements-ci.txt
 
       - name: Install dependencies
         if: github.event_name != 'pull_request' || steps.changes.outputs.relevant == 'true'
-        run: pip install --index-url https://packagefeedproxy.microsoft.io/pypi/simple/ -r .github/requirements-ci.txt
+        run: python -m pip install -r .github/requirements-ci.txt
 
       - name: Run unit tests
         if: github.event_name != 'pull_request' || steps.changes.outputs.relevant == 'true'

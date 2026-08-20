@@ -221,6 +221,174 @@ def test_ci_python_dependencies_are_pinned_and_workflows_use_the_manifest():
     assert not unmanaged, f"Inline CI Python dependencies found: {unmanaged}"
 
 
+def test_python_validation_jobs_use_github_hosted_linux():
+    expected_jobs = {
+        "check-agent-removal-impact.yml": {"check-impact"},
+        "pr-review.yml": {"validate"},
+        "unit-tests.yml": {"pytest"},
+        "validate-everything.yml": {
+            "validate-all-agents",
+            "validate-all-starter-kits",
+        },
+        "validate-agent-schemas.yml": {"validate-schemas"},
+        "validate-starter-kit-schema.yml": {"validate-schema"},
+        "validate-starter-kits.yml": {"validate"},
+        "weekly-deep-scan.yml": {
+            "full-catalog-audit",
+            "url-reputation-audit",
+            "discover-images",
+        },
+    }
+    slim_jobs = {
+        ("check-agent-removal-impact.yml", "check-impact"),
+        ("validate-agent-schemas.yml", "validate-schemas"),
+        ("validate-starter-kit-schema.yml", "validate-schema"),
+        ("validate-starter-kits.yml", "validate"),
+        ("weekly-deep-scan.yml", "discover-images"),
+    }
+
+    for workflow_name, job_names in expected_jobs.items():
+        workflow = load_workflow(REPO_ROOT / ".github" / "workflows" / workflow_name)
+        for job_name in job_names:
+            job = workflow["jobs"][job_name]
+            expected_runner = (
+                "ubuntu-slim"
+                if (workflow_name, job_name) in slim_jobs
+                else "ubuntu-latest"
+            )
+            assert job["runs-on"] == expected_runner
+            assert "container" not in job
+            if expected_runner == "ubuntu-slim":
+                assert int(job["timeout-minutes"]) <= 15
+
+            setup_steps = [
+                step
+                for step in job["steps"]
+                if step.get("uses") == "actions/setup-python@v6"
+            ]
+            assert len(setup_steps) == 1
+            assert setup_steps[0]["with"]["python-version"] == "3.12"
+
+    workflow_text = "\n".join(
+        path.read_text(encoding="utf-8")
+        for path in (REPO_ROOT / ".github" / "workflows").glob("*.yml")
+    )
+    assert "mcr.microsoft.com/azurelinux" not in workflow_text
+    assert "tdnf install" not in workflow_text
+    assert "packagefeedproxy.microsoft.io" not in workflow_text
+
+
+def test_pull_request_target_jobs_keep_pr_data_untrusted():
+    for workflow_name, job_name in {
+        "check-agent-removal-impact.yml": "check-impact",
+        "pr-review.yml": "validate",
+    }.items():
+        workflow = load_workflow(REPO_ROOT / ".github" / "workflows" / workflow_name)
+        steps = workflow["jobs"][job_name]["steps"]
+        trusted_checkout = next(
+            step for step in steps if step.get("with", {}).get("path") == "trusted"
+        )
+        pr_checkout = next(
+            step for step in steps if step.get("with", {}).get("path") == "pr"
+        )
+
+        assert trusted_checkout["with"]["ref"] == (
+            "${{ github.event.pull_request.base.sha }}"
+        )
+        assert trusted_checkout["with"]["persist-credentials"] == "false"
+        assert pr_checkout["with"]["repository"] == (
+            "${{ github.event.pull_request.head.repo.full_name }}"
+        )
+        assert pr_checkout["with"]["ref"] == (
+            "${{ github.event.pull_request.head.sha }}"
+        )
+        assert pr_checkout["with"]["persist-credentials"] == "false"
+
+    pr_review_path = REPO_ROOT / ".github" / "workflows" / "pr-review.yml"
+    pr_review = load_workflow(pr_review_path)
+    head_checkouts = [
+        step
+        for job in pr_review["jobs"].values()
+        for step in job.get("steps", [])
+        if step.get("uses") == "actions/checkout@v6"
+        and step.get("with", {}).get("ref")
+        == "${{ github.event.pull_request.head.sha }}"
+    ]
+    assert len(head_checkouts) == 3
+    for checkout in head_checkouts:
+        assert checkout["with"]["repository"] == (
+            "${{ github.event.pull_request.head.repo.full_name }}"
+        )
+        assert checkout["with"]["persist-credentials"] == "false"
+    assert "allow-unsafe-pr-checkout" not in pr_review_path.read_text(encoding="utf-8")
+
+
+def test_manual_shadow_validation_is_report_only_and_fork_aware():
+    workflow = load_workflow(
+        REPO_ROOT / ".github" / "workflows" / "validate-everything.yml"
+    )
+    assert workflow["permissions"] == {
+        "contents": "read",
+        "pull-requests": "read",
+    }
+    assert "pr_number" in workflow["on"]["workflow_dispatch"]["inputs"]
+
+    shadow_job = workflow["jobs"]["shadow-pr"]
+    assert shadow_job["if"] == "${{ inputs.pr_number != '' }}"
+    steps = shadow_job["steps"]
+    trusted_checkout = next(
+        step for step in steps if step.get("with", {}).get("path") == "trusted"
+    )
+    pr_checkout = next(
+        step for step in steps if step.get("with", {}).get("path") == "pr"
+    )
+    assert trusted_checkout["with"]["ref"] == "${{ github.sha }}"
+    assert trusted_checkout["with"]["persist-credentials"] == "false"
+    assert pr_checkout["with"]["repository"] == (
+        "${{ steps.target.outputs.head-repository }}"
+    )
+    assert pr_checkout["with"]["ref"] == "${{ steps.target.outputs.head-sha }}"
+    assert pr_checkout["with"]["persist-credentials"] == "false"
+
+    report_only_steps = {
+        "Build ephemeral integration tree",
+        "Run primary catalog validator",
+        "Run schema regression suite against PR data",
+        "Run starter-kit validation against PR data",
+        "Run removal-impact validation without write access",
+    }
+    assert report_only_steps <= {step.get("name") for step in steps}
+    for step in steps:
+        if step.get("name") in report_only_steps:
+            assert step.get("continue-on-error") == "true"
+
+    source = (
+        REPO_ROOT / ".github" / "workflows" / "validate-everything.yml"
+    ).read_text(encoding="utf-8")
+    commands = "\n".join(step.get("run", "") for step in steps)
+    assert "python trusted/.github/scripts/" in commands
+    assert not re.search(r"(?m)^\s*python\s+pr/", commands)
+    assert '--repo-root "$GITHUB_WORKSPACE/evaluation"' in commands
+    assert "DISCOVERY_CATALOG_ROOT: ${{ github.workspace }}/evaluation" in source
+    assert "--github-token" not in commands
+    assert "did not change or publish a check to the target PR" in commands
+
+    for mutation in (
+        "issues.createComment",
+        "issues.addLabels",
+        "pulls.createReview",
+        "pulls.merge",
+    ):
+        assert mutation not in source
+
+    branch_job = workflow["jobs"]["validate-all-agents"]
+    assert branch_job["if"] == "${{ inputs.pr_number == '' }}"
+    assert any(
+        "python -m pytest .github/tests/" in step.get("run", "")
+        for step in branch_job["steps"]
+    )
+
+
 def test_dependabot_covers_all_conventional_dockerfiles():
     dockerfiles = sorted(
         [*REPO_ROOT.glob("agents/*/tools/*/Dockerfile")]

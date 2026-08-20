@@ -4,8 +4,8 @@ POL-008 — no binaries in agents/ or starter-kits/, decided by content.
 
 The previous implementation compared file extensions against a denylist, which
 a contributor defeats by renaming ``payload.so`` to ``notes.txt``. This rule
-classifies by magic bytes and text-decodability instead, so the check holds
-regardless of what the file is called.
+uses the file/libmagic database instead, so the check covers broadly recognized
+formats regardless of what the file is called.
 
 Model-weight formats are exempt here and validated by POL-009 instead (LFS
 tracking, size cap, header validation, picklescan).

@@ -17,40 +17,51 @@ permissions:
 jobs:
   check-impact:
     name: Check if agent removal breaks starter kits
-    runs-on: ubuntu-latest
-    timeout-minutes: 20
+    runs-on: ubuntu-slim
+    timeout-minutes: 15
     steps:
       - name: Detect relevant changes
         id: changes
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          set -euo pipefail
-          FILES=$(gh api \
-            "repos/${GITHUB_REPOSITORY}/pulls/${{ github.event.pull_request.number }}/files" \
-            --paginate --jq '.[].filename')
-          if echo "$FILES" | grep -E '^agents/' >/dev/null; then
-            echo "relevant=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "relevant=false" >> "$GITHUB_OUTPUT"
-            echo "::notice::No agents/** paths changed; reporting success without running the impact check."
-          fi
+        uses: actions/github-script@v9
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const files = await github.paginate(github.rest.pulls.listFiles, {
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: context.issue.number,
+              per_page: 100,
+            });
+            const relevant = files.some(({ filename }) => filename.startsWith('agents/'));
+            core.setOutput('relevant', String(relevant));
+            if (!relevant) {
+              core.notice('No agents/** paths changed; reporting success without running the impact check.');
+            }
 
-      - name: Checkout PR branch
+      - name: Checkout trusted base
         if: steps.changes.outputs.relevant == 'true'
         uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
         with:
+          ref: ${{ github.event.pull_request.base.sha }}
+          fetch-depth: 1
+          persist-credentials: false
+          path: trusted
+
+      - name: Checkout PR head as data
+        if: steps.changes.outputs.relevant == 'true'
+        uses: actions/checkout@v6
+        with:
+          repository: ${{ github.event.pull_request.head.repo.full_name }}
+          ref: ${{ github.event.pull_request.head.sha }}
           fetch-depth: 0
+          persist-credentials: false
+          path: pr
 
       - name: Set up Python
         if: steps.changes.outputs.relevant == 'true'
         uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6.3.0
         with:
-          python-version: "3.11"
-
-      - name: Install dependencies
-        if: steps.changes.outputs.relevant == 'true'
-        run: pip install -c .github/requirements-ci.txt pyyaml
+          python-version: "3.12"
 
       - name: Detect fork PR
         if: steps.changes.outputs.relevant == 'true'
@@ -69,8 +80,8 @@ jobs:
           if [ "${{ steps.fork.outputs.is_fork }}" = "true" ]; then
             FORK_FLAG="--is-fork"
           fi
-          python .github/scripts/check_agent_removal_impact.py \
-            --repo-root . \
+          python trusted/.github/scripts/check_agent_removal_impact.py \
+            --repo-root pr \
             --base-sha "${{ github.event.pull_request.base.sha }}" \
             --pr-number "${{ github.event.pull_request.number }}" \
             --github-token "${{ secrets.GITHUB_TOKEN }}" \
