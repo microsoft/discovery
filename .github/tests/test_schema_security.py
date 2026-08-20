@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import os
 import re
 from copy import deepcopy
 from pathlib import Path
@@ -13,8 +14,13 @@ import yaml
 from jsonschema import Draft7Validator, FormatChecker
 from referencing import Registry, Resource
 
+from catalog_validation.schema_checks import check_schema
+from catalog_validation.schemas import CatalogSchemas
 
-REPO_ROOT = Path(__file__).resolve().parents[2]
+
+REPO_ROOT = Path(
+    os.environ.get("DISCOVERY_CATALOG_ROOT", Path(__file__).resolve().parents[2])
+).resolve()
 SCHEMA_DIR = REPO_ROOT / "docs" / "schemas"
 SCHEMA_PATHS = sorted(SCHEMA_DIR.glob("*schema*.json"))
 
@@ -194,6 +200,11 @@ def test_agent_rejects_oversized_prompt_and_deep_extension_input():
     validator = build_validator("agent-schema-v2.json")
     valid = load_document(next(REPO_ROOT.glob("agents/*/agent.yaml")))
 
+    for instructions in ("", " \t\n"):
+        blank = deepcopy(valid)
+        blank["instructions"] = instructions
+        assert not validator.is_valid(blank)
+
     oversized = deepcopy(valid)
     oversized["instructions"] = "x" * 32001
     assert not validator.is_valid(oversized)
@@ -201,6 +212,26 @@ def test_agent_rejects_oversized_prompt_and_deep_extension_input():
     deeply_nested = deepcopy(valid)
     deeply_nested["metadata"] = {"level1": {"level2": {"level3": {"level4": "x"}}}}
     assert not validator.is_valid(deeply_nested)
+
+
+def test_blank_agent_instructions_emit_sch_012(tmp_path: Path):
+    agent = load_document(next(REPO_ROOT.glob("agents/*/agent.yaml")))
+    agent["instructions"] = " \t\n"
+    agent_path = tmp_path / "agents" / "sample" / "agent.yaml"
+    agent_path.parent.mkdir(parents=True)
+    agent_path.write_text(yaml.safe_dump(agent), encoding="utf-8")
+
+    schemas = CatalogSchemas.load(REPO_ROOT)
+    failures = check_schema(
+        tmp_path,
+        {Path("agents/sample")},
+        schemas.agent,
+        schemas.tool,
+        schemas.metadata,
+        schemas.registry,
+    )
+
+    assert {failure.rule_id for failure in failures} == {"SCH-012"}
 
 
 def test_tool_rejects_excessive_resources_and_unknown_parameter_keywords():

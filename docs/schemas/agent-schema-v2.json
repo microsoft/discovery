@@ -96,6 +96,10 @@
           "maxLength": 64,
           "pattern": "^[A-Za-z][A-Za-z0-9_-]{0,62}[A-Za-z0-9]$"
         },
+        "version": {
+          "allOf": [{ "$ref": "common-schema.json#/definitions/semanticVersion" }],
+          "description": "Optional semantic version of the authored agent definition."
+        },
         "displayName": {
           "type": "string",
           "description": "Display name of the agent for UI purposes.",
@@ -144,7 +148,9 @@
             "template": { "$ref": "#/$defs/Template" },
             "instructions": {
               "type": "string",
+              "minLength": 1,
               "maxLength": 32000,
+              "pattern": "\\S",
               "description": "System prompt / instructions for the agent. Must be less than 32,000 characters. Use YAML block scalar (|) for multi-line."
             },
             "additionalInstructions": {

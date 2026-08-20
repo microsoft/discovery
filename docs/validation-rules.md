@@ -168,9 +168,9 @@ Remove the reserved-prefix tag from metadata.yaml. CI applies these automaticall
 
 Further reading: `docs/authoring-guides/agent-authoring-guide.md#tags`
 
-## Rules not yet migrated
+## Other validation families
 
-The `STR-*`, `SCH-*`, `DOC-*`, and remaining `POL-*` rules still live in
-`.github/scripts/validate_pr.py` and are being moved into the modular
-engine one at a time. They run on every PR exactly as before; they are
-simply not yet self-documenting. See `CONTRIBUTING.md` for the full list.
+The `STR-*`, `SCH-*`, `DOC-*`, and remaining `POL-*` checks live in
+`.github/scripts/catalog_validation/`. They run alongside this modular
+engine from the shared PR validation runner. See `docs/validation-rules.csv`
+for the complete source-backed inventory.

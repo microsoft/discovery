@@ -22,52 +22,31 @@ import json
 import os
 import subprocess
 import sys
-import tempfile
 from pathlib import Path
 
 try:
     import jsonschema
-    from referencing import Registry, Resource
+    from referencing import Registry
 except ImportError:
     print("ERROR: jsonschema not installed. Run: pip install jsonschema", file=sys.stderr)
     sys.exit(1)
 
-
-def load_json(path: Path) -> dict:
-    with path.open() as f:
-        return json.load(f)
-
-
-def load_schema(repo_root: Path, schema_name: str) -> dict:
-    schema_path = repo_root / "docs" / "schemas" / schema_name
-    if not schema_path.exists():
-        raise FileNotFoundError(f"Schema not found: {schema_path}")
-    return load_json(schema_path)
+from catalog_validation.schemas import (
+    build_schema_registry,
+    iter_schema_errors,
+    load_json,
+    load_schema,
+)
+from update_registry import scan_repo
 
 
 def build_dry_run_registry(repo_root: Path) -> set[str]:
-    """Run update_registry.py on the current checkout; return set of agent path strings."""
-    script = repo_root / ".github" / "scripts" / "update_registry.py"
-    if not script.exists():
-        raise FileNotFoundError(f"update_registry.py not found: {script}")
-    with tempfile.NamedTemporaryFile(suffix=".json", delete=False) as tmp:
-        tmp_path = tmp.name
-    try:
-        result = subprocess.run(
-            [sys.executable, str(script), "--repo-root", str(repo_root), "--output", tmp_path],
-            capture_output=True,
-            text=True,
-        )
-        if result.returncode != 0:
-            raise RuntimeError(f"update_registry.py failed:\n{result.stderr}")
-        registry = load_json(Path(tmp_path))
-        return {
-            e["path"]
-            for e in registry.get("entries", [])
-            if e.get("type") == "agent"
-        }
-    finally:
-        os.unlink(tmp_path)
+    """Build agent paths from the current checkout without writing a registry."""
+    return {
+        entry["path"]
+        for entry in scan_repo(str(repo_root))
+        if entry.get("type") == "agent"
+    }
 
 
 def get_kit_dirs(repo_root: Path) -> list[Path]:
@@ -130,12 +109,7 @@ def validate_kit(
 
     # SKT-SCH-001: JSON Schema validation
     try:
-        validator = jsonschema.Draft7Validator(
-            kit_schema,
-            registry=schema_registry,
-            format_checker=jsonschema.FormatChecker(),
-        )
-        schema_errors = sorted(validator.iter_errors(manifest), key=lambda e: list(e.path))
+        schema_errors = iter_schema_errors(manifest, kit_schema, schema_registry)
         for err in schema_errors:
             path_str = " -> ".join(str(p) for p in err.absolute_path) or "(root)"
             errors.append(f"[{kit_rel_path}] SKT-SCH-001: Schema error at {path_str}: {err.message}")
@@ -215,7 +189,11 @@ def validate_kit(
         _check_asset(screenshot, "screenshot")
 
 
-def run_validations(repo_root: Path, changed_kit_relpaths: list[str] | None) -> int:
+def run_validations(
+    repo_root: Path,
+    changed_kit_relpaths: list[str] | None,
+    added_kit_relpaths: list[str] | None = None,
+) -> int:
     errors: list[str] = []
     warnings: list[str] = []
 
@@ -226,9 +204,7 @@ def run_validations(repo_root: Path, changed_kit_relpaths: list[str] | None) -> 
     except FileNotFoundError as e:
         print(f"ERROR: {e}", file=sys.stderr)
         return 1
-    schema_registry = Registry().with_resource(
-        "common-schema.json", Resource.from_contents(common_schema)
-    )
+    schema_registry = build_schema_registry(common_schema)
 
     # Build dry-run registry once for all kits
     print("Building dry-run registry from current checkout...")
@@ -241,7 +217,11 @@ def run_validations(repo_root: Path, changed_kit_relpaths: list[str] | None) -> 
 
     # Get all kit dirs and newly added ones
     all_kit_dirs = get_kit_dirs(repo_root)
-    added_kit_relpaths_set = get_git_added_relpaths(repo_root)
+    added_kit_relpaths_set = (
+        set(added_kit_relpaths)
+        if added_kit_relpaths is not None
+        else get_git_added_relpaths(repo_root)
+    )
 
     # Build relpath→dir mapping
     all_kits: list[tuple[str, Path]] = [
@@ -317,6 +297,11 @@ def main() -> None:
             "E.g. --changed-kits protein-structure-analysis my-other-kit"
         ),
     )
+    parser.add_argument(
+        "--added-kits",
+        nargs="*",
+        help="New kit relpaths supplied by CI; skips local git-diff discovery.",
+    )
     args = parser.parse_args()
 
     repo_root = Path(args.repo_root).resolve()
@@ -324,7 +309,7 @@ def main() -> None:
         print(f"ERROR: repo-root does not exist: {repo_root}", file=sys.stderr)
         sys.exit(1)
 
-    sys.exit(run_validations(repo_root, args.changed_kits))
+    sys.exit(run_validations(repo_root, args.changed_kits, args.added_kits))
 
 
 if __name__ == "__main__":

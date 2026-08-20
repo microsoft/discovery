@@ -19,13 +19,26 @@ from rules.registry import RunResult, build_context, run_rules
 REPO_ROOT = Path(__file__).resolve().parents[3]
 
 # Minimal well-formed samples, byte-exact where the magic matters.
-ELF_BYTES = b"\x7fELF\x02\x01\x01\x00" + b"\x00" * 56 + b"payload"
+ELF_BYTES = bytes.fromhex(
+    "7f454c46020101000000000000000000"
+    "02003e00010000000000000000000000"
+    "00000000000000000000000000000000"
+    "00000000400038000000400000000000"
+)
 PE_BYTES = b"MZ\x90\x00\x03\x00\x00\x00\x04\x00\x00\x00" + b"\x00" * 48
 ZIP_BYTES = b"PK\x03\x04\x14\x00\x00\x00\x08\x00" + b"\x00" * 40
 GZIP_BYTES = b"\x1f\x8b\x08\x00\x00\x00\x00\x00\x00\x03" + b"\xed\xbd\x07"
 PNG_BYTES = b"\x89PNG\r\n\x1a\n" + b"\x00\x00\x00\rIHDR" + b"\x00" * 20
 PDF_BYTES = b"%PDF-1.7\n%\xe2\xe3\xcf\xd3\n1 0 obj\n<< >>\nendobj\n"
-SQLITE_BYTES = b"SQLite format 3\x00" + b"\x00" * 80
+SQLITE_BYTES = bytes.fromhex(
+    "53514c69746520666f726d6174203300"
+    "10000101004020200000000100000002"
+    "00000000000000000000000100000004"
+    "00000000000000000000000100000000"
+    "00000000000000000000000000000000"
+    "0000000000000000000000000001002e"
+    "7a71"
+)
 WASM_BYTES = b"\x00asm\x01\x00\x00\x00" + b"\x00" * 16
 
 
