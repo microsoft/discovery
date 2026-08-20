@@ -1,4 +1,5 @@
 name: Validate Everything
+run-name: "Validation test - PR ${{ inputs.pr_number }} - ${{ inputs.reason }}"
 
 on:
   workflow_dispatch:
