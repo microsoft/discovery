@@ -41,23 +41,39 @@ jobs:
         run: python -m pip install -r .github/requirements-ci.txt
 
       - name: Run validation test suite
-        run: python -m pytest .github/tests/ -q
+        id: unit_tests
+        run: |
+          python -m pytest .github/tests/ -q -ra \
+            --junitxml="$RUNNER_TEMP/unit-tests.xml" \
+            2>&1 | tee "$RUNNER_TEMP/unit-tests.log"
+
+      - name: Summarize validation test suite
+        if: always()
+        env:
+          TEST_OUTCOME: ${{ steps.unit_tests.outcome }}
+        run: |
+          python .github/scripts/render_ci_summary.py pytest \
+            --report "$RUNNER_TEMP/unit-tests.xml" \
+            --title "Full validation test suite" \
+            --outcome "$TEST_OUTCOME" \
+            --rerun-command "python -m pytest .github/tests/ -vv -ra"
 
       - name: Build full file list and run validate_pr.py
+        id: catalog
         run: |
           # Pretend every tracked file under agents/ and starter-kits/ is "changed"
           # so the full rule catalogue runs against the entire repo.
           {
             git ls-files agents
             git ls-files starter-kits
-            git ls-files docs/schemas
           } > /tmp/changed-files.txt
           echo "Files under validation: $(wc -l < /tmp/changed-files.txt)"
 
           python .github/scripts/validate_pr.py \
             --changed-files /tmp/changed-files.txt \
             --repo-root "$GITHUB_WORKSPACE" \
-            --output /tmp/validation-results.json || true
+            --output /tmp/validation-results.json \
+            2>&1 | tee "$RUNNER_TEMP/full-catalog-validation.log" || true
 
           python -c "
           import json, sys
@@ -68,12 +84,32 @@ jobs:
           sys.exit(0 if d['passed'] else 1)
           "
 
+      - name: Summarize full catalog validation
+        if: always()
+        env:
+          CATALOG_OUTCOME: ${{ steps.catalog.outcome }}
+          REPOSITORY_URL: ${{ github.server_url }}/${{ github.repository }}
+          VALIDATOR_REVISION: ${{ github.sha }}
+        run: |
+          python .github/scripts/render_ci_summary.py catalog \
+            --report /tmp/validation-results.json \
+            --title "Full agents and starter-kits validation" \
+            --outcome "$CATALOG_OUTCOME" \
+            --repository-url "$REPOSITORY_URL" \
+            --revision "$VALIDATOR_REVISION" \
+            --rerun-command "git ls-files agents starter-kits > changed-files.txt && python .github/scripts/validate_pr.py --changed-files changed-files.txt --repo-root . --output validation-results.json"
+
       - name: Upload results
         if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: full-validation-results
-          path: /tmp/validation-results.json
+          path: |
+            /tmp/validation-results.json
+            ${{ runner.temp }}/full-catalog-validation.log
+            ${{ runner.temp }}/unit-tests.xml
+            ${{ runner.temp }}/unit-tests.log
+          if-no-files-found: warn
 
   validate-all-starter-kits:
     name: Validate every starter kit against current schema
@@ -98,8 +134,29 @@ jobs:
           jsonschema pyyaml referencing
 
       - name: Run validate_starter_kits.py against all kits
+        id: starter_kits
         run: |
-          python .github/scripts/validate_starter_kits.py --repo-root .
+          python .github/scripts/validate_starter_kits.py --repo-root . \
+            2>&1 | tee "$RUNNER_TEMP/starter-kit-validation.log"
+
+      - name: Summarize starter-kit validation
+        if: always()
+        env:
+          STARTER_KIT_OUTCOME: ${{ steps.starter_kits.outcome }}
+        run: |
+          python .github/scripts/render_ci_summary.py text \
+            --log "$RUNNER_TEMP/starter-kit-validation.log" \
+            --title "Full starter-kit validation" \
+            --outcome "$STARTER_KIT_OUTCOME" \
+            --rerun-command "python .github/scripts/validate_starter_kits.py --repo-root ."
+
+      - name: Upload starter-kit validation log
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: full-starter-kit-validation-results
+          path: ${{ runner.temp }}/starter-kit-validation.log
+          if-no-files-found: warn
 
   shadow-pr:
     name: Read-only PR shadow validation
@@ -192,6 +249,7 @@ jobs:
             core.setOutput('changed-count', String(files.length));
 
       - name: Checkout selected validator ref (trusted code)
+        if: always()
         uses: actions/checkout@v6
         with:
           ref: ${{ github.sha }}
@@ -321,25 +379,29 @@ jobs:
           SCHEMA_OUTCOME: ${{ steps.schemas.outcome }}
           STARTER_KIT_OUTCOME: ${{ steps.starter_kits.outcome }}
           REMOVAL_OUTCOME: ${{ steps.removal_impact.outcome }}
+          REPOSITORY_URL: ${{ github.server_url }}/${{ github.repository }}
+          VALIDATOR_REVISION: ${{ github.sha }}
         run: |
-          {
-            echo "## Read-only PR shadow validation"
-            echo
-            echo "**Target:** [#${PR_NUMBER} — ${PR_TITLE}](${PR_URL})"
-            echo "**Head repository:** \`${HEAD_REPOSITORY}\`"
-            echo "**Fork:** \`${IS_FORK}\`"
-            echo "**Changed files:** ${CHANGED_COUNT}"
-            echo
-            echo "| Check | Outcome |"
-            echo "|---|---|"
-            echo "| Ephemeral integration | ${INTEGRATION_OUTCOME} |"
-            echo "| Primary catalog validator | ${CATALOG_OUTCOME} |"
-            echo "| Schema regression suite | ${SCHEMA_OUTCOME} |"
-            echo "| Starter-kit validator | ${STARTER_KIT_OUTCOME} |"
-            echo "| Agent removal impact | ${REMOVAL_OUTCOME} |"
-            echo
-            echo "> Report only: this workflow did not change or publish a check to the target PR."
-          } >> "$GITHUB_STEP_SUMMARY"
+          # Report only: this workflow did not change or publish a check to the target PR.
+          python trusted/.github/scripts/render_ci_summary.py shadow \
+            --pr-number "$PR_NUMBER" \
+            --pr-url "$PR_URL" \
+            --pr-title "$PR_TITLE" \
+            --head-repository "$HEAD_REPOSITORY" \
+            --is-fork "$IS_FORK" \
+            --changed-count "$CHANGED_COUNT" \
+            --integration-outcome "$INTEGRATION_OUTCOME" \
+            --integration-log "$RUNNER_TEMP/shadow-validation/integration.txt" \
+            --catalog-outcome "$CATALOG_OUTCOME" \
+            --catalog-report "$RUNNER_TEMP/shadow-validation/catalog.json" \
+            --schema-outcome "$SCHEMA_OUTCOME" \
+            --schema-log "$RUNNER_TEMP/shadow-validation/schema-tests.txt" \
+            --starter-kit-outcome "$STARTER_KIT_OUTCOME" \
+            --starter-kit-log "$RUNNER_TEMP/shadow-validation/starter-kits.txt" \
+            --removal-outcome "$REMOVAL_OUTCOME" \
+            --removal-log "$RUNNER_TEMP/shadow-validation/removal-impact.txt" \
+            --repository-url "$REPOSITORY_URL" \
+            --revision "$VALIDATOR_REVISION"
 
       - name: Upload shadow validation evidence
         if: always()

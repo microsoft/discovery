@@ -73,6 +73,21 @@ def test_binary_extension_is_not_reported_as_disguised(repo, monkeypatch):
     assert not classify(repo / rel).spoofed
 
 
+def test_mz_executable_header_does_not_depend_on_libmagic(repo, monkeypatch):
+    rel = write(repo, "payload.py", b"MZ" + b"\x00" * 58)
+    monkeypatch.setattr(
+        content_sniffer.subprocess,
+        "run",
+        lambda *_args, **_kwargs: pytest.fail("portable header should classify first"),
+    )
+
+    result = classify(repo / rel)
+
+    assert result.is_binary
+    assert result.format == "application/x-dosexec"
+    assert result.spoofed
+
+
 def test_text_with_binary_extension_is_reported_as_disguised(repo, monkeypatch):
     rel = write(repo, "image.png", b"plain text\n")
     _mock_file(monkeypatch, "text/plain; charset=us-ascii\n")

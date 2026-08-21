@@ -38,6 +38,8 @@ _TEXT_MIME_TYPES = frozenset({
     "image/svg+xml",
 })
 
+_DOS_EXECUTABLE_MAGIC = b"MZ"
+
 
 @dataclass(frozen=True)
 class Classification:
@@ -67,6 +69,23 @@ def _is_text_mime(mime_type: str) -> bool:
         or mime_type in _TEXT_MIME_TYPES
         or mime_type.endswith(("+json", "+xml", "+yaml"))
     )
+
+
+def _classify_portable_header(path: Path, suffix: str) -> Classification | None:
+    try:
+        with path.open("rb") as stream:
+            header = stream.read(len(_DOS_EXECUTABLE_MAGIC))
+    except OSError as error:
+        return _classifier_error(str(error))
+
+    if header == _DOS_EXECUTABLE_MAGIC:
+        return Classification(
+            kind="binary",
+            format="application/x-dosexec",
+            detail="Content has a DOS/PE executable MZ header.",
+            spoofed=suffix not in _EXPECTED_BINARY_EXTENSIONS,
+        )
+    return None
 
 
 def _from_mime_output(output: str, suffix: str) -> Classification:
@@ -130,6 +149,10 @@ def classify(path: Path) -> Classification:
             return Classification("empty", "empty", "File is empty.")
     except OSError as error:
         return _classifier_error(str(error))
+
+    portable = _classify_portable_header(path, path.suffix.lower())
+    if portable is not None:
+        return portable
 
     command = [
         FILE_COMMAND,

@@ -5,7 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from pathlib import Path
 
-from rules.registry import build_context, run_rules
+from rules.registry import build_context, discover_rules, run_rules
 
 from .contribution import ContributionSummary, classify_contribution
 from .contributor_scope import check_contributor_scope
@@ -80,7 +80,9 @@ def run_validation(
     ))
     failures.extend(check_documentation(repo, context.agent_folders))
 
-    engine = run_rules(context)
+    rules = discover_rules()
+    guidance = {rule.id: rule for rule in rules}
+    engine = run_rules(context, rules)
     failures.extend(
         Failure("CFG-001", ".github/policy/waivers.yaml", error)
         for error in engine.config_errors
@@ -92,6 +94,8 @@ def run_validation(
             finding.message,
             finding.line,
             severity=finding.severity.value,
+            remediation=guidance[finding.rule_id].remediation,
+            docs=guidance[finding.rule_id].docs,
         )
         for finding in engine.findings
     )

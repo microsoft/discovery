@@ -19,29 +19,17 @@ DOTNET_TOOL_MANIFEST_PATH = REPO_ROOT / ".config" / "dotnet-tools.json"
 
 CODEQL_SCOPES = {
     ("python", "catalog-python"): ".github/codeql/codeql-config.yml",
-    ("python", "repository-python"): ".github/codeql/repository-config.yml",
-    ("actions", "workflows"): ".github/codeql/actions-config.yml",
 }
 
 CODEQL_PATHS = {
     ".github/codeql/codeql-config.yml": {"agents", "starter-kits"},
-    ".github/codeql/repository-config.yml": {
-        ".github/scripts",
-        ".github/tests",
-        "utilities",
-    },
-    ".github/codeql/actions-config.yml": {".github/workflows"},
 }
 
 CODEQL_TRIGGER_PATHS = {
-    ".github/codeql/**",
-    ".github/scripts/**",
-    ".github/tests/**",
-    ".github/workflows/**",
     "agents/**",
     "starter-kits/**",
-    "utilities/**",
 }
+CATALOG_TRIGGER_PATHS = CODEQL_TRIGGER_PATHS
 
 
 def load_yaml(path: Path) -> dict[str, Any]:
@@ -97,6 +85,16 @@ def test_codeql_matrix_keeps_scopes_separate_and_supported():
     assert analyze_step["with"]["category"] == (
         "/language:${{ matrix.language }}/scope:${{ matrix.scope }}"
     )
+    assert analyze_step["with"]["output"] == "codeql-results"
+    assert analyze_step["with"]["upload"] == (
+        "${{ github.event_name != 'pull_request' || "
+        "github.event.pull_request.head.repo.full_name == github.repository }}"
+    )
+    artifact_step = next(
+        step for step in codeql_job["steps"]
+        if step.get("name") == "Upload CodeQL SARIF artifact"
+    )
+    assert artifact_step["if"] == "always()"
 
 
 def test_codeql_configs_cover_expected_sources_and_queries():
@@ -152,6 +150,7 @@ def test_dependabot_monitors_each_supported_ecosystem():
 def test_dependency_review_blocks_new_high_severity_vulnerabilities():
     workflow = load_workflow(DEPENDENCY_REVIEW_PATH)
     assert "pull_request" in workflow["on"]
+    assert set(workflow["on"]["pull_request"]["paths"]) == CATALOG_TRIGGER_PATHS
     assert workflow["permissions"] == {"contents": "read"}
 
     job = workflow["jobs"]["dependency-review"]
@@ -166,6 +165,77 @@ def test_dependency_review_blocks_new_high_severity_vulnerabilities():
         "fail-on-scopes": "runtime, development, unknown",
         "show-patched-versions": "true",
     }
+
+
+def test_weekly_msdo_checks_out_only_catalog_roots():
+    workflow = load_workflow(
+        REPO_ROOT / ".github" / "workflows" / "weekly-deep-scan.yml"
+    )
+    checkout = next(
+        step for step in workflow["jobs"]["msdo"]["steps"]
+        if step.get("uses") == "actions/checkout@v6"
+    )
+
+    assert checkout["with"]["sparse-checkout"].splitlines() == [
+        "/agents/",
+        "/starter-kits/",
+    ]
+    assert checkout["with"]["sparse-checkout-cone-mode"] == "false"
+    assert checkout["with"]["persist-credentials"] == "false"
+
+
+def test_validation_workflows_publish_actionable_diagnostics():
+    unit_workflow = load_workflow(
+        REPO_ROOT / ".github" / "workflows" / "unit-tests.yml"
+    )
+    unit_steps = unit_workflow["jobs"]["pytest"]["steps"]
+    unit_test_step = next(step for step in unit_steps if step.get("id") == "unit_tests")
+    assert "--junitxml=\"$RUNNER_TEMP/unit-tests.xml\"" in unit_test_step["run"]
+    assert "2>&1 | tee \"$RUNNER_TEMP/unit-tests.log\"" in unit_test_step["run"]
+    unit_summary = next(
+        step for step in unit_steps if step.get("name") == "Summarize unit test results"
+    )
+    assert "render_ci_summary.py pytest" in unit_summary["run"]
+    unit_artifact = next(
+        step for step in unit_steps if step.get("name") == "Upload unit test diagnostics"
+    )
+    assert unit_artifact["if"].startswith("${{ always()")
+
+    full_workflow = load_workflow(
+        REPO_ROOT / ".github" / "workflows" / "validate-everything.yml"
+    )
+    full_steps = full_workflow["jobs"]["validate-all-agents"]["steps"]
+    assert any(
+        "render_ci_summary.py pytest" in step.get("run", "") for step in full_steps
+    )
+    assert any(
+        "render_ci_summary.py catalog" in step.get("run", "") for step in full_steps
+    )
+    shadow_steps = full_workflow["jobs"]["shadow-pr"]["steps"]
+    shadow_summary = next(
+        step for step in shadow_steps
+        if step.get("name") == "Summarize report-only results"
+    )
+    assert "trusted/.github/scripts/render_ci_summary.py shadow" in shadow_summary["run"]
+    assert "--catalog-report" in shadow_summary["run"]
+    assert "--schema-log" in shadow_summary["run"]
+
+    pr_workflow = load_workflow(
+        REPO_ROOT / ".github" / "workflows" / "pr-review.yml"
+    )
+    pr_steps = pr_workflow["jobs"]["validate"]["steps"]
+    pr_summary = next(
+        step for step in pr_steps if step.get("name") == "Summarize validation results"
+    )
+    assert pr_summary["if"] == "always()"
+    assert "trusted/.github/scripts/render_ci_summary.py catalog" in pr_summary["run"]
+    post_results = pr_workflow["jobs"]["post-results"]["steps"]
+    feedback = next(
+        step for step in post_results
+        if step.get("name") == "Manage labels and post PR feedback"
+    )["with"]["script"]
+    assert "**How to fix:** ${remediation(f)}" in feedback
+    assert "**Guidance:** ${guidanceUrl(f)}" in feedback
 
 
 def test_dependabot_covers_all_requirements_files():
@@ -343,6 +413,7 @@ def test_manual_shadow_validation_is_report_only_and_fork_aware():
         step for step in steps if step.get("with", {}).get("path") == "pr"
     )
     assert trusted_checkout["with"]["ref"] == "${{ github.sha }}"
+    assert trusted_checkout["if"] == "always()"
     assert trusted_checkout["with"]["persist-credentials"] == "false"
     assert pr_checkout["with"]["repository"] == (
         "${{ steps.target.outputs.head-repository }}"
@@ -387,6 +458,13 @@ def test_manual_shadow_validation_is_report_only_and_fork_aware():
         "python -m pytest .github/tests/" in step.get("run", "")
         for step in branch_job["steps"]
     )
+    full_catalog_command = next(
+        step["run"] for step in branch_job["steps"]
+        if step.get("name") == "Build full file list and run validate_pr.py"
+    )
+    assert "git ls-files agents" in full_catalog_command
+    assert "git ls-files starter-kits" in full_catalog_command
+    assert "git ls-files docs/schemas" not in full_catalog_command
 
 
 def test_dependabot_covers_all_conventional_dockerfiles():

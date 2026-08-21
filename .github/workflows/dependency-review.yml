@@ -5,6 +5,9 @@ name: Dependency Review
 
 on:
   pull_request:
+    paths:
+      - "agents/**"
+      - "starter-kits/**"
 
 permissions:
   contents: read
