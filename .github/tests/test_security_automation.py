@@ -184,6 +184,29 @@ def test_weekly_msdo_checks_out_only_catalog_roots():
     assert checkout["with"]["persist-credentials"] == "false"
 
 
+def test_weekly_manual_dry_run_suppresses_repository_writes():
+    workflow = load_workflow(
+        REPO_ROOT / ".github" / "workflows" / "weekly-deep-scan.yml"
+    )
+    dry_run = workflow["on"]["workflow_dispatch"]["inputs"]["dry_run"]
+    assert dry_run["type"] == "boolean"
+    assert dry_run["default"] == "true"
+    assert workflow["permissions"] == {"contents": "read"}
+
+    msdo_steps = workflow["jobs"]["msdo"]["steps"]
+    security_upload = next(
+        step for step in msdo_steps
+        if step.get("name") == "Upload results to the Security tab"
+    )
+    assert security_upload["if"] == (
+        "${{ !inputs.dry_run && steps.msdo.outputs.sarifFile != '' }}"
+    )
+
+    report = workflow["jobs"]["report"]
+    assert report["permissions"] == {"issues": "write"}
+    assert "!inputs.dry_run" in report["if"]
+
+
 def test_validation_workflows_publish_actionable_diagnostics():
     unit_workflow = load_workflow(
         REPO_ROOT / ".github" / "workflows" / "unit-tests.yml"
