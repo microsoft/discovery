@@ -183,6 +183,16 @@ def test_weekly_msdo_checks_out_only_catalog_roots():
     assert checkout["with"]["sparse-checkout-cone-mode"] == "false"
     assert checkout["with"]["persist-credentials"] == "false"
 
+    msdo_step = next(
+        step for step in workflow["jobs"]["msdo"]["steps"]
+        if step.get("name") == "Run Microsoft Security DevOps"
+    )
+    assert msdo_step["with"]["tools"].split(",") == [
+        "bandit",
+        "checkov",
+        "trivy",
+    ]
+
 
 def test_weekly_manual_dry_run_suppresses_repository_writes():
     workflow = load_workflow(
