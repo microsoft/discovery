@@ -267,6 +267,12 @@ jobs:
       security-events: write
     steps:
       - uses: actions/checkout@v6
+        with:
+          sparse-checkout: |
+            /agents/
+            /starter-kits/
+          sparse-checkout-cone-mode: false
+          persist-credentials: false
 
       - uses: actions/setup-dotnet@v5
         with:
@@ -278,10 +284,8 @@ jobs:
 
       # MSDO bundles Bandit (Python), Checkov (Dockerfile/IaC), Trivy
       # (filesystem CVEs), and AntiMalware behind one Microsoft-maintained
-      # action that emits SARIF. It runs weekly rather than per-PR because it
-      # scans the whole workspace and cannot be scoped to a subdirectory —
-      # findings outside agents/ and starter-kits/ are filtered from the
-      # summary below rather than at scan time.
+      # action that emits SARIF. A non-cone sparse checkout keeps both the scan
+      # and uploaded SARIF strictly inside the public catalog roots.
       - name: Run Microsoft Security DevOps
         id: msdo
         continue-on-error: true

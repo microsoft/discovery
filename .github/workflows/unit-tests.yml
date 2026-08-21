@@ -85,17 +85,72 @@ jobs:
         run: python -m pip install -r .github/requirements-ci.txt
 
       - name: Run unit tests
+        id: unit_tests
         if: github.event_name != 'pull_request' || steps.changes.outputs.relevant == 'true'
-        run: python -m pytest .github/tests/ -v
+        run: |
+          python -m pytest .github/tests/ -v -ra \
+            --junitxml="$RUNNER_TEMP/unit-tests.xml" \
+            2>&1 | tee "$RUNNER_TEMP/unit-tests.log"
+
+      - name: Summarize unit test results
+        if: ${{ always() && (github.event_name != 'pull_request' || steps.changes.outputs.relevant == 'true') }}
+        env:
+          TEST_OUTCOME: ${{ steps.unit_tests.outcome }}
+        run: |
+          python .github/scripts/render_ci_summary.py pytest \
+            --report "$RUNNER_TEMP/unit-tests.xml" \
+            --title "Discovery validator unit tests" \
+            --outcome "$TEST_OUTCOME" \
+            --rerun-command "python -m pytest .github/tests/ -vv -ra"
 
       # A rule or policy change can silently start firing on legacy content.
       # This fails when the catalog has violations the ratchet baseline does
       # not already record, forcing an explicit decision instead of a surprise
       # failure on an unrelated contributor's PR.
       - name: Ratchet baseline drift
+        id: baseline
         if: github.event_name != 'pull_request' || steps.changes.outputs.relevant == 'true'
-        run: python .github/scripts/generate_baseline.py --check
+        run: |
+          python .github/scripts/generate_baseline.py --check \
+            2>&1 | tee "$RUNNER_TEMP/baseline-drift.log"
+
+      - name: Summarize ratchet baseline failure
+        if: ${{ always() && steps.baseline.outcome == 'failure' }}
+        env:
+          BASELINE_OUTCOME: ${{ steps.baseline.outcome }}
+        run: |
+          python .github/scripts/render_ci_summary.py text \
+            --log "$RUNNER_TEMP/baseline-drift.log" \
+            --title "Ratchet baseline drift" \
+            --outcome "$BASELINE_OUTCOME" \
+            --rerun-command "python .github/scripts/generate_baseline.py --check"
 
       - name: Rule documentation drift
+        id: rule_docs
         if: github.event_name != 'pull_request' || steps.changes.outputs.relevant == 'true'
-        run: python .github/scripts/generate_rule_docs.py --check
+        run: |
+          python .github/scripts/generate_rule_docs.py --check \
+            2>&1 | tee "$RUNNER_TEMP/rule-documentation-drift.log"
+
+      - name: Summarize rule documentation failure
+        if: ${{ always() && steps.rule_docs.outcome == 'failure' }}
+        env:
+          RULE_DOCS_OUTCOME: ${{ steps.rule_docs.outcome }}
+        run: |
+          python .github/scripts/render_ci_summary.py text \
+            --log "$RUNNER_TEMP/rule-documentation-drift.log" \
+            --title "Rule documentation drift" \
+            --outcome "$RULE_DOCS_OUTCOME" \
+            --rerun-command "python .github/scripts/generate_rule_docs.py --check"
+
+      - name: Upload unit test diagnostics
+        if: ${{ always() && (github.event_name != 'pull_request' || steps.changes.outputs.relevant == 'true') }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: unit-test-diagnostics
+          path: |
+            ${{ runner.temp }}/unit-tests.xml
+            ${{ runner.temp }}/unit-tests.log
+            ${{ runner.temp }}/baseline-drift.log
+            ${{ runner.temp }}/rule-documentation-drift.log
+          if-no-files-found: warn

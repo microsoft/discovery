@@ -200,13 +200,13 @@ jobs:
           fi
 
           PASSED=$(python -c "import json; d=json.load(open('/tmp/validation-results.json')); print('true' if d['passed'] else 'false')")
-          echo "passed=$PASSED" >> "$GITHUB_OUTPUT"
-
-          # Compact JSON for passing between steps
           RESULTS=$(cat /tmp/validation-results.json)
-          echo "results_json<<EOF" >> "$GITHUB_OUTPUT"
-          echo "$RESULTS" >> "$GITHUB_OUTPUT"
-          echo "EOF" >> "$GITHUB_OUTPUT"
+          {
+            echo "passed=$PASSED"
+            echo "results_json<<EOF"
+            echo "$RESULTS"
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
 
           # Fail the job so the GitHub check shows red when validation issues are found.
           # post-results uses if: !cancelled() so it still runs to post feedback comments on failure.
@@ -223,6 +223,21 @@ jobs:
             echo '{"passed":false,"failure_count":1,"has_agents":false,"has_docs_only":false,"failures":[{"rule_id":"INTERNAL","file":"(workflow)","line":1,"message":"Validator crashed before producing results — check the Validate PR job logs for details."}]}' \
               > /tmp/validation-results.json
           fi
+
+      - name: Summarize validation results
+        if: always()
+        env:
+          VALIDATION_OUTCOME: ${{ steps.run_validator.outcome }}
+          REPOSITORY_URL: ${{ github.server_url }}/${{ github.repository }}
+          VALIDATOR_REVISION: ${{ github.event.pull_request.base.sha }}
+        run: |
+          python trusted/.github/scripts/render_ci_summary.py catalog \
+            --report /tmp/validation-results.json \
+            --title "PR catalog validation" \
+            --outcome "$VALIDATION_OUTCOME" \
+            --repository-url "$REPOSITORY_URL" \
+            --revision "$VALIDATOR_REVISION" \
+            --rerun-command "python .github/scripts/validate_pr.py --changed-files changed-files.txt --repo-root . --output validation-results.json"
 
       - name: Upload validation results
         if: always()
@@ -456,6 +471,13 @@ jobs:
             // ── 4. Post inline review comments (one per failure) ───
             const failures = results.failures || [];
             if (failures.length > 0) {
+              const guidanceUrl = (failure) => {
+                if (!failure.docs) return '';
+                return `${context.serverUrl}/${owner}/${repo}/blob/${pr.base.sha}/${failure.docs}`;
+              };
+              const remediation = (failure) => failure.remediation ||
+                'Correct the issue described above, then push the fix to rerun validation.';
+
               // Create a PR review with inline comments for each failure
               // We batch all comments into a single review submission so
               // the submitter gets everything in one pass (DC-AUTO-001).
@@ -463,7 +485,12 @@ jobs:
                 path: f.file,
                 line: f.line || 1,
                 side: 'RIGHT',
-                body: `**[${f.rule_id}]** ${f.message}`
+                body: [
+                  `**[${f.rule_id}]** ${f.message}`,
+                  '',
+                  `**How to fix:** ${remediation(f)}`,
+                  guidanceUrl(f) ? `\n**Guidance:** ${guidanceUrl(f)}` : '',
+                ].filter(Boolean).join('\n')
               }));
 
               // GitHub review comments require the file to be in the diff.
@@ -493,9 +520,16 @@ jobs:
               }
 
               // ── 5. Post single summary comment with all issues ──
-              const rows = failures.map(f =>
-                `| \`${f.rule_id}\` | \`${f.file}\` | ${f.message} |`
-              ).join('\n');
+              const tableCell = (value) => String(value)
+                .replaceAll('|', '\\|')
+                .replaceAll(/\r?\n/g, '<br>');
+              const rows = failures.map(f => {
+                const location = `${f.file}:${f.line || 1}`;
+                const guidance = guidanceUrl(f)
+                  ? `<br><br>**Guidance:** [Open the authoring guide](${guidanceUrl(f)})`
+                  : '';
+                return `| \`${tableCell(f.rule_id)}\` | \`${tableCell(location)}\` | ${tableCell(f.message)}<br><br>**How to fix:** ${tableCell(remediation(f))}${guidance} |`;
+              }).join('\n');
 
               const secretRow = !secretScanPassed
                 ? `| \`SEC-SCAN\` | _(repository)_ | Secret scan failed — potential credentials detected. Check the TruffleHog job for details. |`
@@ -507,8 +541,8 @@ jobs:
                 '',
                 'All issues are listed below. Please address **all** of them before requesting human review.',
                 '',
-                '| Rule ID | File | Issue |',
-                '|---------|------|-------|',
+                '| Rule ID | Location | Details |',
+                '|---------|----------|---------|',
                 tableRows,
                 '',
                 '---',

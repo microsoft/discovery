@@ -12,6 +12,8 @@ class Failure:
     message: str
     line: int = 1
     severity: str = "error"
+    remediation: str = ""
+    docs: str = ""
 
     def to_dict(self) -> dict[str, object]:
         return {
@@ -20,4 +22,6 @@ class Failure:
             "line": self.line,
             "message": self.message,
             "severity": self.severity,
+            "remediation": self.remediation,
+            "docs": self.docs,
         }

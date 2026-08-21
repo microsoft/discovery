@@ -3,17 +3,15 @@ name: Code Scan
 # Static analysis of contributed code, using Microsoft and GitHub tooling
 # rather than bespoke rules:
 #
-#   CodeQL              — dataflow analysis of contributed Python, trusted
-#                         repository Python, and GitHub Actions workflows.
+#   CodeQL              — dataflow analysis of contributed catalog Python.
 #   DevSkim             — Microsoft's security linter (microsoft/DevSkim).
 #   ApplicationInspector— Microsoft's characterization scanner. Answers "what
 #                         does this code actually DO" (network, shell, crypto,
 #                         file I/O), which is the question a reviewer of an
 #                         untrusted scientific tool most needs answered.
 #
-# Contributor and maintainer code are analyzed as separate CodeQL categories so
-# findings retain a clear owner. DevSkim and Application Inspector remain scoped
-# to contributed catalog code, where their broad characterization is useful.
+# Every analyzer in this workflow is scoped to contributed catalog code under
+# agents/ and starter-kits/.
 #
 # Rollout posture: reporting, not gating. Pointing three new analyzers at 46
 # pre-existing agents would produce a flood of findings that blocks unrelated
@@ -24,23 +22,13 @@ name: Code Scan
 on:
   pull_request:
     paths:
-      - ".github/codeql/**"
-      - ".github/scripts/**"
-      - ".github/tests/**"
-      - ".github/workflows/**"
       - "agents/**"
       - "starter-kits/**"
-      - "utilities/**"
   push:
     branches: [main]
     paths:
-      - ".github/codeql/**"
-      - ".github/scripts/**"
-      - ".github/tests/**"
-      - ".github/workflows/**"
       - "agents/**"
       - "starter-kits/**"
-      - "utilities/**"
   workflow_dispatch:
 
 permissions:
@@ -52,7 +40,7 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  # ── CodeQL over contributed and repository-owned code ────────────────────
+  # ── CodeQL over contributed catalog code ─────────────────────────────────
   codeql:
     name: CodeQL (${{ matrix.scope }})
     runs-on: ubuntu-latest
@@ -64,12 +52,6 @@ jobs:
           - language: python
             scope: catalog-python
             config: ./.github/codeql/codeql-config.yml
-          - language: python
-            scope: repository-python
-            config: ./.github/codeql/repository-config.yml
-          - language: actions
-            scope: workflows
-            config: ./.github/codeql/actions-config.yml
     steps:
       - uses: actions/checkout@v6
 
@@ -83,6 +65,16 @@ jobs:
         uses: github/codeql-action/analyze@v4
         with:
           category: "/language:${{ matrix.language }}/scope:${{ matrix.scope }}"
+          output: codeql-results
+          upload: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository }}
+
+      - name: Upload CodeQL SARIF artifact
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: codeql-${{ matrix.scope }}-sarif
+          path: codeql-results
+          if-no-files-found: warn
 
   # ── DevSkim security lint ─────────────────────────────────────────────────
   devskim:
