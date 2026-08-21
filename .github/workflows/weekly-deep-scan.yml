@@ -286,16 +286,18 @@ jobs:
         with:
           python-version: "3.12"
 
-      # MSDO bundles Bandit (Python), Checkov (Dockerfile/IaC), Trivy
-      # (filesystem CVEs), and AntiMalware behind one Microsoft-maintained
-      # action that emits SARIF. A non-cone sparse checkout keeps both the scan
-      # and uploaded SARIF strictly inside the public catalog roots.
+      # MSDO bundles Bandit (Python), Checkov (Dockerfile/IaC), and Trivy
+      # (filesystem CVEs) behind one Microsoft-maintained action that emits
+      # SARIF. AntiMalware has no Linux configuration, so enabling it aborts
+      # Guardian before the supported analyzers can produce results. A non-cone
+      # sparse checkout keeps both the scan and uploaded SARIF strictly inside
+      # the public catalog roots.
       - name: Run Microsoft Security DevOps
         id: msdo
         continue-on-error: true
         uses: microsoft/security-devops-action@08976cb623803b1b36d7112d4ff9f59eae704de0 # v1.12.0
         with:
-          tools: bandit,checkov,trivy,antimalware
+          tools: bandit,checkov,trivy
 
       - name: Upload results to the Security tab
         if: ${{ !inputs.dry_run && steps.msdo.outputs.sarifFile != '' }}
