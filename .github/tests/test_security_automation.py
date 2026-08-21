@@ -205,6 +205,10 @@ def test_validation_workflows_publish_actionable_diagnostics():
         REPO_ROOT / ".github" / "workflows" / "validate-everything.yml"
     )
     full_steps = full_workflow["jobs"]["validate-all-agents"]["steps"]
+    full_checkout = next(
+        step for step in full_steps if step.get("uses") == "actions/checkout@v6"
+    )
+    assert full_checkout["with"]["lfs"] == "true"
     assert any(
         "render_ci_summary.py pytest" in step.get("run", "") for step in full_steps
     )
