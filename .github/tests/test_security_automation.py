@@ -207,6 +207,20 @@ def test_weekly_manual_dry_run_suppresses_repository_writes():
     assert "!inputs.dry_run" in report["if"]
 
 
+def test_weekly_url_reputation_provider_errors_are_report_only():
+    workflow = load_workflow(
+        REPO_ROOT / ".github" / "workflows" / "weekly-deep-scan.yml"
+    )
+    reputation_step = next(
+        step for step in workflow["jobs"]["url-reputation-audit"]["steps"]
+        if step.get("id") == "reputation"
+    )
+    command = reputation_step["run"]
+    assert "EXIT_CODE=0" in command
+    assert "|| EXIT_CODE=$?" in command
+    assert command.rstrip().endswith("exit 0")
+
+
 def test_validation_workflows_publish_actionable_diagnostics():
     unit_workflow = load_workflow(
         REPO_ROOT / ".github" / "workflows" / "unit-tests.yml"

@@ -135,11 +135,12 @@ jobs:
           PHISHTANK_APP_KEY: ${{ secrets.PHISHTANK_APP_KEY }}
         run: |
           set -uo pipefail
+          EXIT_CODE=0
           python .github/scripts/url_reputation_audit.py \
             --repo-root "$GITHUB_WORKSPACE" \
             --output /tmp/url-reputation.json \
-            --summary-output /tmp/url-reputation.md
-          EXIT_CODE=$?
+            --summary-output /tmp/url-reputation.md \
+            || EXIT_CODE=$?
 
           case "$EXIT_CODE" in
             0) STATUS=clean ;;
