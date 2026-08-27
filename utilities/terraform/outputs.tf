@@ -6,28 +6,28 @@
 # -----------------------------------------------------------------------------
 
 output "supercomputer_id" {
-  description = "Resource ID of the Discovery Supercomputer (created, or the existing one supplied via existing_supercomputer_id)."
-  value       = local.supercomputer_id
+  description = "Resource ID of the Discovery Supercomputer."
+  value       = module.supercomputer.id
 }
 
 output "node_pool_ids" {
-  description = "Resource IDs of the Supercomputer node pools keyed by name (empty when reusing an existing Supercomputer)."
-  value       = try(module.supercomputer[0].node_pool_ids, {})
+  description = "Resource IDs of the Supercomputer node pools keyed by name."
+  value       = module.supercomputer.node_pool_ids
 }
 
 output "workspace_id" {
-  description = "Resource ID of the Discovery Workspace (created, or the existing one supplied via existing_workspace_id)."
-  value       = local.workspace_id
+  description = "Resource ID of the Discovery Workspace."
+  value       = module.workspace.id
 }
 
 output "chat_model_deployment_ids" {
-  description = "Resource IDs of the chat model deployments keyed by name (empty when reusing an existing Workspace)."
-  value       = try(module.workspace[0].chat_model_deployment_ids, {})
+  description = "Resource IDs of the chat model deployments keyed by name."
+  value       = module.workspace.chat_model_deployment_ids
 }
 
 output "project_ids" {
-  description = "Resource IDs of the Discovery projects keyed by name (empty when reusing an existing Workspace)."
-  value       = try(module.workspace[0].project_ids, {})
+  description = "Resource IDs of the Discovery projects keyed by name."
+  value       = module.workspace.project_ids
 }
 
 output "storage_container_id" {
@@ -36,8 +36,8 @@ output "storage_container_id" {
 }
 
 output "bookshelf_id" {
-  description = "Resource ID of the optional Discovery Bookshelf (created, or the existing one supplied via existing_bookshelf_id)."
-  value       = local.bookshelf_id
+  description = "Resource ID of the optional Discovery Bookshelf (null when enable_bookshelf is false)."
+  value       = one(module.bookshelf[*].id)
 }
 
 output "managed_identity_id" {

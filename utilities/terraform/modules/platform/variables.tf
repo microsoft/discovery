@@ -33,12 +33,6 @@ variable "common_tags" {
   default     = {}
 }
 
-variable "create_supercomputer_network" {
-  description = "Whether to create the Supercomputer VNet, AKS/node-pool subnets, peering, and DNS link. Set false when bringing your own Supercomputer."
-  type        = bool
-  default     = true
-}
-
 variable "blob_container_name" {
   description = "Blob container Discovery mounts for outputs."
   type        = string
@@ -62,19 +56,19 @@ variable "supercomputer_vnet_address_prefix" {
 variable "workspace_subnet_prefix" {
   description = "Workspace subnet prefix (delegated to Microsoft.App/environments)."
   type        = string
-  default     = "10.0.1.0/24"
+  default     = "10.0.3.0/24"
 }
 
 variable "private_endpoint_subnet_prefix" {
   description = "Private endpoint subnet prefix."
   type        = string
-  default     = "10.0.2.0/24"
+  default     = "10.0.4.0/24"
 }
 
 variable "agent_subnet_prefix" {
   description = "Agent subnet prefix (delegated to Microsoft.App/environments)."
   type        = string
-  default     = "10.0.3.0/24"
+  default     = "10.0.5.0/24"
 }
 
 variable "search_subnet_prefix" {
@@ -86,11 +80,11 @@ variable "search_subnet_prefix" {
 variable "aks_subnet_prefix" {
   description = "AKS system subnet prefix (in the Supercomputer VNet)."
   type        = string
-  default     = "10.1.1.0/24"
+  default     = "10.1.2.0/24"
 }
 
 variable "supercomputer_nodepool_subnet_prefix" {
   description = "Supercomputer node pool subnet prefix (in the Supercomputer VNet)."
   type        = string
-  default     = "10.1.2.0/24"
+  default     = "10.1.1.0/24"
 }

@@ -1,14 +1,15 @@
 # -----------------------------------------------------------------------------
 # main.tf -- end-to-end Discovery deployment (single apply)
 #
-# The root composes the same modules the staged BYO examples use:
+# The root composes the reusable modules into one full-stack apply:
 #   * modules/platform                     -- network, identities, storage, RBAC
 #   * modules/control-plane/supercomputer  -- supercomputer + node pool
 #   * modules/control-plane/workspace      -- workspace + chat model + project
 #   * modules/control-plane/bookshelf      -- optional, behind enable_bookshelf
 #
-# There are no inline Discovery or platform resources here: the modules are the
-# single source of truth, so the BYO and E2E paths cannot drift.
+# Full stack is the only path the root wires. To reuse an existing Discovery
+# resource, call the control-plane modules directly from your own configuration
+# (they only consume IDs) -- see the README "Reuse an existing resource" note.
 # -----------------------------------------------------------------------------
 
 module "platform" {
@@ -29,13 +30,10 @@ module "platform" {
   search_subnet_prefix                 = var.search_subnet_prefix
   aks_subnet_prefix                    = var.aks_subnet_prefix
   supercomputer_nodepool_subnet_prefix = var.supercomputer_nodepool_subnet_prefix
-
-  create_supercomputer_network = var.existing_supercomputer_id == null
 }
 
 module "supercomputer" {
   source = "./modules/control-plane/supercomputer"
-  count  = var.existing_supercomputer_id == null ? 1 : 0
 
   name              = local.supercomputer_name
   location          = var.location
@@ -64,27 +62,15 @@ module "supercomputer" {
   )
 }
 
-locals {
-  # Use the caller-provided resource when set (BYO); otherwise the one we create.
-  supercomputer_id = coalesce(var.existing_supercomputer_id, one(module.supercomputer[*].id))
-  workspace_id     = coalesce(var.existing_workspace_id, one(module.workspace[*].id))
-  # bookshelf uses a ternary rather than coalesce because the bookshelf is
-  # optional: when it's disabled, both the BYO id and the module output are
-  # null, and coalesce() errors when every argument is null. The ternary lets
-  # bookshelf_id resolve to null cleanly in that case.
-  bookshelf_id = var.existing_bookshelf_id != null ? var.existing_bookshelf_id : one(module.bookshelf[*].id)
-}
-
 module "workspace" {
   source = "./modules/control-plane/workspace"
-  count  = var.existing_workspace_id == null ? 1 : 0
 
   name              = local.workspace_name
   location          = var.location
   resource_group_id = module.platform.resource_group_id
 
   workspace_identity_id = module.platform.workspace_identity_id
-  supercomputer_ids     = [local.supercomputer_id]
+  supercomputer_ids     = [module.supercomputer.id]
 
   network_isolation          = var.network_isolation
   agent_subnet_id            = var.network_isolation ? module.platform.agent_subnet_id : null
@@ -120,7 +106,7 @@ module "workspace" {
 
 module "bookshelf" {
   source = "./modules/control-plane/bookshelf"
-  count  = var.enable_bookshelf && var.existing_bookshelf_id == null ? 1 : 0
+  count  = var.enable_bookshelf ? 1 : 0
 
   name              = local.bookshelf_name
   location          = var.location

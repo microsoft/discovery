@@ -33,13 +33,13 @@ output "name_suffix" {
 # ---- subnets ----------------------------------------------------------------
 
 output "aks_subnet_id" {
-  description = "AKS system subnet ID (Supercomputer). Null when the Supercomputer network is not created."
-  value       = one(azurerm_subnet.aks[*].id)
+  description = "AKS system subnet ID (Supercomputer)."
+  value       = azurerm_subnet.aks.id
 }
 
 output "supercomputer_nodepool_subnet_id" {
-  description = "Supercomputer node pool subnet ID. Null when the Supercomputer network is not created."
-  value       = one(azurerm_subnet.supercomputer_nodepool[*].id)
+  description = "Supercomputer node pool subnet ID."
+  value       = azurerm_subnet.supercomputer_nodepool.id
 }
 
 output "workspace_subnet_id" {
@@ -119,6 +119,6 @@ output "workspace_vnet_id" {
 }
 
 output "supercomputer_vnet_id" {
-  description = "Resource ID of the Supercomputer virtual network. Null when the Supercomputer network is not created."
-  value       = one(azurerm_virtual_network.supercomputer[*].id)
+  description = "Resource ID of the Supercomputer virtual network."
+  value       = azurerm_virtual_network.supercomputer.id
 }

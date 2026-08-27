@@ -54,12 +54,16 @@ One resource group containing:
 
 Discovery-managed resource groups can use independent regions via per-resource MRG location tags.
 
-## Two ways to deploy
+## How to deploy
 
-The same root module supports both approaches — see [Deployment modes](#deployment-modes) for details:
+The root module builds the full stack in one `terraform apply`: the platform,
+Supercomputer, Workspace (+ chat model + project), and optionally a Bookshelf.
+This is the supported path.
 
-* **Full stack (default)** — one `terraform apply` builds the platform, Supercomputer, Workspace (+ chat model + project), and optionally a Bookshelf.
-* **Bring your own (BYO)** — pass an existing `existing_supercomputer_id`, `existing_workspace_id`, or `existing_bookshelf_id` and the root reuses that resource and creates the rest around it. Mixable in a single apply.
+To reuse a Discovery resource you already have, don't look for a flag on the
+root — instead compose the control-plane modules directly from your own
+configuration. They only consume IDs, so you wire your existing resource in by
+hand. See [Reuse an existing resource](#reuse-an-existing-resource).
 
 The Bookshelf is off by default (`enable_bookshelf = false`); see [The Bookshelf flag](#the-bookshelf-flag).
 
@@ -85,7 +89,8 @@ The first apply also needs the identity running Terraform to hold **Storage Blob
 
 ## Architecture
 
-A thin root ([main.tf](main.tf)) assembles reusable modules into one apply; BYO scenarios pass an existing resource ID and the root wires the rest around it. One definition per resource, all on the `2026-06-01` API.
+A thin root ([main.tf](main.tf)) assembles reusable modules into one apply. One
+definition per resource, all on the `2026-06-01` API.
 
 ### Module layout
 
@@ -103,36 +108,13 @@ utilities/terraform/
 
 The root creates the shared prerequisites (via `platform`) and wires them into the control-plane modules; each control-plane module owns exactly one Discovery type and its children and never creates platform resources. Every module requires an existing resource group.
 
-## Deployment modes
+## Reuse an existing resource
 
-Both modes run through the same root ([main.tf](main.tf)); the only difference is
-whether you hand it an existing resource ID.
-
-**1. Full stack (default).** `terraform apply` creates the platform,
-Supercomputer, Workspace (+ chat model + project), and optional Bookshelf in one
-apply. Terraform orders the modules automatically.
-
-**2. Reuse existing resources (BYO).** Supply a resource's ID and the root skips
-its module, wiring your resource into the rest. Each control-plane resource has
-its own knob:
-
-| Variable | Effect when set |
-| --- | --- |
-| `existing_supercomputer_id` | Skip the Supercomputer module **and its network** (VNet, AKS/node-pool subnets, peering); link the Workspace to your Supercomputer. |
-| `existing_workspace_id` | Skip the Workspace module and its chat model deployments and projects. |
-| `existing_bookshelf_id` | Skip the Bookshelf module. |
-
-```hcl
-# terraform.tfvars -- reuse a supercomputer, create everything else
-existing_supercomputer_id = "/subscriptions/.../Microsoft.Discovery/supercomputers/sc-prod"
-```
-
-Anything you don't pass is created normally, so you can mix created and existing
-resources in a single apply.
-
-**Advanced: call a module standalone.** Because the control-plane modules only
-consume IDs (they never create platform resources), you can also call one
-directly from your own configuration:
+The root always builds the full stack; it has no "bring your own" flag. If you
+need to reuse a Supercomputer, Workspace, or Bookshelf you already have, treat
+it as an advanced path you assemble yourself: the control-plane modules only
+consume IDs and never create platform resources, so you can call one directly
+and pass in your existing resource's ID and the platform IDs it needs.
 
 ```hcl
 module "supercomputer" {
@@ -172,7 +154,6 @@ enable_bookshelf = true
 | Variable | Default | Effect |
 | --- | --- | --- |
 | `enable_bookshelf` | `false` | Create a Bookshelf as part of the full-stack apply. |
-| `existing_bookshelf_id` | `null` | BYO: reuse an existing Bookshelf and skip creating one (takes precedence over `enable_bookshelf`). |
 | `bookshelf_public_network_access` | `"Disabled"` | Public network access on the created Bookshelf (`"Disabled"` or `"Enabled"`). |
 
 It is gated off because the Bookshelf is heavy (~40 minutes) and its backend
@@ -185,6 +166,7 @@ rest of the stack is up and healthy, then re-apply.
 * **Names** derive from a shared random suffix (`sc-`, `ws-`, `prj-`, `stc-`, `stg`, `vnet-`, `uami-<purpose>-`, node pool `nodepool1`); set explicit names in `terraform.tfvars` to override, subject to Azure's per-resource constraints.
 * **Tags** merge as `common_tags` → `resource_tags` → required Discovery tags (required win). `discovery.overridemrgregion` is constrained to the `location` allowlist (`eastus`, `uksouth`, `swedencentral`).
 * **Network isolation** defaults to `true` and always provisions the private topology — see [ADR 0001](docs/adr/0001-network-isolation-posture.md).
+* **Single path** — the root wires the full stack only; reusing an existing resource is a standalone-module escape hatch — see [ADR 0002](docs/adr/0002-single-full-stack-path.md).
 
 ## References
 
