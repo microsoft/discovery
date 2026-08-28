@@ -1,0 +1,17 @@
+name: sandboxaq
+type: agent
+version: 1.0.0
+associated_tools:
+  - agents/sandboxaq/tools/sandboxaq-model
+publisher:
+  name: SandboxAQ
+  contact: support@sandboxaq.com
+  support_url: https://www.sandboxaq.com/contact
+  party: 3p
+description: >
+  Invokes SandboxAQ models subscribed through Azure AI Foundry for secure,
+  structured inference workflows.
+tags:
+  - sandboxaq
+  - foundry
+  - model-inference
