@@ -7,6 +7,7 @@ model:
   id: '{{CHAT-MODEL}}'
   options:
     temperature: 0
+    topP: 0
     maxOutputTokens: 4096
 instructions: |-
   You are the SandboxAQ Foundry Model Agent. You reach the subscribed

@@ -9,20 +9,23 @@ infra:
   - name: worker
     infra_type: container
     image:
-      acr: "{name}/sandboxaq-model:latest"
+      acr: "{name}.azurecr.io/sandboxaq-model:latest"
     compute:
-      pool_type: static
-      pool_size: 1
       min_resources:
         cpu: 1
-        ram: "2Gi"
-        storage: "8Gi"
+        ram: 4Gi
+        storage: 8Gi
         gpu: 0
       max_resources:
         cpu: 2
-        ram: "4Gi"
-        storage: "16Gi"
+        ram: 8Gi
+        storage: 32Gi
         gpu: 0
+      infiniband: false
+      recommended_sku:
+        - Standard_D4s_v6
+      pool_type: static
+      pool_size: 1
 code_environments:
   - language: python3
     command: "python3 -u \"/{{scriptName}}\""
