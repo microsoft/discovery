@@ -23,28 +23,12 @@ infra:
         ram: "4Gi"
         storage: "16Gi"
         gpu: 0
-actions:
-  - name: invoke_model
+code_environments:
+  - language: python3
+    command: "python3 -u \"/{{scriptName}}\""
     description: >
-      Send a prompt to the configured SandboxAQ Azure AI Foundry deployment.
-      The endpoint, deployment name, and credential are supplied as runtime
-      environment variables.
+      Python code environment on the SandboxAQ model container image. Scripts
+      import `sandboxaq_utils` to reach the configured Azure AI Foundry
+      deployment; the endpoint, deployment name, and credential are supplied
+      as runtime environment variables.
     infra_node: worker
-    command: "python3 /app/run_action.py --action invoke_model --prompt '{{prompt}}' --system '{{system_prompt}}' --temperature '{{temperature}}' --max-tokens '{{max_tokens}}'"
-    input_schema:
-      type: object
-      properties:
-        prompt:
-          type: string
-          description: User prompt to send to the SandboxAQ model.
-        system_prompt:
-          type: string
-          description: Optional system instruction for this invocation.
-        temperature:
-          type: number
-          description: Sampling temperature. Defaults to 0.
-        max_tokens:
-          type: integer
-          description: Maximum completion tokens. Defaults to 4096.
-      required:
-        - prompt
