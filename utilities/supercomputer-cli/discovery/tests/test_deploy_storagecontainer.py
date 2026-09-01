@@ -34,7 +34,7 @@ class TestRender:
         params = deploy_storagecontainer.render_storagecontainer_parameters(_default_inputs())
         assert params["parameters"]["outLocation"]["value"] == "uksouth"
         assert params["parameters"]["outStorageContainerName"]["value"] == "scratch-sc-test"
-        assert params["parameters"]["outApiVersion"]["value"] == "2026-02-01-preview"
+        assert params["parameters"]["outApiVersion"]["value"] == "2026-06-01"
         assert params["parameters"]["outNetAppVolumeId"]["value"].endswith("/volumes/vol1")
 
 

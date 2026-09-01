@@ -18,18 +18,17 @@ Date: October 2025
 import json
 import os
 import time
-import ssl
 from typing import List, Dict, Optional, Any
 from xml.etree import ElementTree as ET
 
 from pymed import PubMed
 from Bio import Entrez
 
-# Configure SSL to handle certificate issues in containers
-try:
-    ssl._create_default_https_context = ssl._create_unverified_context
-except AttributeError:
-    pass
+# TLS certificate verification is intentionally left ENABLED.
+# In environments with TLS-inspecting egress, supply the inspecting CA to the
+# container's trust store (e.g. add it under /etc/pki/ca-trust/source/anchors and
+# run update-ca-trust, or set REQUESTS_CA_BUNDLE/SSL_CERT_FILE) rather than
+# disabling verification.
 
 
 class PubMedUtils:

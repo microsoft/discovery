@@ -228,6 +228,8 @@ def list_cmd(
     nodepool: str = typer.Option("", "--pool", help="Filter by nodepool"),
     user: str = typer.Option("", "--user", help="Filter by user (implies --all)"),
     date: str = typer.Option("", "--date", help="Filter by date (YYYY-MM-DD format)"),
+    since: str = typer.Option("", "--since", help="Time window (e.g. 7d, 24h, 30m) or ISO date"),
+    status_filter: str = typer.Option("", "--status", "-s", help="Filter by status (Running, Succeeded, Failed, Canceled, NotStarted)"),
     limit: int = typer.Option(200, "--limit", "-n", help="Limit results to search"),
     all_jobs: bool = typer.Option(
         False,
@@ -244,6 +246,9 @@ def list_cmd(
     By default only lists operations recorded in this machine's local
     job history. Pass ``--all`` (or ``--user X`` to filter by a specific
     user) to see jobs from other people or other machines.
+
+    When ``--status``, ``--since``, or ``--user`` are provided with
+    ``--all``, filtering is done server-side for faster results.
     """
     debug("list(): entering")
     env_cfg = load_project_config(get_config_file_path())
@@ -251,7 +256,7 @@ def list_cmd(
 
     # ``--user X`` is an explicit cross-user query; implicitly skip the
     # local-history default so the user actually sees something.
-    skip_mine = all_jobs or bool(user)
+    skip_mine = all_jobs or bool(user) or bool(status_filter) or bool(since)
     mine_ids = None if skip_mine else _mine_ids_or_hint(env_cfg)
     if not skip_mine and mine_ids is None:
         raise typer.Exit(code=0)
@@ -279,12 +284,26 @@ def list_cmd(
             error(f"Invalid date format: {date}. Expected YYYY-MM-DD")
             raise typer.Exit(code=1) from None
 
+    # Build server-side filter kwargs for list_operations
+    server_filters: dict[str, str | None] = {}
+    if status_filter:
+        server_filters["status"] = status_filter
+    if user:
+        server_filters["created_by"] = user
+    if since:
+        from discovery.poll.api import _resolve_since
+        server_filters["created_after"] = _resolve_since(since)
+    if resolved_pool:
+        server_filters["nodepool_id"] = resolved_pool
+
     def matches_filters(op):
         if mine_ids is not None and op.id not in mine_ids:
             return False
-        if user and op.created_by != user:
+        # When server-side user filter is active, skip client-side check
+        if user and not server_filters.get("created_by") and op.created_by != user:
             return False
-        if resolved_pool and op.nodepool_id != resolved_pool:
+        # When server-side pool filter is active, skip client-side check
+        if resolved_pool and not server_filters.get("nodepool_id") and op.nodepool_id != resolved_pool:
             return False
         if target_date:
             time_diff = abs(op.created_at - target_date)
@@ -299,6 +318,7 @@ def list_cmd(
             limit=limit,
             target_ids=mine_ids,
             not_before=_oldest_mine_submission(env_cfg) if mine_ids else None,
+            server_filters=server_filters if server_filters else None,
         )
     )
 
@@ -342,6 +362,7 @@ async def _paginated_list(
     page_size: int = 0,
     target_ids: set[str] | None = None,
     not_before: datetime | None = None,
+    server_filters: dict[str, str | None] | None = None,
 ) -> None:
     """Async implementation of paginated list.
 
@@ -403,7 +424,19 @@ async def _paginated_list(
 
     # Fetch first API page
     try:
-        result = await asyncio.to_thread(list_operations, env_cfg.project_name, env_cfg.workspace_url, api_version=env_cfg.api_version)
+        # Pass server-side filters to avoid unnecessary client-side scanning
+        _sf = server_filters or {}
+        result = await asyncio.to_thread(
+            list_operations,
+            env_cfg.project_name,
+            env_cfg.workspace_url,
+            api_version=env_cfg.api_version,
+            status=_sf.get("status"),
+            created_by=_sf.get("created_by"),
+            created_after=_sf.get("created_after"),
+            created_before=_sf.get("created_before"),
+            nodepool_id=_sf.get("nodepool_id"),
+        )
     except (httpx.ReadTimeout, httpx.ConnectTimeout, httpx.PoolTimeout) as exc:
         error(
             f"Timeout fetching operations. The workspace may have too many jobs. "

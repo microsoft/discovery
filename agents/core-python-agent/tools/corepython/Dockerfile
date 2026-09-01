@@ -51,6 +51,14 @@ RUN tdnf install -y --setopt=install_weak_deps=False \
       shadow-utils \
  && tdnf clean all
 
+# Make Python HTTP clients honor the OS trust store instead of conda's certifi bundle.
+# The conda `requests`/`urllib3` default to certifi and conda's OpenSSL uses the env's own CA
+# file; point them at the OS trust bundle so any CA added via update-ca-trust (e.g. a
+# TLS-inspecting egress CA supplied by the platform) is trusted by all HTTP clients.
+ENV REQUESTS_CA_BUNDLE=/etc/pki/ca-trust/extracted/pem/tls-ca-bundle.pem \
+    SSL_CERT_FILE=/etc/pki/ca-trust/extracted/pem/tls-ca-bundle.pem \
+    CURL_CA_BUNDLE=/etc/pki/ca-trust/extracted/pem/tls-ca-bundle.pem
+
 # Non-root user (SFI / CIS benchmark requirement)
 RUN groupadd -r moluser && useradd -r -g moluser -s /sbin/nologin moluser
 

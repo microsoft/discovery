@@ -457,33 +457,91 @@ class DiscoveryClient:
     def list_jobs(
         self,
         status: str | None = None,
+        user: str | None = None,
+        since: str | None = None,
+        before: str | None = None,
+        nodepool: str | None = None,
         limit: int = 100,
     ) -> list[dict[str, Any]]:
-        """List recent jobs.
+        """List recent jobs with optional server-side filtering.
 
         Args:
-            status: Filter by status (e.g., "Active", "Succeeded", "Failed")
+            status: Filter by status (e.g., "Running", "Succeeded", "Failed", "Canceled", "NotStarted")
+            user: Filter by submitter UPN/email
+            since: Time window or ISO timestamp (e.g., "7d", "24h", "2026-06-01T00:00:00Z")
+            before: Upper time bound as ISO timestamp
+            nodepool: Nodepool name or ARM resource ID
             limit: Maximum number of jobs to return
 
         Returns:
             List of job information dictionaries
         """
+        # Resolve 'since' duration strings to ISO-8601
+        created_after = _resolve_since(since) if since else None
+        created_before = before
+
+        # Resolve nodepool name to ID if needed
+        nodepool_id: str | None = None
+        if nodepool:
+            if nodepool.startswith("/"):
+                nodepool_id = nodepool
+            else:
+                np_info = self.config.get_nodepool(nodepool)
+                if np_info:
+                    nodepool_id = np_info.id
+
         response = list_operations(
             self.config.project_name,
             self.config.workspace_url,
             api_version=self.config.api_version,
+            status=status,
+            created_by=user,
+            created_after=created_after,
+            created_before=created_before,
+            nodepool_id=nodepool_id,
         )
 
         jobs = []
         for op in response.values[:limit]:
-            if status and op.status != status:
-                continue
             jobs.append({
                 "id": op.id,
                 "status": op.status,
                 "created": op.created_at,
+                "created_by": getattr(op, "created_by", None),
+                "nodepool_id": getattr(op, "nodepool_id", None),
             })
         return jobs
+
+
+def _resolve_since(since: str) -> str:
+    """Convert a duration string (e.g., '7d', '24h', '30m') or ISO timestamp to ISO-8601.
+
+    Returns an ISO-8601 UTC string suitable for the createdAfter API parameter.
+    """
+    import re
+    from datetime import datetime, timedelta, timezone
+
+    # If it looks like an ISO timestamp already, return as-is
+    if "T" in since or len(since) == 10 and "-" in since:
+        # Bare date like "2026-06-01" -> add time
+        if "T" not in since:
+            return f"{since}T00:00:00Z"
+        return since
+
+    # Parse duration: e.g., "7d", "24h", "30m", "2h30m"
+    pattern = re.compile(r"(?:(\d+)d)?(?:(\d+)h)?(?:(\d+)m)?")
+    match = pattern.fullmatch(since.strip())
+    if not match or not any(match.groups()):
+        # Fallback: treat as raw value
+        return since
+
+    days = int(match.group(1) or 0)
+    hours = int(match.group(2) or 0)
+    minutes = int(match.group(3) or 0)
+
+    delta = timedelta(days=days, hours=hours, minutes=minutes)
+    cutoff = datetime.now(tz=timezone.utc) - delta
+    return cutoff.strftime("%Y-%m-%dT%H:%M:%SZ")
 
 
 __all__ = [

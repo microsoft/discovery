@@ -12,6 +12,7 @@ import httpx
 import typer
 from rich.console import Console
 from rich.panel import Panel
+from rich.table import Table
 
 from discovery.common.job_history import (
     MODE_BATCH,
@@ -22,13 +23,14 @@ from discovery.common.job_history import (
     parse_since,
     record_submission,
 )
-from discovery.common.logging import debug, error, info, pretty_debug
+from discovery.common.logging import debug, error, info, pretty_debug, warn
 from discovery.poll.models.api_version import ApiVersion
 from discovery.poll.models.tool_run import (
     DataMount,
     InfraOverrides,
     InfraOverridesFlat,
     ResourceSpec,
+    StorageMountProtocol,
     ToolRunRequest,
 )
 
@@ -47,6 +49,7 @@ from .cli_helpers import (
     render_error_with_details,
 )
 from .dataplane_api import (
+    CancelWaitTimeoutError,
     PollError,
     cancel_operation,
     get_operation_status,
@@ -95,6 +98,32 @@ _LEGACY_API_VERSIONS = frozenset(v.wire_value for v in ApiVersion if v.uses_stor
 _NESTED_INFRA_OVERRIDES_API_VERSIONS = frozenset(
     v.wire_value for v in ApiVersion if v.uses_nested_infra_overrides
 )
+
+
+def _parse_mount_protocol_or_exit(
+    value: str | None, av: ApiVersion,
+) -> StorageMountProtocol | None:
+    """Parse a ``--mount-protocol`` flag value, fast-failing with ``typer.Exit``.
+
+    * ``None`` / empty → returns ``None`` (omit field; server uses container default).
+    * Value present but ``av`` does not support ``mountProtocol`` → exit code 2.
+    * Unknown enum value → exit code 2.
+    * Recognised value (case-insensitive) → returns the :class:`StorageMountProtocol`
+      member with the canonical wire casing.
+    """
+    if value is None or value == "":
+        return None
+    if not av.supports_mount_protocol:
+        error(
+            f"--mount-protocol requires API version 2026-06-01 or later; "
+            f"configured/selected version is {av.value!r}."
+        )
+        raise typer.Exit(code=2)
+    try:
+        return StorageMountProtocol.parse(value)
+    except ValueError as exc:
+        error(str(exc))
+        raise typer.Exit(code=2) from exc
 
 
 def _resolve_scratch_wrapper_id(np_info, env_cfg, av: ApiVersion) -> str:
@@ -445,7 +474,7 @@ def start(
     api_version: str = typer.Option(
         None,
         "--api-version",
-        help="Override API version (e.g. 2026-02-01-preview). Defaults to configured version.",
+        help="Override API version (e.g. 2026-06-01). Defaults to configured version.",
     ),
     scratch: bool = typer.Option(
         False,
@@ -454,6 +483,17 @@ def start(
             "Mount per-supercomputer scratch ANF at /scratch. Requires "
             "'discovery configure --scratch-select' to have set a scratch "
             "wrapper for this supercomputer."
+        ),
+    ),
+    mount_protocol: str = typer.Option(
+        None,
+        "--mount-protocol",
+        help=(
+            "Override mount protocol for the /blob_user and /blob_shared data "
+            "mounts. Values: 'NFS' or 'BlobfuseCaching' (case-insensitive). "
+            "Requires API version 2026-06-01 (GA) or later. The scratch mount "
+            "is unaffected — it always uses the storage container's default "
+            "protocol."
         ),
     ),
 ) -> None:
@@ -536,6 +576,9 @@ def start(
     # Legacy: uri + discovery://dataassets, storageId required.
     # Modern: storageUri + discovery://storageassets, no storageId.
     av = ApiVersion.parse(effective_api_version)
+    # Validate --mount-protocol before any subsequent work (network calls,
+    # scratch resolution, etc.) so bad flags fail fast.
+    mp = _parse_mount_protocol_or_exit(mount_protocol, av)
     _scratch_mount = _scratch_mount_or_exit(np_info, env_cfg, av, scratch)
     if av.uses_dataassets_uri:
         output_uri = f"discovery://dataassets{env_cfg.datacontainer_id}/dataassets/{effective_username}"
@@ -554,8 +597,8 @@ def start(
         )
     else:
         output_mounts = [
-            DataMount(mountPath="/blob_user", storageUri=f"discovery://storageassets{env_cfg.storagecontainer_id}/storageassets/{effective_username}"),
-            DataMount(mountPath="/blob_shared", storageUri=f"discovery://storageassets{env_cfg.storagecontainer_id}/storageassets/shared"),
+            DataMount(mountPath="/blob_user", storageUri=f"discovery://storageassets{env_cfg.storagecontainer_id}/storageassets/{effective_username}", mountProtocol=mp),
+            DataMount(mountPath="/blob_shared", storageUri=f"discovery://storageassets{env_cfg.storagecontainer_id}/storageassets/shared", mountProtocol=mp),
             *([_scratch_mount] if _scratch_mount else []),
         ]
         payload = ToolRunRequest(
@@ -675,7 +718,7 @@ def batch(
     api_version: str = typer.Option(
         None,
         "--api-version",
-        help="Override API version (e.g. 2026-02-01-preview). Defaults to configured version.",
+        help="Override API version (e.g. 2026-06-01). Defaults to configured version.",
     ),
     use_entire_node: bool = typer.Option(
         False,
@@ -688,6 +731,15 @@ def batch(
         help=(
             "Mount per-supercomputer scratch ANF at /scratch on every submitted job. "
             "Requires 'discovery configure --scratch-select'."
+        ),
+    ),
+    mount_protocol: str = typer.Option(
+        None,
+        "--mount-protocol",
+        help=(
+            "Override mount protocol for the /blob_user and /blob_shared data "
+            "mounts on every submitted job. Values: 'NFS' or 'BlobfuseCaching' "
+            "(case-insensitive). Requires API version 2026-06-01 (GA) or later."
         ),
     ),
 ) -> None:
@@ -796,6 +848,8 @@ def batch(
     # Resolve effective API version: CLI flag overrides config
     effective_api_version = api_version or env_cfg.api_version or None
     av = ApiVersion.parse(effective_api_version)
+    # Validate --mount-protocol before scratch resolution + submission loop.
+    mp = _parse_mount_protocol_or_exit(mount_protocol, av)
     _scratch_mount = _scratch_mount_or_exit(np_info, env_cfg, av, scratch)
 
     # Build infra_overrides using the schema variant matching the target api-version.
@@ -823,8 +877,8 @@ def batch(
                 )
             else:
                 output_mounts = [
-                    DataMount(mountPath="/blob_user", storageUri=f"discovery://storageassets{env_cfg.storagecontainer_id}/storageassets/{effective_username}"),
-                    DataMount(mountPath="/blob_shared", storageUri=f"discovery://storageassets{env_cfg.storagecontainer_id}/storageassets/shared"),
+                    DataMount(mountPath="/blob_user", storageUri=f"discovery://storageassets{env_cfg.storagecontainer_id}/storageassets/{effective_username}", mountProtocol=mp),
+                    DataMount(mountPath="/blob_shared", storageUri=f"discovery://storageassets{env_cfg.storagecontainer_id}/storageassets/shared", mountProtocol=mp),
                     *([_scratch_mount] if _scratch_mount else []),
                 ]
                 payload = ToolRunRequest(
@@ -849,8 +903,10 @@ def batch(
 
     # Submit jobs in parallel
     total = len(command_list)
-    operation_ids: list[str] = []
+    # Collect (index, operation_id, command) so we can print in input order
+    successful_jobs: list[tuple[int, str, str]] = []
     failed_jobs: list[tuple[int, str]] = []
+    completed_count = 0
 
     info(f"Submitting {total} operations using {max_workers} parallel workers...")
 
@@ -863,16 +919,36 @@ def batch(
         # Collect results as they complete
         for future in as_completed(futures):
             idx, op_id, err = future.result()
+            completed_count += 1
             if op_id:
-                operation_ids.append(op_id)
-                info(f"  [{len(operation_ids)}/{total}] Operation ID: {op_id}")
+                successful_jobs.append((idx, op_id, command_list[idx]))
+                # Print the full command. Rich's Console soft-wraps to
+                # terminal width; the `[n/total] op-id ` prefix anchors
+                # each entry visually even when the command wraps.
+                info(f"  [{completed_count}/{total}] {op_id}  {command_list[idx]}")
             else:
                 failed_jobs.append((idx, err or "Unknown error"))
                 error(f"  [FAILED] Job {idx + 1}: {err}")
 
-    info(f"Batch complete. Submitted {len(operation_ids)} operations.")
+    info(f"Batch complete. Submitted {len(successful_jobs)} operations.")
     if failed_jobs:
         error(f"Failed to submit {len(failed_jobs)} jobs.")
+
+    # Print ordered mapping table so users can correlate operation IDs to commands.
+    # Long commands are wrapped (overflow="fold") rather than truncated so the
+    # full command is always visible — this is the canonical correlation artifact.
+    if successful_jobs:
+        successful_jobs.sort(key=lambda t: t[0])
+        table = Table(title="Operation Mapping (input order)")
+        table.add_column("#", justify="right", style="cyan", no_wrap=True)
+        table.add_column("Operation ID", style="green", no_wrap=True)
+        table.add_column("Command", style="white", overflow="fold")
+        for idx, op_id, cmd in successful_jobs:
+            table.add_row(str(idx + 1), op_id, cmd)
+        Console().print(table)
+
+    # Keep operation_ids list for any downstream callers
+    operation_ids: list[str] = [op_id for _, op_id, _ in successful_jobs]
 
 
 @app.command("vscode")
@@ -924,7 +1000,7 @@ def vscode_cmd(
     api_version: str = typer.Option(
         None,
         "--api-version",
-        help="Override API version (e.g. 2026-02-01-preview). Defaults to configured version.",
+        help="Override API version (e.g. 2026-06-01). Defaults to configured version.",
     ),
     scratch: bool = typer.Option(
         False,
@@ -932,6 +1008,15 @@ def vscode_cmd(
         help=(
             "Mount per-supercomputer scratch ANF at /scratch in the tunnel session. "
             "Requires 'discovery configure --scratch-select'."
+        ),
+    ),
+    mount_protocol: str = typer.Option(
+        None,
+        "--mount-protocol",
+        help=(
+            "Override mount protocol for the /blob_user and /blob_shared data "
+            "mounts in the tunnel session. Values: 'NFS' or 'BlobfuseCaching' "
+            "(case-insensitive). Requires API version 2026-06-01 (GA) or later."
         ),
     ),
 ) -> None:
@@ -968,6 +1053,14 @@ def vscode_cmd(
         if np_info:
             effective_nodepool_id = np_info.id
             info(f"Using nodepool: {np_info.qualified_name}")
+        # Check if it's a full ID that wasn't in our cached list
+        elif pool.startswith("/"):
+            effective_nodepool_id = pool
+            info(f"Using nodepool ID: {pool}")
+        else:
+            available = [np.qualified_name for np in env_cfg.nodepools]
+            error(f"Nodepool '{pool}' not found. Available pools: {available}")
+            raise typer.Exit(code=1)
     else:
         # Try to get nodepool info for the default pool to use full-node defaults
         for np in env_cfg.nodepools:
@@ -1024,6 +1117,8 @@ def vscode_cmd(
 
     # Build payload — branching on API version capability.
     av = ApiVersion.parse(effective_api_version)
+    # Validate --mount-protocol before scratch resolution + submission.
+    mp = _parse_mount_protocol_or_exit(mount_protocol, av)
     _scratch_mount = _scratch_mount_or_exit(np_info, env_cfg, av, scratch)
     if av.uses_dataassets_uri:
         output_uri = f"discovery://dataassets{env_cfg.datacontainer_id}/dataassets/{effective_username}"
@@ -1042,8 +1137,8 @@ def vscode_cmd(
         )
     else:
         output_mounts = [
-            DataMount(mountPath="/blob_user", storageUri=f"discovery://storageassets{env_cfg.storagecontainer_id}/storageassets/{effective_username}"),
-            DataMount(mountPath="/blob_shared", storageUri=f"discovery://storageassets{env_cfg.storagecontainer_id}/storageassets/shared"),
+            DataMount(mountPath="/blob_user", storageUri=f"discovery://storageassets{env_cfg.storagecontainer_id}/storageassets/{effective_username}", mountProtocol=mp),
+            DataMount(mountPath="/blob_shared", storageUri=f"discovery://storageassets{env_cfg.storagecontainer_id}/storageassets/shared", mountProtocol=mp),
             *([_scratch_mount] if _scratch_mount else []),
         ]
         payload = ToolRunRequest(
@@ -1142,7 +1237,8 @@ def cancel(
             "given window. Accepts shorthand like '10m', '1h', '24h', '7d' "
             "or an absolute YYYY-MM-DD date. Scoped to the current "
             "workspace_url so a typo doesn't reach into a different "
-            "Discovery environment."
+            "Discovery environment. Bulk-cancel does not wait for each "
+            "operation to settle (use single-op cancel to wait)."
         ),
     ),
     yes: bool = typer.Option(
@@ -1157,14 +1253,37 @@ def cancel(
         "-p",
         help="Parallel cancel workers when --since is set (default: 16).",
     ),
+    no_wait: bool = typer.Option(
+        False,
+        "--no-wait",
+        help=(
+            "Return immediately after the cancel POST is accepted, instead of "
+            "polling until the operation reaches a terminal state. Default is "
+            "to wait. Has no effect with --since (bulk-cancel is always no-wait)."
+        ),
+    ),
+    wait_timeout: int = typer.Option(
+        120,
+        "--wait-timeout",
+        help=(
+            "Maximum seconds to wait for the cancelled operation to reach a "
+            "terminal state. On timeout the CLI exits 0 with a warning — the "
+            "cancel POST was accepted, it just didn't settle in time."
+        ),
+    ),
 ) -> None:
     """Cancel a running operation, or bulk-cancel recent local submissions.
 
     Two modes:
 
     * ``discovery job cancel <operation-id>`` — cancel a single specific op.
+      By default, polls until the operation reaches a terminal state
+      (``Succeeded`` / ``Failed`` / ``Canceled``) so the exit signal reflects
+      that cancellation actually propagated. Pass ``--no-wait`` to exit
+      immediately after the cancel POST is acknowledged.
     * ``discovery job cancel --since 10m`` — cancel every locally-recorded
-      job submitted in the last 10 minutes (current workspace only).
+      job submitted in the last 10 minutes (current workspace only). Always
+      fire-and-forget (no per-op wait) for throughput.
     """
     debug("cancel(): entering")
 
@@ -1187,8 +1306,33 @@ def cancel(
 
     info(f"Cancel requested for operation id={operation_id}")
     try:
-        cancel_operation(env_cfg.project_name, operation_id, env_cfg.workspace_url, api_version=env_cfg.api_version)
+        cancel_operation(
+            env_cfg.project_name,
+            operation_id,
+            env_cfg.workspace_url,
+            api_version=env_cfg.api_version,
+            wait=not no_wait,
+            wait_timeout_seconds=wait_timeout,
+        )
+    except CancelWaitTimeoutError as exc:
+        # Cancel POST was accepted server-side; we just didn't observe a terminal
+        # state within the budget. Treat as a soft success: exit 0 with a clear
+        # message so scripts don't pointlessly retry the cancel.
+        warn(str(exc))
+        warn(
+            f"Run `discovery job status {operation_id}` to check the current state."
+        )
+        return
     except httpx.HTTPStatusError as exc:
+        # 404 / 409 on the cancel POST itself means the op is already terminal —
+        # the user's goal ("make it stop") is satisfied. Mirrors the leniency
+        # _cancel_one_op applies in the bulk path.
+        if exc.response.status_code in (404, 409):
+            info(
+                f"Operation {operation_id} is already in a terminal state "
+                f"(HTTP {exc.response.status_code}); nothing to cancel."
+            )
+            return
         error(format_service_error(exc))
         raise typer.Exit(code=1) from exc
     except httpx.TransportError as exc:
@@ -1301,6 +1445,11 @@ def _cancel_one_op(env_cfg, op_id: str) -> tuple[str, str | None]:
 
     404/409 responses are treated as success — the op is already in a
     terminal state, so the user's goal ("make it stop") is already true.
+
+    Always uses ``wait=False`` because the bulk-cancel path optimises for
+    throughput; per-op polling would multiply the wall-clock time by the
+    cancel-settle latency. Single-op cancel (``discovery job cancel <id>``)
+    is where wait-by-default lives.
     """
     try:
         cancel_operation(
@@ -1308,6 +1457,7 @@ def _cancel_one_op(env_cfg, op_id: str) -> tuple[str, str | None]:
             op_id,
             env_cfg.workspace_url,
             api_version=env_cfg.api_version,
+            wait=False,
         )
     except httpx.HTTPStatusError as exc:
         status = exc.response.status_code

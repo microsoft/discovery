@@ -788,7 +788,9 @@ class TestCancelSince:
         """Install a no-op cancel_operation that records the IDs it was called with."""
         called: list[str] = []
 
-        def fake_cancel(project, op_id, workspace_url, *, api_version):
+        def fake_cancel(project, op_id, workspace_url, *, api_version, **_kwargs):
+            # Accept and ignore newer keyword args (``wait``, ``wait_timeout_seconds``)
+            # so this stub keeps working as the signature evolves.
             called.append(op_id)
 
         monkeypatch.setattr(

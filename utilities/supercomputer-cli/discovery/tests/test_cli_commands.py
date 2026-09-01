@@ -138,7 +138,7 @@ class TestBatchCommand:
         assert "SIZE" in result.output
 
     def test_batch_with_mocked_deps(self, tmp_path):
-        """Test batch with mocked dependencies."""
+        """Test batch with mocked dependencies and verify mapping table."""
         with patch.object(cli_submit, "load_project_config") as mock_proj:
             mock_cfg = MagicMock()
             mock_cfg.project_name = "test-project"
@@ -163,6 +163,57 @@ class TestBatchCommand:
                                     result = runner.invoke(app, ["job", "batch", "3", "echo test"])
 
         assert result.exit_code == 0
+        # Mapping table should appear with operation IDs
+        assert "Operation Mapping" in result.output
+        assert "op-123" in result.output
+
+    def test_batch_commands_file_preserves_order(self, tmp_path):
+        """Test that batch --commands-file prints mapping in input order."""
+        cmds_file = tmp_path / "cmds.txt"
+        cmds_file.write_text("echo molecule_A\necho molecule_B\necho molecule_C\n")
+
+        # Return distinct op IDs per call to verify ordering
+        call_count = 0
+
+        def _make_response(*_args, **_kwargs):
+            nonlocal call_count
+            call_count += 1
+            resp = MagicMock()
+            resp.id = f"op-{call_count:03d}"
+            return resp
+
+        with patch.object(cli_submit, "load_project_config") as mock_proj:
+            mock_cfg = MagicMock()
+            mock_cfg.project_name = "test-project"
+            mock_cfg.workspace_url = "https://example.com"
+            mock_cfg.tool_id = "tool-123"
+            mock_cfg.nodepool_id = "nodepool-123"
+            mock_cfg.datacontainer_id = "dc-123"
+            mock_proj.return_value = mock_cfg
+
+            with patch.object(cli_submit, "load_tool_config"):
+                with patch.object(cli_submit, "ensure_datacontainer"):
+                    with patch.object(cli_submit, "emit_env"):
+                        with patch.object(
+                            cli_submit, "prepare_command", side_effect=lambda c, *a, **kw: c
+                        ):
+                            with patch.object(
+                                cli_submit, "get_azure_username", return_value="testuser"
+                            ):
+                                with patch.object(
+                                    cli_submit, "start_tool_run", side_effect=_make_response
+                                ):
+                                    result = runner.invoke(
+                                        app,
+                                        ["job", "batch", "--commands-file", str(cmds_file)],
+                                    )
+
+        assert result.exit_code == 0
+        assert "Operation Mapping" in result.output
+        # All three commands should appear in the mapping table
+        assert "molecule_A" in result.output
+        assert "molecule_B" in result.output
+        assert "molecule_C" in result.output
 
     def test_batch_size_validation(self):
         """Test that batch rejects size < 1."""
@@ -175,6 +226,62 @@ class TestBatchCommand:
             result = runner.invoke(app, ["job", "batch", "0", "echo test"])
 
         assert result.exit_code == 1
+
+    def test_batch_does_not_truncate_long_commands(self, monkeypatch):
+        """Long commands must appear in full in both the live progress line
+        and the final Operation Mapping table — never truncated.
+
+        Regression for the customer-reported issue where commands >80 chars
+        were silently sliced via ``cmd[:80]`` in both surfaces of
+        ``discovery job batch``.
+        """
+        # Force a wide Rich Console so the table cell doesn't fold the
+        # command across multiple lines (which would make a single
+        # contiguous substring assertion flaky). The live line uses
+        # ``overflow="ignore"`` and is unaffected by terminal width.
+        monkeypatch.setenv("COLUMNS", "500")
+
+        # 150-char command with two unique markers: one before the old
+        # 80-char truncation point and one well past it. Both must appear.
+        early_marker = "EARLY42X"
+        late_marker = "LATE99XY"
+        long_command = (
+            f"echo {early_marker} "
+            + ("x" * 100)
+            + f" {late_marker} done"
+        )
+        assert len(long_command) > 120
+        assert long_command.index(late_marker) > 80, "late marker must sit past old 80-char cutoff"
+
+        mock_cfg = MagicMock()
+        mock_cfg.project_name = "test-project"
+        mock_cfg.workspace_url = "https://example.com"
+        mock_cfg.tool_id = "tool-123"
+        mock_cfg.nodepool_id = "nodepool-123"
+        mock_cfg.datacontainer_id = "dc-123"
+
+        mock_response = MagicMock()
+        mock_response.id = "op-long-1"
+
+        with patch.object(cli_submit, "load_project_config", return_value=mock_cfg), \
+             patch.object(cli_submit, "load_tool_config"), \
+             patch.object(cli_submit, "ensure_datacontainer"), \
+             patch.object(cli_submit, "emit_env"), \
+             patch.object(cli_submit, "prepare_command", side_effect=lambda c, *a, **kw: c), \
+             patch.object(cli_submit, "get_azure_username", return_value="testuser"), \
+             patch.object(cli_submit, "start_tool_run", return_value=mock_response):
+            result = runner.invoke(app, ["job", "batch", "1", long_command])
+
+        assert result.exit_code == 0, result.output
+        # Mapping table should appear at all.
+        assert "Operation Mapping" in result.output
+        # Both markers — including the one past char 80 — must be present
+        # somewhere in the combined output (live line + final table).
+        assert early_marker in result.output
+        assert late_marker in result.output, (
+            "Long command was truncated before the late marker; "
+            "expected full command in batch output."
+        )
 
 
 # =============================================================================

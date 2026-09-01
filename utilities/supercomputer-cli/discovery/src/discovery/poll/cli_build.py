@@ -329,10 +329,11 @@ def _ensure_storage_assets_and_containers(
     """Ensure storage assets and blob containers for given usernames exist.
 
     Storage assets are the v2 equivalent of data assets, introduced in the
-    ``2026-02-01-preview`` API version. For ``AzureStorageBlob``-backed
-    storage containers, this helper creates both a storage asset *and* a blob
-    container of the same name (mirroring the legacy data-asset flow), so
-    ``discovery://storageassets.../storageassets/{name}`` URIs resolve.
+    ``2026-02-01-preview`` API version and GA at ``2026-06-01``. For
+    ``AzureStorageBlob``-backed storage containers, this helper creates both
+    a storage asset *and* a blob container of the same name (mirroring the
+    legacy data-asset flow), so ``discovery://storageassets.../storageassets/{name}``
+    URIs resolve.
 
     Requires ``storagecontainer_id`` to be set in ``env_cfg``.
 

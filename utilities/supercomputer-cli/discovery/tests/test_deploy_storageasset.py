@@ -38,7 +38,7 @@ class TestRenderStorageassetParameters:
         assert params["parameters"]["outStorageAssetName"]["value"] == "test-asset"
         assert params["parameters"]["outStorageAssetDescription"]["value"] == "Test storage asset"
         assert params["parameters"]["outStorageAssetPath"]["value"] == "test-asset/"
-        assert params["parameters"]["outApiVersion"]["value"] == "2026-02-01-preview"
+        assert params["parameters"]["outApiVersion"]["value"] == "2026-06-01"
 
     def test_render_custom_api_version(self) -> None:
         inputs = StorageAssetInputs(
