@@ -95,7 +95,9 @@ jobs:
               echo "::error::Could not parse version from redirect target: ${target}" >&2
               return 1
             fi
-            printf 'v%s\t%s' "${ver}" "${target}"
+            # `read` returns failure at EOF unless the record is newline-terminated;
+            # under `set -e`, omitting this newline aborts the step after the first probe.
+            printf 'v%s\t%s\n' "${ver}" "${target}"
           }
 
           IFS=$'\t' read -r aka_current  _                 < <(resolve "${CURRENT_URL}")
