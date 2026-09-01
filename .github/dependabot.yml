@@ -10,3 +10,5 @@ updates:
       - "automated-dep-update"
     commit-message:
       prefix: "chore(actions)"
+    cooldown:
+      default-days: 7
