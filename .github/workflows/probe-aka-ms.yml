@@ -1,0 +1,236 @@
+name: Probe aka.ms Discovery download
+
+# Poll aka.ms/discovery/download/{current,previous} for changes. When the
+# `current` redirect points at a version that differs from the version
+# currently recorded in README.md, dispatch refresh-current.yml with the
+# three parsed inputs (version, previous_version, previous_date).
+#
+# This is a poll-based fallback for the future Approach A pattern where the
+# internal ADO release pipeline dispatches refresh-current.yml directly via
+# repository_dispatch. Both paths funnel into the same worker workflow, so
+# adding the event trigger later is additive.
+
+on:
+  schedule:
+    - cron: "0 * * * *"
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Probe and log what would be dispatched, but don't call refresh-current.yml."
+        required: false
+        default: false
+        type: boolean
+
+permissions:
+  actions: write
+  contents: read
+  issues: write
+
+concurrency:
+  group: probe-aka-ms
+  cancel-in-progress: false
+
+jobs:
+  probe:
+    name: Compare aka.ms against README and dispatch if drifted
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      CURRENT_URL:  https://aka.ms/discovery/download/current
+      PREVIOUS_URL: https://aka.ms/discovery/download/previous
+
+    steps:
+      - name: Checkout main (README only)
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        with:
+          ref: main
+          sparse-checkout: |
+            README.md
+          sparse-checkout-cone-mode: false
+
+      - name: Determine effective dry_run
+        id: mode
+        env:
+          # inputs.dry_run is only populated on workflow_dispatch; empty for schedule/repository_dispatch.
+          DRY_RUN_INPUT: ${{ inputs.dry_run }}
+        run: |
+          set -euo pipefail
+          if [[ "${DRY_RUN_INPUT:-false}" == "true" ]]; then
+            echo "dry_run=true"  >> "$GITHUB_OUTPUT"
+          else
+            echo "dry_run=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Probe aka.ms and decide
+        id: probe
+        run: |
+          set -euo pipefail
+
+          # 1. Version currently recorded in README.
+          readme_current="$(grep -oE 'Current release:[[:space:]]*<strong>v[0-9]+\.[0-9]+\.[0-9]+</strong>' README.md \
+            | grep -oE 'v[0-9]+\.[0-9]+\.[0-9]+' \
+            | head -n1 || true)"
+          if [[ -z "${readme_current}" ]]; then
+            echo "::error::Could not parse 'Current release: <strong>vX.Y.Z</strong>' from README.md"
+            exit 1
+          fi
+          echo "README current: ${readme_current}"
+
+          # 2. Resolve one aka.ms redirect and return "vX.Y.Z<TAB>target_url".
+          #    curl 8.3+ supports %header{location}, which sidesteps parsing
+          #    the raw HEAD response and is immune to console line-wrap.
+          resolve() {
+            local url="$1" target ver
+            target="$(curl -sI -o /dev/null -w '%header{location}' "${url}")"
+            if [[ -z "${target}" ]]; then
+              echo "::error::No Location header on ${url}" >&2
+              return 1
+            fi
+            ver="$(printf '%s' "${target}" \
+              | grep -oE 'Discovery-app-[0-9]+\.[0-9]+\.[0-9]+-preview-win-x64\.exe' \
+              | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' \
+              | head -n1 || true)"
+            if [[ -z "${ver}" ]]; then
+              echo "::error::Could not parse version from redirect target: ${target}" >&2
+              return 1
+            fi
+            printf 'v%s\t%s' "${ver}" "${target}"
+          }
+
+          IFS=$'\t' read -r aka_current  _                 < <(resolve "${CURRENT_URL}")
+          IFS=$'\t' read -r aka_previous previous_target   < <(resolve "${PREVIOUS_URL}")
+          echo "aka.ms current:  ${aka_current}"
+          echo "aka.ms previous: ${aka_previous}"
+          echo "aka.ms previous target: ${previous_target}"
+
+          # 3. Already in sync — nothing to do.
+          if [[ "${aka_current}" == "${readme_current}" ]]; then
+            echo "No change: README already at ${readme_current}."
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          # 4. Sanity guard: refuse to fire if both aka.ms links resolve to the
+          #    same version — that's a transient state during an aka.ms edit
+          #    and would blow away the 'previous' row with a duplicate entry.
+          if [[ "${aka_current}" == "${aka_previous}" ]]; then
+            echo "::warning::aka.ms /current and /previous both resolve to ${aka_current}. Deferring."
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          # 5. Debounce: if refresh-current has already opened a PR for this
+          #    version, don't stack a second dispatch on top of it.
+          branch="release/refresh-current-${aka_current}"
+          if git ls-remote --exit-code --heads \
+               "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" \
+               "${branch}" >/dev/null 2>&1; then
+            echo "Refresh branch ${branch} already exists on origin — refresh already dispatched."
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          # 6. previous_date from the previous blob's Last-Modified.
+          prev_last_mod="$(curl -sI -o /dev/null -w '%header{last-modified}' "${previous_target}")"
+          if [[ -z "${prev_last_mod}" ]]; then
+            echo "::warning::No Last-Modified on previous blob; falling back to today's UTC date."
+            prev_date="$(date -u +%F)"
+          else
+            prev_date="$(date -u -d "${prev_last_mod}" +%F)"
+          fi
+          echo "previous_date: ${prev_date}"
+
+          {
+            echo "changed=true"
+            echo "version=${aka_current}"
+            echo "previous_version=${aka_previous}"
+            echo "previous_date=${prev_date}"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Dispatch refresh-current.yml
+        if: steps.probe.outputs.changed == 'true' && steps.mode.outputs.dry_run != 'true'
+        env:
+          VERSION:          ${{ steps.probe.outputs.version }}
+          PREVIOUS_VERSION: ${{ steps.probe.outputs.previous_version }}
+          PREVIOUS_DATE:    ${{ steps.probe.outputs.previous_date }}
+        run: |
+          set -euo pipefail
+          echo "Dispatching refresh-current.yml: version=${VERSION}, previous_version=${PREVIOUS_VERSION}, previous_date=${PREVIOUS_DATE}"
+          gh workflow run refresh-current.yml \
+            --ref main \
+            -f version="${VERSION}" \
+            -f previous_version="${PREVIOUS_VERSION}" \
+            -f previous_date="${PREVIOUS_DATE}"
+
+      - name: Dry-run — would dispatch
+        if: steps.probe.outputs.changed == 'true' && steps.mode.outputs.dry_run == 'true'
+        env:
+          VERSION:          ${{ steps.probe.outputs.version }}
+          PREVIOUS_VERSION: ${{ steps.probe.outputs.previous_version }}
+          PREVIOUS_DATE:    ${{ steps.probe.outputs.previous_date }}
+        run: |
+          echo "::notice::[dry-run] would run: gh workflow run refresh-current.yml --ref main -f version=${VERSION} -f previous_version=${PREVIOUS_VERSION} -f previous_date=${PREVIOUS_DATE}"
+
+  report-failure:
+    name: Open/update tracking issue on failure
+    needs: probe
+    if: failure()
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      issues: write
+      contents: read
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      - name: Ensure label exists
+        run: |
+          gh label create release-automation \
+            --repo "${GITHUB_REPOSITORY}" \
+            --color "d73a4a" \
+            --description "Automated release refresh workflow failures" \
+            2>/dev/null || true
+
+      - name: Create or update tracking issue
+        env:
+          WORKFLOW: ${{ github.workflow }}
+          RUN_URL:  ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          EVENT:    ${{ github.event_name }}
+          ACTOR:    ${{ github.actor }}
+          SHA:      ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          title="[release-automation] ${WORKFLOW} failed"
+          body_file="$(mktemp)"
+          {
+            echo "Automated release-refresh workflow **${WORKFLOW}** failed."
+            echo
+            echo "- Run: ${RUN_URL}"
+            echo "- Event: \`${EVENT}\`"
+            echo "- Actor: @${ACTOR}"
+            echo "- SHA: \`${SHA}\`"
+            echo
+            echo "The rolling \`current\` GitHub Release and README download table may now be out of sync with the aka.ms redirect. Please:"
+            echo
+            echo "1. Inspect the run log at the URL above and identify the failed step."
+            echo "2. Fix the underlying issue (transient aka.ms edit, broken CDN, README regex drift, credential rotation, etc.)."
+            echo "3. Re-run the workflow manually from the Actions tab. Consider \`dry_run: true\` first to smoke-test the fix."
+            echo "4. Verify the \`current\` tag, GitHub Release, and README download table match the shipped app version, then close this issue."
+          } > "${body_file}"
+
+          existing="$(gh issue list --repo "${GITHUB_REPOSITORY}" \
+            --state open --label release-automation \
+            --search "${title} in:title" \
+            --json number --jq '.[0].number' 2>/dev/null || true)"
+
+          if [[ -n "${existing}" ]]; then
+            gh issue comment "${existing}" --repo "${GITHUB_REPOSITORY}" --body-file "${body_file}"
+            echo "Commented on existing tracking issue #${existing}"
+          else
+            gh issue create --repo "${GITHUB_REPOSITORY}" \
+              --title "${title}" \
+              --label release-automation \
+              --body-file "${body_file}"
+            echo "Opened new tracking issue for ${WORKFLOW} failure"
+          fi
