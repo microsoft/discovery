@@ -16,6 +16,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from content_sniffer import classify
+from image_inspector import is_image_path
 from rules.base import Finding, Rule, RuleContext, Scope, Severity
 
 #: Only these trees accept contributions; everything else is out of scope.
@@ -36,6 +37,8 @@ def check(ctx: RuleContext) -> list[Finding]:
         suffix = Path(rel).suffix.lower()
         if suffix in ctx.policy.model_weight_extensions:
             continue  # POL-009 owns these.
+        if is_image_path(rel):
+            continue  # POL-016 validates narrowly permitted Markdown images.
 
         result = classify(ctx.abs(rel))
         if not result.is_binary:
@@ -68,13 +71,14 @@ def check(ctx: RuleContext) -> list[Finding]:
 
 RULE = Rule(
     id="POL-008",
-    summary="Files under agents/ and starter-kits/ must be source code, verified by content inspection.",
+    summary="Files under agents/ and starter-kits/ must be source code or POL-016-compliant Markdown images, verified by content inspection.",
     scope=Scope.CHANGED_FILES,
     severity=Severity.ERROR,
     remediation=(
         "Remove the binary from the PR. Compile or download it inside the "
         "tool's Dockerfile, or host it externally and reference it by URL. "
-        "Model weights are the only exception and must satisfy POL-009."
+        "Small Markdown images are permitted under POL-016; model weights must "
+        "satisfy POL-009."
     ),
     docs="docs/authoring-guides/agent-authoring-guide.md#no-binaries",
     tags=("security", "supply-chain"),

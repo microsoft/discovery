@@ -8,8 +8,8 @@ Two distinct problems are covered here.
 ELF, or a different image format is either a mistake or an attempt to smuggle
 content past a reviewer who trusts the extension.
 
-**Active content in SVG.** SVG is the only image format the catalog accepts as
-source, because it is text. That same property makes it executable: an SVG can
+**Active content in SVG.** SVG is an image format the catalog accepts for
+Markdown. Its text representation also makes it executable: an SVG can
 carry ``<script>``, inline event handlers, ``javascript:`` URIs, external
 entity declarations, and remote references. Rendered in a browser — a docs
 site, a catalog UI, a Markdown preview — those run. So an SVG is checked for
@@ -25,6 +25,7 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass
 from pathlib import Path
+from urllib.parse import unquote, urlsplit
 
 #: Bytes read from the head of a file for signature matching.
 HEADER_BYTES = 64
@@ -34,6 +35,14 @@ TRAILER_BYTES = 32
 
 #: Cap on how much SVG text is scanned for active content.
 SVG_SCAN_BYTES = 2 * 1024 * 1024
+
+#: Keep review assets small enough for fast clones and Markdown rendering.
+MAX_MARKDOWN_IMAGE_BYTES = 1024 * 1024
+
+#: Formats rendered consistently by GitHub-flavoured Markdown and the catalog.
+MARKDOWN_IMAGE_EXTENSIONS = frozenset({
+    ".png", ".jpg", ".jpeg", ".gif", ".webp", ".svg",
+})
 
 
 @dataclass(frozen=True)
@@ -114,6 +123,92 @@ def detect_raster_format(head: bytes) -> str | None:
 def is_image_path(rel_path: str | Path) -> bool:
     """True when the path claims an image format by extension."""
     return Path(rel_path).suffix.lower() in IMAGE_EXTENSIONS
+
+
+_INLINE_IMAGE_RE = re.compile(
+    r"!\[[^\]]*\]\(\s*(?:<(?P<angled>[^>]+)>|(?P<plain>[^\s)]+))",
+)
+_REFERENCE_IMAGE_RE = re.compile(r"!\[[^\]]*\]\[([^\]]+)\]")
+_REFERENCE_DEFINITION_RE = re.compile(
+    r"(?m)^\s*\[([^\]]+)\]:\s*(?:<([^>]+)>|([^\s]+))"
+)
+_HTML_IMAGE_RE = re.compile(
+    r"<\s*(?:img|source)\b[^>]*\b(?:src|srcset)\s*=\s*[\"']([^\"']+)[\"']",
+    re.IGNORECASE,
+)
+
+
+def _markdown_image_targets(markdown: str) -> set[str]:
+    """Extract local image destinations from common Markdown and HTML forms."""
+    targets = {
+        match.group("angled") or match.group("plain")
+        for match in _INLINE_IMAGE_RE.finditer(markdown)
+    }
+    definitions = {
+        match.group(1).strip().casefold(): match.group(2) or match.group(3)
+        for match in _REFERENCE_DEFINITION_RE.finditer(markdown)
+    }
+    for match in _REFERENCE_IMAGE_RE.finditer(markdown):
+        target = definitions.get(match.group(1).strip().casefold())
+        if target:
+            targets.add(target)
+    for match in _HTML_IMAGE_RE.finditer(markdown):
+        # srcset may contain several comma-separated "URL density" candidates.
+        targets.update(
+            candidate.strip().split()[0]
+            for candidate in match.group(1).split(",")
+            if candidate.strip()
+        )
+    return targets
+
+
+def _resolved_local_target(markdown_dir: Path, target: str) -> Path | None:
+    parsed = urlsplit(target)
+    if parsed.scheme or parsed.netloc or target.startswith(("#", "//")):
+        return None
+    path = unquote(parsed.path).replace("\\", "/")
+    if not path:
+        return None
+    return (markdown_dir / path).resolve()
+
+
+def is_referenced_by_markdown(image_path: Path, owner_dir: Path) -> bool:
+    """Return whether an image is embedded by Markdown within its catalog item."""
+    image_path = image_path.resolve()
+    owner_dir = owner_dir.resolve()
+    markdown_sources: list[tuple[Path, str]] = []
+    for markdown_path in owner_dir.rglob("*"):
+        if not markdown_path.is_file() or markdown_path.suffix.lower() != ".md":
+            continue
+        try:
+            markdown_sources.append(
+                (markdown_path.parent, markdown_path.read_text(encoding="utf-8"))
+            )
+        except (OSError, UnicodeDecodeError):
+            continue
+
+    # A starter kit's longDescription is also rendered as Markdown.
+    kit_manifest = owner_dir / "kit.json"
+    if kit_manifest.is_file():
+        try:
+            import json
+            manifest = json.loads(kit_manifest.read_text(encoding="utf-8"))
+            if isinstance(manifest, dict) and isinstance(manifest.get("longDescription"), str):
+                markdown_sources.append((owner_dir, manifest["longDescription"]))
+        except (OSError, UnicodeDecodeError, ValueError):
+            pass
+
+    for markdown_dir, markdown in markdown_sources:
+        for target in _markdown_image_targets(markdown):
+            resolved = _resolved_local_target(markdown_dir, target)
+            if resolved != image_path:
+                continue
+            try:
+                resolved.relative_to(owner_dir)
+            except ValueError:
+                continue
+            return True
+    return False
 
 
 # ── SVG structure and active content ─────────────────────────────────────────

@@ -7,10 +7,11 @@ Checks performed (in order):
   SKT-STR-001  name field equals parent directory name
   SKT-STR-003  Exactly one agentRef with role:primary and required:true
   SKT-STR-006  No duplicate ref values within agentRefs[]
-  SKT-STR-008  Kit folder must contain only kit.json (no other files)
+    SKT-STR-008  Kit folder may contain kit.json, Markdown, and image assets
   SKT-REF-001  For active kits: every agentRef.ref exists in dry-run registry build
   SKT-POL-001  Newly added kit directories must have lifecycle:active
-  SKT-AST-001  logo / screenshots, if set, must be HTTPS URLs (kit folder cannot host assets)
+    SKT-AST-001  logo / screenshots fields, if set, must be HTTPS URLs
+    SKT-AST-002  Local images are safe, <= 1 MiB, and referenced by Markdown
 
 Usage:
   python .github/scripts/validate_starter_kits.py --repo-root .
@@ -36,6 +37,12 @@ from catalog_validation.schemas import (
     iter_schema_errors,
     load_json,
     load_schema,
+)
+from image_inspector import (
+    MARKDOWN_IMAGE_EXTENSIONS,
+    MAX_MARKDOWN_IMAGE_BYTES,
+    inspect,
+    is_referenced_by_markdown,
 )
 from update_registry import scan_repo
 
@@ -160,26 +167,56 @@ def validate_kit(
             f"[{kit_rel_path}] SKT-POL-001: Newly added kit must have lifecycle:active, got '{lifecycle}'"
         )
 
-    # SKT-STR-008: kit.json must be the ONLY file in the kit folder
+    # SKT-STR-008: permit documentation and its POL-016-governed images, but
+    # keep arbitrary source or payload files out of starter-kit metadata.
     extra_entries = sorted(
-        p.name for p in kit_dir.iterdir()
-        if p.name != "kit.json"
+        str(p.relative_to(kit_dir)).replace(os.sep, "/")
+        for p in kit_dir.rglob("*")
+        if p.is_file()
+        and p != kit_dir / "kit.json"
+        and p.suffix.lower() != ".md"
+        and p.suffix.lower() not in MARKDOWN_IMAGE_EXTENSIONS
     )
     if extra_entries:
         errors.append(
-            f"[{kit_rel_path}] SKT-STR-008: starter-kits/{kit_rel_path}/ must contain only 'kit.json'; "
-            f"found extra entr{'y' if len(extra_entries) == 1 else 'ies'}: {extra_entries}. "
-            f"Move logos, screenshots, READMEs, or any other assets out of the kit folder and reference them via HTTPS URLs."
+            f"[{kit_rel_path}] SKT-STR-008: starter-kits/{kit_rel_path}/ may "
+            f"contain only kit.json, Markdown, and Markdown image assets; found "
+            f"unsupported file(s): {extra_entries}."
         )
 
-    # SKT-AST-001: logo / screenshots, if set, must be HTTPS URLs since the
-    # kit folder is restricted to kit.json only. Relative paths are not permitted.
+    # SKT-AST-002: this script is also run by the standalone starter-kit
+    # workflow, so enforce image safety here instead of relying only on the
+    # shared POL-016 runner.
+    for image_path in sorted(
+        p for p in kit_dir.rglob("*")
+        if p.is_file() and p.suffix.lower() in MARKDOWN_IMAGE_EXTENSIONS
+    ):
+        image_rel = str(image_path.relative_to(kit_dir)).replace(os.sep, "/")
+        verdict = inspect(image_path)
+        if verdict is None or not verdict.ok:
+            reason = verdict.reason if verdict else "unsupported image format"
+            errors.append(
+                f"[{kit_rel_path}] SKT-AST-002: '{image_rel}': {reason}"
+            )
+        elif image_path.stat().st_size > MAX_MARKDOWN_IMAGE_BYTES:
+            errors.append(
+                f"[{kit_rel_path}] SKT-AST-002: '{image_rel}' exceeds the "
+                "1 MiB Markdown image limit."
+            )
+        elif not is_referenced_by_markdown(image_path, kit_dir):
+            errors.append(
+                f"[{kit_rel_path}] SKT-AST-002: '{image_rel}' is not embedded "
+                "by Markdown within this starter kit."
+            )
+
+    # SKT-AST-001: structured catalog-card assets remain HTTPS URLs. Local
+    # images are documentation assets and must be embedded by Markdown.
     def _check_asset(asset_value: str, field: str) -> None:
         s = str(asset_value or "")
         if not s.startswith("https://"):
             errors.append(
                 f"[{kit_rel_path}] SKT-AST-001: {field} '{asset_value}' must be an HTTPS URL; "
-                f"assets cannot live inside the kit folder (see SKT-STR-008)."
+                f"local images are supported only from Markdown content."
             )
 
     logo = manifest.get("logo")

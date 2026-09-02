@@ -48,10 +48,9 @@ def test_disguised_binary_is_flagged_as_spoofed_not_generic(repo):
     assert "disguised with a text extension" in result.findings[0].message
 
 
-# ── Honestly-named binaries ──────────────────────────────────────────────────
+# ── Honestly-named binaries and delegated images ────────────────────────────
 
 @pytest.mark.parametrize("rel,payload", [
-    ("agents/demo/logo.png", PNG_BYTES),
     ("agents/demo/guide.pdf", PDF_BYTES),
     ("agents/demo/tools/t/lib.so", ELF_BYTES),
 ])
@@ -60,6 +59,12 @@ def test_binary_with_matching_extension_is_blocked(repo, rel, payload):
     result = run_rule(repo, RULE, [rel])
     assert files(result) == [rel]
     assert "disguised" not in result.findings[0].message
+
+
+def test_claimed_images_are_delegated_to_pol_016(repo):
+    rel = write(repo, "agents/demo/logo.png", PNG_BYTES)
+    result = run_rule(repo, RULE, [rel])
+    assert result.findings == []
 
 
 # ── Legitimate source must pass ──────────────────────────────────────────────

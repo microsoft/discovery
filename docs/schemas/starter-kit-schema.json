@@ -99,7 +99,7 @@
     },
     "logo": {
       "allOf": [{ "$ref": "common-schema.json#/definitions/httpsUrl" }],
-      "description": "HTTPS URL to the kit logo image. Kit folders may only contain kit.json (see SKT-STR-008), so assets must be hosted externally and linked via HTTPS."
+      "description": "HTTPS URL to the kit logo used by catalog-card metadata. Local images are permitted only as documentation assets referenced from Markdown."
     },
     "screenshots": {
       "type": "array",
@@ -108,7 +108,7 @@
       "items": {
         "$ref": "common-schema.json#/definitions/httpsUrl"
       },
-      "description": "HTTPS URLs to screenshot images. Kit folders may only contain kit.json (see SKT-STR-008), so assets must be hosted externally and linked via HTTPS."
+      "description": "HTTPS URLs to screenshots used by catalog metadata. Local images are permitted only as documentation assets referenced from Markdown."
     },
     "websiteURL": {
       "$ref": "common-schema.json#/definitions/httpsUrl"

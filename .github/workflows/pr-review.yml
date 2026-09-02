@@ -25,7 +25,6 @@ jobs:
     outputs:
       changed_files: ${{ steps.changed.outputs.all_changed_files }}
       has_agents: ${{ steps.classify.outputs.has_agents }}
-      has_docs_only: ${{ steps.classify.outputs.has_docs_only }}
       author_permission: ${{ steps.author_permission.outputs.permission }}
     steps:
       - name: Resolve PR author repository permission
@@ -96,17 +95,12 @@ jobs:
         run: |
           FILES="$ALL_CHANGED_FILES"
           HAS_AGENTS=false
-          HAS_DOCS_ONLY=true
           for f in $FILES; do
             if [[ "$f" == agents/* ]]; then
               HAS_AGENTS=true
-              HAS_DOCS_ONLY=false
-            elif [[ "$f" != docs/schemas/* ]]; then
-              HAS_DOCS_ONLY=false
             fi
           done
           echo "has_agents=$HAS_AGENTS" >> "$GITHUB_OUTPUT"
-          echo "has_docs_only=$HAS_DOCS_ONLY" >> "$GITHUB_OUTPUT"
 
   # ── Stages 2–4: Structural + Schema + Content/Policy + Documentation ───────
   validate:
@@ -196,7 +190,7 @@ jobs:
             --output /tmp/validation-results.json || true
 
           if [[ ! -f /tmp/validation-results.json ]]; then
-            echo '{"passed":false,"failure_count":1,"has_agents":false,"has_docs_only":false,"failures":[{"rule_id":"INTERNAL","file":"validate_pr.py","line":1,"message":"Validator crashed before writing output — check the workflow logs."}]}' > /tmp/validation-results.json
+            echo '{"passed":false,"failure_count":1,"has_agents":false,"has_markdown_only":false,"has_dockerfile":false,"has_code":false,"failures":[{"rule_id":"INTERNAL","file":"validate_pr.py","line":1,"message":"Validator crashed before writing output — check the workflow logs."}]}' > /tmp/validation-results.json
           fi
 
           PASSED=$(python -c "import json; d=json.load(open('/tmp/validation-results.json')); print('true' if d['passed'] else 'false')")
@@ -220,7 +214,7 @@ jobs:
           # Create fallback if an earlier step (checkout, pip install, etc.) failed
           # before run_validator had a chance to create the file.
           if [[ ! -f /tmp/validation-results.json ]]; then
-            echo '{"passed":false,"failure_count":1,"has_agents":false,"has_docs_only":false,"failures":[{"rule_id":"INTERNAL","file":"(workflow)","line":1,"message":"Validator crashed before producing results — check the Validate PR job logs for details."}]}' \
+            echo '{"passed":false,"failure_count":1,"has_agents":false,"has_markdown_only":false,"has_dockerfile":false,"has_code":false,"failures":[{"rule_id":"INTERNAL","file":"(workflow)","line":1,"message":"Validator crashed before producing results — check the Validate PR job logs for details."}]}' \
               > /tmp/validation-results.json
           fi
 
@@ -350,7 +344,7 @@ jobs:
       - name: Create fallback results if artifact missing
         if: steps.download.outcome == 'failure'
         run: |
-          echo '{"passed":false,"failure_count":1,"has_agents":false,"has_docs_only":false,"failures":[{"rule_id":"INTERNAL","file":"(workflow)","line":1,"message":"Validation job was skipped or did not produce results — check the Validate PR job logs for details."}]}' \
+          echo '{"passed":false,"failure_count":1,"has_agents":false,"has_markdown_only":false,"has_dockerfile":false,"has_code":false,"failures":[{"rule_id":"INTERNAL","file":"(workflow)","line":1,"message":"Validation job was skipped or did not produce results — check the Validate PR job logs for details."}]}' \
             > /tmp/validation-results.json
 
       - name: Manage labels and post PR feedback
@@ -374,7 +368,10 @@ jobs:
               'pr-validation-failed',
               '1p-contribution',
               '3p-contribution',
-              'docs-only',
+              'docs-only', // Legacy label; remove but never reapply.
+              'markdown-only',
+              'contains-dockerfile',
+              'contains-code',
               'needs-image-review',
             ];
 
@@ -395,7 +392,9 @@ jobs:
               'pr-validation-failed':  { color: 'd93f0b', description: "The pr-review workflow's validator failed; see inline comments." },
               '1p-contribution':          { color: '1d76db', description: "Authored by Microsoft (party='1p' in metadata)" },
               '3p-contribution':          { color: 'bfd4f2', description: "Authored by a third-party partner (party='3p' in metadata)" },
-              'docs-only':                { color: 'c5def5', description: 'Changes only affect documentation or schemas' },
+              'markdown-only':             { color: '8250df', description: 'Every file changed by this PR is Markdown' },
+              'contains-dockerfile':       { color: '2496ed', description: 'PR adds, modifies, renames, or removes a Dockerfile' },
+              'contains-code':             { color: '1f883d', description: 'PR includes source-code changes' },
               'needs-image-review':       { color: 'd4c5f9', description: 'PR adds or modifies image files — a maintainer must inspect them before merge' },
             };
             async function ensureLabel(name) {
@@ -415,7 +414,9 @@ jobs:
             const labelsToAdd = [];
             if (results.has_1p) labelsToAdd.push('1p-contribution');
             if (results.has_3p) labelsToAdd.push('3p-contribution');
-            if (results.has_docs_only) labelsToAdd.push('docs-only');
+            if (results.has_markdown_only) labelsToAdd.push('markdown-only');
+            if (results.has_dockerfile) labelsToAdd.push('contains-dockerfile');
+            if (results.has_code) labelsToAdd.push('contains-code');
 
             // Images always get a human look. POL-016 proves a file is the
             // format it claims to be; it cannot judge whether the picture is
