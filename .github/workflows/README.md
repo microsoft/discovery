@@ -13,7 +13,7 @@ even after the tag had been moved forward.
 | Workflow | Purpose | Triggers |
 | --- | --- | --- |
 | [`refresh-current.yml`](refresh-current.yml) | Moves the `current` git tag to `main` HEAD, delete-and-recreates the `current` GitHub Release (fresh `published_at`, auto-generated notes), and opens a PR that bumps the README download table. | `workflow_dispatch` (manual button) + `repository_dispatch` (`event_type: app-released`) |
-| [`probe-aka-ms.yml`](probe-aka-ms.yml) | Every 30 minutes, follows the aka.ms redirects, compares the resolved version to the version recorded in README, and calls `refresh-current.yml` when they drift. | `schedule` (`*/30 * * * *`) + `workflow_dispatch` |
+| [`probe-aka-ms.yml`](probe-aka-ms.yml) | Every hour, follows the aka.ms redirects, compares the resolved version to the version recorded in README, and calls `refresh-current.yml` when they drift. Runs only for `microsoft/discovery` on `main`; scheduled runs in forks exit as successful skips. | `schedule` (`0 * * * *`) + `workflow_dispatch` |
 | ADO release pipeline task (future) | Same effect as the probe but event-driven — internal build POSTs `repository_dispatch` to GitHub the moment a new app ships. Draft PowerShell snippet lives in the chat history for this branch; ADO owners can adopt it when they're ready. Requires a GitHub App (recommended) or workload identity federation, per the [1ES PAT removal case study](https://eng.ms/docs/coreai/devdiv/one-engineering-system-1es/1es-docs/1es-security-configuration/configuration-guides/case-studies/azureauth-removing-pats). | `repository_dispatch` |
 
 Both trigger paths funnel into the same worker (`refresh-current.yml`), so
@@ -55,6 +55,15 @@ The probe:
    exists on the remote (debounce) — it calls `gh workflow run
    refresh-current.yml` with the three parsed inputs.
 
+## Repository and branch guard
+
+GitHub evaluates `schedule` workflows from each repository's default branch,
+including forks where Actions and scheduled workflows are enabled. The probe
+therefore guards both jobs with `github.repository == 'microsoft/discovery'`
+and `github.ref == 'refs/heads/main'`. A scheduled run may still appear in a
+fork's Actions history, but it performs no steps and completes successfully.
+Manual dispatches from non-`main` refs are skipped in the same way.
+
 ## Manual trigger
 
 You can always run either workflow by hand from the
@@ -64,7 +73,7 @@ You can always run either workflow by hand from the
   `previous_date` when you want to force the retag + rerelease + README PR
   regardless of what aka.ms says.
 - **Probe aka.ms Discovery download** — runs the poll immediately without
-  waiting for the next 30-minute schedule tick.
+   waiting for the next hourly schedule tick.
 
 ## Local test helpers
 
@@ -124,7 +133,7 @@ Recommended first-run smoke test after this branch merges to `main`:
    `DECISION: no-op` (or `[dry-run] would run: gh workflow run …` if a new
    release has just shipped).
 4. Once both dry-runs look clean, the scheduled probe will start firing on
-   its 30-minute cron and the worker will act on real inputs.
+   its hourly cron and the worker will act on real inputs.
 
 ## Permissions
 

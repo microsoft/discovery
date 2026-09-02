@@ -9,6 +9,10 @@ name: Probe aka.ms Discovery download
 # internal ADO release pipeline dispatches refresh-current.yml directly via
 # repository_dispatch. Both paths funnel into the same worker workflow, so
 # adding the event trigger later is additive.
+#
+# GitHub schedules workflows independently in forks that have Actions enabled.
+# The job-level repository/ref guard below keeps those runs as successful skips;
+# only microsoft/discovery's main branch is allowed to probe or dispatch.
 
 on:
   schedule:
@@ -33,6 +37,7 @@ concurrency:
 jobs:
   probe:
     name: Compare aka.ms against README and dispatch if drifted
+    if: github.repository == 'microsoft/discovery' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     timeout-minutes: 5
     env:
@@ -177,7 +182,11 @@ jobs:
   report-failure:
     name: Open/update tracking issue on failure
     needs: probe
-    if: failure()
+    if: >-
+      always() &&
+      needs.probe.result == 'failure' &&
+      github.repository == 'microsoft/discovery' &&
+      github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     timeout-minutes: 5
     permissions:
