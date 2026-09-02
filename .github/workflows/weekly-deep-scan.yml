@@ -9,12 +9,13 @@ name: Weekly Deep Scan
 #   2. Rule and policy changes are only applied to touched files. A newly
 #      tightened rule can sit unexercised against 45 untouched agents.
 #   3. Catalog webpages can acquire a malware or phishing reputation after
-#      merge. Restricted URLhaus and PhishTank lookups catch that drift.
+#      merge. Restricted URLhaus and PhishTank lookups can catch that drift.
 #
-# So this runs every rule against every file weekly, and pushes the catalog's
-# base images through Docker Scout for vulnerability data. It reports; it does
-# not gate. Findings land in the job summary and an artifact, and open an issue
-# when the catalog regresses or a reputation provider flags a URL or fails.
+# The URL reputation and Docker Scout jobs are temporarily disabled until their
+# authentication and service-access requirements are resolved. Their workflow
+# definitions remain below so the capability can be restored without being
+# rebuilt. Active scans report warnings, upload evidence, and open or update a
+# tracking issue; security findings do not fail or gate the workflow.
 
 on:
   schedule:
@@ -47,6 +48,7 @@ jobs:
     outputs:
       drifted: ${{ steps.audit.outputs.drifted }}
       summary: ${{ steps.audit.outputs.summary }}
+      generated_artifacts_stale: ${{ steps.generated.outputs.stale }}
     steps:
       - uses: actions/checkout@v6
         with:
@@ -83,13 +85,21 @@ jobs:
           else
             echo "drifted=true" >> "$GITHUB_OUTPUT"
             cat /tmp/drift.txt >> "$GITHUB_STEP_SUMMARY"
+            echo "::warning title=Catalog rule drift::The full-catalog audit found findings outside the ratchet baseline. A tracking issue will be filed or updated."
           fi
           SUMMARY=$(head -n 5 /tmp/full-audit.txt | tr '\n' ' ')
           echo "summary=${SUMMARY}" >> "$GITHUB_OUTPUT"
 
       - name: Verify generated artefacts are current
+        id: generated
         run: |
-          python .github/scripts/generate_rule_docs.py --check
+          if python .github/scripts/generate_rule_docs.py --check > /tmp/generated-artifacts.txt 2>&1; then
+            echo "stale=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "stale=true" >> "$GITHUB_OUTPUT"
+            cat /tmp/generated-artifacts.txt >> "$GITHUB_STEP_SUMMARY"
+            echo "::warning title=Generated artifacts are stale::Generated rule documentation is not current. A tracking issue will be filed or updated."
+          fi
 
       - name: Recompute catalog tags
         run: |
@@ -108,6 +118,9 @@ jobs:
   # ── Restricted malware and phishing reputation services ─────────────────
   url-reputation-audit:
     name: URLhaus and PhishTank reputation audit
+    # Temporarily disabled: retain the implementation until provider access and
+    # repository secrets are available and verified.
+    if: ${{ false }}
     runs-on: ubuntu-latest
     timeout-minutes: 15
     outputs:
@@ -176,7 +189,9 @@ jobs:
     name: Discover base images
     runs-on: ubuntu-slim
     timeout-minutes: 10
-    if: ${{ !inputs.skip_image_scan }}
+    # Temporarily disabled: retaining discovery and scan jobs makes Docker Scout
+    # easy to restore after registry authentication is resolved.
+    if: ${{ false && !inputs.skip_image_scan }}
     outputs:
       matrix: ${{ steps.list.outputs.matrix }}
       count: ${{ steps.list.outputs.count }}
@@ -269,6 +284,10 @@ jobs:
     permissions:
       contents: read
       security-events: write
+    outputs:
+      actionable: ${{ steps.summarize.outputs.actionable }}
+      finding_count: ${{ steps.summarize.outputs.finding_count }}
+      scan_status: ${{ steps.summarize.outputs.scan_status }}
     steps:
       - uses: actions/checkout@v6
         with:
@@ -308,17 +327,26 @@ jobs:
           category: msdo
 
       - name: Summarize catalog findings
+        id: summarize
         if: always()
         env:
           SARIF_FILE: ${{ steps.msdo.outputs.sarifFile }}
+          MSDO_OUTCOME: ${{ steps.msdo.outcome }}
         run: |
           set -uo pipefail
-          python - <<'PY' >> "$GITHUB_STEP_SUMMARY"
+          python - <<'PY'
           import json, os, collections
           path = os.environ.get("SARIF_FILE") or ""
-          print("## Microsoft Security DevOps\n")
+          outcome = os.environ.get("MSDO_OUTCOME", "unknown")
+          summary = ["## Microsoft Security DevOps", ""]
+          outputs = os.environ["GITHUB_OUTPUT"]
           if not path or not os.path.exists(path):
-              print("_No SARIF produced — check the MSDO step logs._")
+              summary.append("_No SARIF produced — check the MSDO step logs._")
+              with open(outputs, "a", encoding="utf-8") as stream:
+                  stream.write("actionable=true\nfinding_count=0\nscan_status=error\n")
+              print("::warning title=Security scan incomplete::Microsoft Security DevOps produced no SARIF. A tracking issue will be filed or updated.")
+              with open(os.environ["GITHUB_STEP_SUMMARY"], "a", encoding="utf-8") as stream:
+                  stream.write("\n".join(summary) + "\n")
               raise SystemExit(0)
           data = json.load(open(path, encoding="utf-8"))
           counts = collections.Counter()
@@ -334,12 +362,27 @@ jobs:
                           counts[tool] += 1
                           break
           if counts:
-              print("| Analyzer | Findings in agents/ and starter-kits/ |")
-              print("|---|---|")
+              summary.extend((
+                  "| Analyzer | Findings in agents/ and starter-kits/ |",
+                  "|---|---|",
+              ))
               for tool, n in sorted(counts.items()):
-                  print(f"| {tool} | {n} |")
+                  summary.append(f"| {tool} | {n} |")
           else:
-              print("No findings inside agents/ or starter-kits/.")
+              summary.append("No findings inside agents/ or starter-kits/.")
+          finding_count = sum(counts.values())
+          scan_status = "clean" if outcome == "success" else "error"
+          actionable = finding_count > 0 or scan_status != "clean"
+          with open(outputs, "a", encoding="utf-8") as stream:
+              stream.write(f"actionable={str(actionable).lower()}\n")
+              stream.write(f"finding_count={finding_count}\n")
+              stream.write(f"scan_status={scan_status}\n")
+          if finding_count:
+              print(f"::warning title=Security findings detected::{finding_count} Microsoft Security DevOps finding(s) require review. A tracking issue will be filed or updated.")
+          elif scan_status != "clean":
+              print("::warning title=Security scan incomplete::Microsoft Security DevOps did not complete successfully. A tracking issue will be filed or updated.")
+          with open(os.environ["GITHUB_STEP_SUMMARY"], "a", encoding="utf-8") as stream:
+              stream.write("\n".join(summary) + "\n")
           PY
 
       - name: Upload MSDO SARIF
@@ -350,19 +393,20 @@ jobs:
           path: ${{ steps.msdo.outputs.sarifFile }}
           if-no-files-found: ignore
 
-  # ── Raise an issue when the catalog regresses ─────────────────────────────
+  # ── Raise an advisory issue for every active scan concern ─────────────────
   report:
     name: Report
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:
       issues: write
-    needs: [full-catalog-audit, url-reputation-audit, scan-base-images]
+    needs: [full-catalog-audit, msdo]
     if: >-
       ${{
         !inputs.dry_run && !cancelled() &&
         (needs.full-catalog-audit.outputs.drifted == 'true' ||
-         needs.url-reputation-audit.outputs.status != 'clean')
+         needs.full-catalog-audit.outputs.generated_artifacts_stale == 'true' ||
+         needs.msdo.outputs.actionable == 'true')
       }}
     steps:
       - name: Open or update the drift issue
@@ -373,7 +417,10 @@ jobs:
             const title = 'Weekly deep scan: findings require attention';
             const runUrl = `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
             const drifted = '${{ needs.full-catalog-audit.outputs.drifted }}' === 'true';
-            const reputationStatus = '${{ needs.url-reputation-audit.outputs.status }}' || 'error';
+            const generatedArtifactsStale = '${{ needs.full-catalog-audit.outputs.generated_artifacts_stale }}' === 'true';
+            const msdoActionable = '${{ needs.msdo.outputs.actionable }}' === 'true';
+            const msdoFindingCount = '${{ needs.msdo.outputs.finding_count }}' || '0';
+            const msdoStatus = '${{ needs.msdo.outputs.scan_status }}' || 'error';
             const body = ['The weekly deep scan found something that needs review.', ''];
 
             if (drifted) {
@@ -392,25 +439,53 @@ jobs:
               );
             }
 
-            if (reputationStatus === 'matches') {
+            if (generatedArtifactsStale) {
               body.push(
-                '## URL reputation matches',
+                '## Generated artifacts are stale',
                 '',
-                'URLhaus or PhishTank lists at least one catalog webpage. Do not visit the',
-                'URL directly; inspect the `url-reputation-audit` artifact from the run.',
+                'Generated rule documentation is not current. Inspect the full-catalog-audit',
+                'job summary and regenerate the checked-in artifacts.',
                 '',
               );
-            } else if (reputationStatus !== 'clean') {
+            }
+
+            if (msdoActionable && msdoStatus === 'clean') {
               body.push(
-                '## URL reputation audit error',
+                '## Microsoft Security DevOps findings',
                 '',
-                'The restricted provider check could not complete. Verify the repository',
-                'secrets `URLHAUS_AUTH_KEY` and `PHISHTANK_APP_KEY`, then rerun the workflow.',
+                `The catalog scan reported ${msdoFindingCount} finding(s). Review the`,
+                '`msdo-sarif` artifact and the job summary. Findings are advisory and did',
+                'not fail the workflow.',
+                '',
+              );
+            } else if (msdoActionable) {
+              body.push(
+                '## Microsoft Security DevOps scan error',
+                '',
+                'The catalog security scan did not complete or did not produce SARIF.',
+                'Inspect the Microsoft Security DevOps job logs and rerun the workflow.',
                 '',
               );
             }
 
             body.push(`**Run:** ${runUrl}`);
+
+            try {
+              await github.rest.issues.getLabel({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                name: 'weekly-deep-scan',
+              });
+            } catch (error) {
+              if (error.status !== 404) throw error;
+              await github.rest.issues.createLabel({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                name: 'weekly-deep-scan',
+                color: 'd4a72c',
+                description: 'Advisory findings from the scheduled catalog security scan',
+              });
+            }
 
             const existing = await github.rest.issues.listForRepo({
               owner: context.repo.owner,

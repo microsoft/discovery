@@ -236,6 +236,49 @@ def test_weekly_url_reputation_provider_errors_are_report_only():
     assert command.rstrip().endswith("exit 0")
 
 
+def test_unavailable_external_scanners_remain_disabled():
+    workflow = load_workflow(
+        REPO_ROOT / ".github" / "workflows" / "weekly-deep-scan.yml"
+    )
+
+    assert workflow["jobs"]["url-reputation-audit"]["if"] == "${{ false }}"
+    assert workflow["jobs"]["discover-images"]["if"] == (
+        "${{ false && !inputs.skip_image_scan }}"
+    )
+
+
+def test_weekly_security_findings_warn_and_open_an_issue_instead_of_failing():
+    workflow = load_workflow(
+        REPO_ROOT / ".github" / "workflows" / "weekly-deep-scan.yml"
+    )
+    full_audit = workflow["jobs"]["full-catalog-audit"]
+    audit_command = next(
+        step["run"] for step in full_audit["steps"] if step.get("id") == "audit"
+    )
+    generated_command = next(
+        step["run"] for step in full_audit["steps"] if step.get("id") == "generated"
+    )
+    msdo = workflow["jobs"]["msdo"]
+    summarize_command = next(
+        step["run"] for step in msdo["steps"] if step.get("id") == "summarize"
+    )
+    report = workflow["jobs"]["report"]
+
+    assert "::warning" in audit_command
+    assert "::warning" in generated_command
+    assert "::warning" in summarize_command
+    assert "exit 1" not in audit_command + generated_command + summarize_command
+    assert msdo["outputs"]["actionable"] == (
+        "${{ steps.summarize.outputs.actionable }}"
+    )
+    assert report["needs"] == ["full-catalog-audit", "msdo"]
+    assert report["permissions"] == {"issues": "write"}
+    assert "needs.msdo.outputs.actionable == 'true'" in report["if"]
+    report_script = report["steps"][0]["with"]["script"]
+    assert "github.rest.issues.createLabel" in report_script
+    assert "github.rest.issues.create" in report_script
+
+
 def test_validation_workflows_publish_actionable_diagnostics():
     unit_workflow = load_workflow(
         REPO_ROOT / ".github" / "workflows" / "unit-tests.yml"
