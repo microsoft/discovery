@@ -1,0 +1,221 @@
+name: Code Scan
+
+# Static analysis of contributed code, using Microsoft and GitHub tooling
+# rather than bespoke rules:
+#
+#   CodeQL              — dataflow analysis of contributed catalog Python.
+#   DevSkim             — Microsoft's security linter (microsoft/DevSkim).
+#   ApplicationInspector— Microsoft's characterization scanner. Answers "what
+#                         does this code actually DO" (network, shell, crypto,
+#                         file I/O), which is the question a reviewer of an
+#                         untrusted scientific tool most needs answered.
+#
+# Every analyzer in this workflow is scoped to contributed catalog code under
+# agents/ and starter-kits/.
+#
+# Rollout posture: reporting, not gating. Pointing three new analyzers at 46
+# pre-existing agents would produce a flood of findings that blocks unrelated
+# contributions. Results land in the Security tab and the job summary; promote
+# to blocking once the backlog is triaged, the same way the rule engine's
+# ratchet works.
+
+on:
+  pull_request:
+    paths:
+      - "agents/**"
+      - "starter-kits/**"
+  push:
+    branches: [main]
+    paths:
+      - "agents/**"
+      - "starter-kits/**"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  security-events: write
+
+concurrency:
+  group: code-scan-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # ── CodeQL over contributed catalog code ─────────────────────────────────
+  codeql:
+    name: CodeQL (${{ matrix.scope }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - language: python
+            scope: catalog-python
+            config: ./.github/codeql/codeql-config.yml
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v4
+        with:
+          languages: ${{ matrix.language }}
+          config-file: ${{ matrix.config }}
+
+      - name: Analyze
+        uses: github/codeql-action/analyze@v4
+        with:
+          category: "/language:${{ matrix.language }}/scope:${{ matrix.scope }}"
+          output: codeql-results
+          upload: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository }}
+
+      - name: Upload CodeQL SARIF artifact
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: codeql-${{ matrix.scope }}-sarif
+          path: codeql-results
+          if-no-files-found: warn
+
+  # ── DevSkim security lint ─────────────────────────────────────────────────
+  devskim:
+    name: DevSkim
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v6
+
+      # The action scans a single directory, so the two guarded trees are
+      # scanned separately and their SARIF kept apart by category below.
+      - name: Scan agents/
+        uses: microsoft/DevSkim-Action@v1
+        with:
+          directory-to-scan: agents
+          output-filename: devskim-agents.sarif
+          ignore-globs: "**/.git/**,**/example-input-files/**,agents/tmp/**"
+
+      - name: Scan starter-kits/
+        uses: microsoft/DevSkim-Action@v1
+        with:
+          directory-to-scan: starter-kits
+          output-filename: devskim-starter-kits.sarif
+          ignore-globs: "**/.git/**,starter-kits/tmp/**"
+
+      # A fork PR runs with a read-only token, so the Security tab upload is
+      # not available. Skip it there rather than failing the job; the artifact
+      # below carries the same findings for the reviewer either way.
+      - name: Upload agents SARIF
+        if: ${{ github.event.pull_request.head.repo.full_name == github.repository || github.event_name != 'pull_request' }}
+        continue-on-error: true
+        uses: github/codeql-action/upload-sarif@v4
+        with:
+          sarif_file: devskim-agents.sarif
+          category: devskim-agents
+
+      - name: Upload starter-kits SARIF
+        if: ${{ github.event.pull_request.head.repo.full_name == github.repository || github.event_name != 'pull_request' }}
+        continue-on-error: true
+        uses: github/codeql-action/upload-sarif@v4
+        with:
+          sarif_file: devskim-starter-kits.sarif
+          category: devskim-starter-kits
+
+      - name: Summarize findings
+        if: always()
+        run: |
+          set -uo pipefail
+          summarize() {
+            local file="$1"; local label="$2"
+            [ -f "$file" ] || { echo "- **$label**: no output produced."; return; }
+            local count
+            count=$(python -c "
+          import json, sys
+          try:
+              d = json.load(open('$file'))
+              print(sum(len(r.get('results', [])) for r in d.get('runs', [])))
+          except Exception:
+              print('?')
+          ")
+            echo "- **$label**: $count finding(s)."
+          }
+          {
+            echo "## DevSkim"
+            echo
+            summarize devskim-agents.sarif "agents/"
+            summarize devskim-starter-kits.sarif "starter-kits/"
+            echo
+            echo "Findings are reported, not enforced. Download the \`devskim-sarif\` artifact for detail."
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload SARIF artifacts
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: devskim-sarif
+          path: devskim-*.sarif
+          if-no-files-found: warn
+
+  # ── What does this code actually do? ──────────────────────────────────────
+  capabilities:
+    name: Capability report
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: "8.0"
+
+      - name: Restore Application Inspector
+        run: dotnet tool restore
+
+      # Application Inspector reports features rather than defects: network
+      # calls, shell execution, cryptography, file and cloud APIs. For an
+      # untrusted scientific tool that is the review question — a retrosynthesis
+      # container has no business opening sockets.
+      #
+      # One invocation per tree, matching the DevSkim steps above, rather than
+      # relying on multi-source flag behaviour.
+      - name: Characterize contributed code
+        run: |
+          set -uo pipefail
+          scan() {
+            local dir="$1"; local out="$2"
+            [ -d "$dir" ] || { echo "_No $dir directory._" > "$out"; return; }
+            dotnet tool run appinspector analyze \
+              -s "$dir" \
+              -f markdown \
+              -o "$out" \
+              -g "**/.git/**,**/example-input-files/**,**/tmp/**" \
+              || echo "_Application Inspector exited non-zero for $dir._" >> "$out"
+          }
+          scan agents capabilities-agents.md
+          scan starter-kits capabilities-starter-kits.md
+
+          {
+            echo "## Capability report"
+            echo
+            echo "What the contributed code does, per Microsoft Application Inspector."
+            echo "Review anything unexpected for the agent's stated purpose — network"
+            echo "calls, shell execution, or cryptography in a tool that should not need them."
+            echo
+            echo "<details><summary>agents/</summary>"
+            echo
+            head -c 40000 capabilities-agents.md 2>/dev/null || echo "_No report._"
+            echo
+            echo "</details>"
+            echo
+            echo "<details><summary>starter-kits/</summary>"
+            echo
+            head -c 10000 capabilities-starter-kits.md 2>/dev/null || echo "_No report._"
+            echo
+            echo "</details>"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload capability report
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: capability-report
+          path: capabilities-*.md
+          if-no-files-found: warn

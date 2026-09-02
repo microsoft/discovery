@@ -1,0 +1,437 @@
+name: Weekly Deep Scan
+
+# The PR gate is deliberately fast: it validates only what a pull request
+# changed. That leaves two blind spots this workflow covers.
+#
+#   1. The catalog rots in place. A base image that was clean when its agent
+#      merged accumulates CVEs; nothing in a PR-triggered run would ever look
+#      at it again.
+#   2. Rule and policy changes are only applied to touched files. A newly
+#      tightened rule can sit unexercised against 45 untouched agents.
+#   3. Catalog webpages can acquire a malware or phishing reputation after
+#      merge. Restricted URLhaus and PhishTank lookups catch that drift.
+#
+# So this runs every rule against every file weekly, and pushes the catalog's
+# base images through Docker Scout for vulnerability data. It reports; it does
+# not gate. Findings land in the job summary and an artifact, and open an issue
+# when the catalog regresses or a reputation provider flags a URL or fails.
+
+on:
+  schedule:
+    # 06:00 UTC Monday — results are waiting at the start of the week.
+    - cron: "0 6 * * 1"
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Do not publish SARIF or create/update the weekly drift issue"
+        type: boolean
+        default: true
+      skip_image_scan:
+        description: "Skip the Docker Scout image scan (faster; rules only)"
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: weekly-deep-scan
+  cancel-in-progress: false
+
+jobs:
+  # ── Every rule against every file ─────────────────────────────────────────
+  full-catalog-audit:
+    name: Full catalog rule audit
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    outputs:
+      drifted: ${{ steps.audit.outputs.drifted }}
+      summary: ${{ steps.audit.outputs.summary }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: .github/requirements-ci.txt
+
+      - name: Install dependencies
+        run: python -m pip install -r .github/requirements-ci.txt
+
+      - name: Audit every agent and starter kit
+        id: audit
+        run: |
+          set -uo pipefail
+          python .github/scripts/generate_baseline.py --report \
+            | tee /tmp/full-audit.txt
+          {
+            echo "## Full catalog rule audit"
+            echo
+            echo '```'
+            head -n 40 /tmp/full-audit.txt
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          # --check fails when the catalog has violations the ratchet baseline
+          # does not record, i.e. the catalog regressed since the last rollout.
+          if python .github/scripts/generate_baseline.py --check > /tmp/drift.txt 2>&1; then
+            echo "drifted=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "drifted=true" >> "$GITHUB_OUTPUT"
+            cat /tmp/drift.txt >> "$GITHUB_STEP_SUMMARY"
+          fi
+          SUMMARY=$(head -n 5 /tmp/full-audit.txt | tr '\n' ' ')
+          echo "summary=${SUMMARY}" >> "$GITHUB_OUTPUT"
+
+      - name: Verify generated artefacts are current
+        run: |
+          python .github/scripts/generate_rule_docs.py --check
+
+      - name: Recompute catalog tags
+        run: |
+          # Reports only. The registry bot owns the committed file, so a diff
+          # here means main moved without the bot running, not a PR problem.
+          python .github/scripts/compute_tags.py --report >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload audit report
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: full-catalog-audit
+          path: /tmp/full-audit.txt
+          if-no-files-found: warn
+
+  # ── Restricted malware and phishing reputation services ─────────────────
+  url-reputation-audit:
+    name: URLhaus and PhishTank reputation audit
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    outputs:
+      status: ${{ steps.reputation.outputs.status }}
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: .github/requirements-ci.txt
+
+      - name: Install dependencies
+        run: python -m pip install -c .github/requirements-ci.txt pyyaml
+
+      # Configure both as repository Actions secrets. The script sends the
+      # URLhaus key in Auth-Key and the PhishTank key in a POST body; neither
+      # credential is placed in a URL, command line, artifact, or log message.
+      - name: Check catalog URL reputation
+        id: reputation
+        env:
+          URLHAUS_AUTH_KEY: ${{ secrets.URLHAUS_AUTH_KEY }}
+          PHISHTANK_APP_KEY: ${{ secrets.PHISHTANK_APP_KEY }}
+        run: |
+          set -uo pipefail
+          EXIT_CODE=0
+          python .github/scripts/url_reputation_audit.py \
+            --repo-root "$GITHUB_WORKSPACE" \
+            --output /tmp/url-reputation.json \
+            --summary-output /tmp/url-reputation.md \
+            || EXIT_CODE=$?
+
+          case "$EXIT_CODE" in
+            0) STATUS=clean ;;
+            1) STATUS=matches ;;
+            *) STATUS=error ;;
+          esac
+          echo "status=$STATUS" >> "$GITHUB_OUTPUT"
+
+          if [ -s /tmp/url-reputation.md ]; then
+            cat /tmp/url-reputation.md >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "## URL reputation audit" >> "$GITHUB_STEP_SUMMARY"
+            echo "The audit exited without producing a report." >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+          # Findings are report-only here; the report job opens or updates the
+          # weekly-deep-scan issue so transient provider errors do not hide the
+          # rest of the scheduled security scan.
+          exit 0
+
+      - name: Upload URL reputation report
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: url-reputation-audit
+          path: |
+            /tmp/url-reputation.json
+            /tmp/url-reputation.md
+          if-no-files-found: warn
+
+  # ── Enumerate the base images to scan ─────────────────────────────────────
+  discover-images:
+    name: Discover base images
+    runs-on: ubuntu-slim
+    timeout-minutes: 10
+    if: ${{ !inputs.skip_image_scan }}
+    outputs:
+      matrix: ${{ steps.list.outputs.matrix }}
+      count: ${{ steps.list.outputs.count }}
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+
+      - name: Enumerate distinct base images
+        id: list
+        run: |
+          set -euo pipefail
+          MATRIX=$(python .github/scripts/list_base_images.py --matrix)
+          echo "matrix=$MATRIX" >> "$GITHUB_OUTPUT"
+          COUNT=$(echo "$MATRIX" | python -c "import json,sys; print(len(json.load(sys.stdin)['image']))")
+          echo "count=$COUNT" >> "$GITHUB_OUTPUT"
+          echo "Discovered $COUNT distinct base image(s)."
+          python .github/scripts/list_base_images.py >> "$GITHUB_STEP_SUMMARY"
+
+  # ── Docker Scout CVE scan, one job per image ──────────────────────────────
+  scan-base-images:
+    name: "Scout: ${{ matrix.image }}"
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    needs: discover-images
+    if: ${{ needs.discover-images.outputs.count != '0' }}
+    strategy:
+      fail-fast: false
+      max-parallel: 5
+      matrix: ${{ fromJson(needs.discover-images.outputs.matrix) }}
+    steps:
+      # Docker Hub credentials raise the anonymous pull-rate limit and unlock
+      # full Scout data. The scan degrades to public data when absent rather
+      # than failing, so a fork or a secretless environment still gets signal.
+      - name: Log in to Docker Hub
+        if: ${{ env.DOCKERHUB_USERNAME != '' }}
+        env:
+          DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Scan image for known vulnerabilities
+        id: scout
+        continue-on-error: true
+        env:
+          IMAGE: ${{ matrix.image }}
+        run: |
+          set -uo pipefail
+          # The immutable installer verifies the selected release checksum.
+          curl -fsSL https://raw.githubusercontent.com/docker/scout-cli/c7ac4ce317eafa536bf2421d1c223908e2200dce/install.sh \
+            | sh -s -- -b "$HOME/.docker/scout" v1.24.0
+          export PATH="$HOME/.docker/scout:$PATH"
+
+          # Image reference comes from repository content, so pass it through
+          # the environment rather than interpolating it into the shell.
+          docker scout cves --only-severity critical,high \
+            --format markdown "$IMAGE" > /tmp/scout.md 2>/tmp/scout.err || true
+
+          {
+            echo "### $IMAGE"
+            echo
+            if [ -s /tmp/scout.md ]; then
+              cat /tmp/scout.md
+            else
+              echo "No Scout data returned. Details:"
+              echo '```'
+              head -n 20 /tmp/scout.err || true
+              echo '```'
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload scan output
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: scout-${{ strategy.job-index }}
+          path: /tmp/scout.md
+          if-no-files-found: ignore
+
+  # ── Microsoft Security DevOps over the catalog ────────────────────────────
+  msdo:
+    name: Microsoft Security DevOps
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    permissions:
+      contents: read
+      security-events: write
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          sparse-checkout: |
+            /agents/
+            /starter-kits/
+          sparse-checkout-cone-mode: false
+          persist-credentials: false
+
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: "8.0"
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+
+      # MSDO bundles Bandit (Python), Checkov (Dockerfile/IaC), and Trivy
+      # (filesystem CVEs) behind one Microsoft-maintained action that emits
+      # SARIF. AntiMalware has no Linux configuration, so enabling it aborts
+      # Guardian before the supported analyzers can produce results. A non-cone
+      # sparse checkout keeps both the scan and uploaded SARIF strictly inside
+      # the public catalog roots.
+      - name: Run Microsoft Security DevOps
+        id: msdo
+        continue-on-error: true
+        uses: microsoft/security-devops-action@08976cb623803b1b36d7112d4ff9f59eae704de0 # v1.12.0
+        with:
+          tools: bandit,checkov,trivy
+
+      - name: Upload results to the Security tab
+        if: ${{ !inputs.dry_run && steps.msdo.outputs.sarifFile != '' }}
+        continue-on-error: true
+        uses: github/codeql-action/upload-sarif@v4
+        with:
+          sarif_file: ${{ steps.msdo.outputs.sarifFile }}
+          category: msdo
+
+      - name: Summarize catalog findings
+        if: always()
+        env:
+          SARIF_FILE: ${{ steps.msdo.outputs.sarifFile }}
+        run: |
+          set -uo pipefail
+          python - <<'PY' >> "$GITHUB_STEP_SUMMARY"
+          import json, os, collections
+          path = os.environ.get("SARIF_FILE") or ""
+          print("## Microsoft Security DevOps\n")
+          if not path or not os.path.exists(path):
+              print("_No SARIF produced — check the MSDO step logs._")
+              raise SystemExit(0)
+          data = json.load(open(path, encoding="utf-8"))
+          counts = collections.Counter()
+          for run in data.get("runs", []):
+              tool = run.get("tool", {}).get("driver", {}).get("name", "unknown")
+              for result in run.get("results", []):
+                  for loc in result.get("locations", []):
+                      uri = (loc.get("physicalLocation", {})
+                                .get("artifactLocation", {})
+                                .get("uri", ""))
+                      # Only the publicly-contributed trees are in scope.
+                      if uri.startswith(("agents/", "starter-kits/")):
+                          counts[tool] += 1
+                          break
+          if counts:
+              print("| Analyzer | Findings in agents/ and starter-kits/ |")
+              print("|---|---|")
+              for tool, n in sorted(counts.items()):
+                  print(f"| {tool} | {n} |")
+          else:
+              print("No findings inside agents/ or starter-kits/.")
+          PY
+
+      - name: Upload MSDO SARIF
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: msdo-sarif
+          path: ${{ steps.msdo.outputs.sarifFile }}
+          if-no-files-found: ignore
+
+  # ── Raise an issue when the catalog regresses ─────────────────────────────
+  report:
+    name: Report
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      issues: write
+    needs: [full-catalog-audit, url-reputation-audit, scan-base-images]
+    if: >-
+      ${{
+        !inputs.dry_run && !cancelled() &&
+        (needs.full-catalog-audit.outputs.drifted == 'true' ||
+         needs.url-reputation-audit.outputs.status != 'clean')
+      }}
+    steps:
+      - name: Open or update the drift issue
+        uses: actions/github-script@v9
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const title = 'Weekly deep scan: findings require attention';
+            const runUrl = `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
+            const drifted = '${{ needs.full-catalog-audit.outputs.drifted }}' === 'true';
+            const reputationStatus = '${{ needs.url-reputation-audit.outputs.status }}' || 'error';
+            const body = ['The weekly deep scan found something that needs review.', ''];
+
+            if (drifted) {
+              body.push(
+                '## Catalog rule drift',
+                '',
+                'The full-catalog audit found rule violations not recorded in',
+                '`.github/policy/baseline.json`. Fix the violations, or regenerate the',
+                'baseline if this is a deliberate rollout:',
+                '',
+                '```',
+                'python .github/scripts/generate_baseline.py --report',
+                'python .github/scripts/generate_baseline.py',
+                '```',
+                '',
+              );
+            }
+
+            if (reputationStatus === 'matches') {
+              body.push(
+                '## URL reputation matches',
+                '',
+                'URLhaus or PhishTank lists at least one catalog webpage. Do not visit the',
+                'URL directly; inspect the `url-reputation-audit` artifact from the run.',
+                '',
+              );
+            } else if (reputationStatus !== 'clean') {
+              body.push(
+                '## URL reputation audit error',
+                '',
+                'The restricted provider check could not complete. Verify the repository',
+                'secrets `URLHAUS_AUTH_KEY` and `PHISHTANK_APP_KEY`, then rerun the workflow.',
+                '',
+              );
+            }
+
+            body.push(`**Run:** ${runUrl}`);
+
+            const existing = await github.rest.issues.listForRepo({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: 'open',
+              labels: 'weekly-deep-scan',
+            });
+
+            if (existing.data.length > 0) {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: existing.data[0].number,
+                body: body.join('\n'),
+              });
+            } else {
+              await github.rest.issues.create({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                title,
+                body: body.join('\n'),
+                labels: ['weekly-deep-scan'],
+              });
+            }

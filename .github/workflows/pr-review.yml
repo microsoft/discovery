@@ -25,13 +25,48 @@ jobs:
     outputs:
       changed_files: ${{ steps.changed.outputs.all_changed_files }}
       has_agents: ${{ steps.classify.outputs.has_agents }}
-      has_docs_only: ${{ steps.classify.outputs.has_docs_only }}
+      author_permission: ${{ steps.author_permission.outputs.permission }}
     steps:
-      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+      - name: Resolve PR author repository permission
+        id: author_permission
+        uses: actions/github-script@v9
         with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const username = context.payload.pull_request.user.login;
+            const knownPermissions = new Set([
+              'admin', 'maintain', 'write', 'triage', 'read', 'none'
+            ]);
+            let permission = 'unknown';
+
+            try {
+              const response = await github.rest.repos.getCollaboratorPermissionLevel({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                username,
+              });
+              const reported = String(response.data.permission || '').toLowerCase();
+              permission = knownPermissions.has(reported) ? reported : 'unknown';
+            } catch (error) {
+              if (error.status === 404) {
+                permission = 'none';
+              } else {
+                core.warning(
+                  `Could not resolve repository permission for @${username}; ` +
+                  `applying public-contributor scope. ${error.message}`
+                );
+              }
+            }
+
+            core.info(`Repository permission for @${username}: ${permission}`);
+            core.setOutput('permission', permission);
+
+      - uses: actions/checkout@v6
+        with:
+          repository: ${{ github.event.pull_request.head.repo.full_name }}
           ref: ${{ github.event.pull_request.head.sha }}
-          allow-unsafe-pr-checkout: true
           fetch-depth: 0
+          persist-credentials: false
 
       - name: Get changed files
         id: changed
@@ -60,17 +95,12 @@ jobs:
         run: |
           FILES="$ALL_CHANGED_FILES"
           HAS_AGENTS=false
-          HAS_DOCS_ONLY=true
           for f in $FILES; do
             if [[ "$f" == agents/* ]]; then
               HAS_AGENTS=true
-              HAS_DOCS_ONLY=false
-            elif [[ "$f" != docs/schemas/* ]]; then
-              HAS_DOCS_ONLY=false
             fi
           done
           echo "has_agents=$HAS_AGENTS" >> "$GITHUB_OUTPUT"
-          echo "has_docs_only=$HAS_DOCS_ONLY" >> "$GITHUB_OUTPUT"
 
   # ── Stages 2–4: Structural + Schema + Content/Policy + Documentation ───────
   validate:
@@ -93,24 +123,30 @@ jobs:
         with:
           ref: ${{ github.event.pull_request.base.sha }}
           fetch-depth: 1
+          persist-credentials: false
           path: trusted
 
       - name: Checkout PR head (content under review — never executed)
         uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
         with:
+          repository: ${{ github.event.pull_request.head.repo.full_name }}
           ref: ${{ github.event.pull_request.head.sha }}
-          allow-unsafe-pr-checkout: true
           fetch-depth: 0
           lfs: true
+          persist-credentials: false
           path: pr
 
       - name: Set up Python
         uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6.3.0
         with:
           python-version: "3.12"
+          cache: pip
+          cache-dependency-path: trusted/.github/requirements-ci.txt
 
       - name: Install dependencies
-        run: pip install jsonschema pyyaml onnx picklescan
+        run: >-
+          python -m pip install -c trusted/.github/requirements-ci.txt
+          codespell dnspython jsonschema onnx picklescan pyyaml referencing
 
       - name: Write changed files list
         env:
@@ -125,6 +161,16 @@ jobs:
           echo "Changed files:"
           cat /tmp/changed-files.txt
 
+      - name: Spellcheck changed catalog prose (non-blocking)
+        continue-on-error: true
+        run: |
+          # Run trusted base-branch code against PR content as data. The script
+          # extracts only approved prose fields and Markdown outside code fences.
+          python trusted/.github/scripts/spellcheck_prose.py \
+            --changed-files /tmp/changed-files.txt \
+            --repo-root "$GITHUB_WORKSPACE/pr" \
+            --output /tmp/spellcheck-results.json
+
       - name: Run validation
         id: run_validator
         env:
@@ -133,6 +179,9 @@ jobs:
           # Exempt requires BOTH author and head ref to match.
           PR_AUTHOR: ${{ github.event.pull_request.user.login }}
           PR_HEAD_REF: ${{ github.event.pull_request.head.ref }}
+          # POL-021 treats an absent or failed lookup as public scope. Only
+          # admin/maintain/write can modify paths outside the catalog roots.
+          PR_AUTHOR_PERMISSION: ${{ needs.classify.outputs.author_permission || 'unknown' }}
         run: |
           # Invoke validator from the trusted checkout (base SHA) against PR content.
           python trusted/.github/scripts/validate_pr.py \
@@ -141,17 +190,17 @@ jobs:
             --output /tmp/validation-results.json || true
 
           if [[ ! -f /tmp/validation-results.json ]]; then
-            echo '{"passed":false,"failure_count":1,"has_agents":false,"has_docs_only":false,"failures":[{"rule_id":"INTERNAL","file":"validate_pr.py","line":1,"message":"Validator crashed before writing output — check the workflow logs."}]}' > /tmp/validation-results.json
+            echo '{"passed":false,"failure_count":1,"has_agents":false,"has_markdown_only":false,"has_dockerfile":false,"has_code":false,"failures":[{"rule_id":"INTERNAL","file":"validate_pr.py","line":1,"message":"Validator crashed before writing output — check the workflow logs."}]}' > /tmp/validation-results.json
           fi
 
           PASSED=$(python -c "import json; d=json.load(open('/tmp/validation-results.json')); print('true' if d['passed'] else 'false')")
-          echo "passed=$PASSED" >> "$GITHUB_OUTPUT"
-
-          # Compact JSON for passing between steps
           RESULTS=$(cat /tmp/validation-results.json)
-          echo "results_json<<EOF" >> "$GITHUB_OUTPUT"
-          echo "$RESULTS" >> "$GITHUB_OUTPUT"
-          echo "EOF" >> "$GITHUB_OUTPUT"
+          {
+            echo "passed=$PASSED"
+            echo "results_json<<EOF"
+            echo "$RESULTS"
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
 
           # Fail the job so the GitHub check shows red when validation issues are found.
           # post-results uses if: !cancelled() so it still runs to post feedback comments on failure.
@@ -165,9 +214,24 @@ jobs:
           # Create fallback if an earlier step (checkout, pip install, etc.) failed
           # before run_validator had a chance to create the file.
           if [[ ! -f /tmp/validation-results.json ]]; then
-            echo '{"passed":false,"failure_count":1,"has_agents":false,"has_docs_only":false,"failures":[{"rule_id":"INTERNAL","file":"(workflow)","line":1,"message":"Validator crashed before producing results — check the Validate PR job logs for details."}]}' \
+            echo '{"passed":false,"failure_count":1,"has_agents":false,"has_markdown_only":false,"has_dockerfile":false,"has_code":false,"failures":[{"rule_id":"INTERNAL","file":"(workflow)","line":1,"message":"Validator crashed before producing results — check the Validate PR job logs for details."}]}' \
               > /tmp/validation-results.json
           fi
+
+      - name: Summarize validation results
+        if: always()
+        env:
+          VALIDATION_OUTCOME: ${{ steps.run_validator.outcome }}
+          REPOSITORY_URL: ${{ github.server_url }}/${{ github.repository }}
+          VALIDATOR_REVISION: ${{ github.event.pull_request.base.sha }}
+        run: |
+          python trusted/.github/scripts/render_ci_summary.py catalog \
+            --report /tmp/validation-results.json \
+            --title "PR catalog validation" \
+            --outcome "$VALIDATION_OUTCOME" \
+            --repository-url "$REPOSITORY_URL" \
+            --revision "$VALIDATOR_REVISION" \
+            --rerun-command "python .github/scripts/validate_pr.py --changed-files changed-files.txt --repo-root . --output validation-results.json"
 
       - name: Upload validation results
         if: always()
@@ -175,6 +239,14 @@ jobs:
         with:
           name: validation-results
           path: /tmp/validation-results.json
+
+      - name: Upload spellcheck results
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: spellcheck-results
+          path: /tmp/spellcheck-results.json
+          if-no-files-found: ignore
 
   # ── Stage 5: Secret scan ───────────────────────────────────────────────────
   secret-scan:
@@ -194,9 +266,10 @@ jobs:
     steps:
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
         with:
+          repository: ${{ github.event.pull_request.head.repo.full_name }}
           ref: ${{ github.event.pull_request.head.sha }}
-          allow-unsafe-pr-checkout: true
           fetch-depth: 0
+          persist-credentials: false
 
       - name: Run TruffleHog secret scan (verified — blocking)
         env:
@@ -206,9 +279,10 @@ jobs:
           BASE_SHA: ${{ github.event.pull_request.base.sha }}
           HEAD_SHA: ${{ github.event.pull_request.head.sha }}
         run: |
-          # Install TruffleHog directly — avoids org-level action allowlist restrictions
-          curl -sSfL https://raw.githubusercontent.com/trufflesecurity/trufflehog/main/scripts/install.sh \
-            | sh -s -- -b /usr/local/bin
+          # Install directly to avoid org-level action allowlist restrictions.
+          # The immutable installer verifies the selected release checksum.
+          curl -sSfL https://raw.githubusercontent.com/trufflesecurity/trufflehog/bcfcf73aaf4759d4dadc2783177c245a02792318/scripts/install.sh \
+            | sh -s -- -b /usr/local/bin v3.97.0
           trufflehog git file://. \
             --since-commit "$BASE_SHA" \
             --branch "$HEAD_SHA" \
@@ -270,7 +344,7 @@ jobs:
       - name: Create fallback results if artifact missing
         if: steps.download.outcome == 'failure'
         run: |
-          echo '{"passed":false,"failure_count":1,"has_agents":false,"has_docs_only":false,"failures":[{"rule_id":"INTERNAL","file":"(workflow)","line":1,"message":"Validation job was skipped or did not produce results — check the Validate PR job logs for details."}]}' \
+          echo '{"passed":false,"failure_count":1,"has_agents":false,"has_markdown_only":false,"has_dockerfile":false,"has_code":false,"failures":[{"rule_id":"INTERNAL","file":"(workflow)","line":1,"message":"Validation job was skipped or did not produce results — check the Validate PR job logs for details."}]}' \
             > /tmp/validation-results.json
 
       - name: Manage labels and post PR feedback
@@ -294,7 +368,11 @@ jobs:
               'pr-validation-failed',
               '1p-contribution',
               '3p-contribution',
-              'docs-only',
+              'docs-only', // Legacy label; remove but never reapply.
+              'markdown-only',
+              'contains-dockerfile',
+              'contains-code',
+              'needs-image-review',
             ];
 
             const currentLabels = await github.rest.issues.listLabelsOnIssue({
@@ -314,7 +392,10 @@ jobs:
               'pr-validation-failed':  { color: 'd93f0b', description: "The pr-review workflow's validator failed; see inline comments." },
               '1p-contribution':          { color: '1d76db', description: "Authored by Microsoft (party='1p' in metadata)" },
               '3p-contribution':          { color: 'bfd4f2', description: "Authored by a third-party partner (party='3p' in metadata)" },
-              'docs-only':                { color: 'c5def5', description: 'Changes only affect documentation or schemas' },
+              'markdown-only':             { color: '8250df', description: 'Every file changed by this PR is Markdown' },
+              'contains-dockerfile':       { color: '2496ed', description: 'PR adds, modifies, renames, or removes a Dockerfile' },
+              'contains-code':             { color: '1f883d', description: 'PR includes source-code changes' },
+              'needs-image-review':       { color: 'd4c5f9', description: 'PR adds or modifies image files — a maintainer must inspect them before merge' },
             };
             async function ensureLabel(name) {
               try {
@@ -333,7 +414,15 @@ jobs:
             const labelsToAdd = [];
             if (results.has_1p) labelsToAdd.push('1p-contribution');
             if (results.has_3p) labelsToAdd.push('3p-contribution');
-            if (results.has_docs_only) labelsToAdd.push('docs-only');
+            if (results.has_markdown_only) labelsToAdd.push('markdown-only');
+            if (results.has_dockerfile) labelsToAdd.push('contains-dockerfile');
+            if (results.has_code) labelsToAdd.push('contains-code');
+
+            // Images always get a human look. POL-016 proves a file is the
+            // format it claims to be; it cannot judge whether the picture is
+            // appropriate, correctly licensed, or carries unreviewed text.
+            const imageFiles = results.image_files || [];
+            if (results.has_images) labelsToAdd.push('needs-image-review');
 
             // ── 3. Apply pass/fail labels ──────────────────────────
             if (allPassed) {
@@ -349,9 +438,47 @@ jobs:
               });
             }
 
+            // ── 3b. Image review notice ───────────────────────────
+            if (imageFiles.length > 0) {
+              const rows = imageFiles.map(f => `| \`${f}\` |`).join('\n');
+              const body = [
+                '## 🖼️ Image review required',
+                '',
+                `This PR adds or modifies ${imageFiles.length} image file(s). Automated checks confirm each file is the format its name claims (POL-016) and that SVGs contain no scripts, event handlers, or remote references — but a maintainer must still look at them.`,
+                '',
+                '| File |',
+                '|------|',
+                rows,
+                '',
+                '**Reviewer checklist**',
+                '',
+                '- [ ] The image renders as expected and shows what the PR claims',
+                '- [ ] No embedded text containing credentials, internal URLs, or unreleased information',
+                '- [ ] Content is appropriate and the contributor has the right to publish it',
+                '- [ ] Licensing and attribution are correct for third-party artwork',
+                '- [ ] The image is genuinely needed — prefer diagrams as text (Mermaid) or linked external assets',
+                '',
+                'Remove the `needs-image-review` label to clear this gate. Pushing a new commit re-applies it.',
+              ].join('\n');
+              try {
+                await github.rest.issues.createComment({
+                  owner, repo, issue_number: prNumber, body
+                });
+              } catch (e) {
+                console.log(`Could not post image review notice: ${e.message}`);
+              }
+            }
+
             // ── 4. Post inline review comments (one per failure) ───
             const failures = results.failures || [];
             if (failures.length > 0) {
+              const guidanceUrl = (failure) => {
+                if (!failure.docs) return '';
+                return `${context.serverUrl}/${owner}/${repo}/blob/${pr.base.sha}/${failure.docs}`;
+              };
+              const remediation = (failure) => failure.remediation ||
+                'Correct the issue described above, then push the fix to rerun validation.';
+
               // Create a PR review with inline comments for each failure
               // We batch all comments into a single review submission so
               // the submitter gets everything in one pass (DC-AUTO-001).
@@ -359,7 +486,12 @@ jobs:
                 path: f.file,
                 line: f.line || 1,
                 side: 'RIGHT',
-                body: `**[${f.rule_id}]** ${f.message}`
+                body: [
+                  `**[${f.rule_id}]** ${f.message}`,
+                  '',
+                  `**How to fix:** ${remediation(f)}`,
+                  guidanceUrl(f) ? `\n**Guidance:** ${guidanceUrl(f)}` : '',
+                ].filter(Boolean).join('\n')
               }));
 
               // GitHub review comments require the file to be in the diff.
@@ -389,9 +521,16 @@ jobs:
               }
 
               // ── 5. Post single summary comment with all issues ──
-              const rows = failures.map(f =>
-                `| \`${f.rule_id}\` | \`${f.file}\` | ${f.message} |`
-              ).join('\n');
+              const tableCell = (value) => String(value)
+                .replaceAll('|', '\\|')
+                .replaceAll(/\r?\n/g, '<br>');
+              const rows = failures.map(f => {
+                const location = `${f.file}:${f.line || 1}`;
+                const guidance = guidanceUrl(f)
+                  ? `<br><br>**Guidance:** [Open the authoring guide](${guidanceUrl(f)})`
+                  : '';
+                return `| \`${tableCell(f.rule_id)}\` | \`${tableCell(location)}\` | ${tableCell(f.message)}<br><br>**How to fix:** ${tableCell(remediation(f))}${guidance} |`;
+              }).join('\n');
 
               const secretRow = !secretScanPassed
                 ? `| \`SEC-SCAN\` | _(repository)_ | Secret scan failed — potential credentials detected. Check the TruffleHog job for details. |`
@@ -403,8 +542,8 @@ jobs:
                 '',
                 'All issues are listed below. Please address **all** of them before requesting human review.',
                 '',
-                '| Rule ID | File | Issue |',
-                '|---------|------|-------|',
+                '| Rule ID | Location | Details |',
+                '|---------|----------|---------|',
                 tableRows,
                 '',
                 '---',

@@ -7,10 +7,11 @@ Checks performed (in order):
   SKT-STR-001  name field equals parent directory name
   SKT-STR-003  Exactly one agentRef with role:primary and required:true
   SKT-STR-006  No duplicate ref values within agentRefs[]
-  SKT-STR-008  Kit folder must contain only kit.json (no other files)
+    SKT-STR-008  Kit folder may contain kit.json, Markdown, and image assets
   SKT-REF-001  For active kits: every agentRef.ref exists in dry-run registry build
   SKT-POL-001  Newly added kit directories must have lifecycle:active
-  SKT-AST-001  logo / screenshots, if set, must be HTTPS URLs (kit folder cannot host assets)
+    SKT-AST-001  logo / screenshots fields, if set, must be HTTPS URLs
+    SKT-AST-002  Local images are safe, <= 1 MiB, and referenced by Markdown
 
 Usage:
   python .github/scripts/validate_starter_kits.py --repo-root .
@@ -22,51 +23,37 @@ import json
 import os
 import subprocess
 import sys
-import tempfile
 from pathlib import Path
 
 try:
     import jsonschema
+    from referencing import Registry
 except ImportError:
     print("ERROR: jsonschema not installed. Run: pip install jsonschema", file=sys.stderr)
     sys.exit(1)
 
-
-def load_json(path: Path) -> dict:
-    with path.open() as f:
-        return json.load(f)
-
-
-def load_schema(repo_root: Path, schema_name: str) -> dict:
-    schema_path = repo_root / "docs" / "schemas" / schema_name
-    if not schema_path.exists():
-        raise FileNotFoundError(f"Schema not found: {schema_path}")
-    return load_json(schema_path)
+from catalog_validation.schemas import (
+    build_schema_registry,
+    iter_schema_errors,
+    load_json,
+    load_schema,
+)
+from image_inspector import (
+    MARKDOWN_IMAGE_EXTENSIONS,
+    MAX_MARKDOWN_IMAGE_BYTES,
+    inspect,
+    is_referenced_by_markdown,
+)
+from update_registry import scan_repo
 
 
 def build_dry_run_registry(repo_root: Path) -> set[str]:
-    """Run update_registry.py on the current checkout; return set of agent path strings."""
-    script = repo_root / ".github" / "scripts" / "update_registry.py"
-    if not script.exists():
-        raise FileNotFoundError(f"update_registry.py not found: {script}")
-    with tempfile.NamedTemporaryFile(suffix=".json", delete=False) as tmp:
-        tmp_path = tmp.name
-    try:
-        result = subprocess.run(
-            [sys.executable, str(script), "--repo-root", str(repo_root), "--output", tmp_path],
-            capture_output=True,
-            text=True,
-        )
-        if result.returncode != 0:
-            raise RuntimeError(f"update_registry.py failed:\n{result.stderr}")
-        registry = load_json(Path(tmp_path))
-        return {
-            e["path"]
-            for e in registry.get("entries", [])
-            if e.get("type") == "agent"
-        }
-    finally:
-        os.unlink(tmp_path)
+    """Build agent paths from the current checkout without writing a registry."""
+    return {
+        entry["path"]
+        for entry in scan_repo(str(repo_root))
+        if entry.get("type") == "agent"
+    }
 
 
 def get_kit_dirs(repo_root: Path) -> list[Path]:
@@ -118,6 +105,7 @@ def validate_kit(
     kit_rel_path: str,
     manifest: dict,
     kit_schema: dict,
+    schema_registry: Registry,
     agent_paths: set[str],
     added_kit_relpaths: set[str],
     errors: list[str],
@@ -128,8 +116,7 @@ def validate_kit(
 
     # SKT-SCH-001: JSON Schema validation
     try:
-        validator = jsonschema.Draft7Validator(kit_schema)
-        schema_errors = sorted(validator.iter_errors(manifest), key=lambda e: list(e.path))
+        schema_errors = iter_schema_errors(manifest, kit_schema, schema_registry)
         for err in schema_errors:
             path_str = " -> ".join(str(p) for p in err.absolute_path) or "(root)"
             errors.append(f"[{kit_rel_path}] SKT-SCH-001: Schema error at {path_str}: {err.message}")
@@ -180,26 +167,56 @@ def validate_kit(
             f"[{kit_rel_path}] SKT-POL-001: Newly added kit must have lifecycle:active, got '{lifecycle}'"
         )
 
-    # SKT-STR-008: kit.json must be the ONLY file in the kit folder
+    # SKT-STR-008: permit documentation and its POL-016-governed images, but
+    # keep arbitrary source or payload files out of starter-kit metadata.
     extra_entries = sorted(
-        p.name for p in kit_dir.iterdir()
-        if p.name != "kit.json"
+        str(p.relative_to(kit_dir)).replace(os.sep, "/")
+        for p in kit_dir.rglob("*")
+        if p.is_file()
+        and p != kit_dir / "kit.json"
+        and p.suffix.lower() != ".md"
+        and p.suffix.lower() not in MARKDOWN_IMAGE_EXTENSIONS
     )
     if extra_entries:
         errors.append(
-            f"[{kit_rel_path}] SKT-STR-008: starter-kits/{kit_rel_path}/ must contain only 'kit.json'; "
-            f"found extra entr{'y' if len(extra_entries) == 1 else 'ies'}: {extra_entries}. "
-            f"Move logos, screenshots, READMEs, or any other assets out of the kit folder and reference them via HTTPS URLs."
+            f"[{kit_rel_path}] SKT-STR-008: starter-kits/{kit_rel_path}/ may "
+            f"contain only kit.json, Markdown, and Markdown image assets; found "
+            f"unsupported file(s): {extra_entries}."
         )
 
-    # SKT-AST-001: logo / screenshots, if set, must be HTTPS URLs since the
-    # kit folder is restricted to kit.json only. Relative paths are not permitted.
+    # SKT-AST-002: this script is also run by the standalone starter-kit
+    # workflow, so enforce image safety here instead of relying only on the
+    # shared POL-016 runner.
+    for image_path in sorted(
+        p for p in kit_dir.rglob("*")
+        if p.is_file() and p.suffix.lower() in MARKDOWN_IMAGE_EXTENSIONS
+    ):
+        image_rel = str(image_path.relative_to(kit_dir)).replace(os.sep, "/")
+        verdict = inspect(image_path)
+        if verdict is None or not verdict.ok:
+            reason = verdict.reason if verdict else "unsupported image format"
+            errors.append(
+                f"[{kit_rel_path}] SKT-AST-002: '{image_rel}': {reason}"
+            )
+        elif image_path.stat().st_size > MAX_MARKDOWN_IMAGE_BYTES:
+            errors.append(
+                f"[{kit_rel_path}] SKT-AST-002: '{image_rel}' exceeds the "
+                "1 MiB Markdown image limit."
+            )
+        elif not is_referenced_by_markdown(image_path, kit_dir):
+            errors.append(
+                f"[{kit_rel_path}] SKT-AST-002: '{image_rel}' is not embedded "
+                "by Markdown within this starter kit."
+            )
+
+    # SKT-AST-001: structured catalog-card assets remain HTTPS URLs. Local
+    # images are documentation assets and must be embedded by Markdown.
     def _check_asset(asset_value: str, field: str) -> None:
         s = str(asset_value or "")
         if not s.startswith("https://"):
             errors.append(
                 f"[{kit_rel_path}] SKT-AST-001: {field} '{asset_value}' must be an HTTPS URL; "
-                f"assets cannot live inside the kit folder (see SKT-STR-008)."
+                f"local images are supported only from Markdown content."
             )
 
     logo = manifest.get("logo")
@@ -209,16 +226,22 @@ def validate_kit(
         _check_asset(screenshot, "screenshot")
 
 
-def run_validations(repo_root: Path, changed_kit_relpaths: list[str] | None) -> int:
+def run_validations(
+    repo_root: Path,
+    changed_kit_relpaths: list[str] | None,
+    added_kit_relpaths: list[str] | None = None,
+) -> int:
     errors: list[str] = []
     warnings: list[str] = []
 
     # Load schemas
     try:
         kit_schema = load_schema(repo_root, "starter-kit-schema.json")
+        common_schema = load_schema(repo_root, "common-schema.json")
     except FileNotFoundError as e:
         print(f"ERROR: {e}", file=sys.stderr)
         return 1
+    schema_registry = build_schema_registry(common_schema)
 
     # Build dry-run registry once for all kits
     print("Building dry-run registry from current checkout...")
@@ -231,7 +254,11 @@ def run_validations(repo_root: Path, changed_kit_relpaths: list[str] | None) -> 
 
     # Get all kit dirs and newly added ones
     all_kit_dirs = get_kit_dirs(repo_root)
-    added_kit_relpaths_set = get_git_added_relpaths(repo_root)
+    added_kit_relpaths_set = (
+        set(added_kit_relpaths)
+        if added_kit_relpaths is not None
+        else get_git_added_relpaths(repo_root)
+    )
 
     # Build relpath→dir mapping
     all_kits: list[tuple[str, Path]] = [
@@ -278,7 +305,7 @@ def run_validations(repo_root: Path, changed_kit_relpaths: list[str] | None) -> 
             # Already reported as parse error above
             continue
         validate_kit(
-            kit_dir, kit_relpath, manifest_entry, kit_schema,
+            kit_dir, kit_relpath, manifest_entry, kit_schema, schema_registry,
             agent_paths, added_kit_relpaths_set, errors, warnings,
         )
 
@@ -307,6 +334,11 @@ def main() -> None:
             "E.g. --changed-kits protein-structure-analysis my-other-kit"
         ),
     )
+    parser.add_argument(
+        "--added-kits",
+        nargs="*",
+        help="New kit relpaths supplied by CI; skips local git-diff discovery.",
+    )
     args = parser.parse_args()
 
     repo_root = Path(args.repo_root).resolve()
@@ -314,7 +346,7 @@ def main() -> None:
         print(f"ERROR: repo-root does not exist: {repo_root}", file=sys.stderr)
         sys.exit(1)
 
-    sys.exit(run_validations(repo_root, args.changed_kits))
+    sys.exit(run_validations(repo_root, args.changed_kits, args.added_kits))
 
 
 if __name__ == "__main__":

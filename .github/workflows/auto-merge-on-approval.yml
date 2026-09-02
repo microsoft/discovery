@@ -6,11 +6,14 @@ name: Auto-merge on Approval
 #   2. up_to_date     — PR branch is not behind base (no "Update branch" needed).
 #   3. human_approved — at least one non-bot reviewer has APPROVED, and the overall
 #                       reviewDecision is not CHANGES_REQUESTED.
+#   4. images_reviewed — the `needs-image-review` label is absent. pr-review.yml
+#                       applies that label whenever a PR adds or modifies an image;
+#                       a maintainer clears it by hand after inspecting the files.
 #
 # Labels applied:
 #   - update-branch          when the PR is behind base
 #   - needs-human-review     when no human approval (or changes requested)
-#   - ready-for-auto-merge   when all three gates pass; on this state the workflow
+#   - ready-for-auto-merge   when all four gates pass; on this state the workflow
 #                            also performs a squash merge with branch deletion.
 #
 # The workflow runs on PR events, review events, and check_suite completions, so it
@@ -168,7 +171,18 @@ jobs:
             HUMAN_APPROVED=false
           fi
 
-          echo "Gates: checks_passed=$CHECKS_PASSED up_to_date=$UP_TO_DATE human_approved=$HUMAN_APPROVED"
+          # ── Gate 4: images_reviewed ────────────────────────────────
+          # Applied by pr-review.yml on any PR touching an image, and cleared
+          # by a maintainer once they have actually looked at the files. A new
+          # commit re-applies it, so approval never carries over to images the
+          # reviewer has not seen.
+          if echo "$PR_JSON" | jq -e '.labels[]? | select(.name == "needs-image-review")' >/dev/null; then
+            IMAGES_REVIEWED=false
+          else
+            IMAGES_REVIEWED=true
+          fi
+
+          echo "Gates: checks_passed=$CHECKS_PASSED up_to_date=$UP_TO_DATE human_approved=$HUMAN_APPROVED images_reviewed=$IMAGES_REVIEWED"
           echo "       (checks_failed=$CHECKS_FAILED pending=$CHECKS_PENDING human_approvals=$HUMAN_APPROVALS reviewDecision=$REVIEW_DECISION)"
 
           # ── Label management ───────────────────────────────────────
@@ -185,7 +199,7 @@ jobs:
           # Cleared as soon as every check has reported (pass or fail).
           if [ "$CHECKS_PENDING" -gt 0 ]; then add_label "checks-in-progress"; else remove_label "checks-in-progress"; fi
 
-          if [ "$CHECKS_PASSED" = "true" ] && [ "$UP_TO_DATE" = "true" ] && [ "$HUMAN_APPROVED" = "true" ]; then
+          if [ "$CHECKS_PASSED" = "true" ] && [ "$UP_TO_DATE" = "true" ] && [ "$HUMAN_APPROVED" = "true" ] && [ "$IMAGES_REVIEWED" = "true" ]; then
             add_label "ready-for-auto-merge"
 
             # Also ensure the PR isn't blocked by merge conflicts.
@@ -206,5 +220,8 @@ jobs:
             fi
           else
             remove_label "ready-for-auto-merge"
+            if [ "$IMAGES_REVIEWED" = "false" ]; then
+              echo "Blocked: this PR changes image files and still carries the needs-image-review label."
+            fi
             echo "Not ready for auto-merge yet."
           fi

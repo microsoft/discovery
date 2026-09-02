@@ -42,7 +42,7 @@ jobs:
           python-version: "3.11"
 
       - name: Install dependencies
-        run: pip install pyyaml jsonschema
+        run: pip install -c .github/requirements-ci.txt pyyaml jsonschema referencing
 
       - name: Rebuild .auto-registry/agent-registry.json
         run: python .github/scripts/update_registry.py --repo-root . --output .auto-registry/agent-registry.json
@@ -51,11 +51,19 @@ jobs:
         run: |
           python -c "
           import json, sys, jsonschema
+          from referencing import Registry, Resource
+          with open('docs/schemas/common-schema.json') as f:
+              common_schema = json.load(f)
           with open('docs/schemas/registry-schema.json') as f:
               schema = json.load(f)
           with open('.auto-registry/agent-registry.json') as f:
               data = json.load(f)
-          v = jsonschema.Draft7Validator(schema)
+          schema_registry = Registry().with_resource(
+              'common-schema.json', Resource.from_contents(common_schema)
+          )
+          v = jsonschema.Draft7Validator(
+              schema, registry=schema_registry, format_checker=jsonschema.FormatChecker()
+          )
           errors = sorted(v.iter_errors(data), key=lambda e: list(e.path))
           if errors:
               for e in errors:
@@ -78,15 +86,23 @@ jobs:
           import json, sys, os
           try:
               import jsonschema
+              from referencing import Registry, Resource
               if not os.path.exists('.auto-registry/starter-kit-registry.json'):
                   print('  SKIP: no starter-kit-registry.json produced (no kits in repo).')
                   sys.exit(0)
+              with open('docs/schemas/common-schema.json') as f:
+                  common_schema = json.load(f)
               with open('docs/schemas/starter-kit-registry-schema.json') as f:
                   schema = json.load(f)
               with open('.auto-registry/starter-kit-registry.json') as f:
                   registry = json.load(f)
               jsonschema.Draft7Validator.check_schema(schema)
-              validator = jsonschema.Draft7Validator(schema)
+              schema_registry = Registry().with_resource(
+                  'common-schema.json', Resource.from_contents(common_schema)
+              )
+              validator = jsonschema.Draft7Validator(
+                schema, registry=schema_registry, format_checker=jsonschema.FormatChecker()
+              )
               errors = sorted(validator.iter_errors(registry), key=lambda e: list(e.absolute_path))
               if errors:
                   for err in errors:
@@ -99,6 +115,12 @@ jobs:
               sys.exit(1)
           "
 
+      # Computed tags are derived from agent contents (tools, tests, base
+      # images, publisher party), so they belong with the other generated
+      # registries: bot-owned, never hand-edited, refreshed on the same push.
+      - name: Rebuild .auto-registry/agent-tags.json
+        run: python .github/scripts/compute_tags.py --repo-root .
+
       - name: Check for changes
         id: diff
         run: |
@@ -109,6 +131,9 @@ jobs:
           git add .auto-registry/agent-registry.json
           if [ -f .auto-registry/starter-kit-registry.json ]; then
             git add .auto-registry/starter-kit-registry.json
+          fi
+          if [ -f .auto-registry/agent-tags.json ]; then
+            git add .auto-registry/agent-tags.json
           fi
           if git diff --cached --quiet -- .auto-registry/; then
             echo "changed=false" >> "$GITHUB_OUTPUT"
@@ -176,6 +201,7 @@ jobs:
           # the script under `set -euo pipefail`.
           AGENT_DIFF=$(git diff --cached -- .auto-registry/agent-registry.json || true)
           KIT_DIFF=$(git diff --cached -- .auto-registry/starter-kit-registry.json || true)
+          TAGS_DIFF=$(git diff --cached -- .auto-registry/agent-tags.json || true)
           AGENT_ADDED=$(echo "$AGENT_DIFF" | { grep '^\+.*"path"' || true; } | wc -l | tr -d ' ')
           AGENT_REMOVED=$(echo "$AGENT_DIFF" | { grep '^\-.*"path"' || true; } | wc -l | tr -d ' ')
           PARTS=()
@@ -184,6 +210,9 @@ jobs:
           fi
           if [ -n "$KIT_DIFF" ]; then
             PARTS+=("starter-kit-registry updated")
+          fi
+          if [ -n "$TAGS_DIFF" ]; then
+            PARTS+=("agent-tags updated")
           fi
           # Join PARTS with ", "
           SUMMARY=$(IFS=', '; echo "${PARTS[*]}")

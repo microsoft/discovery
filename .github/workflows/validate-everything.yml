@@ -1,4 +1,5 @@
 name: Validate Everything
+run-name: "Validation test - PR ${{ inputs.pr_number }} - ${{ inputs.reason }}"
 
 on:
   workflow_dispatch:
@@ -7,43 +8,76 @@ on:
         description: "Reason for manual full-repo validation"
         required: false
         default: "Manual full-repo validation"
+        type: string
+      pr_number:
+        description: "Optional open PR number to inspect read-only (same-repo or fork)"
+        required: false
+        default: ""
+        type: string
 
 permissions:
   contents: read
+  pull-requests: read
 
 jobs:
   validate-all-agents:
-    name: Validate every agent against current schemas
+    name: Validate the full catalog
+    if: ${{ inputs.pr_number == '' }}
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
         with:
           fetch-depth: 0
+          lfs: true
 
       - name: Set up Python
         uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6.3.0
         with:
           python-version: "3.12"
+          cache: pip
+          cache-dependency-path: .github/requirements-ci.txt
 
       - name: Install dependencies
-        run: pip install jsonschema pyyaml onnx picklescan
+        run: python -m pip install -r .github/requirements-ci.txt
+
+      - name: Run validation test suite
+        id: unit_tests
+        continue-on-error: true
+        run: |
+          set -o pipefail
+          python -m pytest .github/tests/ -q -ra -n auto --dist worksteal \
+            --junitxml="$RUNNER_TEMP/unit-tests.xml" \
+            2>&1 | tee "$RUNNER_TEMP/unit-tests.log"
+
+      - name: Summarize validation test suite
+        if: always()
+        env:
+          TEST_OUTCOME: ${{ steps.unit_tests.outcome }}
+        run: |
+          python .github/scripts/render_ci_summary.py pytest \
+            --report "$RUNNER_TEMP/unit-tests.xml" \
+            --title "Full validation test suite" \
+            --outcome "$TEST_OUTCOME" \
+            --rerun-command "python -m pytest .github/tests/ -vv -ra -n auto --dist worksteal"
 
       - name: Build full file list and run validate_pr.py
+        id: catalog
+        continue-on-error: true
         run: |
           # Pretend every tracked file under agents/ and starter-kits/ is "changed"
           # so the full rule catalogue runs against the entire repo.
           {
             git ls-files agents
             git ls-files starter-kits
-            git ls-files docs/schemas
           } > /tmp/changed-files.txt
           echo "Files under validation: $(wc -l < /tmp/changed-files.txt)"
 
           python .github/scripts/validate_pr.py \
             --changed-files /tmp/changed-files.txt \
             --repo-root "$GITHUB_WORKSPACE" \
-            --output /tmp/validation-results.json || true
+            --output /tmp/validation-results.json \
+            2>&1 | tee "$RUNNER_TEMP/full-catalog-validation.log" || true
 
           python -c "
           import json, sys
@@ -54,30 +88,321 @@ jobs:
           sys.exit(0 if d['passed'] else 1)
           "
 
+      - name: Summarize full catalog validation
+        if: always()
+        env:
+          CATALOG_OUTCOME: ${{ steps.catalog.outcome }}
+          REPOSITORY_URL: ${{ github.server_url }}/${{ github.repository }}
+          VALIDATOR_REVISION: ${{ github.sha }}
+        run: |
+          python .github/scripts/render_ci_summary.py catalog \
+            --report /tmp/validation-results.json \
+            --title "Full agents and starter-kits validation" \
+            --outcome "$CATALOG_OUTCOME" \
+            --repository-url "$REPOSITORY_URL" \
+            --revision "$VALIDATOR_REVISION" \
+            --rerun-command "git ls-files agents starter-kits > changed-files.txt && python .github/scripts/validate_pr.py --changed-files changed-files.txt --repo-root . --output validation-results.json"
+
+      - name: Validate every starter kit against current schema
+        id: starter_kits
+        continue-on-error: true
+        run: |
+          set -o pipefail
+          python .github/scripts/validate_starter_kits.py --repo-root . \
+            2>&1 | tee "$RUNNER_TEMP/starter-kit-validation.log"
+
+      - name: Summarize starter-kit validation
+        if: always()
+        env:
+          STARTER_KIT_OUTCOME: ${{ steps.starter_kits.outcome }}
+        run: |
+          python .github/scripts/render_ci_summary.py text \
+            --log "$RUNNER_TEMP/starter-kit-validation.log" \
+            --title "Full starter-kit validation" \
+            --outcome "$STARTER_KIT_OUTCOME" \
+            --rerun-command "python .github/scripts/validate_starter_kits.py --repo-root ."
+
       - name: Upload results
         if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: full-validation-results
-          path: /tmp/validation-results.json
+          path: |
+            /tmp/validation-results.json
+            ${{ runner.temp }}/full-catalog-validation.log
+            ${{ runner.temp }}/unit-tests.xml
+            ${{ runner.temp }}/unit-tests.log
+            ${{ runner.temp }}/starter-kit-validation.log
+          if-no-files-found: warn
 
-  validate-all-starter-kits:
-    name: Validate every starter kit against current schema
+      - name: Fail when any full-catalog validation failed
+        if: always()
+        env:
+          UNIT_TEST_OUTCOME: ${{ steps.unit_tests.outcome }}
+          CATALOG_OUTCOME: ${{ steps.catalog.outcome }}
+          STARTER_KIT_OUTCOME: ${{ steps.starter_kits.outcome }}
+        run: |
+          if [[ "$UNIT_TEST_OUTCOME" != "success" || \
+                "$CATALOG_OUTCOME" != "success" || \
+                "$STARTER_KIT_OUTCOME" != "success" ]]; then
+            echo "One or more full-catalog validations failed. See the job summary and artifact."
+            exit 1
+          fi
+
+  shadow-pr:
+    name: Read-only PR shadow validation
+    if: ${{ inputs.pr_number != '' }}
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
-      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+      # This job is intentionally detached from the target PR's check suite.
+      # It never comments, labels, approves, merges, or executes PR-supplied code.
+      - name: Resolve open PR and changed paths
+        id: target
+        uses: actions/github-script@v9
+        env:
+          PR_NUMBER: ${{ inputs.pr_number }}
         with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const fs = require('fs');
+            const path = require('path');
+            const rawNumber = process.env.PR_NUMBER.trim();
+            const prNumber = Number(rawNumber);
+            if (!Number.isSafeInteger(prNumber) || prNumber < 1 || String(prNumber) !== rawNumber) {
+              core.setFailed(`pr_number must be a positive integer, got '${rawNumber}'.`);
+              return;
+            }
+
+            const { data: pr } = await github.rest.pulls.get({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: prNumber,
+            });
+            if (pr.state !== 'open') {
+              core.setFailed(`PR #${prNumber} is ${pr.state}; shadow validation accepts open PRs only.`);
+              return;
+            }
+
+            const files = await github.paginate(github.rest.pulls.listFiles, {
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: prNumber,
+              per_page: 100,
+            });
+            if (files.length !== pr.changed_files) {
+              core.setFailed(`GitHub returned ${files.length} of ${pr.changed_files} changed files.`);
+              return;
+            }
+
+            fs.mkdirSync(path.join(process.env.RUNNER_TEMP, 'shadow-validation'), { recursive: true });
+            fs.writeFileSync(
+              path.join(process.env.RUNNER_TEMP, 'changed-files.txt'),
+              files.map(({ filename }) => filename).join('\n') + '\n',
+              'utf8',
+            );
+            const addedKits = files.flatMap(({ filename, status }) => {
+              const match = /^starter-kits\/([a-z0-9][a-z0-9-]*)\/kit\.json$/.exec(filename);
+              return status === 'added' && match ? [match[1]] : [];
+            });
+            fs.writeFileSync(
+              path.join(process.env.RUNNER_TEMP, 'added-kits.txt'),
+              [...new Set(addedKits)].join('\n') + '\n',
+              'utf8',
+            );
+
+            let authorPermission = 'unknown';
+            try {
+              const response = await github.rest.repos.getCollaboratorPermissionLevel({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                username: pr.user.login,
+              });
+              authorPermission = response.data.user.permission;
+            } catch (error) {
+              if (error.status === 404) {
+                authorPermission = 'none';
+              } else {
+                core.warning(`Could not resolve @${pr.user.login}'s permission: ${error.message}`);
+              }
+            }
+
+            core.setOutput('number', String(prNumber));
+            core.setOutput('url', pr.html_url);
+            core.setOutput('title', pr.title);
+            core.setOutput('author', pr.user.login);
+            core.setOutput('author-permission', authorPermission);
+            core.setOutput('base-sha', pr.base.sha);
+            core.setOutput('head-sha', pr.head.sha);
+            core.setOutput('head-ref', pr.head.ref);
+            core.setOutput('head-repository', pr.head.repo.full_name);
+            core.setOutput('is-fork', String(pr.head.repo.full_name !== pr.base.repo.full_name));
+            core.setOutput('changed-count', String(files.length));
+
+      - name: Checkout selected validator ref (trusted code)
+        if: always()
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 1
+          persist-credentials: false
+          path: trusted
+
+      - name: Checkout PR head (untrusted data)
+        uses: actions/checkout@v6
+        with:
+          repository: ${{ steps.target.outputs.head-repository }}
+          ref: ${{ steps.target.outputs.head-sha }}
           fetch-depth: 0
+          lfs: true
+          persist-credentials: false
+          path: pr
+
+      - name: Checkout selected ref as integration base
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+          lfs: true
+          persist-credentials: false
+          path: evaluation
+
+      - name: Build ephemeral integration tree
+        id: integration
+        continue-on-error: true
+        env:
+          HEAD_SHA: ${{ steps.target.outputs.head-sha }}
+        run: |
+          set -o pipefail
+          git -C "$GITHUB_WORKSPACE/evaluation" config user.name "discovery-shadow-validator"
+          git -C "$GITHUB_WORKSPACE/evaluation" config user.email "discovery-shadow-validator@users.noreply.github.com"
+          git -C "$GITHUB_WORKSPACE/evaluation" fetch --no-tags \
+            "$GITHUB_WORKSPACE/pr" "$HEAD_SHA"
+          git -C "$GITHUB_WORKSPACE/evaluation" merge --no-commit --no-ff "$HEAD_SHA" \
+            2>&1 | tee "$RUNNER_TEMP/shadow-validation/integration.txt"
 
       - name: Set up Python
-        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6.3.0
+        # Do not restore or save caches after checking out attacker-controlled
+        # PR content. This workflow is report-only, so isolation wins over the
+        # small dependency-install speedup.
+        uses: actions/setup-python@v6
         with:
-          python-version: "3.11"
+          python-version: "3.12"
 
-      - name: Install dependencies
-        run: pip install jsonschema pyyaml
+      - name: Install trusted validator dependencies
+        run: python -m pip install -r trusted/.github/requirements-ci.txt
 
-      - name: Run validate_starter_kits.py against all kits
+      - name: Run primary catalog validator
+        id: catalog
+        if: steps.integration.outcome == 'success'
+        continue-on-error: true
+        env:
+          PR_AUTHOR: ${{ steps.target.outputs.author }}
+          PR_AUTHOR_PERMISSION: ${{ steps.target.outputs.author-permission }}
+          PR_HEAD_REF: ${{ steps.target.outputs.head-ref }}
         run: |
-          python .github/scripts/validate_starter_kits.py --repo-root .
+          set +e
+          python trusted/.github/scripts/validate_pr.py \
+            --changed-files "$RUNNER_TEMP/changed-files.txt" \
+            --repo-root "$GITHUB_WORKSPACE/evaluation" \
+            --output "$RUNNER_TEMP/shadow-validation/catalog.json"
+          status=$?
+          set -e
+          if [[ ! -f "$RUNNER_TEMP/shadow-validation/catalog.json" ]]; then
+            echo '{"passed":false,"failure_count":1,"failures":[{"rule_id":"INTERNAL","file":"validate_pr.py","line":1,"message":"Validator exited without producing results."}]}' \
+              > "$RUNNER_TEMP/shadow-validation/catalog.json"
+          fi
+          exit "$status"
+
+      - name: Run schema regression suite against PR data
+        id: schemas
+        if: steps.integration.outcome == 'success'
+        continue-on-error: true
+        env:
+          DISCOVERY_CATALOG_ROOT: ${{ github.workspace }}/evaluation
+        run: |
+          set -o pipefail
+          python -m pytest trusted/.github/tests/test_schema_security.py -q \
+            | tee "$RUNNER_TEMP/shadow-validation/schema-tests.txt"
+
+      - name: Run starter-kit validation against PR data
+        id: starter_kits
+        if: steps.integration.outcome == 'success'
+        continue-on-error: true
+        run: |
+          set -o pipefail
+          mapfile -t added_kits < "$RUNNER_TEMP/added-kits.txt"
+          args=(--repo-root "$GITHUB_WORKSPACE/evaluation" --added-kits)
+          if (( ${#added_kits[@]} )); then
+            args+=("${added_kits[@]}")
+          fi
+          python trusted/.github/scripts/validate_starter_kits.py "${args[@]}" \
+            | tee "$RUNNER_TEMP/shadow-validation/starter-kits.txt"
+
+      - name: Run removal-impact validation without write access
+        id: removal_impact
+        if: steps.integration.outcome == 'success'
+        continue-on-error: true
+        env:
+          BASE_SHA: ${{ steps.target.outputs.base-sha }}
+          IS_FORK: ${{ steps.target.outputs.is-fork }}
+          PR_NUMBER: ${{ steps.target.outputs.number }}
+        run: |
+          set -o pipefail
+          args=(
+            --repo-root "$GITHUB_WORKSPACE/evaluation"
+            --base-sha "$BASE_SHA"
+            --pr-number "$PR_NUMBER"
+            --repo "$GITHUB_REPOSITORY"
+          )
+          if [[ "$IS_FORK" == "true" ]]; then
+            args+=(--is-fork)
+          fi
+          python trusted/.github/scripts/check_agent_removal_impact.py "${args[@]}" \
+            | tee "$RUNNER_TEMP/shadow-validation/removal-impact.txt"
+
+      - name: Summarize report-only results
+        if: always()
+        env:
+          PR_NUMBER: ${{ steps.target.outputs.number }}
+          PR_URL: ${{ steps.target.outputs.url }}
+          PR_TITLE: ${{ steps.target.outputs.title }}
+          HEAD_REPOSITORY: ${{ steps.target.outputs.head-repository }}
+          IS_FORK: ${{ steps.target.outputs.is-fork }}
+          CHANGED_COUNT: ${{ steps.target.outputs.changed-count }}
+          INTEGRATION_OUTCOME: ${{ steps.integration.outcome }}
+          CATALOG_OUTCOME: ${{ steps.catalog.outcome }}
+          SCHEMA_OUTCOME: ${{ steps.schemas.outcome }}
+          STARTER_KIT_OUTCOME: ${{ steps.starter_kits.outcome }}
+          REMOVAL_OUTCOME: ${{ steps.removal_impact.outcome }}
+          REPOSITORY_URL: ${{ github.server_url }}/${{ github.repository }}
+          VALIDATOR_REVISION: ${{ github.sha }}
+        run: |
+          # Report only: this workflow did not change or publish a check to the target PR.
+          python trusted/.github/scripts/render_ci_summary.py shadow \
+            --pr-number "$PR_NUMBER" \
+            --pr-url "$PR_URL" \
+            --pr-title "$PR_TITLE" \
+            --head-repository "$HEAD_REPOSITORY" \
+            --is-fork "$IS_FORK" \
+            --changed-count "$CHANGED_COUNT" \
+            --integration-outcome "$INTEGRATION_OUTCOME" \
+            --integration-log "$RUNNER_TEMP/shadow-validation/integration.txt" \
+            --catalog-outcome "$CATALOG_OUTCOME" \
+            --catalog-report "$RUNNER_TEMP/shadow-validation/catalog.json" \
+            --schema-outcome "$SCHEMA_OUTCOME" \
+            --schema-log "$RUNNER_TEMP/shadow-validation/schema-tests.txt" \
+            --starter-kit-outcome "$STARTER_KIT_OUTCOME" \
+            --starter-kit-log "$RUNNER_TEMP/shadow-validation/starter-kits.txt" \
+            --removal-outcome "$REMOVAL_OUTCOME" \
+            --removal-log "$RUNNER_TEMP/shadow-validation/removal-impact.txt" \
+            --repository-url "$REPOSITORY_URL" \
+            --revision "$VALIDATOR_REVISION"
+
+      - name: Upload shadow validation evidence
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: shadow-pr-${{ steps.target.outputs.number }}
+          path: ${{ runner.temp }}/shadow-validation/
+          if-no-files-found: warn

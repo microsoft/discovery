@@ -27,7 +27,7 @@ The remainder of this file is about **contributing** to the catalog (agents and 
 
 ## Where contributions go
 
-Code contributions to the Microsoft Discovery app itself — its plugin, MCP tool, and use-case surfaces — are not handled in this repository (the app's source code lives elsewhere). Conversations about those surfaces happen in **Discussions**. **Catalog metadata** (`agents/<name>/`, `starter-kits/<name>/`) and **documentation** are accepted via pull request. Every PR runs through an automated review that checks structure, schema conformance, documentation, and secrets; any failures are reported inline on the PR with a remediation hint.
+Code contributions to the Microsoft Discovery app itself — its plugin, MCP tool, and use-case surfaces — are not handled in this repository (the app's source code lives elsewhere). Conversations about those surfaces happen in **Discussions**. Public contributors may submit catalog content under `agents/` and `starter-kits/`, along with documentation fixes, by pull request. Trusted automation, repository configuration, schemas, generated output, and executable utilities must be authored by a maintainer with `write`, `maintain`, or `admin` permission; public contributors should propose those changes in **Discussions**. Every PR runs through an automated review that checks structure, schema conformance, documentation, and secrets; any failures are reported inline on the PR with a remediation hint.
 
 | Type of contribution | Where it goes | Best for |
 | --- | --- | --- |
@@ -35,10 +35,10 @@ Code contributions to the Microsoft Discovery app itself — its plugin, MCP too
 | **Something you built** | [Discussions → Show and tell](https://github.com/microsoft/discovery/discussions/categories/show-and-tell) | Workflows, prompts, notebooks, or anything you've put together on top of Microsoft Discovery. |
 | **Question** | [Discussions → Q&A](https://github.com/microsoft/discovery/discussions/categories/q-a) | "How do I…?", "Why does…?" |
 | **Bug** | [Discussions → Bugs](https://github.com/microsoft/discovery/discussions/categories/bugs) | The Bug template prompts you for version, repro steps, logs, etc. |
-| **Documentation fix** | Pull request against `docs/`, `README.md`, etc. | Typos, broken links, clarifications, missing prerequisites. |
+| **Documentation fix** | Pull request changing Markdown or content under `docs/` | Typos, broken links, clarifications, missing prerequisites. |
 | **New agent** | Pull request adding `agents/<agent-name>/` | A prompt agent + optional Discovery-managed tools. See the [Agent authoring guide](docs/authoring-guides/agent-authoring-guide.md). |
 | **New starter kit** | Pull request adding `starter-kits/<starter-kit-name>/` | A `kit.json` manifest that bundles one or more agents into a launchable kit. See the [Starter-kit authoring guide](docs/authoring-guides/starter-kit-authoring-guide.md). |
-| **Discovery services utility** | Pull request against `utilities/<utility-name>/` | Operator-facing PowerShell scripts that set up or maintain Discovery services (resource-provider registration, RBAC, data-asset migration). See [`utilities/README.md`](utilities/README.md). |
+| **Discovery services utility** | Maintainer-authored pull request; public contributors open an [Idea](https://github.com/microsoft/discovery/discussions/categories/ideas) | Operator-facing PowerShell scripts that set up or maintain Discovery services (resource-provider registration, RBAC, data-asset migration). See [`utilities/README.md`](utilities/README.md). |
 | **Schema / workflow change** | Pull request against `docs/schemas/` or `.github/workflows/` — **Microsoft maintainers only** (enforced by CODEOWNERS + branch protection). External contributors should open an **Idea in Discussions** first; a Microsoft maintainer will land the change once it is agreed. | All PRs (including maintainers') come from forks. CODEOWNERS makes schema and workflow edits land only when a maintainer approves. |
 | **Discussion triage / answers** | [Discussions](https://github.com/microsoft/discovery/discussions) | Helping other community members. |
 
@@ -46,7 +46,7 @@ Code contributions to the Microsoft Discovery app itself — its plugin, MCP too
 
 ## Authoring a catalog PR
 
-> Applies to agent submissions, starter-kit submissions, and documentation changes. Every PR runs through an automated review that enforces structural, schema, policy, documentation, and security checks. Address any failures reported on your PR; the comment includes a rule ID and a remediation hint. Detailed walkthroughs:
+> Applies to agent and starter-kit submissions. Every PR runs through an automated review that enforces structural, schema, policy, documentation, and security checks. Address any failures reported on your PR; the comment includes a rule ID and a remediation hint. Detailed walkthroughs:
 >
 > - [Agent authoring guide](docs/authoring-guides/agent-authoring-guide.md)
 > - [Starter-kit authoring guide](docs/authoring-guides/starter-kit-authoring-guide.md)
@@ -58,6 +58,21 @@ Code contributions to the Microsoft Discovery app itself — its plugin, MCP too
 3. Open a pull request against `main` and fill out **every** section of the PR template.
 4. Automated checks will run on your PR. If anything fails, the bot adds an inline comment with the rule ID and how to fix it — address every finding before requesting human review.
 5. When the pr-review validator passes, the `pr-validation-passed` label is applied and the [CODEOWNERS](.github/CODEOWNERS) maintainers are auto-requested for review. Other status checks (unit tests, schema regression, etc.) report independently — see the PR status rollup for the full picture. **One CODEOWNERS approval** is required to merge.
+
+`POL-021` checks the PR author's repository permission. Authors without
+`write`, `maintain`, or `admin` permission may modify catalog content and
+documentation. Mixed PRs that also touch trusted automation, repository
+configuration, schemas, generated output, or executable utilities are blocked.
+
+The PR review also spellchecks changed agent and starter-kit prose. `SPELL-001`
+annotations are advisory warnings: they never block merge, and code, identifiers,
+URLs, and fenced Markdown examples are excluded from the check.
+
+After merge, the weekly security scan submits declared catalog webpage URLs as
+exact strings to the [URLhaus](https://urlhaus.abuse.ch/) malware-reputation API
+and the [PhishTank](https://www.phishtank.com/) phishing-reputation API. The
+audit queries those databases only; it does not visit listed catalog webpages
+or download remote content.
 
 ### Required files
 
@@ -86,7 +101,7 @@ Before opening a PR, verify:
 - [ ] Folder name matches `metadata.yaml.name` (or `kit.json.name`).
 - [ ] `version` follows SemVer (`MAJOR.MINOR.PATCH`).
 - [ ] `tags` are lowercase, hyphen-separated, and non-empty.
-- [ ] `publisher.contact` is a valid email and `publisher.support_url` is HTTPS.
+- [ ] Contact email domains resolve in DNS and webpage URLs return public HTML pages over HTTPS.
 - [ ] `README.md` includes all required sections.
 - [ ] No placeholder markers (`TODO`, `FIXME`, `XXX`) in metadata, agent definition, or README.
 - [ ] No duplicate mapping keys in any YAML file.
@@ -98,6 +113,23 @@ Before opening a PR, verify:
 ### Schema changes
 
 > **Microsoft maintainers only.** Edits under `docs/schemas/` define the contract every agent and kit in the repo must satisfy. **This is enforced by `.github/CODEOWNERS` plus branch protection's "Require review from Code Owners"** — a schema PR cannot land without a Microsoft maintainer's approval, regardless of who opened it. If you are an external contributor and need a schema change, please [open an Idea in Discussions](https://github.com/microsoft/discovery/discussions/categories/ideas) describing the use case so a Microsoft maintainer can land the change.
+
+### Test model
+
+Repository-owned validator tests live under `.github/tests/` and run together in
+the `Unit Tests` workflow with `python -m pytest .github/tests/ -v`. This suite
+covers agents and starter kits through trusted schema, policy, registry, and
+validator code.
+
+Agent tool authors may place focused `test_*.py` or `*_test.py` files beside a
+tool. The registry records their presence as `auto:has-tests`, but privileged PR
+workflows do not execute submitted test code. Tool tests may invoke subprocesses,
+download models, require GPUs, or otherwise cross the untrusted-code boundary;
+authors must run them in their own isolated environment or CI before submission.
+
+Starter-kit folders cannot contain test files because they may contain only
+`kit.json`. Starter-kit behavior is covered by the trusted schema-security and
+starter-kit validator suites instead.
 
 ---
 

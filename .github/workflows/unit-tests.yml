@@ -1,13 +1,15 @@
 name: Unit Tests
 
-# Runs the .github/tests/ pytest suites that guard the POL-009 model-weight
-# sniffer logic and the picklescan integration inside validate_pr.py.
+# Runs the .github/tests/ pytest suites: the POL-009 model-weight sniffer, the
+# picklescan integration inside validate_pr.py, and the per-rule suites under
+# .github/tests/rules/ that cover the modular rule engine.
 #
 # This workflow is a *required* status check on `main`. GitHub treats a
 # non-triggered required check as "expected, never reported" which blocks PRs
 # that don't touch the relevant paths. To avoid that, the workflow runs on
 # every PR and a "Detect relevant changes" guard step skips the real work
-# (but still reports success) when no scripts/tests/workflow files changed.
+# (but still reports success) when no trusted code, policy, schema, or security
+# automation files changed.
 
 on:
   pull_request:
@@ -15,9 +17,18 @@ on:
     branches:
       - main
     paths:
+      - ".github/codeql/**"
+      - ".github/dependabot.yml"
+      - ".github/requirements-ci.txt"
       - ".github/scripts/**"
       - ".github/tests/**"
+      - ".github/policy/**"
+      - ".github/workflows/code-scan.yml"
+      - ".github/workflows/dependency-review.yml"
       - ".github/workflows/unit-tests.yml"
+      - "docs/schemas/**"
+      - "docs/validation-rules.csv"
+      - "docs/validation-rules.md"
   workflow_dispatch:
 
 permissions:
@@ -33,19 +44,29 @@ jobs:
       - name: Detect relevant changes
         id: changes
         if: github.event_name == 'pull_request'
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          set -euo pipefail
-          FILES=$(gh api \
-            "repos/${GITHUB_REPOSITORY}/pulls/${{ github.event.pull_request.number }}/files" \
-            --paginate --jq '.[].filename')
-          if echo "$FILES" | grep -E '^\.github/(scripts|tests)/|^\.github/workflows/unit-tests\.yml$' >/dev/null; then
-            echo "relevant=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "relevant=false" >> "$GITHUB_OUTPUT"
-            echo "::notice::No scripts/tests/unit-tests-workflow paths changed; reporting success without running pytest."
-          fi
+        uses: actions/github-script@v9
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const files = await github.paginate(github.rest.pulls.listFiles, {
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: context.issue.number,
+              per_page: 100,
+            });
+            const patterns = [
+              /^\.github\/(scripts|tests|policy|codeql)\//,
+              /^\.github\/(dependabot\.yml|requirements-ci\.txt)$/,
+              /^\.github\/workflows\/(code-scan|dependency-review|unit-tests)\.yml$/,
+              /^docs\/(schemas\/|validation-rules\.(csv|md)$)/,
+            ];
+            const relevant = files.some(({ filename }) =>
+              patterns.some((pattern) => pattern.test(filename))
+            );
+            core.setOutput('relevant', String(relevant));
+            if (!relevant) {
+              core.notice('No trusted code, policy, schema, or security automation paths changed; reporting success without running pytest.');
+            }
 
       - name: Checkout
         if: github.event_name != 'pull_request' || steps.changes.outputs.relevant == 'true'
@@ -56,11 +77,85 @@ jobs:
         uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6.3.0
         with:
           python-version: "3.12"
+          cache: pip
+          cache-dependency-path: .github/requirements-ci.txt
 
       - name: Install dependencies
         if: github.event_name != 'pull_request' || steps.changes.outputs.relevant == 'true'
-        run: pip install pytest jsonschema pyyaml picklescan onnx
+        run: python -m pip install -r .github/requirements-ci.txt
 
       - name: Run unit tests
+        id: unit_tests
         if: github.event_name != 'pull_request' || steps.changes.outputs.relevant == 'true'
-        run: python -m pytest .github/tests/ -v
+        run: |
+          set -o pipefail
+          # Keep tests in focused modules, but distribute them across the
+          # runner's available CPUs in one pytest invocation.
+          python -m pytest .github/tests/ -v -ra -n auto --dist worksteal \
+            --junitxml="$RUNNER_TEMP/unit-tests.xml" \
+            2>&1 | tee "$RUNNER_TEMP/unit-tests.log"
+
+      - name: Summarize unit test results
+        if: ${{ always() && (github.event_name != 'pull_request' || steps.changes.outputs.relevant == 'true') }}
+        env:
+          TEST_OUTCOME: ${{ steps.unit_tests.outcome }}
+        run: |
+          python .github/scripts/render_ci_summary.py pytest \
+            --report "$RUNNER_TEMP/unit-tests.xml" \
+            --title "Discovery validator unit tests" \
+            --outcome "$TEST_OUTCOME" \
+            --rerun-command "python -m pytest .github/tests/ -vv -ra -n auto --dist worksteal"
+
+      # A rule or policy change can silently start firing on legacy content.
+      # This fails when the catalog has violations the ratchet baseline does
+      # not already record, forcing an explicit decision instead of a surprise
+      # failure on an unrelated contributor's PR.
+      - name: Ratchet baseline drift
+        id: baseline
+        if: github.event_name != 'pull_request' || steps.changes.outputs.relevant == 'true'
+        run: |
+          set -o pipefail
+          python .github/scripts/generate_baseline.py --check \
+            2>&1 | tee "$RUNNER_TEMP/baseline-drift.log"
+
+      - name: Summarize ratchet baseline failure
+        if: ${{ always() && steps.baseline.outcome == 'failure' }}
+        env:
+          BASELINE_OUTCOME: ${{ steps.baseline.outcome }}
+        run: |
+          python .github/scripts/render_ci_summary.py text \
+            --log "$RUNNER_TEMP/baseline-drift.log" \
+            --title "Ratchet baseline drift" \
+            --outcome "$BASELINE_OUTCOME" \
+            --rerun-command "python .github/scripts/generate_baseline.py --check"
+
+      - name: Rule documentation drift
+        id: rule_docs
+        if: github.event_name != 'pull_request' || steps.changes.outputs.relevant == 'true'
+        run: |
+          set -o pipefail
+          python .github/scripts/generate_rule_docs.py --check \
+            2>&1 | tee "$RUNNER_TEMP/rule-documentation-drift.log"
+
+      - name: Summarize rule documentation failure
+        if: ${{ always() && steps.rule_docs.outcome == 'failure' }}
+        env:
+          RULE_DOCS_OUTCOME: ${{ steps.rule_docs.outcome }}
+        run: |
+          python .github/scripts/render_ci_summary.py text \
+            --log "$RUNNER_TEMP/rule-documentation-drift.log" \
+            --title "Rule documentation drift" \
+            --outcome "$RULE_DOCS_OUTCOME" \
+            --rerun-command "python .github/scripts/generate_rule_docs.py --check"
+
+      - name: Upload unit test diagnostics
+        if: ${{ always() && (github.event_name != 'pull_request' || steps.changes.outputs.relevant == 'true') }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: unit-test-diagnostics
+          path: |
+            ${{ runner.temp }}/unit-tests.xml
+            ${{ runner.temp }}/unit-tests.log
+            ${{ runner.temp }}/baseline-drift.log
+            ${{ runner.temp }}/rule-documentation-drift.log
+          if-no-files-found: warn

@@ -1,0 +1,80 @@
+# Approved container base images — POL-014 / POL-017
+#
+# Contributed Dockerfiles build images that run scientific workloads on Discovery
+# infrastructure. The base image is the largest piece of software in that build
+# and the piece no reviewer reads, so it must come from a source that publishes
+# provenance and gets scanned.
+#
+# Policy: prefer Docker Official Images on docker.io. Those are the "mainline"
+# builds — maintained by the Docker Library team, rebuilt on CVE disclosure, and
+# covered by Docker Scout vulnerability data. Everything else needs an explicit
+# entry here, added through a CODEOWNERS-reviewed PR.
+#
+# Deliberately NOT required: digest pinning, non-root USER, or a ban on piping
+# installers into a shell. Those add friction to scientific images that build
+# from source, and the registry allowlist plus weekly Docker Scout scanning
+# addresses the supply-chain risk more directly.
+
+# docker.io/library/* — Docker Official Images. Always allowed.
+allow_docker_official_images: true
+
+# Whole registries trusted without a per-namespace entry.
+registries:
+  - host: mcr.microsoft.com
+    note: >
+      Microsoft Container Registry. First-party images with Microsoft's own
+      patch pipeline; Azure Linux bases are the default for this catalog.
+
+# docker.io namespaces approved individually. `status` records why the
+# namespace is trusted, so a reviewer can judge whether it still holds.
+namespaces:
+  - ref: docker.io/nvidia
+    publisher: NVIDIA
+    status: verified-publisher
+    note: CUDA runtime and devel images required for GPU-accelerated tools.
+
+  - ref: docker.io/pytorch
+    publisher: PyTorch Foundation
+    status: verified-publisher
+    note: Official PyTorch runtime images used by trained-model agents.
+
+  - ref: docker.io/condaforge
+    publisher: conda-forge
+    status: sponsored-oss
+    note: mambaforge images; the standard base for conda-based scientific stacks.
+
+  - ref: docker.io/continuumio
+    publisher: Anaconda
+    status: verified-publisher
+    note: miniconda3 images.
+
+  - ref: docker.io/mambaorg
+    publisher: mamba-org
+    status: sponsored-oss
+    note: micromamba images; smaller alternative to full conda distributions.
+
+  - ref: docker.io/opencfd
+    publisher: OpenCFD Ltd
+    status: reviewed-exception
+    note: >
+      Upstream publisher of OpenFOAM. No Docker Official Image exists for
+      OpenFOAM and building it from source in-catalog is impractical.
+
+  - ref: docker.io/hdlc
+    publisher: HDL Containers
+    status: reviewed-exception
+    note: >
+      Community EDA toolchain images (Xyce). No official or verified-publisher
+      equivalent exists for open-source silicon tooling.
+
+# Tags that float — the image you scanned is not the image you build. Reported
+# as a warning rather than a hard failure so existing agents are not broken.
+floating_tags:
+  - latest
+  - edge
+  - devel
+  - nightly
+  - main
+  - master
+  - stable
+  - rolling

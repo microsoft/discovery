@@ -17,7 +17,7 @@ permissions:
 jobs:
   validate-schemas:
     name: Agent / tool / metadata schema regression guard (AS-001 – AS-005)
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-slim
     timeout-minutes: 15
     steps:
       # NOTE: All PRs in this repo come from forks (including those by maintainers).
@@ -26,140 +26,38 @@ jobs:
       # the existing catalog. The workflow is data-only — it reads JSON files
       # as data and never executes PR-supplied code.
 
-      - name: Checkout PR branch
-        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
-        with:
-          fetch-depth: 0
-
       - name: Detect relevant changes
         id: changes
-        run: |
-          set -euo pipefail
-          git fetch origin "${{ github.event.pull_request.base.ref }}"
-          if git diff --name-only "origin/${{ github.event.pull_request.base.ref }}...HEAD" | grep -qE '^docs/schemas/(agent-schema-v2|tool-definition-schema|metadata-schema)\.json$'; then
-            echo "relevant=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "relevant=false" >> "$GITHUB_OUTPUT"
-            echo "::notice::No agent/tool/metadata schema files changed; reporting success without running regression guard."
-          fi
-
+        uses: actions/github-script@v9
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const files = await github.paginate(github.rest.pulls.listFiles, {
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: context.issue.number,
+              per_page: 100,
+            });
+            const pattern = /^docs\/schemas\/(agent-schema-v2|common-schema|tool-definition-schema|metadata-schema)\.json$/;
+            const relevant = files.some(({ filename }) => pattern.test(filename));
+            core.setOutput('relevant', String(relevant));
+            if (!relevant) {
+              core.notice('No agent/tool/metadata schema files changed; reporting success without running regression guard.');
+            }
+      - name: Checkout PR branch
+        if: steps.changes.outputs.relevant == 'true'
+        uses: actions/checkout@v6
       - name: Set up Python
         if: steps.changes.outputs.relevant == 'true'
         uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6.3.0
         with:
-          python-version: "3.11"
-
+          python-version: '3.12'
+          cache: pip
+          cache-dependency-path: .github/requirements-ci.txt
       - name: Install dependencies
         if: steps.changes.outputs.relevant == 'true'
-        run: pip install jsonschema pyyaml
-
-      - name: AS-001 — Schema files are valid JSON
+        run: >
+          python -m pip install -c .github/requirements-ci.txt pytest jsonschema pyyaml referencing
+      - name: Run AS-001 through AS-005 schema checks
         if: steps.changes.outputs.relevant == 'true'
-        run: |
-          python -c "
-          import json, sys
-          for f in [
-              'docs/schemas/agent-schema-v2.json',
-              'docs/schemas/tool-definition-schema.json',
-              'docs/schemas/metadata-schema.json',
-          ]:
-              try:
-                  with open(f) as fh:
-                      json.load(fh)
-                  print(f'  OK: {f}')
-              except Exception as e:
-                  print(f'  FAIL: {f}: {e}', file=sys.stderr)
-                  sys.exit(1)
-          "
-
-      - name: AS-002 — Schemas are valid JSON Schema Draft 7
-        if: steps.changes.outputs.relevant == 'true'
-        run: |
-          python -c "
-          import json, sys, jsonschema
-          for f in [
-              'docs/schemas/agent-schema-v2.json',
-              'docs/schemas/tool-definition-schema.json',
-              'docs/schemas/metadata-schema.json',
-          ]:
-              with open(f) as fh:
-                  schema = json.load(fh)
-              try:
-                  jsonschema.Draft7Validator.check_schema(schema)
-                  print(f'  OK: {f}')
-              except jsonschema.exceptions.SchemaError as e:
-                  print(f'  FAIL: {f}: {e.message}', file=sys.stderr)
-                  sys.exit(1)
-          "
-
-      - name: AS-003 — Every existing agents/*/metadata.yaml validates against updated metadata-schema.json
-        if: steps.changes.outputs.relevant == 'true'
-        run: |
-          python -c "
-          import json, sys, glob, jsonschema, yaml
-          with open('docs/schemas/metadata-schema.json') as f:
-              schema = json.load(f)
-          validator = jsonschema.Draft7Validator(schema)
-          failed = False
-          for meta_path in sorted(glob.glob('agents/*/metadata.yaml')):
-              with open(meta_path) as f:
-                  data = yaml.safe_load(f)
-              errors = list(validator.iter_errors(data))
-              if errors:
-                  for e in errors:
-                      path_str = ' -> '.join(str(p) for p in e.absolute_path) or '(root)'
-                      print(f'  FAIL: {meta_path} at {path_str}: {e.message}', file=sys.stderr)
-                  failed = True
-              else:
-                  print(f'  OK: {meta_path}')
-          if failed:
-              sys.exit(1)
-          "
-
-      - name: AS-004 — Every existing agents/*/agent.yaml validates against updated agent-schema-v2.json
-        if: steps.changes.outputs.relevant == 'true'
-        run: |
-          python -c "
-          import json, sys, glob, jsonschema, yaml
-          with open('docs/schemas/agent-schema-v2.json') as f:
-              schema = json.load(f)
-          validator = jsonschema.Draft7Validator(schema)
-          failed = False
-          for agent_path in sorted(glob.glob('agents/*/agent.yaml')):
-              with open(agent_path) as f:
-                  data = yaml.safe_load(f)
-              errors = list(validator.iter_errors(data))
-              if errors:
-                  for e in errors:
-                      path_str = ' -> '.join(str(p) for p in e.absolute_path) or '(root)'
-                      print(f'  FAIL: {agent_path} at {path_str}: {e.message}', file=sys.stderr)
-                  failed = True
-              else:
-                  print(f'  OK: {agent_path}')
-          if failed:
-              sys.exit(1)
-          "
-
-      - name: AS-005 — Every existing agents/*/tools/*/tool.yaml validates against updated tool-definition-schema.json
-        if: steps.changes.outputs.relevant == 'true'
-        run: |
-          python -c "
-          import json, sys, glob, jsonschema, yaml
-          with open('docs/schemas/tool-definition-schema.json') as f:
-              schema = json.load(f)
-          validator = jsonschema.Draft7Validator(schema)
-          failed = False
-          for tool_path in sorted(glob.glob('agents/*/tools/*/tool.yaml')):
-              with open(tool_path) as f:
-                  data = yaml.safe_load(f)
-              errors = list(validator.iter_errors(data))
-              if errors:
-                  for e in errors:
-                      path_str = ' -> '.join(str(p) for p in e.absolute_path) or '(root)'
-                      print(f'  FAIL: {tool_path} at {path_str}: {e.message}', file=sys.stderr)
-                  failed = True
-              else:
-                  print(f'  OK: {tool_path}')
-          if failed:
-              sys.exit(1)
-          "
+        run: python -m pytest .github/tests/test_schema_security.py -q

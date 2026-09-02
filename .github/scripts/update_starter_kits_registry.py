@@ -30,7 +30,7 @@ except ImportError:
 
 
 def load_json(path: Path) -> dict:
-    with path.open() as f:
+    with path.open(encoding="utf-8") as f:
         return json.load(f)
 
 
@@ -68,11 +68,20 @@ def get_kit_relpath(repo_root: Path, kit_dir: Path) -> str:
 
 def build_registry_path_set(registry: dict) -> set[str]:
     """Return set of agent paths from .auto-registry/agent-registry.json."""
-    return {
-        e["path"]
-        for e in registry.get("entries", [])
-        if e.get("type") == "agent"
-    }
+    if not isinstance(registry, dict) or not isinstance(registry.get("entries"), list):
+        raise ValueError("agent registry must contain an 'entries' array")
+
+    paths: set[str] = set()
+    for index, entry in enumerate(registry["entries"]):
+        if not isinstance(entry, dict):
+            raise ValueError(f"agent registry entries[{index}] must be an object")
+        if entry.get("type") != "agent":
+            raise ValueError(f"agent registry entries[{index}] has invalid type")
+        path = entry.get("path")
+        if not isinstance(path, str) or not path:
+            raise ValueError(f"agent registry entries[{index}] requires a path")
+        paths.add(path)
+    return paths
 
 
 def load_agent_meta(repo_root: Path, ref: str) -> dict | None:
@@ -188,7 +197,7 @@ def write_json(path: Path, data: dict) -> None:
         f.write("\n")
 
 
-def main() -> None:
+def main() -> int:
     parser = argparse.ArgumentParser(description="Generate starter-kit-registry.json")
     parser.add_argument("--repo-root", required=True, help="Repository root directory")
     args = parser.parse_args()
@@ -199,15 +208,19 @@ def main() -> None:
     registry_path = repo_root / ".auto-registry" / "agent-registry.json"
     if not registry_path.exists():
         print(f"ERROR: .auto-registry/agent-registry.json not found at {registry_path}", file=sys.stderr)
-        sys.exit(1)
-    registry = load_json(registry_path)
-    agent_path_set = build_registry_path_set(registry)
+        return 1
+    try:
+        registry = load_json(registry_path)
+        agent_path_set = build_registry_path_set(registry)
+    except (OSError, json.JSONDecodeError, ValueError) as exc:
+        print(f"ERROR: invalid agent registry at {registry_path}: {exc}", file=sys.stderr)
+        return 1
     print(f"Loaded registry with {len(agent_path_set)} agent paths")
 
     # Discover all kit dirs
     if not (repo_root / "starter-kits").is_dir():
         print("No starter-kits/ directory found. Nothing to generate.")
-        sys.exit(0)
+        return 0
 
     kit_dirs = get_kit_dirs(repo_root)
     kit_relpaths = [get_kit_relpath(repo_root, d) for d in kit_dirs]
@@ -235,7 +248,7 @@ def main() -> None:
     if errors:
         for err in errors:
             print(f"ERROR: {err}", file=sys.stderr)
-        sys.exit(1)
+        return 1
 
     # Write .auto-registry/starter-kit-registry.json
     registry_output = {
@@ -252,7 +265,8 @@ def main() -> None:
     healthy = sum(1 for k in registry_kits if k.get("availability") == "healthy")
     degraded = sum(1 for k in registry_kits if k.get("availability") == "degraded")
     print(f"\n✓ Done. {len(registry_kits)} kit(s): {healthy} healthy, {degraded} degraded.")
+    return 0
 
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main())
