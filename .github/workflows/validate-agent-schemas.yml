@@ -26,11 +26,6 @@ jobs:
       # the existing catalog. The workflow is data-only — it reads JSON files
       # as data and never executes PR-supplied code.
 
-      - name: Checkout PR branch
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          fetch-depth: 0
-
       - name: Detect relevant changes
         id: changes
         uses: actions/github-script@v9
@@ -51,7 +46,7 @@ jobs:
             }
       - name: Checkout PR branch
         if: steps.changes.outputs.relevant == 'true'
-        uses: actions/checkout@v6
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - name: Set up Python
         if: steps.changes.outputs.relevant == 'true'
         uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
