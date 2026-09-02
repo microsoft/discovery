@@ -88,7 +88,10 @@ jobs:
         id: unit_tests
         if: github.event_name != 'pull_request' || steps.changes.outputs.relevant == 'true'
         run: |
-          python -m pytest .github/tests/ -v -ra \
+          set -o pipefail
+          # Keep tests in focused modules, but distribute them across the
+          # runner's available CPUs in one pytest invocation.
+          python -m pytest .github/tests/ -v -ra -n auto --dist worksteal \
             --junitxml="$RUNNER_TEMP/unit-tests.xml" \
             2>&1 | tee "$RUNNER_TEMP/unit-tests.log"
 
@@ -101,7 +104,7 @@ jobs:
             --report "$RUNNER_TEMP/unit-tests.xml" \
             --title "Discovery validator unit tests" \
             --outcome "$TEST_OUTCOME" \
-            --rerun-command "python -m pytest .github/tests/ -vv -ra"
+            --rerun-command "python -m pytest .github/tests/ -vv -ra -n auto --dist worksteal"
 
       # A rule or policy change can silently start firing on legacy content.
       # This fails when the catalog has violations the ratchet baseline does
@@ -111,6 +114,7 @@ jobs:
         id: baseline
         if: github.event_name != 'pull_request' || steps.changes.outputs.relevant == 'true'
         run: |
+          set -o pipefail
           python .github/scripts/generate_baseline.py --check \
             2>&1 | tee "$RUNNER_TEMP/baseline-drift.log"
 
@@ -129,6 +133,7 @@ jobs:
         id: rule_docs
         if: github.event_name != 'pull_request' || steps.changes.outputs.relevant == 'true'
         run: |
+          set -o pipefail
           python .github/scripts/generate_rule_docs.py --check \
             2>&1 | tee "$RUNNER_TEMP/rule-documentation-drift.log"
 

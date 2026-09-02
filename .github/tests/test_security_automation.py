@@ -46,6 +46,11 @@ def load_workflow(path: Path) -> dict[str, Any]:
     return document
 
 
+def uses_action(step: dict[str, Any], action: str) -> bool:
+    """Match an action independently of whether its revision is a tag or SHA."""
+    return step.get("uses", "").partition("@")[0] == action
+
+
 def dependabot_update(ecosystem: str) -> dict[str, Any]:
     updates = load_yaml(DEPENDABOT_PATH)["updates"]
     matches = [
@@ -237,6 +242,8 @@ def test_validation_workflows_publish_actionable_diagnostics():
     )
     unit_steps = unit_workflow["jobs"]["pytest"]["steps"]
     unit_test_step = next(step for step in unit_steps if step.get("id") == "unit_tests")
+    assert "-n auto --dist worksteal" in unit_test_step["run"]
+    assert "set -o pipefail" in unit_test_step["run"]
     assert "--junitxml=\"$RUNNER_TEMP/unit-tests.xml\"" in unit_test_step["run"]
     assert "2>&1 | tee \"$RUNNER_TEMP/unit-tests.log\"" in unit_test_step["run"]
     unit_summary = next(
@@ -253,9 +260,29 @@ def test_validation_workflows_publish_actionable_diagnostics():
     )
     full_steps = full_workflow["jobs"]["validate-all-agents"]["steps"]
     full_checkout = next(
-        step for step in full_steps if step.get("uses") == "actions/checkout@v6"
+        step for step in full_steps if uses_action(step, "actions/checkout")
     )
     assert full_checkout["with"]["lfs"] == "true"
+    assert "validate-all-starter-kits" not in full_workflow["jobs"]
+    assert any(
+        step.get("name") == "Validate every starter kit against current schema"
+        for step in full_steps
+    )
+    validation_step_ids = {"unit_tests", "catalog", "starter_kits"}
+    for step in full_steps:
+        if step.get("id") in validation_step_ids:
+            assert step.get("continue-on-error") == "true"
+    aggregate_failure = next(
+        step for step in full_steps
+        if step.get("name") == "Fail when any full-catalog validation failed"
+    )
+    assert aggregate_failure["if"] == "always()"
+    assert "UNIT_TEST_OUTCOME" in aggregate_failure["env"]
+    assert "CATALOG_OUTCOME" in aggregate_failure["env"]
+    assert "STARTER_KIT_OUTCOME" in aggregate_failure["env"]
+    for step in full_steps:
+        if "| tee" in step.get("run", ""):
+            assert "set -o pipefail" in step["run"] or "|| true" in step["run"]
     assert any(
         "render_ci_summary.py pytest" in step.get("run", "") for step in full_steps
     )
@@ -320,6 +347,7 @@ def test_ci_python_dependencies_are_pinned_and_workflows_use_the_manifest():
         "onnx",
         "picklescan",
         "pytest",
+        "pytest-xdist",
         "pyyaml",
         "referencing",
     }
@@ -347,10 +375,7 @@ def test_python_validation_jobs_use_github_hosted_linux():
         "check-agent-removal-impact.yml": {"check-impact"},
         "pr-review.yml": {"validate"},
         "unit-tests.yml": {"pytest"},
-        "validate-everything.yml": {
-            "validate-all-agents",
-            "validate-all-starter-kits",
-        },
+        "validate-everything.yml": {"validate-all-agents"},
         "validate-agent-schemas.yml": {"validate-schemas"},
         "validate-starter-kit-schema.yml": {"validate-schema"},
         "validate-starter-kits.yml": {"validate"},
@@ -385,7 +410,7 @@ def test_python_validation_jobs_use_github_hosted_linux():
             setup_steps = [
                 step
                 for step in job["steps"]
-                if step.get("uses") == "actions/setup-python@v6"
+                if uses_action(step, "actions/setup-python")
             ]
             assert len(setup_steps) == 1
             assert setup_steps[0]["with"]["python-version"] == "3.12"
@@ -431,7 +456,7 @@ def test_pull_request_target_jobs_keep_pr_data_untrusted():
         step
         for job in pr_review["jobs"].values()
         for step in job.get("steps", [])
-        if step.get("uses") == "actions/checkout@v6"
+        if uses_action(step, "actions/checkout")
         and step.get("with", {}).get("ref")
         == "${{ github.event.pull_request.head.sha }}"
     ]
@@ -471,6 +496,10 @@ def test_manual_shadow_validation_is_report_only_and_fork_aware():
     )
     assert pr_checkout["with"]["ref"] == "${{ steps.target.outputs.head-sha }}"
     assert pr_checkout["with"]["persist-credentials"] == "false"
+    setup_python = next(
+        step for step in steps if uses_action(step, "actions/setup-python")
+    )
+    assert "cache" not in setup_python.get("with", {})
 
     report_only_steps = {
         "Build ephemeral integration tree",
@@ -507,6 +536,7 @@ def test_manual_shadow_validation_is_report_only_and_fork_aware():
     assert branch_job["if"] == "${{ inputs.pr_number == '' }}"
     assert any(
         "python -m pytest .github/tests/" in step.get("run", "")
+        and "-n auto --dist worksteal" in step.get("run", "")
         for step in branch_job["steps"]
     )
     full_catalog_command = next(
