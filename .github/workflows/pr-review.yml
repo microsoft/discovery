@@ -10,11 +10,10 @@ concurrency:
   group: pr-review-${{ github.event.pull_request.number }}
   cancel-in-progress: true
 
-# Minimal permissions — only what we need
+# Read-only by default. Only post-results receives PR/issue write access.
 permissions:
   contents: read
-  pull-requests: write
-  issues: write
+  pull-requests: read
 
 jobs:
   # ── Stage 1: Classify changed paths ───────────────────────────────────────
@@ -24,53 +23,31 @@ jobs:
     timeout-minutes: 20
     outputs:
       changed_files: ${{ steps.changed.outputs.all_changed_files }}
-      has_agents: ${{ steps.classify.outputs.has_agents }}
-      has_docs_only: ${{ steps.classify.outputs.has_docs_only }}
+      has_agents: ${{ steps.changed.outputs.has_agents }}
+      has_docs_only: ${{ steps.changed.outputs.has_docs_only }}
     steps:
-      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
-        with:
-          ref: ${{ github.event.pull_request.head.sha }}
-          allow-unsafe-pr-checkout: true
-          fetch-depth: 0
-
-      - name: Get changed files
+      # Do not check out attacker-controlled PR content in this privileged
+      # pull_request_target workflow. The API supplies the authoritative list.
+      - name: Get and classify changed files
         id: changed
-        env:
-          # Pass untrusted, attacker-controllable values through the environment
-          # instead of interpolating ${{ }} directly into the shell. This prevents
-          # expression/command injection (MSRC 124614).
-          BASE_SHA: ${{ github.event.pull_request.base.sha }}
-          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
-        run: |
-          # Fetch the base commit so git diff can compare across fork boundaries
-          git fetch origin "$BASE_SHA" --depth=1 2>/dev/null || true
-          FILES=$(git diff --name-only "$BASE_SHA" "$HEAD_SHA" 2>/dev/null || git diff --name-only HEAD~1 HEAD)
-          # Newline-separated list → space-separated for the classify step
-          FILES_INLINE=$(echo "$FILES" | tr '\n' ' ' | sed 's/ $//')
-          echo "all_changed_files=$FILES_INLINE" >> "$GITHUB_OUTPUT"
-          echo "Changed files: $FILES_INLINE"
-
-      - name: Classify paths
-        id: classify
-        env:
-          # Changed file paths are attacker-controlled (an attacker can name a
-          # file in their PR). Pass via env so the value is never expanded by
-          # the shell parser (MSRC 124614).
-          ALL_CHANGED_FILES: ${{ steps.changed.outputs.all_changed_files }}
-        run: |
-          FILES="$ALL_CHANGED_FILES"
-          HAS_AGENTS=false
-          HAS_DOCS_ONLY=true
-          for f in $FILES; do
-            if [[ "$f" == agents/* ]]; then
-              HAS_AGENTS=true
-              HAS_DOCS_ONLY=false
-            elif [[ "$f" != docs/schemas/* ]]; then
-              HAS_DOCS_ONLY=false
-            fi
-          done
-          echo "has_agents=$HAS_AGENTS" >> "$GITHUB_OUTPUT"
-          echo "has_docs_only=$HAS_DOCS_ONLY" >> "$GITHUB_OUTPUT"
+        uses: actions/github-script@v9
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const files = await github.paginate(github.rest.pulls.listFiles, {
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: context.payload.pull_request.number,
+              per_page: 100,
+            });
+            const names = files.map(({ filename }) => filename);
+            core.setOutput('all_changed_files', JSON.stringify(names));
+            core.setOutput('has_agents', String(names.some(name => name.startsWith('agents/'))));
+            core.setOutput(
+              'has_docs_only',
+              String(names.length > 0 && names.every(name => name.startsWith('docs/schemas/'))),
+            );
+            core.info(`Changed files (${names.length}):\n${names.join('\n')}`);
 
   # ── Stages 2–4: Structural + Schema + Content/Policy + Documentation ───────
   validate:
@@ -94,15 +71,18 @@ jobs:
           ref: ${{ github.event.pull_request.base.sha }}
           fetch-depth: 1
           path: trusted
+          persist-credentials: false
 
       - name: Checkout PR head (content under review — never executed)
         uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
         with:
+          repository: ${{ github.event.pull_request.head.repo.full_name }}
           ref: ${{ github.event.pull_request.head.sha }}
           allow-unsafe-pr-checkout: true
           fetch-depth: 0
           lfs: true
           path: pr
+          persist-credentials: false
 
       - name: Set up Python
         uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6.3.0
@@ -114,14 +94,11 @@ jobs:
 
       - name: Write changed files list
         env:
-          # Attacker-controlled file paths — pass via env, never interpolate
-          # directly into the shell (MSRC 124614).
-          CHANGED_FILES: ${{ needs.classify.outputs.changed_files }}
+          # JSON preserves spaces and other characters in attacker-controlled
+          # paths. Pass via env and decode without shell evaluation.
+          CHANGED_FILES_JSON: ${{ needs.classify.outputs.changed_files }}
         run: |
-          echo "$CHANGED_FILES" \
-            | tr ' ' '\n' \
-            | grep -v '^$' \
-            > /tmp/changed-files.txt
+          python -c 'import json, os, pathlib; pathlib.Path("/tmp/changed-files.txt").write_text("".join(f"{p}\n" for p in json.loads(os.environ["CHANGED_FILES_JSON"])), encoding="utf-8")'
           echo "Changed files:"
           cat /tmp/changed-files.txt
 
@@ -192,12 +169,6 @@ jobs:
     env:
       GIT_LFS_SKIP_SMUDGE: "1"
     steps:
-      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
-        with:
-          ref: ${{ github.event.pull_request.head.sha }}
-          allow-unsafe-pr-checkout: true
-          fetch-depth: 0
-
       - name: Run TruffleHog secret scan (verified — blocking)
         env:
           # Pass commit SHAs through the environment rather than interpolating
@@ -205,11 +176,23 @@ jobs:
           # injection (MSRC 124614).
           BASE_SHA: ${{ github.event.pull_request.base.sha }}
           HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          BASE_REPOSITORY: ${{ github.event.pull_request.base.repo.full_name }}
+          HEAD_REPOSITORY: ${{ github.event.pull_request.head.repo.full_name }}
         run: |
           # Install TruffleHog directly — avoids org-level action allowlist restrictions
           curl -sSfL https://raw.githubusercontent.com/trufflesecurity/trufflehog/main/scripts/install.sh \
             | sh -s -- -b /usr/local/bin
-          trufflehog git file://. \
+
+          # Fetch Git objects without checking out PR-controlled files. No
+          # privileged token or persisted credentials are exposed to the clone.
+          git init --bare /tmp/pr-history.git
+          git -C /tmp/pr-history.git fetch --no-tags \
+            "https://github.com/${BASE_REPOSITORY}.git" \
+            "$BASE_SHA"
+          git -C /tmp/pr-history.git fetch --no-tags \
+            "https://github.com/${HEAD_REPOSITORY}.git" \
+            "$HEAD_SHA"
+          trufflehog git file:///tmp/pr-history.git \
             --since-commit "$BASE_SHA" \
             --branch "$HEAD_SHA" \
             --only-verified \
@@ -229,7 +212,7 @@ jobs:
           # it produces an artefact so reviewers can spot dummy keys / leaked
           # placeholders that the verified scan deliberately ignores.
           set +e
-          trufflehog git file://. \
+          trufflehog git file:///tmp/pr-history.git \
             --since-commit "$BASE_SHA" \
             --branch "$HEAD_SHA" \
             --json \
@@ -258,6 +241,10 @@ jobs:
     # Use !cancelled() instead of always() to avoid zombie queued jobs when a run is cancelled.
     # always() causes Post Results to queue even for cancelled runs, exhausting the runner pool.
     if: ${{ !cancelled() }}
+    permissions:
+      contents: read
+      pull-requests: write
+      issues: write
     steps:
       - name: Download validation results
         id: download
