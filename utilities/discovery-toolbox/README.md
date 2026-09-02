@@ -4,7 +4,7 @@
 
 Microsoft Discovery is the AI for Science platform that enables agentic-driven scientific research and development. Discovery Toolbox provides an end-to-end deployment and management experience — including instantiation of agents, tools, models, knowledge bases (Bookshelves), and the supercomputer compute pool — plus subscription-wide resource inventory with cascade tear-down, declarative validation plans, live agent chat, and a `@discovery` chat participant for natural-language operations.
 
-**Current version:** `v1.1.67`
+**Current version:** `v1.7.11`
 
 ---
 
@@ -25,7 +25,7 @@ Microsoft Discovery is the AI for Science platform that enables agentic-driven s
 - 🔧 **End-to-end deployment** — Provision the full Microsoft Discovery platform from scratch (VNets, supercomputers, workspaces, projects, chat models, storage, managed identities) using a bundled, hardened Bicep template, deployed directly from inside VS Code with live terminal output.
 - 🤖 **Agent & tool publishing** — Publish AI agents and containerized tools directly to your Discovery environment. Create from scratch or from the catalog, then build tool images **remotely via ACR Tasks** — no local Docker required — and push them straight to your Azure Container Registry.
 - 🛡️ **Prerequisite validation** — Automatically verify 100+ Azure prerequisites — RBAC roles, resource providers, quotas, policies, **network security perimeter**, and configuration — before deployment, with one-click remediation actions for every issue found.
-- �️ **Inventory & cleanup** — Subscription-wide scan of every Discovery resource group, workspace, project, agent, supercomputer, storage account/container, UAMI, Bookshelf, ACR registry, and orphan MRG. Per-leaf delete and full project / workspace / supercomputer cascade tear-down with type-confirm modals (gated by `mdToolbox.enableCleanup`).
+- 🗂️ **Inventory & cleanup** — Subscription-wide scan of every Discovery resource group, workspace, project, agent, supercomputer, storage account/container, UAMI, Bookshelf, ACR registry, and orphan MRG. Per-leaf delete and full project / workspace / supercomputer cascade tear-down with type-confirm modals (gated by `mdToolbox.enableCleanup`).
 - 📊 **Architecture visualization** — See your entire Discovery deployment topology as an interactive diagram (workspaces, projects, agents, supercomputers, storage, networking) with real-time health status. Export as PNG (2×) or SVG, or browse a built-in example dataset.
 - 💰 **Cost analysis** — Track per-resource costs across your Discovery resource groups (daily, weekly, monthly breakdowns). Sortable table with RG and service filters, plus direct links to the Azure Portal cost blade.
 - 📋 **Operational monitoring** — 5-signal diagnostics dashboard (Resource Health, Active Alerts, Advisor Recommendations, Service Health, Diagnostic Settings) across main and managed resource groups, with KPI tiles.
@@ -35,12 +35,19 @@ Microsoft Discovery is the AI for Science platform that enables agentic-driven s
 
 - **Onboarding Journey** — Guided 6-step path (Discover → Evaluate → Engage → Triage → Onboard → Deploy & Build) with curated links to the Azure announcement, MS Learn docs, and solutions page.
 - **Dashboard** — At-a-glance health of every section with colored status tiles, KPI/hybrid metric tiles, and completion tracking.
+- **Chat Progress** — One pane for live deploy / teardown / validation runs, a past-run history selector, and an editable plan the `@discovery` participant executes.
+- **Starter Kits** — One-click deploy of official Microsoft Discovery starter kits (curated domain agent bundles — chemistry, silicon, life sciences, physics) from the public `microsoft/discovery` registry, in a gallery page or in chat.
+- **Tenant & Subscription Switcher** — Switch the toolbox's target by picking a tenant, then a subscription under it, or find a subscription's owning tenant from just its id.
+- **Guided Quota Requests** — A quota-request builder that pre-checks the required resource providers (a model-quota request stalls until Microsoft.CognitiveServices is registered), offers one-click registration, and drives a semi-automated portal form filler.
+- **Chat Capabilities & Help** — `@discovery /help` lists what the participant can do; a Dashboard capabilities card surfaces the same catalog plus a live inventory of the `#discovery_*` tools.
 - **Prerequisites** — Azure CLI, Bicep, login, tenant, subscription, region — including approved-region validation against the Azure locations API.
 - **Deployment Settings** — Region + resource group selectors that act as both the deployment target for new infrastructure and the management scope used to discover existing deployments.
 - **Permission Auditing** — Enumerate 15 RBAC roles with member resolution (users, groups, service principals, managed identities) across subscription, RG, and child-resource scopes.
 - **Role Summary** — 3-persona capability matrix (Platform Admin · Scientist · Reader) showing what each persona can and can't do based on current role assignments.
 - **Quota Management** — vCPU and AI Foundry TPM quotas per region with one-click quota-form data generation; NetApp Files reported informationally.
-- **Network Security** — Four checks for the AIFSPInfrastructure service principal (existence, NSP Perimeter Joiner role, role assignment, Reader at subscription scope) with one-click create/assign actions.
+- **Region Readiness** — Per-region readiness preflight: vCPU/GPU headroom, node-pool SKU availability (with an allowlisted-alternative recommendation), model TPM, and network/security guardrails side-by-side, with a region picker (home regions by default; add any region to vet a cross-region target).
+- **Network Security** — Four checks for the AIFSPInfrastructure service principal (existence, NSP Perimeter Joiner role, role assignment, Reader at subscription scope) with one-click create/assign actions. Required for every deploy (network hardening is on by default), not just hardened mode.
+- **Checklist** — The end-to-end Validation Checklist: one dense, linear table that walks a whole deployment top-to-bottom (every pre-flight check, then every validation stage) with live status, collapsible detail, and an Input column of the resource names each stage will create. Reflects both chat- and UI-driven runs.
 - **Bicep Deployment** — Validate, configure, and deploy the bundled template with real-time terminal output and a live Infra Status bar.
 - **Inventory** — Subscription-wide scan of every Discovery resource group, workspace, project, agent, supercomputer, storage account, container, UAMI, ACR, MRG, and Bookshelf — with inline per-leaf delete and cascade tear-down (project / workspace / supercomputer) when `mdToolbox.enableCleanup` is on.
 - **Agents Page** — Combined catalog browser + agent inventory across workspaces and projects with model, tools, KBs, and Studio/Foundry links.
@@ -56,10 +63,11 @@ Microsoft Discovery is the AI for Science platform that enables agentic-driven s
 - **Documentation** — Embedded MS Learn docs browser (no git clone required).
 - **Sidebar Health Overlays** — Per-section busy and error icons in the Activity Bar tree, gated by `mdToolbox.sidebar.showBusyOverlay` / `showErrorOverlay`.
 - **Update Checker** — Automatic version check on startup with a welcome-page banner and VS Code notification when a new version is available.
+- **Reset to First-Run** — Clear all local settings and cached state to return the toolbox to a clean first-run experience — handy for demos or escaping stale state. Right-click the **Introduction** sidebar group; your deployed Azure resources are not affected.
 
 ## What's new & coming soon
 
-Experimental features are off by default. To opt in, set `mdToolbox.showExperimental` to `true` in VS Code Settings. The pages exist and are functional — they're hidden from the sidebar until the toggle flips.
+The sidebar's breadth is set by a single **View Level** (`mdToolbox.viewLevel`): **Simple** (essentials), **Standard** (everything except experimental — the default for this build), or **Advanced** (everything, including experimental pages marked `*`). Change it from the **Welcome** page or the **View Level** menu (sidebar **…**). Experimental pages exist and are functional — they're just hidden below the Advanced level.
 
 | Status | Feature | What it does |
 | --- | --- | --- |
@@ -69,7 +77,7 @@ Experimental features are off by default. To opt in, set `mdToolbox.showExperime
 | Experimental | **Bookshelves & Knowledge Bases** | Bookshelf enumeration, deploy form, and per-resource delete — wired into the Agent Deploy form's Knowledge Bases multi-select, the Inventory page, and the architecture diagram. |
 | Experimental | **Supercomputer Page** | AKS snapshot of the Discovery supercomputer with node pool list, resize/delete/create actions, and a read-only kubectl console. |
 | Experimental | **MCP Catalog & Invoke** | Browse MCP servers exposed by your Discovery environment and invoke their tools directly from the toolbox. |
-| Experimental | **@discovery Chat Participant** | Slash commands (`/create-agent`, `/explain`) plus the full `#discovery_*` language model tool set — read tools (catalog, agents, docs, config, preflight, deployment plan) and write tools (`discovery_deployBicep` · `discovery_deployTool` · `discovery_deployAgent` · `discovery_provisionFoundation` · `discovery_applySetting` · `discovery_modifyNodePool`) for natural-language agent creation, infrastructure deploys, and Q&A. Write tools are double-gated on `mdToolbox.advancedDevProxy.allowDeploys` plus per-action approval flags. Requires GitHub Copilot Chat. |
+| Experimental | **@discovery Chat Participant** | Slash commands (`/help`, `/setup`, `/deploy`, `/list`, `/create-agent`, `/explain`) plus the full `#discovery_*` language model tool set — read tools (capabilities, catalog, starter kits, agents, tenants & subscriptions, docs, config, environment checks & preflight, Chat Progress plan, capacity & inventory scans) and write tools (`discovery_deployBicep` · `discovery_deployTool` · `discovery_deployAgent` · `discovery_provisionFoundation` · `discovery_applySetting` · `discovery_modifyNodePool`) for natural-language agent creation, infrastructure deploys, and Q&A. Write tools are double-gated on `mdToolbox.advancedDevProxy.allowDeploys` plus per-action approval flags. Requires GitHub Copilot Chat. |
 | Planned | **Post-Deploy Health Smoke** | Dashboard-level passive health verification, endpoint connectivity tests, and Service Health correlation — complements the active Validation feature. |
 | Planned | **Centralized Input Validation** | Shared validation rules driving inline validation across every editable field. |
 
@@ -87,4 +95,4 @@ Found a bug, want a feature, or have general feedback? Open an issue on the [mic
 
 ---
 
-<sub>Published version **v1.1.67** &middot; built from `d8bce6e` on 2026-06-01T18:47:30.060Z.</sub>
+<sub>Published version **v1.7.11** &middot; built from `68e9303` on 2026-09-01T23:31:59.699Z.</sub>
