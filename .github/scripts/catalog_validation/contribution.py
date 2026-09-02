@@ -13,10 +13,35 @@ from .schemas import load_json, load_yaml
 @dataclass(frozen=True)
 class ContributionSummary:
     has_agents: bool
-    has_docs_only: bool
+    has_markdown_only: bool
+    has_dockerfile: bool
+    has_code: bool
     has_1p: bool
     has_3p: bool
     image_files: list[str]
+
+
+_CODE_EXTENSIONS = frozenset({
+    ".bash", ".c", ".cc", ".cpp", ".cs", ".cxx", ".fs", ".fsx", ".go",
+    ".h", ".hpp", ".java", ".js", ".jsx", ".kt", ".kts", ".m", ".mm",
+    ".php", ".pl", ".ps1", ".py", ".r", ".rb", ".rs", ".sh", ".sql",
+    ".swift", ".tf", ".ts", ".tsx", ".vb", ".vue", ".wasm", ".zig",
+})
+
+
+def _is_dockerfile(path: str) -> bool:
+    """Return whether a path names a Docker build file."""
+    name = Path(path).name.lower()
+    return (
+        name == "dockerfile"
+        or name.startswith("dockerfile.")
+        or name.endswith(".dockerfile")
+    )
+
+
+def _is_code(path: str) -> bool:
+    """Return whether a path has a recognized source-code extension."""
+    return Path(path).suffix.lower() in _CODE_EXTENSIONS
 
 
 def _party_values(
@@ -63,10 +88,12 @@ def classify_contribution(
             path.startswith("agents/") and not path.startswith("agents/tmp/")
             for path in normalized_files
         ),
-        has_docs_only=(
+        has_markdown_only=(
             bool(normalized_files)
-            and all(path.startswith("docs/schemas/") for path in normalized_files)
+            and all(Path(path).suffix.lower() == ".md" for path in normalized_files)
         ),
+        has_dockerfile=any(_is_dockerfile(path) for path in normalized_files),
+        has_code=any(_is_code(path) for path in normalized_files),
         has_1p="1p" in parties,
         has_3p="3p" in parties,
         image_files=image_files,

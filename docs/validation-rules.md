@@ -19,10 +19,10 @@ Two escape hatches exist, and neither is a way to skip review:
 
 | Rule | Summary | Applies to | Severity |
 | --- | --- | --- | --- |
-| [POL-008](#pol-008) | Files under agents/ and starter-kits/ must be source code, verified by content inspection. | Every changed file | error |
+| [POL-008](#pol-008) | Files under agents/ and starter-kits/ must be source code or POL-016-compliant Markdown images, verified by content inspection. | Every changed file | error |
 | [POL-014](#pol-014) | Dockerfile base images must be Docker Official Images or come from an approved registry or publisher namespace. | Every changed file | error |
 | [POL-015](#pol-015) | Added files must use an approved extension or filename from the source allowlist. | Every changed file | error |
-| [POL-016](#pol-016) | Image files under agents/ or starter-kits/ must contain the format their name claims, and SVGs must be free of active content. | Every changed file | error |
+| [POL-016](#pol-016) | Images under agents/ or starter-kits/ must be safe Markdown formats, at most 1 MiB, and referenced by Markdown in the same catalog item. | Every changed file | error |
 | [POL-017](#pol-017) | Base image tags should be pinned to an explicit version rather than a floating tag such as :latest. | Every changed file | warning |
 | [POL-018](#pol-018) | Catalog webpage URLs must resolve to reachable public HTML pages. | Whole repository | error |
 | [POL-019](#pol-019) | Catalog contact email domains must exist and advertise usable mail DNS records. | Whole repository | error |
@@ -32,7 +32,7 @@ Two escape hatches exist, and neither is a way to skip review:
 
 ## POL-008
 
-Files under agents/ and starter-kits/ must be source code, verified by content inspection.
+Files under agents/ and starter-kits/ must be source code or POL-016-compliant Markdown images, verified by content inspection.
 
 - **Applies to:** Every changed file
 - **Severity:** error
@@ -40,7 +40,7 @@ Files under agents/ and starter-kits/ must be source code, verified by content i
 
 **How to fix**
 
-Remove the binary from the PR. Compile or download it inside the tool's Dockerfile, or host it externally and reference it by URL. Model weights are the only exception and must satisfy POL-009.
+Remove the binary from the PR. Compile or download it inside the tool's Dockerfile, or host it externally and reference it by URL. Small Markdown images are permitted under POL-016; model weights must satisfy POL-009.
 
 Further reading: `docs/authoring-guides/agent-authoring-guide.md#no-binaries`
 
@@ -74,7 +74,7 @@ Further reading: `docs/authoring-guides/agent-authoring-guide.md#approved-file-t
 
 ## POL-016
 
-Image files under agents/ or starter-kits/ must contain the format their name claims, and SVGs must be free of active content.
+Images under agents/ or starter-kits/ must be safe Markdown formats, at most 1 MiB, and referenced by Markdown in the same catalog item.
 
 - **Applies to:** Every changed file
 - **Severity:** error
@@ -82,7 +82,7 @@ Image files under agents/ or starter-kits/ must contain the format their name cl
 
 **How to fix**
 
-Re-export the image in its declared format, or rename it to match what it actually contains. For SVG, remove scripts, event handler attributes, javascript: URIs, entity declarations, embedded documents, and remote references — the catalog accepts declarative artwork only.
+Use PNG, JPEG, GIF, WebP, or SVG; keep the file at or below 1 MiB; and embed it from Markdown in the same agent or starter-kit folder. Re-export the image if its content does not match its extension. For SVG, remove scripts, event handler attributes, javascript: URIs, entity declarations, embedded documents, and remote references — the catalog accepts declarative artwork only.
 
 Further reading: `docs/authoring-guides/agent-authoring-guide.md#images`
 

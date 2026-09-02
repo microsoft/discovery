@@ -103,7 +103,13 @@ extensions:
   - .off
   - .cml
 
-  # Vector graphics only — raster formats are binary and always rejected.
+  # Markdown review assets. POL-016 verifies content, limits each image to
+  # 1 MiB, and requires an embed from Markdown in the same catalog item.
+  - .png
+  - .jpg
+  - .jpeg
+  - .gif
+  - .webp
   - .svg
 
 # Exact filenames permitted regardless of extension.

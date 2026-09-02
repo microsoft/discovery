@@ -314,6 +314,12 @@ def test_validation_workflows_publish_actionable_diagnostics():
     )["with"]["script"]
     assert "**How to fix:** ${remediation(f)}" in feedback
     assert "**Guidance:** ${guidanceUrl(f)}" in feedback
+    assert "results.has_markdown_only" in feedback
+    assert "results.has_dockerfile" in feedback
+    assert "results.has_code" in feedback
+    assert "'markdown-only':             { color: '8250df'" in feedback
+    assert "'contains-dockerfile':       { color: '2496ed'" in feedback
+    assert "'contains-code':             { color: '1f883d'" in feedback
 
 
 def test_dependabot_covers_all_requirements_files():

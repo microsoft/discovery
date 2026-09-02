@@ -254,6 +254,21 @@ Your `README.md` must include all of these section headings:
 
 > Avoid placeholder markers (`TODO`, `FIXME`, `XXX`) in the README, `metadata.yaml`, or `agent.yaml` — they are blocked by the validator.
 
+### Images
+
+Documentation may include local **PNG, JPEG, GIF, WebP, or inert SVG** images.
+Each image must:
+
+- be no larger than **1 MiB**;
+- contain the format claimed by its extension;
+- be embedded from a Markdown file within the same agent folder (for example,
+  `![Architecture](media/architecture.png)`); and
+- for SVG, contain no scripts, event handlers, embedded documents, remote
+  resources, animation, or entity declarations.
+
+Unreferenced images and other binary formats are rejected. Compress or resize
+larger documentation images, or host them externally over HTTPS.
+
 ### Example skeleton
 
 ```markdown

@@ -32,14 +32,14 @@ SCH-036,Agent instruction size,Limits agent instructions to 32000 characters.,.g
 SCH-037,Deployment-time ACR placeholder,Requires tool images to use the {name}.azurecr.io deployment placeholder instead of a hardcoded registry.,.github/scripts/catalog_validation/schema_checks.py; docs/schemas/tool-definition-schema.json
 POL-004,Metadata description length,Requires agent descriptions to contain between 10 and 500 characters.,.github/scripts/catalog_validation/policy_checks.py
 POL-005,Agent README minimum size,Rejects agent README files smaller than 100 bytes.,.github/scripts/catalog_validation/policy_checks.py
-POL-008,Content-based binary prohibition,Blocks binary files under agents and starter-kits by inspecting content rather than trusting the extension.,.github/scripts/rules/pol_008.py; .github/scripts/content_sniffer.py
+POL-008,Content-based binary prohibition,Blocks binary files under agents and starter-kits by inspecting content rather than trusting the extension; approved documentation images are delegated to POL-016.,.github/scripts/rules/pol_008.py; .github/scripts/content_sniffer.py
 POL-009,Model weight safety,"Requires model weights to use Git LFS, remain within 5 GB, match their declared format, and pass pickle import checks where applicable.",.github/scripts/catalog_validation/policy_checks.py; .github/scripts/model_weights_sniffer.py
 POL-010,OS and editor artifact prohibition,Blocks hidden environment files and common OS or editor artifacts.,.github/scripts/catalog_validation/policy_checks.py
 POL-011,Generated registry integrity,Blocks hand edits to generated .auto-registry content except the trusted registry refresh bot flow.,.github/scripts/catalog_validation/policy_checks.py
 POL-012,Scratch artifact prohibition,Blocks deployer scratch content under agents/tmp and starter-kits/tmp.,.github/scripts/catalog_validation/policy_checks.py
 POL-014,Approved Docker base images,Requires Dockerfile base images to come from approved registries or publisher namespaces.,.github/scripts/rules/pol_014.py; .github/scripts/dockerfile_parser.py; .github/policy/base-images.yaml
 POL-015,Approved source file types,Requires contributed files to use an approved source extension filename or exempt directory.,.github/scripts/rules/pol_015.py; .github/policy/source-allowlist.yaml
-POL-016,Image and SVG safety,Requires images to match their filename format and rejects active or remote content in SVG files.,.github/scripts/rules/pol_016.py; .github/scripts/image_inspector.py
+POL-016,Markdown image safety,Allows PNG JPEG GIF WebP and inert SVG images up to 1 MiB only when embedded by Markdown in the same catalog item.,.github/scripts/rules/pol_016.py; .github/scripts/image_inspector.py
 POL-017,Pinned Docker base image tags,Warns when Dockerfile base images use floating tags instead of explicit versions.,.github/scripts/rules/pol_017.py; .github/scripts/dockerfile_parser.py
 POL-018,Public webpage reachability,"Requires governed catalog webpage URLs to use HTTPS, resolve only to public addresses, follow bounded redirects, and return HTML.",.github/scripts/rules/pol_018.py; .github/scripts/contact_network_validator.py; .github/policy/contact-network.json
 POL-019,Contact email domain DNS,Requires catalog contact domains to publish usable public mail or fallback DNS records.,.github/scripts/rules/pol_019.py; .github/scripts/contact_network_validator.py; .github/policy/contact-network.json
@@ -62,10 +62,11 @@ SKT-SCH-001,Starter-kit manifest schema,Validates kit.json against the starter-k
 SKT-STR-001,Starter-kit folder and name match,Requires kit.json name to equal its parent directory name.,.github/scripts/validate_starter_kits.py; .github/workflows/validate-starter-kits.yml
 SKT-STR-003,Single required primary agent,Requires exactly one agentRef with role primary and required true.,.github/scripts/validate_starter_kits.py; .github/workflows/validate-starter-kits.yml
 SKT-STR-006,Unique starter-kit agent references,Rejects duplicate agentRef ref values.,.github/scripts/validate_starter_kits.py; .github/workflows/validate-starter-kits.yml
-SKT-STR-008,Starter-kit folder contents,Requires a starter-kit folder to contain only kit.json.,.github/scripts/validate_starter_kits.py; .github/workflows/validate-starter-kits.yml
+SKT-STR-008,Starter-kit folder contents,Requires a starter-kit folder to contain only kit.json Markdown and approved Markdown image formats.,.github/scripts/validate_starter_kits.py; .github/workflows/validate-starter-kits.yml
 SKT-REF-001,Starter-kit agent reference integrity,Requires active starter-kit agent references to resolve in a dry-run agent registry and reports missing archived references as warnings.,.github/scripts/validate_starter_kits.py; .github/scripts/update_registry.py; .github/workflows/validate-starter-kits.yml
 SKT-POL-001,New starter-kit lifecycle,Requires newly added starter kits to use lifecycle active.,.github/scripts/validate_starter_kits.py; .github/workflows/validate-starter-kits.yml
 SKT-AST-001,Starter-kit remote asset URLs,Requires starter-kit logos and screenshots to use HTTPS URLs.,.github/scripts/validate_starter_kits.py; .github/workflows/validate-starter-kits.yml
+SKT-AST-002,Starter-kit local image safety,Requires local starter-kit images to be genuine at most 1 MiB and embedded by Markdown in the same kit.,.github/scripts/validate_starter_kits.py; .github/scripts/image_inspector.py; .github/workflows/validate-starter-kits.yml
 SKT-DUP-001,Globally unique starter-kit names,Rejects duplicate kit.json names across starter kits.,.github/scripts/validate_starter_kits.py; .github/workflows/validate-starter-kits.yml
 AS-001,Agent schema JSON syntax,Requires agent metadata tool and common schema files to be valid JSON.,.github/tests/test_schema_security.py
 AS-002,Agent schema Draft 7 validity,Requires agent metadata tool and common schemas to be valid JSON Schema Draft 7.,.github/tests/test_schema_security.py

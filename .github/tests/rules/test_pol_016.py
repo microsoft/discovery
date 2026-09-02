@@ -1,8 +1,7 @@
-"""POL-016 — image files must genuinely be the image they claim to be.
+"""POL-016 — documentation images must be safe, small, and referenced.
 
-Two failure families matter: a raster whose content contradicts its extension,
-and an SVG carrying active content. SVG gets the heavier coverage because it is
-the only image format accepted as source and the only one that can execute.
+The rule checks format integrity, approved web formats, size, Markdown
+reachability, and active SVG content.
 """
 
 from __future__ import annotations
@@ -11,6 +10,7 @@ import pytest
 from conftest import ELF_BYTES, PNG_BYTES, ZIP_BYTES, files, run_rule, write
 
 from rules.pol_016 import RULE
+from image_inspector import MAX_MARKDOWN_IMAGE_BYTES
 
 # Byte-exact minimal images, each with the end-of-file marker its format requires.
 VALID_PNG = (
@@ -34,6 +34,13 @@ CLEAN_SVG = (
 )
 
 
+def reference_image(repo, rel):
+    parts = rel.split("/")
+    owner = "/".join(parts[:2])
+    target = "/".join(parts[2:])
+    write(repo, f"{owner}/README.md", f"# Documentation\n\n![Diagram]({target})\n")
+
+
 # ── Valid images pass ────────────────────────────────────────────────────────
 
 @pytest.mark.parametrize("rel,payload", [
@@ -42,18 +49,90 @@ CLEAN_SVG = (
     ("agents/demo/img.jpeg", VALID_JPEG),
     ("agents/demo/img.gif", VALID_GIF),
     ("agents/demo/img.webp", VALID_WEBP),
-    ("agents/demo/img.bmp", VALID_BMP),
-    ("agents/demo/img.ico", VALID_ICO),
-    ("agents/demo/img.tiff", VALID_TIFF),
 ])
 def test_matching_raster_content_passes(repo, rel, payload):
     write(repo, rel, payload)
+    reference_image(repo, rel)
     result = run_rule(repo, RULE, [rel])
     assert result.findings == []
 
 
 def test_clean_svg_passes(repo):
     rel = write(repo, "agents/demo/diagram.svg", CLEAN_SVG)
+    reference_image(repo, rel)
+    result = run_rule(repo, RULE, [rel])
+    assert result.findings == []
+
+
+def test_orphaned_image_is_blocked(repo):
+    rel = write(repo, "agents/demo/img.png", VALID_PNG)
+    result = run_rule(repo, RULE, [rel])
+    assert files(result) == [rel]
+    assert "not embedded by Markdown" in result.findings[0].message
+
+
+def test_oversized_image_is_blocked(repo):
+    rel = write(
+        repo,
+        "agents/demo/img.png",
+        VALID_PNG[:-8] + b"x" * MAX_MARKDOWN_IMAGE_BYTES + b"IEND\xaeB`\x82",
+    )
+    reference_image(repo, rel)
+    result = run_rule(repo, RULE, [rel])
+    assert files(result) == [rel]
+    assert "1 MiB" in result.findings[0].message
+
+
+def test_non_markdown_image_format_is_blocked(repo):
+    rel = write(repo, "agents/demo/img.bmp", VALID_BMP)
+    reference_image(repo, rel)
+    result = run_rule(repo, RULE, [rel])
+    assert files(result) == [rel]
+    assert "not an approved Markdown image format" in result.findings[0].message
+
+
+def test_nested_image_can_be_referenced_from_nested_markdown(repo):
+    rel = write(repo, "agents/demo/media/diagram.png", VALID_PNG)
+    write(repo, "agents/demo/docs/usage.md", "![Diagram](../media/diagram.png)\n")
+    result = run_rule(repo, RULE, [rel])
+    assert result.findings == []
+
+
+def test_uppercase_markdown_extension_can_reference_image(repo):
+    rel = write(repo, "agents/demo/media/diagram.png", VALID_PNG)
+    write(repo, "agents/demo/ARCHITECTURE.MD", "![Diagram](media/diagram.png)\n")
+    result = run_rule(repo, RULE, [rel])
+    assert result.findings == []
+
+
+def test_reference_style_markdown_image_passes(repo):
+    rel = write(repo, "agents/demo/media/diagram.png", VALID_PNG)
+    write(repo, "agents/demo/README.md", "![Diagram][architecture]\n\n[architecture]: media/diagram.png\n")
+    result = run_rule(repo, RULE, [rel])
+    assert result.findings == []
+
+
+def test_html_image_reference_passes(repo):
+    rel = write(repo, "agents/demo/media/diagram.webp", VALID_WEBP)
+    write(repo, "agents/demo/README.md", '<img src="media/diagram.webp" alt="Diagram">\n')
+    result = run_rule(repo, RULE, [rel])
+    assert result.findings == []
+
+
+def test_reference_from_another_catalog_item_does_not_pass(repo):
+    rel = write(repo, "agents/demo/diagram.png", VALID_PNG)
+    write(repo, "agents/other/README.md", "![Wrong owner](../demo/diagram.png)\n")
+    result = run_rule(repo, RULE, [rel])
+    assert files(result) == [rel]
+
+
+def test_starter_kit_long_description_can_reference_image(repo):
+    rel = write(repo, "starter-kits/demo/media/diagram.png", VALID_PNG)
+    write(
+        repo,
+        "starter-kits/demo/kit.json",
+        '{"longDescription": "# Demo\\n\\n![Diagram](media/diagram.png)"}\n',
+    )
     result = run_rule(repo, RULE, [rel])
     assert result.findings == []
 
@@ -186,6 +265,7 @@ def test_svg_attributes_resembling_handlers_are_not_flagged(repo, attr):
         "</svg>\n"
     )
     rel = write(repo, "agents/demo/ok.svg", body)
+    reference_image(repo, rel)
     result = run_rule(repo, RULE, [rel])
     assert result.findings == []
 
