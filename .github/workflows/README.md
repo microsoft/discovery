@@ -1,4 +1,32 @@
-# Release refresh automation
+# GitHub workflow automation
+
+## Pull request maintenance
+
+[`stale-pr-maintenance.yml`](stale-pr-maintenance.yml) runs daily and can also
+be run manually in dry-run mode. It intentionally avoids a blanket stale rule:
+healthy ready-for-review pull requests are not closed just because they are
+quiet, since the repository may owe the contributor a review.
+
+The workflow warns inactive PRs before taking action. A PR with failed checks
+receives 7 days of notice before closure at 30 inactive days. A draft whose
+checks are not failing receives 14 days of notice before closure at 90 inactive
+days. Human commits, comments, reviews, and PR edits reset the clock; bot
+activity does not. Bot-authored and `maintenance: keep-open` PRs are exempt.
+
+Maintainers can also make an explicit closure decision by applying one of
+`close: duplicate`, `close: superseded`, `close: withdrawn`, or
+`close: out-of-scope`. The workflow supplies a respectful standard comment and
+closes the PR. These labels should only be applied after the reason has been
+communicated; `close: withdrawn` is for an author's request. See the
+[contributor-facing policy](../../CONTRIBUTING.md#pull-request-maintenance) for
+the complete rules and reopening guidance.
+
+To preview a sweep, use Actions → **Stale PR Maintenance** → **Run workflow**
+with `dry_run: true` (the manual default). Scheduled runs always apply changes.
+
+---
+
+## Release workflows
 
 Three workflows work together to keep the mutable `current` tag, the
 `Discovery-app-preview-release` GitHub Release, and the download table in

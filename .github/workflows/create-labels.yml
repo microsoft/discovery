@@ -29,6 +29,13 @@ jobs:
               { name: 'needs-human-review',      color: '0075ca', description: 'Awaiting human approval' },
               { name: 'ready-for-auto-merge',    color: '0e8a16', description: 'All gates green — will be auto-merged' },
               { name: 'checks-in-progress',      color: 'ededed', description: 'One or more required status checks are still running on this PR. Removed automatically once all checks have reported.' },
+              // ── Pull-request maintenance labels ──
+              { name: 'maintenance: stale',      color: 'fbca04', description: 'Inactive PR is in its notice period before automated closure' },
+              { name: 'maintenance: keep-open',  color: '0e8a16', description: 'Exempt this PR from inactivity-based automated closure' },
+              { name: 'close: duplicate',        color: 'd4c5f9', description: 'Maintainer decision: close as duplicate with an automated explanation' },
+              { name: 'close: superseded',       color: 'd4c5f9', description: 'Maintainer decision: close because newer work supersedes this PR' },
+              { name: 'close: withdrawn',        color: 'd4c5f9', description: 'Close automatically after the author asks to withdraw the PR' },
+              { name: 'close: out-of-scope',     color: 'd4c5f9', description: 'Maintainer decision: close because the change is outside repository scope' },
               // ── Discussion-template labels ──
               { name: 'bug',                     color: 'd73a4a', description: 'Bug report (Discussions → Bugs template)' },
               { name: 'idea',                    color: 'a2eeef', description: 'Feature idea / proposal (Discussions → Ideas template)' },

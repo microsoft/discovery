@@ -1,0 +1,281 @@
+name: Stale PR Maintenance
+
+# This workflow deliberately does not close every inactive PR. A quiet PR may
+# be waiting on maintainers, especially when the author is a volunteer.
+# Automatic age-based closure is limited to failed PRs and long-idle drafts.
+
+on:
+  schedule:
+    - cron: "17 9 * * *"
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: Report actions without changing pull requests
+        required: false
+        default: true
+        type: boolean
+
+permissions:
+  contents: read
+  pull-requests: write
+  issues: write
+  checks: read
+  statuses: read
+
+concurrency:
+  group: stale-pr-maintenance
+  cancel-in-progress: false
+
+jobs:
+  maintain:
+    name: Review inactive pull requests
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Evaluate open pull requests
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
+        env:
+          DRY_RUN: ${{ github.event_name == 'workflow_dispatch' && inputs.dry_run || false }}
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+            const dryRun = process.env.DRY_RUN === 'true';
+            const day = 24 * 60 * 60 * 1000;
+            const now = Date.now();
+            const warningLabel = 'maintenance: stale';
+            const exemptLabel = 'maintenance: keep-open';
+            const warningMarker = '<!-- stale-pr-maintenance:warning';
+
+            // These labels are an explicit maintainer decision, not a decision
+            // inferred by automation. The first matching label wins.
+            const closeReasons = new Map([
+              ['close: duplicate', {
+                reason: 'duplicate',
+                message: 'A maintainer marked this pull request as a duplicate of work already being tracked elsewhere.'
+              }],
+              ['close: superseded', {
+                reason: 'superseded',
+                message: 'A maintainer marked this pull request as superseded by newer work.'
+              }],
+              ['close: withdrawn', {
+                reason: 'withdrawn',
+                message: 'This pull request is being closed after the author asked to withdraw it.'
+              }],
+              ['close: out-of-scope', {
+                reason: 'out-of-scope',
+                message: 'A maintainer marked this change as outside this repository’s contribution scope.'
+              }],
+            ]);
+
+            const failedConclusions = new Set([
+              'failure', 'cancelled', 'timed_out', 'action_required',
+              'startup_failure'
+            ]);
+
+            function isBot(user) {
+              const login = user?.login || '';
+              return user?.type === 'Bot' || login.endsWith('[bot]') || login === 'github-actions';
+            }
+
+            function daysSince(date) {
+              return Math.floor((now - new Date(date).getTime()) / day);
+            }
+
+            async function mutate(description, operation) {
+              if (dryRun) {
+                core.info(`[dry-run] ${description}`);
+                return;
+              }
+              await operation();
+            }
+
+            async function setWarningLabel(number, present, labels) {
+              const hasLabel = labels.has(warningLabel);
+              if (present && !hasLabel) {
+                await mutate(`add "${warningLabel}" to #${number}`, () =>
+                  github.rest.issues.addLabels({ owner, repo, issue_number: number, labels: [warningLabel] }));
+              } else if (!present && hasLabel) {
+                await mutate(`remove "${warningLabel}" from #${number}`, async () => {
+                  try {
+                    await github.rest.issues.removeLabel({ owner, repo, issue_number: number, name: warningLabel });
+                  } catch (error) {
+                    if (error.status !== 404) throw error;
+                  }
+                });
+              }
+            }
+
+            async function comment(number, body) {
+              await mutate(`comment on #${number}`, () =>
+                github.rest.issues.createComment({ owner, repo, issue_number: number, body }));
+            }
+
+            async function close(number, body) {
+              await comment(number, body);
+              await mutate(`close #${number}`, () =>
+                github.rest.pulls.update({ owner, repo, pull_number: number, state: 'closed' }));
+            }
+
+            async function loadActivity(pr) {
+              const [comments, reviews, reviewComments, commits, editData] = await Promise.all([
+                github.paginate(github.rest.issues.listComments, {
+                  owner, repo, issue_number: pr.number, per_page: 100
+                }),
+                github.paginate(github.rest.pulls.listReviews, {
+                  owner, repo, pull_number: pr.number, per_page: 100
+                }),
+                github.paginate(github.rest.pulls.listReviewComments, {
+                  owner, repo, pull_number: pr.number, per_page: 100
+                }),
+                github.paginate(github.rest.pulls.listCommits, {
+                  owner, repo, pull_number: pr.number, per_page: 100
+                }),
+                github.graphql(`
+                  query($owner: String!, $repo: String!, $number: Int!) {
+                    repository(owner: $owner, name: $repo) {
+                      pullRequest(number: $number) { lastEditedAt }
+                    }
+                  }
+                `, { owner, repo, number: pr.number }),
+              ]);
+
+              const humanDates = [pr.created_at];
+              if (editData.repository.pullRequest.lastEditedAt) {
+                humanDates.push(editData.repository.pullRequest.lastEditedAt);
+              }
+              for (const item of comments) {
+                if (!isBot(item.user)) humanDates.push(item.created_at);
+              }
+              for (const item of reviews) {
+                if (!isBot(item.user) && item.submitted_at) humanDates.push(item.submitted_at);
+              }
+              for (const item of reviewComments) {
+                if (!isBot(item.user)) humanDates.push(item.created_at);
+              }
+              for (const item of commits) {
+                // Commits without a linked GitHub account are treated as human.
+                if (!item.author || !isBot(item.author)) {
+                  humanDates.push(item.commit.committer?.date || item.commit.author?.date);
+                }
+              }
+
+              const latestActivity = humanDates.filter(Boolean).sort().at(-1);
+              return { comments, latestActivity };
+            }
+
+            async function hasFailedChecks(pr) {
+              const [checks, status] = await Promise.all([
+                github.paginate(github.rest.checks.listForRef, {
+                  owner, repo, ref: pr.head.sha, filter: 'latest', per_page: 100
+                }),
+                github.rest.repos.getCombinedStatusForRef({
+                  owner, repo, ref: pr.head.sha, per_page: 100
+                }),
+              ]);
+              return status.data.state === 'failure' ||
+                checks.some(run => failedConclusions.has(run.conclusion));
+            }
+
+            const managedLabels = [
+              { name: warningLabel, color: 'fbca04', description: 'Inactive PR is in its notice period before automated closure' },
+              { name: exemptLabel, color: '0e8a16', description: 'Exempt this PR from inactivity-based automated closure' },
+              { name: 'close: duplicate', color: 'd4c5f9', description: 'Maintainer decision: close as duplicate with an automated explanation' },
+              { name: 'close: superseded', color: 'd4c5f9', description: 'Maintainer decision: close because newer work supersedes this PR' },
+              { name: 'close: withdrawn', color: 'd4c5f9', description: 'Close automatically after the author asks to withdraw the PR' },
+              { name: 'close: out-of-scope', color: 'd4c5f9', description: 'Maintainer decision: close because the change is outside repository scope' },
+            ];
+            for (const label of managedLabels) {
+              await mutate(`ensure label "${label.name}" exists`, async () => {
+                try {
+                  await github.rest.issues.updateLabel({
+                    owner, repo, name: label.name, color: label.color,
+                    description: label.description
+                  });
+                } catch (error) {
+                  if (error.status !== 404) throw error;
+                  await github.rest.issues.createLabel({ owner, repo, ...label });
+                }
+              });
+            }
+
+            const pulls = await github.paginate(github.rest.pulls.list, {
+              owner, repo, state: 'open', sort: 'created', direction: 'asc', per_page: 100
+            });
+            core.info(`Evaluating ${pulls.length} open pull request(s); dry_run=${dryRun}.`);
+
+            for (const pr of pulls) {
+              try {
+                const labels = new Set(pr.labels.map(label => label.name));
+                const explicitReason = [...closeReasons].find(([label]) => labels.has(label));
+
+                if (explicitReason) {
+                  const [, details] = explicitReason;
+                  await close(pr.number,
+                    `${details.message}\n\n` +
+                    `This is an automated maintenance close based on the \`${explicitReason[0]}\` label. ` +
+                    'Thank you for the time you put into the contribution. If the label was applied in error, ' +
+                    'please comment and a maintainer can reopen the pull request.');
+                  continue;
+                }
+
+                if (labels.has(exemptLabel) || isBot(pr.user)) {
+                  await setWarningLabel(pr.number, false, labels);
+                  core.info(`#${pr.number}: exempt or bot-authored; skipped.`);
+                  continue;
+                }
+
+                const { comments, latestActivity } = await loadActivity(pr);
+                const inactiveDays = daysSince(latestActivity);
+                const failed = await hasFailedChecks(pr);
+                const policy = failed
+                  ? { reason: 'failed-checks', warnAfter: 23, closeAfter: 30, grace: 7 }
+                  : pr.draft
+                    ? { reason: 'draft', warnAfter: 76, closeAfter: 90, grace: 14 }
+                    : null;
+
+                if (!policy || inactiveDays < policy.warnAfter) {
+                  await setWarningLabel(pr.number, false, labels);
+                  core.info(`#${pr.number}: no closure policy applies (inactive ${inactiveDays} day(s)).`);
+                  continue;
+                }
+
+                const marker = `${warningMarker} reason=${policy.reason} -->`;
+                const warning = comments
+                  .filter(item => item.body?.includes(marker))
+                  .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))[0];
+                const warningIsCurrent = warning &&
+                  new Date(warning.created_at) >= new Date(latestActivity);
+
+                if (inactiveDays >= policy.closeAfter && warningIsCurrent &&
+                    daysSince(warning.created_at) >= policy.grace) {
+                  const reasonText = policy.reason === 'draft'
+                    ? `it has remained a draft without human activity for ${inactiveDays} days`
+                    : `its latest checks are failing and it has had no human activity for ${inactiveDays} days`;
+                  await close(pr.number,
+                    `This pull request is being closed automatically because ${reasonText}. ` +
+                    `A warning was left at least ${policy.grace} days ago.\n\n` +
+                    'Thank you for contributing. Closing is housekeeping, not a judgment on the idea or the work. ' +
+                    'When you have time to continue, please comment and a maintainer can reopen this pull request, ' +
+                    'or open a fresh pull request if that is easier.');
+                  continue;
+                }
+
+                if (!warningIsCurrent) {
+                  const reasonText = policy.reason === 'draft'
+                    ? `This draft has had no human activity for ${inactiveDays} days.`
+                    : `The latest checks are failing, and this pull request has had no human activity for ${inactiveDays} days.`;
+                  await comment(pr.number,
+                    `${marker}\n${reasonText} If there is no new human activity, it may be closed after ` +
+                    `${policy.closeAfter} inactive days, with at least ${policy.grace} days of notice.\n\n` +
+                    'Any commit, review, or non-bot comment resets the inactivity clock. If more time is needed, ' +
+                    `a maintainer can apply the \`${exemptLabel}\` label. We appreciate the contribution and ` +
+                    'understand that volunteer availability changes.');
+                }
+                await setWarningLabel(pr.number, true, labels);
+              } catch (error) {
+                core.error(`#${pr.number}: ${error.stack || error.message}`);
+                core.setFailed(`Failed while evaluating pull request #${pr.number}.`);
+              }
+            }
