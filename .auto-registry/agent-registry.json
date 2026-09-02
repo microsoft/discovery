@@ -1,6 +1,6 @@
 {
   "version": "1.0",
-  "generated_at": "2026-06-01T21:28:53Z",
+  "generated_at": "2026-09-02T22:11:39Z",
   "entries": [
     {
       "name": "aizynthfinder",
@@ -792,6 +792,27 @@
       ]
     },
     {
+      "name": "synthesize-bio",
+      "type": "agent",
+      "publisher_name": "Synthesize Bio",
+      "path": "agents/synthesize-bio",
+      "version": "1.0.0",
+      "associated_tools": [],
+      "foundry_tools": [
+        "synthesize_bio"
+      ],
+      "supported_regions": [],
+      "description": "Generate gene expression from a virtual human. Describe any experiment \u2014 \"tumor vs normal lung tissue\" or \"KRAS knockout vs control\" \u2014 and Synthesize Bio generates realistic human expression profiles using its Gene Expression Model (GEM). Supports bulk and single-cell RNA-seq modalities.\n",
+      "tags": [
+        "life-sciences",
+        "bioinformatics",
+        "transcriptomics",
+        "gene-expression",
+        "rna-seq",
+        "single-cell"
+      ]
+    },
+    {
       "name": "tamgen",
       "type": "agent",
       "publisher_name": "Microsoft",
@@ -830,6 +851,24 @@
         "trained-model",
         "d-mpnn",
         "property-prediction"
+      ]
+    },
+    {
+      "name": "wiley-nexus",
+      "type": "agent",
+      "publisher_name": "Wiley Applied Research Intelligence Team",
+      "path": "agents/wiley-nexus",
+      "version": "1.0.0",
+      "associated_tools": [],
+      "foundry_tools": [],
+      "supported_regions": [],
+      "description": "Answers scientific and technical questions from Wiley's peer-reviewed scholarly corpus via the Wiley Nexus MCP server. Surveys published evidence from multiple angles, reads key publications in full, and returns a citation-backed synthesis with IEEE references linked to Wiley Online Library, then handles follow-ups in the same conversation. Includes an optional three-agent Discovery Engine pipeline for per-paper full-text analysis. Requires a Wiley Nexus API key.\n",
+      "tags": [
+        "literature-review",
+        "research",
+        "full-text-analysis",
+        "scholarly-publishing",
+        "evidence-synthesis"
       ]
     },
     {

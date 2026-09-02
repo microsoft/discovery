@@ -1,7 +1,7 @@
 {
   "schemaVersion": "1.0.0",
-  "generatedAt": "2026-06-01T21:28:53Z",
-  "commitSha": "d2ff53289094dfe60841dbfecdf412ee2495036c",
+  "generatedAt": "2026-09-02T22:11:39Z",
+  "commitSha": "29f306333110ccb8976a29fd45348bb3e0bc50f6",
   "kits": [
     {
       "$schema": "../../docs/schemas/starter-kit-schema.json",
@@ -413,7 +413,7 @@
       },
       "availability": "healthy",
       "missingAgents": [],
-      "computedAt": "2026-06-01T21:28:53Z",
+      "computedAt": "2026-09-02T22:11:39Z",
       "kitPath": "starter-kits/chemistry-and-materials"
     },
     {
@@ -529,7 +529,7 @@
       },
       "availability": "healthy",
       "missingAgents": [],
-      "computedAt": "2026-06-01T21:28:53Z",
+      "computedAt": "2026-09-02T22:11:39Z",
       "kitPath": "starter-kits/chip-synthesis-timing"
     },
     {
@@ -946,7 +946,7 @@
       },
       "availability": "healthy",
       "missingAgents": [],
-      "computedAt": "2026-06-01T21:28:53Z",
+      "computedAt": "2026-09-02T22:11:39Z",
       "kitPath": "starter-kits/life-sciences"
     },
     {
@@ -1024,7 +1024,7 @@
       },
       "availability": "healthy",
       "missingAgents": [],
-      "computedAt": "2026-06-01T21:28:53Z",
+      "computedAt": "2026-09-02T22:11:39Z",
       "kitPath": "starter-kits/physics-cfd-sim"
     }
   ]
