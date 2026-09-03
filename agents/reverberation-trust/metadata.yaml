@@ -4,7 +4,7 @@ version: 1.0.0
 associated_tools:
   - agents/reverberation-trust/tools/reverberation-trust
 publisher:
-  name: Parallax
+  name: Microsoft Discovery
   contact: jhaole@microsoft.com
   support_url: https://github.com/microsoft/discovery/discussions/categories/bugs
   party: 1p

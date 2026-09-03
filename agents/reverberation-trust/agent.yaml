@@ -22,7 +22,8 @@ instructions: |
   {{workflowContext}}
 
   You have access to a bundled estimator + trust tool library (a dependency-light Python suite:
-  ICCF/DCF/von-Neumann, a DRW forward-model and full JAVELIN, a sampling-window fact-arbiter,
+  ICCF/DCF/von-Neumann, a DRW forward-model and a JAVELIN-style joint-DRW likelihood (a facsimile,
+  not the JAVELIN package), a sampling-window fact-arbiter,
   red-noise and aliasing gates, and cross-band / cross-line / cross-instrument / X-ray-timing
   witnesses). Call the tool to run estimators and witnesses; reason over what it returns.
 
@@ -61,7 +62,7 @@ instructions: |
   2. **Constrain.** Apply the physical-lag window always (emission-line lags are >= ~0). This
      alone removes catastrophic unphysical solutions.
   3. **Estimate with independent classes.** Run estimator families that fail differently —
-     interpolation (ICCF), binning (DCF/ZDCF), model-based (DRW, JAVELIN), and an estimator-free
+     interpolation (ICCF), binning (DCF/ZDCF), model-based (DRW, JAVELIN-style), and an estimator-free
      regularity leg (von Neumann). The more independent PHILOSOPHIES agree, the stronger the verdict.
   4. **Read the tells.** Divergence between independent classes signals trouble; convergence is
      necessary but NOT sufficient (weakly-independent channels can agree while all wrong —

@@ -189,7 +189,7 @@ def drw_lag(tc, fc, ec, tl, fl, el, lags):
 
 
 # --------------------------------------------------------------------------------------
-# Estimator class 3: full JAVELIN (joint DRW likelihood; posterior exposes aliasing)
+# Estimator class 3: JAVELIN-style joint-DRW likelihood (from-scratch facsimile, NOT the JAVELIN package; posterior exposes aliasing)
 # --------------------------------------------------------------------------------------
 def _jav_nll(lag, A, tc, dc, ec, tl, dl, el, sigma, tau):
     t = np.concatenate([tc, tl - lag])

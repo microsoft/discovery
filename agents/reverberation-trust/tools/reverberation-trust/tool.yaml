@@ -1,7 +1,8 @@
 name: reverberation-trust
 description: >
   Reverberation-mapping trust toolkit for AGN continuum-to-line time lags. Provides independent
-  lag estimators (interpolated CCF with FR/RSS, a DRW forward-model, and full JAVELIN), a
+  lag estimators (interpolated CCF with FR/RSS, a DRW forward-model, and a JAVELIN-style joint-DRW
+  likelihood — a from-scratch facsimile, not the JAVELIN package), a
   sampling-fact arbiter that breaks estimator ties with the observing schedule rather than more
   estimators, verification gates (physical-lag window, red-noise false-alarm probability,
   aliasing/multimodality), independent Look/Channel witnesses, and a TrustState confidence
