@@ -179,20 +179,27 @@ jobs:
           BASE_REPOSITORY: ${{ github.event.pull_request.base.repo.full_name }}
           HEAD_REPOSITORY: ${{ github.event.pull_request.head.repo.full_name }}
         run: |
-          # Install TruffleHog directly — avoids org-level action allowlist restrictions
-          curl -sSfL https://raw.githubusercontent.com/trufflesecurity/trufflehog/main/scripts/install.sh \
-            | sh -s -- -b /usr/local/bin
+          # Install a pinned TruffleHog release from its immutable installer.
+          # Pinning both prevents upstream changes from silently breaking every
+          # PR and lets the installer verify the release checksum.
+          curl -sSfL https://raw.githubusercontent.com/trufflesecurity/trufflehog/cc1fe982afc515d2991365ce8d4d0dd07170fcad/scripts/install.sh \
+            | sh -s -- -b /usr/local/bin v3.97.2
 
           # Fetch Git objects without checking out PR-controlled files. No
           # privileged token or persisted credentials are exposed to the clone.
-          git init --bare /tmp/pr-history.git
-          git -C /tmp/pr-history.git fetch --no-tags \
+          # TruffleHog requires a work-tree repository with a .git directory;
+          # it also reads the index and clones reachable refs internally. An
+          # empty index plus temporary refs satisfy those requirements while
+          # still avoiding a checkout of untrusted content.
+          git init /tmp/pr-history
+          git -C /tmp/pr-history read-tree --empty
+          git -C /tmp/pr-history fetch --no-tags \
             "https://github.com/${BASE_REPOSITORY}.git" \
-            "$BASE_SHA"
-          git -C /tmp/pr-history.git fetch --no-tags \
+            "$BASE_SHA:refs/heads/trufflehog-base"
+          git -C /tmp/pr-history fetch --no-tags \
             "https://github.com/${HEAD_REPOSITORY}.git" \
-            "$HEAD_SHA"
-          trufflehog git file:///tmp/pr-history.git \
+            "$HEAD_SHA:refs/heads/trufflehog-head"
+          trufflehog git file:///tmp/pr-history \
             --since-commit "$BASE_SHA" \
             --branch "$HEAD_SHA" \
             --only-verified \
@@ -212,7 +219,7 @@ jobs:
           # it produces an artefact so reviewers can spot dummy keys / leaked
           # placeholders that the verified scan deliberately ignores.
           set +e
-          trufflehog git file:///tmp/pr-history.git \
+          trufflehog git file:///tmp/pr-history \
             --since-commit "$BASE_SHA" \
             --branch "$HEAD_SHA" \
             --json \
