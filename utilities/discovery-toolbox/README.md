@@ -4,7 +4,7 @@
 
 Microsoft Discovery is the AI for Science platform that enables agentic-driven scientific research and development. Discovery Toolbox provides an end-to-end deployment and management experience — including instantiation of agents, tools, models, knowledge bases (Bookshelves), and the supercomputer compute pool — plus subscription-wide resource inventory with cascade tear-down, declarative validation plans, live agent chat, and a `@discovery` chat participant for natural-language operations.
 
-**Current version:** `v1.7.20`
+**Current version:** `v1.7.22`
 
 ---
 
@@ -95,4 +95,4 @@ Found a bug, want a feature, or have general feedback? Open an issue on the [mic
 
 ---
 
-<sub>Published version **v1.7.20** &middot; built from `bc42237` on 2026-09-02T23:30:08.966Z.</sub>
+<sub>Published version **v1.7.22** &middot; built from `524c849` on 2026-09-03T22:41:40.889Z.</sub>
