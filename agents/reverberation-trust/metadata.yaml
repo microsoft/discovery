@@ -1,0 +1,21 @@
+name: reverberation-trust
+type: agent
+version: 1.0.0
+associated_tools:
+  - agents/reverberation-trust/tools/reverberation-trust
+publisher:
+  name: Parallax
+  contact: jhaole@microsoft.com
+  support_url: https://github.com/microsoft/discovery/discussions/categories/bugs
+  party: 1p
+description: >
+  Reverberation-mapping trust agent for AGN continuum-to-line time lags. Given a lag and its
+  light curves, it returns a calibrated trust verdict — the lag, a confidence tier, and the
+  reasoning — by cross-checking independent estimators, arbitrating their disagreement with
+  sampling facts (not more estimators), and corroborating with independent Look and Channel
+  witnesses. Triages a flood of lags: auto-certify the trustworthy, route the rest to humans.
+tags:
+  - reverberation-mapping
+  - time-series
+  - trust-triage
+  - astronomy
