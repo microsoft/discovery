@@ -185,14 +185,14 @@ jobs:
 
           # Fetch Git objects without checking out PR-controlled files. No
           # privileged token or persisted credentials are exposed to the clone.
-          git init --bare /tmp/pr-history.git
-          git -C /tmp/pr-history.git fetch --no-tags \
+          git init /tmp/pr-history
+          git -C /tmp/pr-history fetch --no-tags \
             "https://github.com/${BASE_REPOSITORY}.git" \
             "$BASE_SHA"
-          git -C /tmp/pr-history.git fetch --no-tags \
+          git -C /tmp/pr-history fetch --no-tags \
             "https://github.com/${HEAD_REPOSITORY}.git" \
             "$HEAD_SHA"
-          trufflehog git file:///tmp/pr-history.git \
+          trufflehog git file:///tmp/pr-history \
             --since-commit "$BASE_SHA" \
             --branch "$HEAD_SHA" \
             --only-verified \
@@ -212,7 +212,7 @@ jobs:
           # it produces an artefact so reviewers can spot dummy keys / leaked
           # placeholders that the verified scan deliberately ignores.
           set +e
-          trufflehog git file:///tmp/pr-history.git \
+          trufflehog git file:///tmp/pr-history \
             --since-commit "$BASE_SHA" \
             --branch "$HEAD_SHA" \
             --json \
