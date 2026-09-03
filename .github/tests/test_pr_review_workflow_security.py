@@ -30,7 +30,7 @@ def test_untrusted_jobs_do_not_checkout_before_shell_execution():
 
     secret_steps = workflow["jobs"]["secret-scan"]["steps"]
     assert not any(is_checkout(step) for step in secret_steps)
-    assert "git init --bare" in secret_steps[0]["run"]
+    assert "git init /tmp/pr-history" in secret_steps[0]["run"]
 
 
 def test_only_reporting_job_has_write_permissions():

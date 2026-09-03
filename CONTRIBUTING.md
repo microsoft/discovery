@@ -59,6 +59,34 @@ Code contributions to the Microsoft Discovery app itself — its plugin, MCP too
 4. Automated checks will run on your PR. If anything fails, the bot adds an inline comment with the rule ID and how to fix it — address every finding before requesting human review.
 5. When the pr-review validator passes, the `pr-validation-passed` label is applied and the [CODEOWNERS](.github/CODEOWNERS) maintainers are auto-requested for review. Other status checks (unit tests, schema regression, etc.) report independently — see the PR status rollup for the full picture. **One CODEOWNERS approval** is required to merge.
 
+### Pull request maintenance
+
+We do not close a pull request merely because it is quiet. A contribution may
+be waiting on maintainer review, and contributors may be volunteering their
+time. The daily maintenance workflow uses these narrower rules:
+
+- A pull request whose latest checks are failing is warned after 23 days
+	without human activity. It may be closed after 30 inactive days, but
+	only after at least 7 days of notice.
+- A draft pull request is warned after 76 days without human activity. It may
+	be closed after 90 inactive days, but only after at least 14 days of notice.
+- A commit, review, pull request edit, or non-bot comment resets the inactivity
+	clock. Automation comments do not keep a pull request alive artificially.
+- Bot-authored pull requests are left to their own update automation. A
+	maintainer can apply `maintenance: keep-open` whenever a contributor needs
+	more time or there is a reason to preserve the pull request.
+- Maintainers may apply an explicit `close: duplicate`, `close: superseded`,
+	`close: withdrawn`, or `close: out-of-scope` label after communicating the
+	reason. The workflow then closes the pull request with a standard explanatory
+	comment. `close: withdrawn` is reserved for an author's request.
+
+Automated closure is housekeeping, not a rejection of the contributor or the
+idea. Contributors may comment to ask that a pull request be reopened, or open
+a fresh pull request when they are ready. Merge conflicts, an out-of-date
+branch, or inactivity on an otherwise healthy ready-for-review pull request are
+not automatic closure reasons; maintainers share responsibility for moving
+those contributions forward.
+
 ### Required files
 
 #### For an agent (`agents/<agent-name>/`)
