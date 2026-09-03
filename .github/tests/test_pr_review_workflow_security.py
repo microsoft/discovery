@@ -30,7 +30,27 @@ def test_untrusted_jobs_do_not_checkout_before_shell_execution():
 
     secret_steps = workflow["jobs"]["secret-scan"]["steps"]
     assert not any(is_checkout(step) for step in secret_steps)
-    assert "git init --bare" in secret_steps[0]["run"]
+    command = secret_steps[0]["run"]
+    assert "git init /tmp/pr-history" in command
+    assert "git init --bare" not in command
+    assert "git -C /tmp/pr-history read-tree --empty" in command
+    assert '"$BASE_SHA:refs/heads/trufflehog-base"' in command
+    assert '"$HEAD_SHA:refs/heads/trufflehog-head"' in command
+    assert "trufflehog git file:///tmp/pr-history" in command
+
+
+def test_trufflehog_install_and_repository_layout_are_stable():
+    workflow = load_workflow()
+    command = workflow["jobs"]["secret-scan"]["steps"][0]["run"]
+
+    assert (
+        "trufflesecurity/trufflehog/"
+        "cc1fe982afc515d2991365ce8d4d0dd07170fcad/scripts/install.sh"
+        in command
+    )
+    assert "sh -s -- -b /usr/local/bin v3.97.2" in command
+    assert "trufflesecurity/trufflehog/main/scripts/install.sh" not in command
+    assert "/tmp/pr-history.git" not in command
 
 
 def test_only_reporting_job_has_write_permissions():
