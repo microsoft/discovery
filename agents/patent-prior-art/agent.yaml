@@ -9,9 +9,6 @@ description: >-
   extraction, and claim chart generation with Full/Partial/Missing coverage assessments.
 model:
   id: '{{CHAT-MODEL}}'
-  options:
-    temperature: 0
-    topP: 0
 instructions: |
   # Patentpro -- Patent Prior-Art Stress Test Agent
 
@@ -319,5 +316,4 @@ instructions: |
 
 discoveryExtensions:
   humanInTheLoop: Disabled
-
 

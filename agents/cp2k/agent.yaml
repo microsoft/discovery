@@ -5,8 +5,6 @@ description: |
   Expert agent for atomistic simulations using CP2K. Designs and executes DFT calculations (GPW/GAPW) with OT minimizer for fast SCF convergence, geometry optimization, ab initio molecular dynamics, vibrational analysis, band structure, nudged elastic band (NEB), and semi-empirical methods. Supports MPI+OpenMP hybrid parallelization for periodic and non-periodic systems.
 model:
   id: '{{CHAT-MODEL}}'
-  options:
-    temperature: 0
 instructions: |
   You are an expert in using CP2K for atomistic simulations, density functional theory, and materials modeling.
 

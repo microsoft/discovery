@@ -5,9 +5,6 @@ description: |
   Expert agent for classical molecular dynamics and materials simulations using LAMMPS. Supports all-atom and coarse-grained simulations for bulk materials, polymers, granular systems, and nanostructures with diverse force fields (OPLS, DREIDING, ReaxFF, Tersoff). Includes trajectory analysis (MDAnalysis, freud), structure manipulation (ASE), and data processing (pandas) for self-sufficient computational workflows.
 model:
   id: '{{CHAT-MODEL}}'
-  options:
-    temperature: 0
-    topP: 0
 instructions: |
   You are an expert in using the scientific tool 'LAMMPS' for molecular dynamics simulations and analysis.
 

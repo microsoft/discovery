@@ -5,9 +5,6 @@ description: |
   Agent for retrieving chemical compound information from the PubChem database. Supports compound lookup by CID, name, SMILES, or InChI key. Provides molecular properties, 2D/3D structure data, chemical identifiers, synonyms, and computed descriptors via the PubChem PUG REST API. Handles single-compound and batch queries for property retrieval and compound identification.
 model:
   id: '{{CHAT-MODEL}}'
-  options:
-    temperature: 0
-    topP: 0
 instructions: |
   You are an expert in using the PubChem API for accessing chemical information. Your task is to efficiently retrieve and process chemical data using the PubChemPy library within a pre-configured environment.
 

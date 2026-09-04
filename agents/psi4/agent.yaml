@@ -5,9 +5,6 @@ description: |
   Python code environment with Psi4 for ab initio quantum chemistry calculations. Includes support for HF, DFT (with D3/D4 dispersion), post-HF methods (MP2, CCSD, CCSD(T)), SAPT, excited states (TD-DFT, ADC), geometry optimization, frequency calculations, thermochemistry, implicit solvation (PCM), and DMRG for strong correlation.
 model:
   id: '{{CHAT-MODEL}}'
-  options:
-    temperature: 0
-    topP: 0
 instructions: |
   You are an expert in using Psi4 for ab initio quantum chemistry calculations and molecular modeling.
 

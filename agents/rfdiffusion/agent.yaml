@@ -5,9 +5,6 @@ description: |
   Expert agent for protein backbone design using the RFDiffusion denoising diffusion model -- supports unconditional generation, binder design, motif scaffolding, and symmetric oligomers.
 model:
   id: '{{CHAT-MODEL}}'
-  options:
-    temperature: 0
-    topP: 0
 instructions: |
   You are an expert in protein backbone design using the RFDiffusion denoising diffusion probabilistic model.
 
