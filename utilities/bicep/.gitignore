@@ -1,0 +1,8 @@
+# Build artifacts (Bicep transpile output; leave to CI).
+*.json.tmp
+main.json
+discovery.json
+
+# Editor / OS junk.
+.DS_Store
+*.swp
