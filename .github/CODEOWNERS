@@ -7,7 +7,7 @@
 # See https://docs.github.com/en/repositories/managing-your-repositories-settings-and-customization/customizing-your-repository/about-code-owners
 
 # Default reviewers — applied when no more-specific rule matches.
-*                                       @mukesh-dua @charwen @leijgao @karthikananth @anzaman @surajmb @umamaheshmsft @yousefi-msft @ryansok @faranm-stack
+*                                       @mukesh-dua @charwen @leijgao @karthikananth @anzaman @surajmb @umamaheshmsft @yousefi-msft @ryansok
 
 # CI / workflow tooling
 /.github/workflows/                     @mukesh-dua @charwen @leijgao @karthikananth @anzaman @surajmb @umamaheshmsft @yousefi-msft @ryansok
@@ -28,8 +28,8 @@
 /.auto-registry/                        @mukesh-dua @charwen @leijgao @karthikananth @anzaman @surajmb @umamaheshmsft @discovery-registry-bot @yousefi-msft @ryansok
 
 # Per-content area
-/agents/                                @mukesh-dua @charwen @leijgao @karthikananth @anzaman @surajmb @umamaheshmsft @yousefi-msft @ryansok @faranm-stack
-/starter-kits/                          @mukesh-dua @charwen @leijgao @karthikananth @anzaman @surajmb @umamaheshmsft @yousefi-msft @ryansok @faranm-stack
+/agents/                                @mukesh-dua @charwen @leijgao @karthikananth @anzaman @surajmb @umamaheshmsft @yousefi-msft @ryansok
+/starter-kits/                          @mukesh-dua @charwen @leijgao @karthikananth @anzaman @surajmb @umamaheshmsft @yousefi-msft @ryansok
 
 # Operator utilities for Discovery services (PowerShell scripts).
 /utilities/                             @mukesh-dua @charwen @leijgao @karthikananth @anzaman @surajmb @umamaheshmsft  @yousefi-msft @ryansok
