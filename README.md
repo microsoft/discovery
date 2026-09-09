@@ -30,7 +30,7 @@
 
 # Microsoft Discovery community
 
-Welcome to the **Microsoft Discovery community** — the public home for the Discovery platform, where users, partners, and the product team build together. Share what you've built, ask questions, file bugs, suggest ideas, and see what other Discovery users are doing across disciplines.
+Welcome to the **Microsoft Discovery community** — the public home for the Discovery platform, where users, partners, and the product team build together. We're proud to announce that the [Microsoft Discovery Discussions forum](https://techcommunity.microsoft.com/category/azure/discussions/microsoft-discovery-discussions) is now open on the Microsoft Community Hub! Share what you've built, ask questions, file bugs, suggest ideas, and see what other Discovery users are doing across disciplines.
 
 > **Microsoft Discovery is an extensible platform that brings together agentic orchestration, advanced reasoning, a graph-based knowledge foundation, and high-performance computing for accelerating scientific research and R&D workflows.**
 
@@ -97,10 +97,10 @@ All contributions — from Microsoft engineers and external partners — arrive 
 | **New agent** | `agents/<agent-name>/` | [Agent authoring guide](docs/authoring-guides/agent-authoring-guide.md) |
 | **New starter kit** | `starter-kits/<kit-name>/` | [Starter-kit authoring guide](docs/authoring-guides/starter-kit-authoring-guide.md) |
 | **Documentation fix** | `docs/`, `README.md`, etc. | [`CONTRIBUTING.md`](CONTRIBUTING.md) |
-| **Idea / feature request** | [Discussions → Ideas](https://github.com/microsoft/discovery/discussions/categories/ideas) | — |
-| **Bug** | [Discussions → Bugs](https://github.com/microsoft/discovery/discussions/categories/bugs) | — |
-| **Question** | [Discussions → Q&A](https://github.com/microsoft/discovery/discussions/categories/q-a) | — |
-| **Something you built** | [Discussions → Show and tell](https://github.com/microsoft/discovery/discussions/categories/show-and-tell) | — |
+| **Idea / feature request** | [Discussions → Ideas](https://techcommunity.microsoft.com/category/azure/discussions/microsoft-discovery-discussions) | — |
+| **Bug** | [Discussions → Bugs](https://techcommunity.microsoft.com/category/azure/discussions/microsoft-discovery-discussions) | — |
+| **Question** | [Discussions → Q&A](https://techcommunity.microsoft.com/category/azure/discussions/microsoft-discovery-discussions) | — |
+| **Something you built** | [Discussions → Show and tell](https://techcommunity.microsoft.com/category/azure/discussions/microsoft-discovery-discussions) | — |
 | **Schema / workflow change** | PR against `docs/schemas/` or `.github/workflows/` — **Microsoft maintainers only**; open an Idea first. | [`CONTRIBUTING.md`](CONTRIBUTING.md) |
 
 The full contributor contract is in [`CONTRIBUTING.md`](CONTRIBUTING.md). Every PR runs through an automated review that validates structure, schemas, policy, documentation, and secrets — failures are reported inline with rule IDs and remediation hints.
@@ -126,12 +126,12 @@ git push origin add-my-agent
 
 ## 🆘 Getting help
 
-Everything community-facing goes to **[Discussions](https://github.com/microsoft/discovery/discussions)**, posted in the matching category:
+Everything community-facing goes to the **[Microsoft Discovery Discussions forum](https://techcommunity.microsoft.com/category/azure/discussions/microsoft-discovery-discussions)**, posted in the matching category:
 
-- **Questions / how-to** → [Q&A](https://github.com/microsoft/discovery/discussions/categories/q-a)
-- **Bugs** → [Bugs](https://github.com/microsoft/discovery/discussions/categories/bugs) (the Bug template prompts you for version, repro steps, logs)
-- **Ideas** → [Ideas](https://github.com/microsoft/discovery/discussions/categories/ideas)
-- **Show what you've built** → [Show and tell](https://github.com/microsoft/discovery/discussions/categories/show-and-tell)
+- **Questions / how-to** → [Q&A](https://techcommunity.microsoft.com/category/azure/discussions/microsoft-discovery-discussions)
+- **Bugs** → [Bugs](https://techcommunity.microsoft.com/category/azure/discussions/microsoft-discovery-discussions) 
+- **Ideas** → [Ideas](https://techcommunity.microsoft.com/category/azure/discussions/microsoft-discovery-discussions)
+- **Show what you've built** → [Show and tell](https://techcommunity.microsoft.com/category/azure/discussions/microsoft-discovery-discussions)
 
 For security-sensitive reports, follow [`SECURITY.md`](SECURITY.md) — **do not** open a public Discussion or issue for vulnerabilities.
 
