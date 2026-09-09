@@ -24,6 +24,7 @@
 | --- | --- | --- | --- |
 | v0.15.13 _(previous)_ | 2026-09-01 | Windows x64 | [`Discovery-app-0.15.13-preview-win-x64.exe`](https://aka.ms/discovery/download/previous) |
 | v0.15.13 _(previous)_ | 2026-09-01 | Windows Arm64 | [`Discovery-app-0.15.13-preview-win-arm64.exe`](https://aka.ms/discovery/download/arm64/previous) |
+| v0.15.13 _(previous)_ | 2026-09-01 | macOS | |
 
 ---
 
