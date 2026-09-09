@@ -230,18 +230,50 @@ jobs:
             echo "4. Verify the \`current\` tag, GitHub Release, and README download table match the shipped app version, then close this issue."
           } > "${body_file}"
 
+          # Fallback when the Issues tracker can't be used (e.g. Issues are
+          # disabled on this repo, or a gh call fails): surface the failure in
+          # the job summary and as a warning annotation instead of letting this
+          # reporter job fail too. A failing reporter buries the real error and
+          # produces confusing "the workflow that reports failures failed" noise.
+          report_via_summary() {
+            local reason="$1"
+            echo "::warning::${WORKFLOW} failed and the tracking issue could not be used (${reason}). See ${RUN_URL}"
+            {
+              echo "## ⚠️ ${title}"
+              echo
+              echo "Tracking issue was not used: **${reason}**."
+              echo
+              cat "${body_file}"
+            } >> "${GITHUB_STEP_SUMMARY:-/dev/stderr}"
+          }
+
+          # Issues may be disabled on the repository; probe before calling the
+          # issues API so we degrade gracefully rather than exiting non-zero.
+          issues_enabled="$(gh repo view "${GITHUB_REPOSITORY}" \
+            --json hasIssuesEnabled --jq '.hasIssuesEnabled' 2>/dev/null || echo "false")"
+          if [[ "${issues_enabled}" != "true" ]]; then
+            report_via_summary "Issues are disabled on ${GITHUB_REPOSITORY}"
+            exit 0
+          fi
+
           existing="$(gh issue list --repo "${GITHUB_REPOSITORY}" \
             --state open --label release-automation \
             --search "${title} in:title" \
             --json number --jq '.[0].number' 2>/dev/null || true)"
 
           if [[ -n "${existing}" ]]; then
-            gh issue comment "${existing}" --repo "${GITHUB_REPOSITORY}" --body-file "${body_file}"
-            echo "Commented on existing tracking issue #${existing}"
+            if gh issue comment "${existing}" --repo "${GITHUB_REPOSITORY}" --body-file "${body_file}"; then
+              echo "Commented on existing tracking issue #${existing}"
+            else
+              report_via_summary "failed to comment on issue #${existing}"
+            fi
           else
-            gh issue create --repo "${GITHUB_REPOSITORY}" \
+            if gh issue create --repo "${GITHUB_REPOSITORY}" \
               --title "${title}" \
               --label release-automation \
-              --body-file "${body_file}"
-            echo "Opened new tracking issue for ${WORKFLOW} failure"
+              --body-file "${body_file}"; then
+              echo "Opened new tracking issue for ${WORKFLOW} failure"
+            else
+              report_via_summary "failed to create tracking issue"
+            fi
           fi

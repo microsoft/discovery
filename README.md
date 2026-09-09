@@ -49,7 +49,7 @@ In addition, this repository hosts the **public Discovery Catalog** — the cano
 
 The canonical conceptual reference for both the app and the services is [Microsoft Discovery on Microsoft Learn](https://learn.microsoft.com/en-us/azure/microsoft-discovery/). The starting points most users want:
 
-- [Microsoft Discovery & the Microsoft Discovery app](https://learn.microsoft.com/azure/microsoft-discovery/concept-discovery-and-discovery-app) - detailed comparison of Discovery experiences 
+- [Microsoft Discovery & the Microsoft Discovery app](https://learn.microsoft.com/azure/microsoft-discovery/concept-discovery-and-discovery-app) - detailed comparison of Discovery experiences
 - [Discovery Agent concepts](https://learn.microsoft.com/azure/microsoft-discovery/concept-discovery-agent) — what an agent is and how it's invoked
 - [Discovery Engine overview](https://learn.microsoft.com/azure/microsoft-discovery/concept-discovery-engine) — the cognition layer
 - [Bookshelf and Knowledge Bases](https://learn.microsoft.com/azure/microsoft-discovery/concept-bookshelf-knowledge-bases) — how indexing and retrieval work
@@ -76,7 +76,7 @@ For an app-specific 15-minute hands-on tour, see [`docs/discovery-app/quickstart
 
 ### Install and use the Discovery app
 
-The Microsoft Discovery app is a **self-contained Windows application** — no SDK, no cloud setup, no IT ticket. Download the latest release installer and follow the [Quickstart guide](docs/discovery-app/quickstart.md) to get started. 
+The Microsoft Discovery app is a **self-contained Windows application** — no SDK, no cloud setup, no IT ticket. Download the latest release installer and follow the [Quickstart guide](docs/discovery-app/quickstart.md) to get started.
 
 **Have feedback?** See [`docs/discovery-app/feedback.md`](docs/discovery-app/feedback.md).
 
@@ -129,7 +129,7 @@ git push origin add-my-agent
 Everything community-facing goes to the **[Microsoft Discovery Discussions forum](https://techcommunity.microsoft.com/category/azure/discussions/microsoft-discovery-discussions)**, posted in the matching category:
 
 - **Questions / how-to** → [Q&A](https://techcommunity.microsoft.com/category/azure/discussions/microsoft-discovery-discussions)
-- **Bugs** → [Bugs](https://techcommunity.microsoft.com/category/azure/discussions/microsoft-discovery-discussions) 
+- **Bugs** → [Bugs](https://techcommunity.microsoft.com/category/azure/discussions/microsoft-discovery-discussions)
 - **Ideas** → [Ideas](https://techcommunity.microsoft.com/category/azure/discussions/microsoft-discovery-discussions)
 - **Show what you've built** → [Show and tell](https://techcommunity.microsoft.com/category/azure/discussions/microsoft-discovery-discussions)
 

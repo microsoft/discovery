@@ -147,19 +147,31 @@ Recommended first-run smoke test after this branch merges to `main`:
 ## Failure reporting
 
 Both workflows have a `report-failure` job that runs only `if: failure()`.
-When any earlier job fails, it opens (or comments on) a GitHub issue
-labelled [`release-automation`](https://github.com/microsoft/discovery/labels/release-automation)
-with a link to the failing run, the event that triggered it, and a checklist
-for triage.
+When any earlier job fails it records the failure — a link to the failing run,
+the triggering event, and a triage checklist.
+
+**Issues are intentionally disabled on this public repo**, so the primary
+output is written to the **Actions run's job summary** together with a
+`::warning::` annotation on the run. The reporter probes `hasIssuesEnabled`
+first and degrades to this summary path rather than failing; a broken run must
+never be masked by a second "the reporter itself failed" error. Read the
+failure detail on the run page under **Summary** (and in the maintainer
+notification for the run).
+
+If Issues are ever re-enabled (or the reporter is pointed at a private
+tracking repo), the same job additionally opens or comments on a GitHub issue
+labelled [`release-automation`](https://github.com/microsoft/discovery/labels/release-automation):
 
 - The label is created idempotently on first failure with color `#d73a4a`.
 - Deduplication: if an open issue with title `[release-automation] <workflow>
   failed` already exists, the job comments on it rather than opening a new
   one. Close the issue once you've reconciled state to reset the cycle.
-- Fires for **any** failure — parser drift (aka.ms URL format changed),
-  README regex miss, broken aka.ms link (the worker HEADs every download
-  URL after patching), retag/rerelease failure, PR-open failure, or the
-  `gh workflow run` dispatch call failing.
+- Any `gh issue` failure also falls back to the job-summary path.
+
+Fires for **any** failure — parser drift (aka.ms URL format changed),
+README regex miss, broken aka.ms link (the worker HEADs every download
+URL after patching), retag/rerelease failure, PR-open failure, or the
+`gh workflow run` dispatch call failing.
 
 ## Link verification
 
