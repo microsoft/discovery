@@ -8,10 +8,11 @@
       <strong>User Installer</strong>
       <a href="https://aka.ms/discovery/download/current"><strong>x64</strong></a>
       <a href="https://aka.ms/discovery/download/arm64/current"><strong>Arm64</strong></a>
+      <a href="https://aka.ms/discovery/download/osx/current"><strong>macOS</strong></a>
     </td>
     <td valign="middle">
       A self-contained Windows app - no SDK, no cloud setup. Current release: <strong>v0.15.14</strong>.<br>
-      <sub>macOS and Linux are not supported yet. Windows x64 and Windows ARM64 installers are available today.</sub><br><br>
+      <sub>Windows x64, Windows ARM64, and macOS installers are available today. Linux is not supported yet.</sub><br><br>
       🛠️ <a href="docs/discovery-app/install.md">Install guide</a> - setup, verification, and upgrade steps.
     </td>
   </tr>
