@@ -24,7 +24,7 @@ Two escape hatches exist, and neither is a way to skip review:
 | [POL-015](#pol-015) | Added files must use an approved extension or filename from the source allowlist. | Every changed file | error |
 | [POL-016](#pol-016) | Images under agents/ or starter-kits/ must be safe Markdown formats, at most 1 MiB, and referenced by Markdown in the same catalog item. | Every changed file | error |
 | [POL-017](#pol-017) | Base image tags should be pinned to an explicit version rather than a floating tag such as :latest. | Every changed file | warning |
-| [POL-018](#pol-018) | Catalog webpage URLs must resolve to reachable public HTML pages. | Whole repository | error |
+| [POL-018](#pol-018) | Catalog webpage URLs must resolve to reachable public HTML pages. | Whole repository | warning |
 | [POL-019](#pol-019) | Catalog contact email domains must exist and advertise usable mail DNS records. | Whole repository | error |
 | [POL-020](#pol-020) | UTF-8 source text must not contain unsafe or invisible Unicode characters. | Every changed file | error |
 | [TAG-001](#tag-001) | Tags declared in metadata.yaml must exist in the controlled tag vocabulary. | Each touched agent folder | error |
@@ -105,7 +105,7 @@ Further reading: `docs/authoring-guides/agent-authoring-guide.md#base-images`
 Catalog webpage URLs must resolve to reachable public HTML pages.
 
 - **Applies to:** Whole repository
-- **Severity:** error
+- **Severity:** warning
 - **Tags:** network, publisher, ssrf
 
 **How to fix**

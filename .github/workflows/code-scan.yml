@@ -29,6 +29,12 @@ on:
     paths:
       - "agents/**"
       - "starter-kits/**"
+  schedule:
+    # 06:00 UTC Monday — a full-catalog sweep that *raises* pre-existing
+    # breakage (e.g. a contributed file CodeQL cannot even parse). On a PR the
+    # same analysis is non-gating (see continue-on-error below): it reports on
+    # what the PR changed without blocking on unrelated legacy debt.
+    - cron: "0 6 * * 1"
   workflow_dispatch:
 
 permissions:
@@ -56,12 +62,17 @@ jobs:
       - uses: actions/checkout@v6
 
       - name: Initialize CodeQL
+        # Reporting posture on PRs: a pre-existing file the extractor cannot
+        # parse must not fail an unrelated contributor's PR. Scheduled and
+        # push runs stay gating so the breakage is raised for triage.
+        continue-on-error: ${{ github.event_name == 'pull_request' }}
         uses: github/codeql-action/init@v4
         with:
           languages: ${{ matrix.language }}
           config-file: ${{ matrix.config }}
 
       - name: Analyze
+        continue-on-error: ${{ github.event_name == 'pull_request' }}
         uses: github/codeql-action/analyze@v4
         with:
           category: "/language:${{ matrix.language }}/scope:${{ matrix.scope }}"

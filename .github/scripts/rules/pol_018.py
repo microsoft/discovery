@@ -6,7 +6,7 @@ from __future__ import annotations
 import json
 
 from contact_network_validator import ContactNetworkPolicy, validate_webpage
-from rules.base import Finding, Rule, RuleContext, Scope
+from rules.base import Finding, Rule, RuleContext, Scope, Severity
 from source_locations import line_for_key_path
 
 POLICY_PATH = ".github/policy/contact-network.json"
@@ -80,6 +80,10 @@ RULE = Rule(
     id="POL-018",
     summary="Catalog webpage URLs must resolve to reachable public HTML pages.",
     scope=Scope.REPO,
+    # Reachability is a live-network property that degrades after merge and is
+    # unreliable to assert from a PR sandbox: a warning that the weekly deep
+    # scan raises, not a blocking gate on an unrelated contributor's PR.
+    severity=Severity.WARNING,
     remediation=(
         "Use an HTTPS URL on port 443 that resolves only to public addresses, "
         "follows at most five public HTTPS redirects, and returns a non-empty "
