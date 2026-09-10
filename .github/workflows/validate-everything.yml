@@ -1,5 +1,5 @@
 name: Validate Everything
-run-name: "Validation test - PR ${{ inputs.pr_number }} - ${{ inputs.reason }}"
+run-name: "Validation test - ${{ inputs.checks }} - PR ${{ inputs.pr_number }} - ${{ inputs.reason }}"
 
 on:
   workflow_dispatch:
@@ -9,6 +9,17 @@ on:
         required: false
         default: "Manual full-repo validation"
         type: string
+      checks:
+        description: "Which checks to run (applies to full-catalog mode; ignored when a PR number is supplied)"
+        required: false
+        default: "all"
+        type: choice
+        options:
+          - all
+          - unit-tests
+          - catalog-validation
+          - starter-kits
+          - schemas
       pr_number:
         description: "Optional open PR number to inspect read-only (same-repo or fork)"
         required: false
@@ -43,6 +54,7 @@ jobs:
 
       - name: Run validation test suite
         id: unit_tests
+        if: ${{ inputs.checks == 'all' || inputs.checks == 'unit-tests' }}
         continue-on-error: true
         run: |
           set -o pipefail
@@ -51,7 +63,7 @@ jobs:
             2>&1 | tee "$RUNNER_TEMP/unit-tests.log"
 
       - name: Summarize validation test suite
-        if: always()
+        if: ${{ always() && (inputs.checks == 'all' || inputs.checks == 'unit-tests') }}
         env:
           TEST_OUTCOME: ${{ steps.unit_tests.outcome }}
         run: |
@@ -61,8 +73,30 @@ jobs:
             --outcome "$TEST_OUTCOME" \
             --rerun-command "python -m pytest .github/tests/ -vv -ra -n auto --dist worksteal"
 
+      - name: Run schema regression suite
+        id: schemas
+        if: ${{ inputs.checks == 'schemas' }}
+        continue-on-error: true
+        run: |
+          set -o pipefail
+          python -m pytest .github/tests/test_schema_security.py -q -ra \
+            --junitxml="$RUNNER_TEMP/schema-tests.xml" \
+            2>&1 | tee "$RUNNER_TEMP/schema-tests.log"
+
+      - name: Summarize schema regression suite
+        if: ${{ always() && inputs.checks == 'schemas' }}
+        env:
+          SCHEMA_OUTCOME: ${{ steps.schemas.outcome }}
+        run: |
+          python .github/scripts/render_ci_summary.py pytest \
+            --report "$RUNNER_TEMP/schema-tests.xml" \
+            --title "Schema regression suite (AS-* / SKS-*)" \
+            --outcome "$SCHEMA_OUTCOME" \
+            --rerun-command "python -m pytest .github/tests/test_schema_security.py -vv -ra"
+
       - name: Build full file list and run validate_pr.py
         id: catalog
+        if: ${{ inputs.checks == 'all' || inputs.checks == 'catalog-validation' }}
         continue-on-error: true
         run: |
           # Pretend every tracked file under agents/ and starter-kits/ is "changed"
@@ -89,7 +123,7 @@ jobs:
           "
 
       - name: Summarize full catalog validation
-        if: always()
+        if: ${{ always() && (inputs.checks == 'all' || inputs.checks == 'catalog-validation') }}
         env:
           CATALOG_OUTCOME: ${{ steps.catalog.outcome }}
           REPOSITORY_URL: ${{ github.server_url }}/${{ github.repository }}
@@ -105,6 +139,7 @@ jobs:
 
       - name: Validate every starter kit against current schema
         id: starter_kits
+        if: ${{ inputs.checks == 'all' || inputs.checks == 'starter-kits' }}
         continue-on-error: true
         run: |
           set -o pipefail
@@ -112,7 +147,7 @@ jobs:
             2>&1 | tee "$RUNNER_TEMP/starter-kit-validation.log"
 
       - name: Summarize starter-kit validation
-        if: always()
+        if: ${{ always() && (inputs.checks == 'all' || inputs.checks == 'starter-kits') }}
         env:
           STARTER_KIT_OUTCOME: ${{ steps.starter_kits.outcome }}
         run: |
@@ -132,6 +167,8 @@ jobs:
             ${{ runner.temp }}/full-catalog-validation.log
             ${{ runner.temp }}/unit-tests.xml
             ${{ runner.temp }}/unit-tests.log
+            ${{ runner.temp }}/schema-tests.xml
+            ${{ runner.temp }}/schema-tests.log
             ${{ runner.temp }}/starter-kit-validation.log
           if-no-files-found: warn
 
@@ -139,13 +176,17 @@ jobs:
         if: always()
         env:
           UNIT_TEST_OUTCOME: ${{ steps.unit_tests.outcome }}
+          SCHEMA_OUTCOME: ${{ steps.schemas.outcome }}
           CATALOG_OUTCOME: ${{ steps.catalog.outcome }}
           STARTER_KIT_OUTCOME: ${{ steps.starter_kits.outcome }}
         run: |
-          if [[ "$UNIT_TEST_OUTCOME" != "success" || \
-                "$CATALOG_OUTCOME" != "success" || \
-                "$STARTER_KIT_OUTCOME" != "success" ]]; then
-            echo "One or more full-catalog validations failed. See the job summary and artifact."
+          # Steps that were not selected report outcome 'skipped'; only a real
+          # 'failure' should fail the run.
+          if [[ "$UNIT_TEST_OUTCOME" == "failure" || \
+                "$SCHEMA_OUTCOME" == "failure" || \
+                "$CATALOG_OUTCOME" == "failure" || \
+                "$STARTER_KIT_OUTCOME" == "failure" ]]; then
+            echo "One or more selected full-catalog validations failed. See the job summary and artifact."
             exit 1
           fi
 

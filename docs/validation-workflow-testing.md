@@ -15,6 +15,17 @@ fail normally when the branch's validators, schemas, or tests find a problem.
 python .github/scripts/run_validation_workflow.py --reason="Candidate branch smoke test"
 ```
 
+### Run only a subset of the checks
+
+By default every full-catalog check runs. Pass `--checks` (or set the **checks**
+input in the UI) to run just one: `unit-tests`, `catalog-validation`,
+`starter-kits`, or `schemas`. Unselected checks report as skipped and never fail
+the run. This is ignored in shadow-PR mode.
+
+```console
+python .github/scripts/run_validation_workflow.py --checks=schemas --reason="Schema regression only"
+```
+
 ## Shadow-test an open pull request
 
 Set `pr_number` to any open pull request in `microsoft/discovery`. Internal
@@ -42,6 +53,15 @@ merge eligibility.
 To launch the same modes in the GitHub UI, open **Actions**, select **Validate
 Everything**, choose **Run workflow**, select the candidate branch, and either
 leave **pr_number** empty or enter an open PR number.
+
+## Run an individual schema validator on demand
+
+The **Validate Agent Schemas**, **Validate Starter Kits**, and **Validate
+Starter Kit Schema** workflows normally run only on pull requests. Each now also
+accepts a manual trigger: open **Actions**, select the workflow, choose **Run
+workflow**, and pick a branch. On manual dispatch they skip the changed-file
+detection and run their full regression guard against the selected ref, so you
+can confirm the whole catalog still validates without opening a PR.
 
 ## Inspect a run
 

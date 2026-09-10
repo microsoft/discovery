@@ -40,6 +40,30 @@ def test_pr_dispatch_includes_pr_input():
     assert command[-2:] == ["-f", "pr_number=110"]
 
 
+def test_checks_subset_is_forwarded():
+    command = build_dispatch_command(
+        "microsoft/discovery",
+        "users/example/pipeline",
+        "Schema-only run",
+        None,
+        "schemas",
+    )
+
+    assert command[-2:] == ["-f", "checks=schemas"]
+
+
+def test_checks_omitted_by_default():
+    command = build_dispatch_command(
+        "microsoft/discovery",
+        "users/example/pipeline",
+        "Default run",
+        None,
+    )
+
+    assert "checks=all" not in command
+    assert all(not entry.startswith("checks=") for entry in command)
+
+
 @pytest.mark.parametrize("value", ["0", "-1"])
 def test_pr_number_must_be_positive(value: str):
     with pytest.raises(argparse.ArgumentTypeError):

@@ -38,6 +38,7 @@ def build_dispatch_command(
     ref: str,
     reason: str,
     pr_number: int | None,
+    checks: str | None = None,
 ) -> list[str]:
     command = [
         "gh",
@@ -51,6 +52,8 @@ def build_dispatch_command(
         "-f",
         f"reason={reason}",
     ]
+    if checks is not None:
+        command.extend(["-f", f"checks={checks}"])
     if pr_number is not None:
         command.extend(["-f", f"pr_number={pr_number}"])
     return command
@@ -68,6 +71,11 @@ def parse_args() -> argparse.Namespace:
         help="Trusted workflow branch or SHA (default: current Git branch).",
     )
     parser.add_argument("--repo", default=DEFAULT_REPOSITORY)
+    parser.add_argument(
+        "--checks",
+        choices=["all", "unit-tests", "catalog-validation", "starter-kits", "schemas"],
+        help="Subset of full-catalog checks to run (ignored when --pr-number is given).",
+    )
     parser.add_argument("--reason", help="Label shown in the Actions run title.")
     return parser.parse_args()
 
@@ -95,7 +103,7 @@ def main() -> int:
     reason = args.reason or (
         "Queued PR shadow test" if args.pr_number else "Candidate branch smoke test"
     )
-    command = build_dispatch_command(args.repo, ref, reason, args.pr_number)
+    command = build_dispatch_command(args.repo, ref, reason, args.pr_number, args.checks)
     result = subprocess.run(command, check=False)
     if result.returncode != 0:
         return result.returncode

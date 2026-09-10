@@ -8,6 +8,13 @@ name: Validate Starter Kits
 
 on:
   pull_request:
+  workflow_dispatch:
+    inputs:
+      reason:
+        description: "Reason for manual starter-kit validation"
+        required: false
+        default: "Manual starter-kit validation"
+        type: string
 
 permissions:
   contents: read
@@ -25,6 +32,12 @@ jobs:
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
+            if (context.eventName === 'workflow_dispatch') {
+              core.setOutput('relevant', 'true');
+              core.setOutput('added-kits', '');
+              core.notice('Manual dispatch: validating every starter-kit manifest against the selected ref.');
+              return;
+            }
             const files = await github.paginate(github.rest.pulls.listFiles, {
               owner: context.repo.owner,
               repo: context.repo.repo,
