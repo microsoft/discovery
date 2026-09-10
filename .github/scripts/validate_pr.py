@@ -28,6 +28,7 @@ from typing import Any
 
 import jsonschema
 import yaml
+from referencing import Registry, Resource
 
 from model_weights_sniffer import MODEL_WEIGHT_EXTENSIONS, sniff
 
@@ -84,6 +85,24 @@ def load_json_schema(path: Path) -> dict | None:
             return json.load(f)
     except Exception:
         return None
+
+
+def build_schema_registry(repo: Path) -> Registry | None:
+    """Build a referencing Registry so schemas can resolve external ``$ref``s
+    such as ``common-schema.json#/definitions/...``.
+
+    Returns None when docs/schemas/common-schema.json is absent, in which case
+    validation falls back to the historic self-contained behaviour. This keeps
+    the validator backward compatible: schemas without external references are
+    unaffected whether or not the shared definitions file exists.
+    """
+    common = load_json_schema(repo / "docs" / "schemas" / "common-schema.json")
+    if common is None:
+        return None
+    return Registry().with_resource(
+        "common-schema.json",
+        Resource.from_contents(common),
+    )
 
 
 # ── STR-011: YAML duplicate-key detection ────────────────────────────────────
@@ -143,11 +162,17 @@ def _is_env_artefact(rel: str) -> bool:
     return name == ".env" or name.startswith(".env.")
 
 
-def validate_against_schema(data: Any, schema: dict) -> list[str]:
+def validate_against_schema(data: Any, schema: dict, registry: Registry | None = None) -> list[str]:
     errors = []
     try:
         # B1: enable FormatChecker so format: email / format: uri actually fire.
-        v = jsonschema.Draft7Validator(schema, format_checker=jsonschema.FormatChecker())
+        # A registry (when provided) resolves external $refs like
+        # common-schema.json#/definitions/...; without one, self-contained
+        # schemas validate exactly as before.
+        validator_kwargs: dict[str, Any] = {"format_checker": jsonschema.FormatChecker()}
+        if registry is not None:
+            validator_kwargs["registry"] = registry
+        v = jsonschema.Draft7Validator(schema, **validator_kwargs)
         for error in sorted(v.iter_errors(data), key=lambda e: list(e.path)):
             path = ".".join(str(p) for p in error.path) or "(root)"
             errors.append(f"{path}: {error.message}")
@@ -305,7 +330,7 @@ def check_structural(repo: Path, folders: set[Path], changed_files: list[str]) -
     return failures
 
 
-def check_schema(repo: Path, folders: set[Path], agent_schema: dict | None, tool_schema: dict | None, metadata_schema: dict | None = None) -> list[Failure]:
+def check_schema(repo: Path, folders: set[Path], agent_schema: dict | None, tool_schema: dict | None, metadata_schema: dict | None = None, schema_registry: Registry | None = None) -> list[Failure]:
     failures = []
     valid_regions = load_valid_regions(repo)
 
@@ -325,7 +350,7 @@ def check_schema(repo: Path, folders: set[Path], agent_schema: dict | None, tool
 
             # SCH-001: full schema validation against docs/schemas/metadata-schema.json
             if metadata_schema:
-                for schema_err in validate_against_schema(data, metadata_schema):
+                for schema_err in validate_against_schema(data, metadata_schema, schema_registry):
                     failures.append(Failure("SCH-001", meta_rel,
                         f"metadata.yaml does not conform to docs/schemas/metadata-schema.json: {schema_err}"))
 
@@ -446,7 +471,7 @@ def check_schema(repo: Path, folders: set[Path], agent_schema: dict | None, tool
                 failures.append(Failure("SCH-010", agent_rel, f"agent.yaml could not be parsed: {err}"))
             else:
                 # SCH-010: full schema validation
-                schema_errors = validate_against_schema(data, agent_schema)
+                schema_errors = validate_against_schema(data, agent_schema, schema_registry)
                 for se in schema_errors:
                     failures.append(Failure(
                         "SCH-010", agent_rel,
@@ -516,7 +541,7 @@ def check_schema(repo: Path, folders: set[Path], agent_schema: dict | None, tool
                         continue
 
                     # SCH-014: full schema validation
-                    schema_errors = validate_against_schema(data, tool_schema)
+                    schema_errors = validate_against_schema(data, tool_schema, schema_registry)
                     for se in schema_errors:
                         failures.append(Failure(
                             "SCH-014", tool_rel,
@@ -1036,6 +1061,7 @@ def main():
     agent_schema = load_json_schema(repo / "docs" / "schemas" / "agent-schema-v2.json")
     tool_schema = load_json_schema(repo / "docs" / "schemas" / "tool-definition-schema.json")
     metadata_schema = load_json_schema(repo / "docs" / "schemas" / "metadata-schema.json")
+    schema_registry = build_schema_registry(repo)
 
     if agent_schema is None:
         print("WARNING: docs/schemas/agent-schema-v2.json could not be loaded. SCH-010–013 skipped.", file=sys.stderr)
@@ -1049,7 +1075,7 @@ def main():
     # Run ALL checks — collect everything before reporting
     failures: list[Failure] = []
     failures += check_structural(repo, folders, changed_files)
-    failures += check_schema(repo, folders, agent_schema, tool_schema, metadata_schema)
+    failures += check_schema(repo, folders, agent_schema, tool_schema, metadata_schema, schema_registry)
     failures += check_policy(repo, folders, changed_files)
     failures += check_documentation(repo, folders)
 
