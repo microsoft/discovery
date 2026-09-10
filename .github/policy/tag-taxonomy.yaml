@@ -28,12 +28,15 @@ domains:
     - clinical-trials
     - dna-analysis
     - esm2
+    - gene-expression
     - genomics
+    - life-sciences
     - protein
     - protein-design
     - protein-folding
     - protein-structure
     - rna-seq
+    - single-cell
     - structural-biology
     - structure-prediction
     - transcriptomics
@@ -128,6 +131,8 @@ domains:
     - climate
     - data-analysis
     - database
+    - evidence-synthesis
+    - full-text-analysis
     - hypothesis-testing
     - knowledge-base
     - legal-tech
@@ -136,6 +141,7 @@ domains:
     - patent-analysis
     - prior-art
     - research
+    - scholarly-publishing
     - statistics
 
   environment:

@@ -509,13 +509,17 @@ def test_pull_request_target_jobs_keep_pr_data_untrusted():
         and step.get("with", {}).get("ref")
         == "${{ github.event.pull_request.head.sha }}"
     ]
-    assert len(head_checkouts) == 3
-    for checkout in head_checkouts:
-        assert checkout["with"]["repository"] == (
-            "${{ github.event.pull_request.head.repo.full_name }}"
-        )
-        assert checkout["with"]["persist-credentials"] == "false"
-    assert "allow-unsafe-pr-checkout" not in pr_review_path.read_text(encoding="utf-8")
+    assert len(head_checkouts) == 1
+    pr_head_checkout = head_checkouts[0]
+    assert pr_head_checkout["with"]["repository"] == (
+        "${{ github.event.pull_request.head.repo.full_name }}"
+    )
+    assert pr_head_checkout["with"]["persist-credentials"] == "false"
+    # The only head checkout lands untrusted content in pr/ (never executed).
+    # #141 removed the classify/secret-scan head checkouts; #106 requires
+    # allow-unsafe-pr-checkout so forked pull_request_target PRs can be fetched.
+    assert pr_head_checkout["with"]["path"] == "pr"
+    assert pr_head_checkout["with"]["allow-unsafe-pr-checkout"] == "true"
 
 
 def test_manual_shadow_validation_is_report_only_and_fork_aware():

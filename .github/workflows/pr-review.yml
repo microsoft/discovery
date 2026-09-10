@@ -23,9 +23,33 @@ jobs:
     timeout-minutes: 20
     outputs:
       changed_files: ${{ steps.changed.outputs.all_changed_files }}
-      has_agents: ${{ steps.classify.outputs.has_agents }}
+      has_agents: ${{ steps.changed.outputs.has_agents }}
+      has_docs_only: ${{ steps.changed.outputs.has_docs_only }}
       author_permission: ${{ steps.author_permission.outputs.permission }}
     steps:
+      # Do not check out attacker-controlled PR content in this privileged
+      # pull_request_target workflow. The API supplies the authoritative list.
+      - name: Get and classify changed files
+        id: changed
+        uses: actions/github-script@v9
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const files = await github.paginate(github.rest.pulls.listFiles, {
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: context.payload.pull_request.number,
+              per_page: 100,
+            });
+            const names = files.map(({ filename }) => filename);
+            core.setOutput('all_changed_files', JSON.stringify(names));
+            core.setOutput('has_agents', String(names.some(name => name.startsWith('agents/'))));
+            core.setOutput(
+              'has_docs_only',
+              String(names.length > 0 && names.every(name => name.startsWith('docs/schemas/'))),
+            );
+            core.info(`Changed files (${names.length}):\n${names.join('\n')}`);
+
       - name: Resolve PR author repository permission
         id: author_permission
         uses: actions/github-script@v9
@@ -60,34 +84,6 @@ jobs:
             core.info(`Repository permission for @${username}: ${permission}`);
             core.setOutput('permission', permission);
 
-      - uses: actions/checkout@v6
-        with:
-          repository: ${{ github.event.pull_request.head.repo.full_name }}
-          ref: ${{ github.event.pull_request.head.sha }}
-          fetch-depth: 0
-          persist-credentials: false
-
-      - name: Get changed files
-        id: changed
-        uses: actions/github-script@v9
-        with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          script: |
-            const files = await github.paginate(github.rest.pulls.listFiles, {
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              pull_number: context.payload.pull_request.number,
-              per_page: 100,
-            });
-            const names = files.map(({ filename }) => filename);
-            core.setOutput('all_changed_files', JSON.stringify(names));
-            core.setOutput('has_agents', String(names.some(name => name.startsWith('agents/'))));
-            core.setOutput(
-              'has_docs_only',
-              String(names.length > 0 && names.every(name => name.startsWith('docs/schemas/'))),
-            );
-            core.info(`Changed files (${names.length}):\n${names.join('\n')}`);
-
   # ── Stages 2–4: Structural + Schema + Content/Policy + Documentation ───────
   validate:
     name: Validate PR
@@ -109,7 +105,6 @@ jobs:
         with:
           ref: ${{ github.event.pull_request.base.sha }}
           fetch-depth: 1
-          persist-credentials: false
           path: trusted
           persist-credentials: false
 
@@ -118,9 +113,9 @@ jobs:
         with:
           repository: ${{ github.event.pull_request.head.repo.full_name }}
           ref: ${{ github.event.pull_request.head.sha }}
+          allow-unsafe-pr-checkout: true
           fetch-depth: 0
           lfs: true
-          persist-credentials: false
           path: pr
           persist-credentials: false
 
@@ -249,13 +244,6 @@ jobs:
     env:
       GIT_LFS_SKIP_SMUDGE: "1"
     steps:
-      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
-        with:
-          repository: ${{ github.event.pull_request.head.repo.full_name }}
-          ref: ${{ github.event.pull_request.head.sha }}
-          fetch-depth: 0
-          persist-credentials: false
-
       - name: Run TruffleHog secret scan (verified — blocking)
         env:
           # Pass commit SHAs through the environment rather than interpolating

@@ -63,7 +63,7 @@ def test_agent_without_metadata_is_skipped(repo):
 
 
 def test_every_tag_in_the_catalog_is_in_the_taxonomy(repo):
-    """The vocabulary must already cover all 46 shipped agents."""
+    """The vocabulary must already cover all 48 shipped agents."""
     from pathlib import Path
 
     import yaml
