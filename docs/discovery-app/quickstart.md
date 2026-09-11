@@ -61,10 +61,10 @@ Download the installer from the latest release and run it. That's it.
 ## Step 1: Tour the Discovery experience
 
 Select the **Discovery** action button from the sidebar and the pane opens with collapsible panes. Here's what you'll see:
-
-A hierarchical view of your project files in the familiar VSCode explorer layout.
+![Screenshot detail of the left action bar and the Discovery icon highlighted in red](/includes/media/discovery-action-detail.png)
 
 ### Project
+The Project pane lists the file assets for the current project scope only, in the familiar Explorer hierarchical, drop-down format.
 
 ### Lab Notebooks
 Create a Jupyter, Markdown, or Team Wiki notebook to capture findings and save within a project. Discovery can use these notebooks and you can add to them.
@@ -406,7 +406,7 @@ Define a custom engine in `.discovery/config.json` with your own system prompt, 
 
 ### Share what you build
 
-Share your workflows, prompts, and plugins in [Discussions → Show and tell](https://github.com/microsoft/discovery/discussions/categories/show-and-tell). If you'd like to land an agent or starter kit in this catalog, see [`CONTRIBUTING.md`](../../CONTRIBUTING.md) and the authoring guides under [`docs/authoring-guides/`](../authoring-guides/).
+Share your workflows, prompts, and plugins in [Discussions](https://techcommunity.microsoft.com/category/azure/discussions/microsoft-discovery-discussions). If you'd like to land an agent or starter kit in this catalog, see [`CONTRIBUTING.md`](/CONTRIBUTING.md) and the authoring guides under [`docs/authoring-guides/`](../authoring-guides/).
 
 ### Pair with Microsoft Discovery services for team scale
 

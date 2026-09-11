@@ -22,7 +22,7 @@ The Microsoft Discovery app is a self-contained application available for Window
 
 ## Step 1 — Download
 
-1. Open the [Discovery download landing page](https://github.com/microsoft/discovery/blob/main/README.md) on this repository.
+1. Open the [Discovery download landing page](/README.md) on this repository.
 1. Select your platform amongst the **User Installer** options (**x64**, **Arm64**, or **macOS**). Optionally, you can get one previous version from the table below the download options.
 
 ## Step 2 — Install
@@ -56,7 +56,7 @@ New builds are delivered as releases on this repository. To upgrade:
 1. Run the new installer. It updates components in place; your `.discovery/` workspace state is preserved.
 1. Re-open Microsoft Discovery and verify with `dx --version`.
 
-> 💡 **Tip.** Watch the [README](https://github.com/microsoft/discovery/blob/main/README.md).
+> 💡 **Tip.** Watch the [README](/README.md).
 
 ## Uninstalling
 
@@ -78,4 +78,4 @@ New builds are delivered as releases on this repository. To upgrade:
 | Microsoft Discovery won't sign you in | Confirm your GitHub Copilot subscription is active. |
 | `dx` not found on `PATH` | Open a new terminal session (the installer adds `dx` to the user `PATH`). If still missing, sign out / sign in. |
 | `dx doctor` reports an LLM route warning | Expected on first run. Sign in to Copilot in Microsoft Discovery, or run `dx workspace config llm set-azure-openai …`. Local embedding still works without this. |
-| Anything else | Run `dx doctor --workspace .` and include its output when you [file a bug in Discussions](https://github.com/microsoft/discovery/discussions/categories/bugs). |
+| Anything else | Run `dx doctor --workspace .` and include its output when you [file a bug in Discussions](https://techcommunity.microsoft.com/category/azure/discussions/microsoft-discovery-discussions). |
