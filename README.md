@@ -24,7 +24,7 @@
 | --- | --- | --- | --- |
 | v0.15.13 _(previous)_ | 2026-09-01 | Windows x64 | [`Discovery-app-0.15.13-preview-win-x64.exe`](https://aka.ms/discovery/download/previous) |
 | v0.15.13 _(previous)_ | 2026-09-01 | Windows Arm64 | [`Discovery-app-0.15.13-preview-win-arm64.exe`](https://aka.ms/discovery/download/arm64/previous) |
-| v0.15.13 _(previous)_ | 2026-09-01 | macOS | |
+| No previous version | 2026-09-01 | macOS | *No previous version available.* |
 
 ---
 
@@ -38,7 +38,7 @@ Microsoft Discovery is offered in two complementary experiences: an enterprise-g
 
 | Experience | What it is | Where to start |
 | --- | --- | --- |
-| 🖥️ **Microsoft Discovery app** | A local-first Windows client for individual evaluation on a laptop. **Distributed from this repository.** | [`docs/discovery-app/`](docs/discovery-app/) — install, quickstart, feedback |
+| 🖥️ **Microsoft Discovery app** | A local, desktop client for individual evaluation. **Distributed from this repository.** | [`docs/discovery-app/`](docs/discovery-app/) — install, quickstart, feedback |
 | ☁️ **Microsoft Discovery** | The cloud-hosted, team-scale experience on Azure. | [Microsoft Learn](https://learn.microsoft.com/en-us/azure/microsoft-discovery/) — full reference |
 
 In addition, this repository hosts the **public Discovery Catalog** — the canonical metadata catalog of AI research **agents** and **starter kits** contributed by Microsoft and ecosystem partners. Agent code, container images, and model weights live in each contributor's own infrastructure; the metadata and documentation that describe them live here, where they are PR-reviewed, schema-validated, and surfaced to every Discovery user.
@@ -76,7 +76,7 @@ For an app-specific 15-minute hands-on tour, see [`docs/discovery-app/quickstart
 
 ### Install and use the Discovery app
 
-The Microsoft Discovery app is a **self-contained Windows application** — no SDK, no cloud setup, no IT ticket. Download the latest release installer and follow the [Quickstart guide](docs/discovery-app/quickstart.md) to get started.
+The Microsoft Discovery app is a **self-contained desktop application** — no SDK, no cloud setup, no IT ticket. Download the latest release installer and follow the [Quickstart guide](docs/discovery-app/quickstart.md) to get started.
 
 **Have feedback?** See [`docs/discovery-app/feedback.md`](docs/discovery-app/feedback.md).
 

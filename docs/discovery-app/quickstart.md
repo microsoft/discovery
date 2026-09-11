@@ -6,7 +6,7 @@
 
 ## What is Microsoft Discovery?
 
-Microsoft Discovery is the AI-augmented science and engineering platform, offered as a **Microsoft Discovery app** (the local-first Windows client this Quick Start covers) and **Microsoft Discovery services** (cloud-hosted, [documented on Microsoft Learn](https://learn.microsoft.com/en-us/azure/microsoft-discovery/)). Install the app on your laptop and you immediately have:
+Microsoft Discovery is the AI-augmented science and engineering platform, offered as the **Microsoft Discovery app** (a local-first  client this Quick Start covers) and **Microsoft Discovery services** (cloud-hosted, [documented on Microsoft Learn](https://learn.microsoft.com/en-us/azure/microsoft-discovery/)). Install the app on your laptop and you immediately have:
 
 - 📚 **A searchable knowledge base** of your own papers, docs, and code (Bookshelf)
 - 🔧 **Curated scientific tools** ready to deploy to GitHub Copilot, Claude, or Cursor (Tool Catalog)
@@ -52,29 +52,47 @@ Before you click anything, here's how Microsoft Discovery is organized:
 
 Download the installer from the latest release and run it. That's it.
 
-👉 **[Download the latest Microsoft Discovery installer](https://github.com/microsoft/discovery/releases/latest)** — pick the `DiscoveryExpressSetup-x.y.z.exe` asset.
+👉 **[Download the latest Microsoft Discovery installer](/README.md)** — pick the `Discovery-app-<version>-<release>-<platform>-<arch>.<installer-type>` asset.
 
-> ⚠️ **Prerequisites.** Windows and an active **GitHub Copilot subscription**. Microsoft Discovery is a self-contained Windows app — VS Code is *optional* and only needed if you want the VS Code integration surface. See [install.md](install.md) for the full prerequisite list and verification steps.
-
-After installation, open VS Code. You'll see the **Microsoft Discovery** icon in the Activity Bar (the vertical strip on the left). If it's there, you're done.
-
-> 💡 **Try this now.** Open VS Code and confirm you see the Microsoft Discovery icon in the Activity Bar. Click it.
+> ⚠️ **Prerequisites.** Windows 11 or macOS (Arm64) and an active **GitHub Copilot subscription**. Microsoft Discovery is a self-contained desktop applicaton. See [install.md](install.md) for the full list of prerequisites and installation steps.
 
 ---
 
-## Step 1: Tour the Sidebar 🗂️
+## Step 1: Tour the Discovery experience
 
-Click the Microsoft Discovery icon. The sidebar opens with a tree view. Here's what you'll see:
+Select the **Discovery** action button from the sidebar and the pane opens with collapsible panes. Here's what you'll see:
 
-```
-◆ MICROSOFT DISCOVERY
- ├── 📁 Workspace        ← files in your project, with Microsoft Discovery-aware actions
- ├── 📓 Notebooks         ← Jupyter, Wiki, and Brief notebooks
- ├── 📚 Bookshelf         ← your indexed knowledge bases
- ├── 🔧 Tool Catalog      ← MCP servers and agent plugins
- ├── 📋 Tasks             ← your task graph
- └── 🤖 Engines           ← configured Discovery Engines
-```
+A hierarchical view of your project files in the familiar VSCode explorer layout.
+
+### Project
+
+### Lab Notebooks
+Create a Jupyter, Markdown, or Team Wiki notebook to capture findings and save within a project. Discovery can use these notebooks and you can add to them.
+
+### Bookshelf
+A GraphRAG-based knowledge base that is local to your project. Use the Bookshelf to keep indexes of your documents, manuals, papers, and other assets. Discovery can reference the Bookshelf to assist in your research.
+
+### Tools
+A list of ready-to-use tools that ships with Discovery initially populates this list. You can add or author your own and Discovery will use them when processing your tasks.
+
+### Tasks
+A hierarchical list of tasks that the Discovery Engine creates to systematically decompose your user prompt or goal to completion.
+
+### Purpose
+Optional objective or guiding terminal state to align tasks.
+
+### Engines
+Engines are the processing capability of Discovery. Discovery ships with two default engines, *Mission Control* and *Generic Copilot*. Both use the `copilot-cli`.
+
+### Agents
+Agents that you can add to Discovery for managing workloads. Discovery ships with a few basic, general-purpose agents
+
+### Dependencies
+The dependency pane lists the dependencies that Discovery uses to run. Discovery currently ships with four dependencies:
+  * Clio Copilot plugin which powers your Engines
+  * GraphRAG Zero runtime for knowledge indexing
+  * Doc-cracker OCR runtime, an optical character recognition package that allows Bookshelf to include scanned documents and images; and,
+  * ONNX embedding model, from Hugging Face
 
 A few things to know:
 
