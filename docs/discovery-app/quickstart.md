@@ -61,6 +61,7 @@ Download the installer from the latest release and run it. That's it.
 ## Step 1: Tour the Discovery experience
 
 Select the **Discovery** action button from the sidebar and the pane opens with collapsible panes. Here's what you'll see:
+
 ![Screenshot detail of the left action bar and the Discovery icon highlighted in red](/includes/media/discovery-action-detail.png)
 
 ### Project
