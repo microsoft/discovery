@@ -8,10 +8,11 @@
       <strong>User Installer</strong>
       <a href="https://aka.ms/discovery/download/current"><strong>x64</strong></a>
       <a href="https://aka.ms/discovery/download/arm64/current"><strong>Arm64</strong></a>
+      <a href="https://aka.ms/discovery/download/osx/current"><strong>macOS</strong></a>
     </td>
     <td valign="middle">
-      A self-contained Windows app - no SDK, no cloud setup. Current release: <strong>v0.15.13</strong>.<br>
-      <sub>macOS and Linux are not supported yet. Windows x64 and Windows ARM64 installers are available today.</sub><br><br>
+      A self-contained Windows app - no SDK, no cloud setup. Current release: <strong>v0.15.14</strong>.<br>
+      <sub>Windows x64, Windows ARM64, and macOS installers are available today. Linux is not supported yet.</sub><br><br>
       🛠️ <a href="docs/discovery-app/install.md">Install guide</a> - setup, verification, and upgrade steps.
     </td>
   </tr>
@@ -21,14 +22,15 @@
 
 | Version | Date | Platform | Installer |
 | --- | --- | --- | --- |
-| v0.15.12 _(previous)_ | 2026-08-25 | Windows x64 | [`Discovery-app-0.15.12-preview-win-x64.exe`](https://aka.ms/discovery/download/previous) |
-| v0.15.12 _(previous)_ | 2026-08-25 | Windows Arm64 | [`Discovery-app-0.15.12-preview-win-arm64.exe`](https://aka.ms/discovery/download/arm64/previous) |
+| v0.15.13 _(previous)_ | 2026-09-01 | Windows x64 | [`Discovery-app-0.15.13-preview-win-x64.exe`](https://aka.ms/discovery/download/previous) |
+| v0.15.13 _(previous)_ | 2026-09-01 | Windows Arm64 | [`Discovery-app-0.15.13-preview-win-arm64.exe`](https://aka.ms/discovery/download/arm64/previous) |
+| No previous version | 2026-09-01 | macOS | *No previous version available.* |
 
 ---
 
 # Microsoft Discovery community
 
-Welcome to the **Microsoft Discovery community** — the public home for the Discovery platform, where users, partners, and the product team build together. Share what you've built, ask questions, file bugs, suggest ideas, and see what other Discovery users are doing across disciplines.
+Welcome to the **Microsoft Discovery community** — the public home for the Discovery platform, where users, partners, and the product team build together. We're proud to announce that the [Microsoft Discovery Discussions forum](https://techcommunity.microsoft.com/category/azure/discussions/microsoft-discovery-discussions) is now open on the Microsoft Community Hub! Share what you've built, ask questions, file bugs, suggest ideas, and see what other Discovery users are doing across disciplines.
 
 > **Microsoft Discovery is an extensible platform that brings together agentic orchestration, advanced reasoning, a graph-based knowledge foundation, and high-performance computing for accelerating scientific research and R&D workflows.**
 
@@ -36,7 +38,7 @@ Microsoft Discovery is offered in two complementary experiences: an enterprise-g
 
 | Experience | What it is | Where to start |
 | --- | --- | --- |
-| 🖥️ **Microsoft Discovery app** | A local-first Windows client for individual evaluation on a laptop. **Distributed from this repository.** | [`docs/discovery-app/`](docs/discovery-app/) — install, quickstart, feedback |
+| 🖥️ **Microsoft Discovery app** | A local, desktop client for individual evaluation. **Distributed from this repository.** | [`docs/discovery-app/`](docs/discovery-app/) — install, quickstart, feedback |
 | ☁️ **Microsoft Discovery** | The cloud-hosted, team-scale experience on Azure. | [Microsoft Learn](https://learn.microsoft.com/en-us/azure/microsoft-discovery/) — full reference |
 
 In addition, this repository hosts the **public Discovery Catalog** — the canonical metadata catalog of AI research **agents** and **starter kits** contributed by Microsoft and ecosystem partners. Agent code, container images, and model weights live in each contributor's own infrastructure; the metadata and documentation that describe them live here, where they are PR-reviewed, schema-validated, and surfaced to every Discovery user.
@@ -47,7 +49,7 @@ In addition, this repository hosts the **public Discovery Catalog** — the cano
 
 The canonical conceptual reference for both the app and the services is [Microsoft Discovery on Microsoft Learn](https://learn.microsoft.com/en-us/azure/microsoft-discovery/). The starting points most users want:
 
-- [Microsoft Discovery & the Microsoft Discovery app](https://learn.microsoft.com/azure/microsoft-discovery/concept-discovery-and-discovery-app) - detailed comparison of Discovery experiences 
+- [Microsoft Discovery & the Microsoft Discovery app](https://learn.microsoft.com/azure/microsoft-discovery/concept-discovery-and-discovery-app) - detailed comparison of Discovery experiences
 - [Discovery Agent concepts](https://learn.microsoft.com/azure/microsoft-discovery/concept-discovery-agent) — what an agent is and how it's invoked
 - [Discovery Engine overview](https://learn.microsoft.com/azure/microsoft-discovery/concept-discovery-engine) — the cognition layer
 - [Bookshelf and Knowledge Bases](https://learn.microsoft.com/azure/microsoft-discovery/concept-bookshelf-knowledge-bases) — how indexing and retrieval work
@@ -74,7 +76,7 @@ For an app-specific 15-minute hands-on tour, see [`docs/discovery-app/quickstart
 
 ### Install and use the Discovery app
 
-The Microsoft Discovery app is a **self-contained Windows application** — no SDK, no cloud setup, no IT ticket. Download the latest release installer and follow the [Quickstart guide](docs/discovery-app/quickstart.md) to get started. 
+The Microsoft Discovery app is a **self-contained desktop application** — no SDK, no cloud setup, no IT ticket. Download the latest release installer and follow the [Quickstart guide](docs/discovery-app/quickstart.md) to get started.
 
 **Have feedback?** See [`docs/discovery-app/feedback.md`](docs/discovery-app/feedback.md).
 
@@ -95,10 +97,10 @@ All contributions — from Microsoft engineers and external partners — arrive 
 | **New agent** | `agents/<agent-name>/` | [Agent authoring guide](docs/authoring-guides/agent-authoring-guide.md) |
 | **New starter kit** | `starter-kits/<kit-name>/` | [Starter-kit authoring guide](docs/authoring-guides/starter-kit-authoring-guide.md) |
 | **Documentation fix** | `docs/`, `README.md`, etc. | [`CONTRIBUTING.md`](CONTRIBUTING.md) |
-| **Idea / feature request** | [Discussions → Ideas](https://github.com/microsoft/discovery/discussions/categories/ideas) | — |
-| **Bug** | [Discussions → Bugs](https://github.com/microsoft/discovery/discussions/categories/bugs) | — |
-| **Question** | [Discussions → Q&A](https://github.com/microsoft/discovery/discussions/categories/q-a) | — |
-| **Something you built** | [Discussions → Show and tell](https://github.com/microsoft/discovery/discussions/categories/show-and-tell) | — |
+| **Idea / feature request** | [Discussions → Ideas](https://techcommunity.microsoft.com/category/azure/discussions/microsoft-discovery-discussions) | — |
+| **Bug** | [Discussions → Bugs](https://techcommunity.microsoft.com/category/azure/discussions/microsoft-discovery-discussions) | — |
+| **Question** | [Discussions → Q&A](https://techcommunity.microsoft.com/category/azure/discussions/microsoft-discovery-discussions) | — |
+| **Something you built** | [Discussions → Show and tell](https://techcommunity.microsoft.com/category/azure/discussions/microsoft-discovery-discussions) | — |
 | **Schema / workflow change** | PR against `docs/schemas/` or `.github/workflows/` — **Microsoft maintainers only**; open an Idea first. | [`CONTRIBUTING.md`](CONTRIBUTING.md) |
 
 The full contributor contract is in [`CONTRIBUTING.md`](CONTRIBUTING.md). Every PR runs through an automated review that validates structure, schemas, policy, documentation, and secrets — failures are reported inline with rule IDs and remediation hints.
@@ -124,12 +126,12 @@ git push origin add-my-agent
 
 ## 🆘 Getting help
 
-Everything community-facing goes to **[Discussions](https://github.com/microsoft/discovery/discussions)**, posted in the matching category:
+Everything community-facing goes to the **[Microsoft Discovery Discussions forum](https://techcommunity.microsoft.com/category/azure/discussions/microsoft-discovery-discussions)**, posted in the matching category:
 
-- **Questions / how-to** → [Q&A](https://github.com/microsoft/discovery/discussions/categories/q-a)
-- **Bugs** → [Bugs](https://github.com/microsoft/discovery/discussions/categories/bugs) (the Bug template prompts you for version, repro steps, logs)
-- **Ideas** → [Ideas](https://github.com/microsoft/discovery/discussions/categories/ideas)
-- **Show what you've built** → [Show and tell](https://github.com/microsoft/discovery/discussions/categories/show-and-tell)
+- **Questions / how-to** → [Q&A](https://techcommunity.microsoft.com/category/azure/discussions/microsoft-discovery-discussions)
+- **Bugs** → [Bugs](https://techcommunity.microsoft.com/category/azure/discussions/microsoft-discovery-discussions)
+- **Ideas** → [Ideas](https://techcommunity.microsoft.com/category/azure/discussions/microsoft-discovery-discussions)
+- **Show what you've built** → [Show and tell](https://techcommunity.microsoft.com/category/azure/discussions/microsoft-discovery-discussions)
 
 For security-sensitive reports, follow [`SECURITY.md`](SECURITY.md) — **do not** open a public Discussion or issue for vulnerabilities.
 

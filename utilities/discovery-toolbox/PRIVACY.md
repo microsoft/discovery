@@ -61,7 +61,7 @@ Every host the extension may contact, and what for:
 | Host | Purpose | Auth |
 |---|---|---|
 | `management.azure.com` | Azure Resource Manager — list/read/create/delete resources in **your** subscription | Microsoft session token |
-| `graph.microsoft.com` | Resolve your display name; verify the `AIFSPInfrastructure` service principal exists in your tenant (network-hardened workspaces only) | Microsoft session token |
+| `graph.microsoft.com` | Resolve your display name; verify the Discovery control-plane service principal exists in your tenant (all workspaces — network hardening is on by default) | Microsoft session token |
 | `*.azurecr.io` | Pull/push container images to **your** Azure Container Registry | ACR credentials sourced from ARM |
 | `<workspace>.<region>.api.discovery.microsoft.com` (and similar) | Discovery workspace data plane — investigations, agents, conversations | Microsoft session token |
 | `mcp.discovery.azure.com` (when MCP enabled) | Discovery MCP server for tool invocation | Microsoft session token |
@@ -184,6 +184,6 @@ pre-filled body before submitting — the GitHub issue is public.
 
 ---
 
-<sub>Privacy notice for Discovery Toolbox **v1.6.87** · built from `2fdde84` on 2026-08-27T20:26:42.891Z.</sub>
+<sub>Privacy notice for Discovery Toolbox **v1.7.22** · built from `524c849` on 2026-09-03T22:41:40.889Z.</sub>
 
 <sub>This document is maintained in the open in the [`microsoft/discovery`](https://github.com/microsoft/discovery/tree/main/utilities/discovery-toolbox) repository. It covers only this extension; for VS Code's own privacy practices see the [VS Code privacy statement](https://code.visualstudio.com/license).</sub>

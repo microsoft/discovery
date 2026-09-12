@@ -1,0 +1,362 @@
+name: Refresh current release
+
+# Worker for the release-refresh automation (see .github/workflows/README.md).
+#
+# Moves the mutable `current` git tag to main HEAD, delete-and-recreates the
+# `current` GitHub Release (fresh `published_at`, auto-generated notes, no
+# uploaded assets), and opens a PR that bumps the README download table so the
+# recorded version matches the app shipping behind the aka.ms short links.
+#
+# Two trigger paths funnel here:
+#   * workflow_dispatch  — manual button / the hourly probe-aka-ms.yml poll.
+#   * repository_dispatch (event_type: app-released) — the future ADO release
+#     pipeline POSTs the same three inputs as client_payload.
+#
+# Both paths supply: version, previous_version, previous_date.
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "New current version, e.g. v0.15.14"
+        required: true
+        type: string
+      previous_version:
+        description: "Immediately preceding version, e.g. v0.15.13"
+        required: true
+        type: string
+      previous_date:
+        description: "Release date (UTC) of the previous version, YYYY-MM-DD"
+        required: true
+        type: string
+      dry_run:
+        description: "Patch README in the workspace and print intended mutations, but don't retag, rerelease, or open a PR."
+        required: false
+        default: false
+        type: boolean
+  repository_dispatch:
+    types: [app-released]
+
+permissions:
+  contents: write
+  pull-requests: write
+  issues: write
+
+concurrency:
+  group: refresh-current
+  cancel-in-progress: false
+
+jobs:
+  refresh:
+    name: Retag, rerelease, and open README PR
+    if: github.repository == 'microsoft/discovery' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      RELEASE_TAG: current
+      RELEASE_NAME: Discovery-app-preview-release
+      # workflow_dispatch inputs (empty on repository_dispatch).
+      WD_VERSION:  ${{ inputs.version }}
+      WD_PREV:     ${{ inputs.previous_version }}
+      WD_DATE:     ${{ inputs.previous_date }}
+      WD_DRY:      ${{ inputs.dry_run }}
+      # repository_dispatch client_payload (empty on workflow_dispatch).
+      RD_VERSION:  ${{ github.event.client_payload.version }}
+      RD_PREV:     ${{ github.event.client_payload.previous_version }}
+      RD_DATE:     ${{ github.event.client_payload.previous_date }}
+
+    steps:
+      - name: Resolve and validate inputs
+        id: in
+        run: |
+          set -euo pipefail
+          if [[ "${GITHUB_EVENT_NAME}" == "repository_dispatch" ]]; then
+            version="${RD_VERSION:-}"; previous="${RD_PREV:-}"; date="${RD_DATE:-}"; dry="false"
+          else
+            version="${WD_VERSION:-}"; previous="${WD_PREV:-}"; date="${WD_DATE:-}"; dry="${WD_DRY:-false}"
+          fi
+
+          semver='^v[0-9]+\.[0-9]+\.[0-9]+$'
+          isodate='^[0-9]{4}-[0-9]{2}-[0-9]{2}$'
+          if [[ ! "${version}"  =~ ${semver} ]]; then echo "::error::version must look like vX.Y.Z (got '${version}')"; exit 1; fi
+          if [[ ! "${previous}" =~ ${semver} ]]; then echo "::error::previous_version must look like vX.Y.Z (got '${previous}')"; exit 1; fi
+          if [[ ! "${date}"     =~ ${isodate} ]]; then echo "::error::previous_date must be YYYY-MM-DD (got '${date}')"; exit 1; fi
+          if [[ "${version}" == "${previous}" ]]; then echo "::error::version and previous_version are identical (${version})"; exit 1; fi
+
+          {
+            echo "version=${version}"
+            echo "previous=${previous}"
+            echo "date=${date}"
+            echo "dry_run=${dry}"
+            echo "branch=release/refresh-current-${version}"
+          } >> "$GITHUB_OUTPUT"
+          echo "Resolved: version=${version} previous=${previous} previous_date=${date} dry_run=${dry}"
+
+      - name: Checkout main
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Configure git identity
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+      - name: Patch README.md
+        id: patch
+        env:
+          NEW_VERSION:      ${{ steps.in.outputs.version }}
+          PREVIOUS_VERSION: ${{ steps.in.outputs.previous }}
+          PREVIOUS_DATE:    ${{ steps.in.outputs.date }}
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import os, re, sys
+
+          version   = os.environ["NEW_VERSION"]
+          previous  = os.environ["PREVIOUS_VERSION"]
+          date      = os.environ["PREVIOUS_DATE"]
+          prev_bare = previous.lstrip("v")
+
+          with open("README.md", encoding="utf-8") as fh:
+              text = fh.read()
+          original = text
+
+          # 1. Header: "Current release: <strong>vX.Y.Z</strong>"
+          header_pat = re.compile(r'(Current release:\s*<strong>)v\d+\.\d+\.\d+(</strong>)')
+          if len(header_pat.findall(text)) != 1:
+              sys.exit("::error::Header regex did not match exactly once in README.md")
+          text = header_pat.sub(lambda m: m.group(1) + version + m.group(2), text, count=1)
+
+          # 2. Previous rows — one per Windows architecture. Keep the captured
+          #    aka.ms URL and the filename's win-<suffix> token untouched.
+          def update_previous_row(t, arch):
+              pat = re.compile(
+                  r'\|\s*v\d+\.\d+\.\d+\s*_\(previous\)_\s*\|\s*\d{4}-\d{2}-\d{2}\s*\|\s*Windows\s+'
+                  + re.escape(arch)
+                  + r'\s*\|\s*\[`Discovery-app-\d+\.\d+\.\d+-preview-win-([A-Za-z0-9]+)\.exe`\]'
+                  + r'\((https://aka\.ms/discovery/download/[^)]+)\)\s*\|'
+              )
+              matches = pat.findall(t)
+              if len(matches) != 1:
+                  sys.exit(f"::error::Previous-row regex for Windows {arch} matched {len(matches)} times (expected 1)")
+              def repl(m):
+                  arch_suffix = m.group(1)
+                  url = m.group(2)
+                  return (f'| {previous} _(previous)_ | {date} | Windows {arch} | '
+                          f'[`Discovery-app-{prev_bare}-preview-win-{arch_suffix}.exe`]({url}) |')
+              return pat.sub(repl, t, count=1)
+
+          text = update_previous_row(text, "x64")
+          text = update_previous_row(text, "Arm64")
+
+          gh_out = os.environ.get("GITHUB_OUTPUT")
+          changed = "true" if text != original else "false"
+          if changed == "true":
+              with open("README.md", "w", encoding="utf-8") as fh:
+                  fh.write(text)
+          if gh_out:
+              with open(gh_out, "a", encoding="utf-8") as fh:
+                  fh.write(f"changed={changed}\n")
+          print(f"README patch: changed={changed} (current -> {version}, previous -> {previous} / {date})")
+          PY
+
+      - name: Verify aka.ms download links
+        run: |
+          set -euo pipefail
+          mapfile -t urls < <(grep -oE 'https://aka\.ms/discovery/download/[^)"]+' README.md | sort -u)
+          if [[ "${#urls[@]}" -eq 0 ]]; then
+            echo "::error::No aka.ms/discovery/download URLs found in README.md — parser drift?"
+            exit 1
+          fi
+          fail=0
+          for u in "${urls[@]}"; do
+            code="$(curl -sS -o /dev/null -m 20 -w '%{http_code}' -I "${u}" || echo "000")"
+            loc="$(curl -sS -o /dev/null -m 20 -w '%header{location}' -I "${u}" || true)"
+            if [[ "${code}" =~ ^3[0-9][0-9]$ && -n "${loc}" ]]; then
+              echo "OK   ${u} -> ${code} ${loc}"
+            else
+              echo "::error::Link check failed for ${u} (status ${code}, location '${loc}')"
+              fail=1
+            fi
+          done
+          [[ "${fail}" -eq 0 ]]
+
+      - name: Move current tag to main HEAD
+        if: steps.in.outputs.dry_run != 'true'
+        run: |
+          set -euo pipefail
+          sha="$(git rev-parse HEAD)"
+          echo "Retagging ${RELEASE_TAG} -> ${sha}"
+          git tag -f "${RELEASE_TAG}" "${sha}"
+          git push -f origin "refs/tags/${RELEASE_TAG}"
+
+      - name: Recreate current release
+        if: steps.in.outputs.dry_run != 'true'
+        run: |
+          set -euo pipefail
+          # Delete-and-recreate so published_at is refreshed. Keep the tag we
+          # just moved (default --cleanup-tag=false). No assets are uploaded —
+          # download links stay as the aka.ms redirects (see README asset policy).
+          if gh release view "${RELEASE_TAG}" --repo "${GITHUB_REPOSITORY}" >/dev/null 2>&1; then
+            gh release delete "${RELEASE_TAG}" --repo "${GITHUB_REPOSITORY}" --yes
+          fi
+          gh release create "${RELEASE_TAG}" \
+            --repo "${GITHUB_REPOSITORY}" \
+            --target main \
+            --title "${RELEASE_NAME}" \
+            --generate-notes \
+            --latest=false
+          echo "Recreated release ${RELEASE_NAME} (${RELEASE_TAG}) at main HEAD"
+
+      - name: Open README bump PR
+        if: steps.in.outputs.dry_run != 'true' && steps.patch.outputs.changed == 'true'
+        env:
+          BRANCH:  ${{ steps.in.outputs.branch }}
+          VERSION: ${{ steps.in.outputs.version }}
+        run: |
+          set -euo pipefail
+
+          # Debounce: if the branch or an open PR already exists, don't stack a
+          # duplicate. The hourly probe also guards on this branch name.
+          if git ls-remote --exit-code --heads origin "${BRANCH}" >/dev/null 2>&1; then
+            echo "Branch ${BRANCH} already exists on origin — refresh already dispatched. Skipping PR."
+            exit 0
+          fi
+
+          git checkout -b "${BRANCH}"
+          git add README.md
+          git commit -m "chore(release): refresh README download table to ${VERSION}"
+          git push origin "${BRANCH}"
+
+          body_file="$(mktemp)"
+          {
+            echo "Automated README download-table refresh for **${VERSION}**."
+            echo
+            echo "- Current release bumped to \`${VERSION}\`."
+            echo "- Previous-release rows updated to \`${{ steps.in.outputs.previous }}\` (${{ steps.in.outputs.date }})."
+            echo "- The \`${RELEASE_TAG}\` tag and \`${RELEASE_NAME}\` GitHub Release were retagged to main HEAD with a fresh \`published_at\`."
+            echo
+            echo "Opened by \`refresh-current.yml\`. Merge to record the shipped version on \`main\`."
+          } > "${body_file}"
+
+          gh pr create --repo "${GITHUB_REPOSITORY}" \
+            --base main --head "${BRANCH}" \
+            --title "chore(release): refresh README download table to ${VERSION}" \
+            --body-file "${body_file}"
+
+      - name: Dry-run summary
+        if: steps.in.outputs.dry_run == 'true'
+        env:
+          VERSION:  ${{ steps.in.outputs.version }}
+          PREVIOUS: ${{ steps.in.outputs.previous }}
+          DATE:     ${{ steps.in.outputs.date }}
+          BRANCH:   ${{ steps.in.outputs.branch }}
+          CHANGED:  ${{ steps.patch.outputs.changed }}
+        run: |
+          echo "::notice::[dry-run] README patched in workspace (changed=${CHANGED}); no external state mutated."
+          echo "[dry-run] would retag ${RELEASE_TAG} -> main HEAD"
+          echo "[dry-run] would delete + recreate release '${RELEASE_NAME}' (${RELEASE_TAG}) with --generate-notes"
+          echo "[dry-run] would push branch ${BRANCH} and open PR: 'chore(release): refresh README download table to ${VERSION}'"
+          echo "[dry-run] inputs: version=${VERSION} previous_version=${PREVIOUS} previous_date=${DATE}"
+
+  report-failure:
+    name: Open/update tracking issue on failure
+    needs: refresh
+    if: >-
+      always() &&
+      needs.refresh.result == 'failure' &&
+      github.repository == 'microsoft/discovery' &&
+      github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      issues: write
+      contents: read
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      - name: Ensure label exists
+        run: |
+          gh label create release-automation \
+            --repo "${GITHUB_REPOSITORY}" \
+            --color "d73a4a" \
+            --description "Automated release refresh workflow failures" \
+            2>/dev/null || true
+
+      - name: Create or update tracking issue
+        env:
+          WORKFLOW: ${{ github.workflow }}
+          RUN_URL:  ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          EVENT:    ${{ github.event_name }}
+          ACTOR:    ${{ github.actor }}
+          SHA:      ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          title="[release-automation] ${WORKFLOW} failed"
+          body_file="$(mktemp)"
+          {
+            echo "Automated release-refresh workflow **${WORKFLOW}** failed."
+            echo
+            echo "- Run: ${RUN_URL}"
+            echo "- Event: \`${EVENT}\`"
+            echo "- Actor: @${ACTOR}"
+            echo "- SHA: \`${SHA}\`"
+            echo
+            echo "The rolling \`current\` GitHub Release and README download table may now be out of sync with the aka.ms redirect. Please:"
+            echo
+            echo "1. Inspect the run log at the URL above and identify the failed step."
+            echo "2. Fix the underlying issue (transient aka.ms edit, broken CDN, README regex drift, credential rotation, etc.)."
+            echo "3. Re-run the workflow manually from the Actions tab. Consider \`dry_run: true\` first to smoke-test the fix."
+            echo "4. Verify the \`current\` tag, GitHub Release, and README download table match the shipped app version, then close this issue."
+          } > "${body_file}"
+
+          # Fallback when the Issues tracker can't be used (e.g. Issues are
+          # disabled on this repo, or a gh call fails): surface the failure in
+          # the job summary and as a warning annotation instead of letting this
+          # reporter job fail too. A failing reporter buries the real error and
+          # produces confusing "the workflow that reports failures failed" noise.
+          report_via_summary() {
+            local reason="$1"
+            echo "::warning::${WORKFLOW} failed and the tracking issue could not be used (${reason}). See ${RUN_URL}"
+            {
+              echo "## ⚠️ ${title}"
+              echo
+              echo "Tracking issue was not used: **${reason}**."
+              echo
+              cat "${body_file}"
+            } >> "${GITHUB_STEP_SUMMARY:-/dev/stderr}"
+          }
+
+          # Issues may be disabled on the repository; probe before calling the
+          # issues API so we degrade gracefully rather than exiting non-zero.
+          issues_enabled="$(gh repo view "${GITHUB_REPOSITORY}" \
+            --json hasIssuesEnabled --jq '.hasIssuesEnabled' 2>/dev/null || echo "false")"
+          if [[ "${issues_enabled}" != "true" ]]; then
+            report_via_summary "Issues are disabled on ${GITHUB_REPOSITORY}"
+            exit 0
+          fi
+
+          existing="$(gh issue list --repo "${GITHUB_REPOSITORY}" \
+            --state open --label release-automation \
+            --search "${title} in:title" \
+            --json number --jq '.[0].number' 2>/dev/null || true)"
+
+          if [[ -n "${existing}" ]]; then
+            if gh issue comment "${existing}" --repo "${GITHUB_REPOSITORY}" --body-file "${body_file}"; then
+              echo "Commented on existing tracking issue #${existing}"
+            else
+              report_via_summary "failed to comment on issue #${existing}"
+            fi
+          else
+            if gh issue create --repo "${GITHUB_REPOSITORY}" \
+              --title "${title}" \
+              --label release-automation \
+              --body-file "${body_file}"; then
+              echo "Opened new tracking issue for ${WORKFLOW} failure"
+            else
+              report_via_summary "failed to create tracking issue"
+            fi
+          fi

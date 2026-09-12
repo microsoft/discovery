@@ -1,0 +1,60 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2018-05-01/subscriptionDeploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "metadata": {
+    "_generator": {
+      "name": "bicep",
+      "version": "0.44.1.10279",
+      "templateHash": "16695505145294792511"
+    }
+  },
+  "parameters": {
+    "ruleState": {
+      "type": "string",
+      "defaultValue": "Enabled",
+      "metadata": {
+        "description": "Enable or disable both suppression rules."
+      }
+    }
+  },
+  "resources": [
+    {
+      "type": "Microsoft.Security/alertsSuppressionRules",
+      "apiVersion": "2019-01-01-preview",
+      "name": "Binary-drift-vscode-cli-download",
+      "properties": {
+        "alertType": "K8S.NODE_DriftDetection",
+        "reason": "SpecificEntityFalsePositive",
+        "state": "[parameters('ruleState')]",
+        "comment": "Discovery interactive debug (VS Code tunnel): CLI download + tar extract of vscode-cli.tar.gz. Runtime tools are not in the image.",
+        "suppressionAlertsScope": {
+          "allOf": [
+            {
+              "field": "entities.process.commandline",
+              "contains": "vscode-cli.tar.gz"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "type": "Microsoft.Security/alertsSuppressionRules",
+      "apiVersion": "2019-01-01-preview",
+      "name": "Binary-drift-vscode-cli-tunnel",
+      "properties": {
+        "alertType": "K8S.NODE_DriftDetection",
+        "reason": "SpecificEntityFalsePositive",
+        "state": "[parameters('ruleState')]",
+        "comment": "Discovery interactive debug (VS Code tunnel): CLI/server exec from /tmp/_debug_*. Runtime-fetched binaries are not in the image.",
+        "suppressionAlertsScope": {
+          "allOf": [
+            {
+              "field": "entities.process.commandline",
+              "contains": "/tmp/_debug_c"
+            }
+          ]
+        }
+      }
+    }
+  ]
+}
