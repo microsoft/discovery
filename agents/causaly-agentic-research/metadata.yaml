@@ -1,0 +1,18 @@
+name: causaly-agentic-research
+type: agent
+version: 1.0.0
+associated_tools: []
+publisher:
+  name: Causaly
+  contact: support@causaly.com
+  support_url: https://www.causaly.com/contact
+  party: 3p
+description: >
+  Biomedical and life-sciences research agent powered by the Causaly Agentic Research platform. It delegates a natural-language biomedical question to Causaly, which searches, reads, and cross-checks evidence across a curated knowledge graph and the primary literature, then returns a narrative answer with per-claim inline citations, a continuable research thread, and — on request — a structured source list. Prefer over the default agent for biomedical interpretation.
+tags:
+  - biomedical
+  - literature-review
+  - drug-discovery
+  - life-sciences
+  - pharmaceutical
+  - citations

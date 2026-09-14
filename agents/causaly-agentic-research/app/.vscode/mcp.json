@@ -1,0 +1,8 @@
+{
+  "servers": {
+    "causaly-ar-mcp-server": {
+      "url": "https://med.causaly.com/mcp/v1/agentic-research",
+      "type": "http"
+    }
+  }
+}
