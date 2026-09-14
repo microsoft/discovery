@@ -1,5 +1,6 @@
 rule_id,name,purpose,implementation_source
 CFG-001,Policy configuration validity,"Blocks malformed, expired, or overlong policy waivers so validation cannot fail open.",.github/scripts/catalog_validation/runner.py; .github/scripts/rules/registry.py; .github/policy/waivers.yaml
+CFG-002,Policy file well-formedness,"Blocks when a policy file (source-allowlist, base-images, tag-taxonomy) cannot be loaded as a mapping, so a malformed policy cannot silently disable the checks that depend on it.",.github/scripts/catalog_validation/runner.py; .github/scripts/rules/base.py
 STR-001,Required agent metadata,Requires every touched agent folder to contain metadata.yaml.,.github/scripts/catalog_validation/structural.py
 STR-002,Required agent README,Requires every touched agent folder to contain README.md.,.github/scripts/catalog_validation/structural.py
 STR-003,Required agent definition,Requires every touched agent folder to contain agent.yaml.,.github/scripts/catalog_validation/structural.py
