@@ -12,7 +12,7 @@ infra:
   - name: worker
     infra_type: container
     image:
-      acr: "{name}/xyce:latest"
+      acr: "{name}.azurecr.io/xyce:latest"
     compute:
       pool_type: static
       pool_size: 1

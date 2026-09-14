@@ -1,14 +1,119 @@
 version: 2
 updates:
-  # GitHub Actions — track action versions and surface security advisories.
+  # GitHub Actions: one grouped PR for compatible updates; major updates stay
+  # separate so workflow API changes receive focused review.
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
       interval: "weekly"
-    open-pull-requests-limit: 5
+      day: "monday"
+      time: "07:00"
+      timezone: "Etc/UTC"
+    open-pull-requests-limit: 10
+    groups:
+      actions-minor-patch:
+        patterns:
+          - "*"
+        update-types:
+          - "minor"
+          - "patch"
     labels:
       - "automated-dep-update"
     commit-message:
       prefix: "chore(actions)"
     cooldown:
       default-days: 7
+
+  # The root local tool manifest pins Application Inspector for code scanning.
+  - package-ecosystem: "nuget"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "tuesday"
+      time: "07:00"
+      timezone: "Etc/UTC"
+    open-pull-requests-limit: 10
+    groups:
+      nuget-minor-patch:
+        patterns:
+          - "*"
+        update-types:
+          - "minor"
+          - "patch"
+    labels:
+      - "automated-dep-update"
+    commit-message:
+      prefix: "chore(dotnet)"
+
+  # The Supercomputer CLI has a committed uv lockfile, so Dependabot can update
+  # direct and transitive Python dependencies reproducibly.
+  - package-ecosystem: "uv"
+    directory: "/utilities/supercomputer-cli/discovery"
+    schedule:
+      interval: "weekly"
+      day: "tuesday"
+      time: "07:00"
+      timezone: "Etc/UTC"
+    open-pull-requests-limit: 10
+    groups:
+      uv-minor-patch:
+        patterns:
+          - "*"
+        update-types:
+          - "minor"
+          - "patch"
+    labels:
+      - "automated-dep-update"
+    commit-message:
+      prefix: "chore(python)"
+
+  # Standalone requirements files that are not owned by the uv project above.
+  - package-ecosystem: "pip"
+    directories:
+      - "/.github"
+      - "/agents/gwp-predictor/training"
+      - "/agents/zinc/tools/zinc"
+      - "/utilities/supercomputer-cli/example_images/mongo"
+    schedule:
+      interval: "weekly"
+      day: "tuesday"
+      time: "08:00"
+      timezone: "Etc/UTC"
+    open-pull-requests-limit: 10
+    groups:
+      pip-minor-patch:
+        patterns:
+          - "*"
+        update-types:
+          - "minor"
+          - "patch"
+        group-by: "dependency-name"
+    labels:
+      - "automated-dep-update"
+    commit-message:
+      prefix: "chore(python)"
+
+  # Track base images in catalog tools and maintained utility examples. The
+  # globs automatically include newly added conventional Dockerfiles.
+  - package-ecosystem: "docker"
+    directories:
+      - "/agents/*/tools/*"
+      - "/utilities/supercomputer-cli/example_images/*"
+    schedule:
+      interval: "weekly"
+      day: "wednesday"
+      time: "07:00"
+      timezone: "Etc/UTC"
+    open-pull-requests-limit: 10
+    groups:
+      docker-minor-patch:
+        patterns:
+          - "*"
+        update-types:
+          - "minor"
+          - "patch"
+        group-by: "dependency-name"
+    labels:
+      - "automated-dep-update"
+    commit-message:
+      prefix: "chore(images)"

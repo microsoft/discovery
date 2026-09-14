@@ -1,0 +1,13 @@
+{
+  "version": 1,
+  "isRoot": true,
+  "tools": {
+    "microsoft.cst.applicationinspector.cli": {
+      "version": "1.9.55",
+      "commands": [
+        "appinspector"
+      ],
+      "rollForward": false
+    }
+  }
+}
