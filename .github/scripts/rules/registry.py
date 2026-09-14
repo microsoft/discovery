@@ -9,11 +9,15 @@ layers sit between a raw finding and a blocking failure:
 1. **Waivers** (`.github/policy/waivers.yaml`) — a reviewed, expiring
    exception for a specific rule and path. Suppresses the finding entirely.
 2. **Ratchet** (`.github/policy/baseline.json`) — pre-existing violations
-   recorded at rollout. Downgraded to warnings so legacy content keeps
-   building, while any *new* violation of the same rule still blocks.
+   recorded at rollout. A baselined finding is downgraded to a warning **only
+   when the PR does not touch the offending file**, so legacy content keeps
+   building. The moment a PR changes a baselined file it is re-subjected to
+   full scrutiny and the finding blocks again — a new violation can never
+   hide behind a stale baseline entry for a file the PR is actively editing.
 
 The ratchet is what lets a stricter ruleset ship without breaking the 46
-agents that predate it.
+agents that predate it, without letting the baseline become a bypass for new
+problems introduced into those same files.
 """
 
 from __future__ import annotations
@@ -249,6 +253,7 @@ def run_rules(
     rules = rules if rules is not None else discover_rules()
     waivers, config_errors = load_waivers(ctx.repo)
     baseline = load_baseline(ctx.repo) if apply_ratchet else set()
+    changed_set = {f.replace("\\", "/") for f in ctx.changed_files}
 
     raw: list[Finding] = []
     for rule in rules:
@@ -258,8 +263,12 @@ def run_rules(
     for finding in raw:
         if any(w.matches(finding.rule_id, finding.file) for w in waivers):
             continue
-        if (finding.rule_id, finding.file) in baseline:
-            # Pre-existing at rollout: report, but do not block.
+        finding_path = finding.file.replace("\\", "/")
+        if (finding.rule_id, finding_path) in baseline and finding_path not in changed_set:
+            # Pre-existing at rollout and untouched by this PR: report, but do
+            # not block. If the PR changes the file, the baseline no longer
+            # applies and the finding blocks — the baseline can never suppress
+            # a violation in a file the PR is actively editing.
             resolved.append(
                 Finding(
                     rule_id=finding.rule_id,

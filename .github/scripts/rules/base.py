@@ -85,34 +85,52 @@ class PolicyConfig:
     domain_tags: frozenset[str] = frozenset()
     reserved_tag_prefixes: tuple[str, ...] = ()
     computed_tags: frozenset[str] = frozenset()
+    #: (rel_path, message) for every policy file that could not be loaded as a
+    #: mapping. A non-empty tuple means one or more checks would silently run
+    #: with empty configuration — the runner turns these into blocking
+    #: failures rather than letting a malformed policy fail open.
+    config_errors: tuple[tuple[str, str], ...] = ()
+
+    @staticmethod
+    def _load_mapping(path: Path) -> tuple[dict, str | None]:
+        """Load a policy YAML file that must be a top-level mapping.
+
+        Returns ``(mapping, error)``. A *missing* file is not an error — that
+        policy is simply unconfigured and the defaults apply. A parse failure,
+        a read failure, or a top-level document that is not a mapping IS an
+        error, so a malformed policy can never silently disable the checks
+        that depend on it.
+        """
+        if not path.exists():
+            return {}, None
+        try:
+            raw = yaml.safe_load(path.read_text(encoding="utf-8"))
+        except (yaml.YAMLError, OSError, UnicodeDecodeError) as e:
+            return {}, f"{path.name} could not be parsed: {e}"
+        if raw is None:
+            return {}, None
+        if not isinstance(raw, dict):
+            return (
+                {},
+                f"{path.name}: top-level document must be a mapping, "
+                f"got {type(raw).__name__}.",
+            )
+        return raw, None
 
     @classmethod
     def load(cls, repo: Path) -> "PolicyConfig":
         policy_dir = repo / ".github" / "policy"
+        errors: list[tuple[str, str]] = []
 
-        allowlist: dict = {}
-        allowlist_path = policy_dir / "source-allowlist.yaml"
-        if allowlist_path.exists():
-            try:
-                allowlist = yaml.safe_load(allowlist_path.read_text(encoding="utf-8")) or {}
-            except (yaml.YAMLError, OSError):
-                allowlist = {}
+        def _load(filename: str) -> dict:
+            mapping, err = cls._load_mapping(policy_dir / filename)
+            if err:
+                errors.append((f".github/policy/{filename}", err))
+            return mapping
 
-        base_images: dict = {}
-        base_images_path = policy_dir / "base-images.yaml"
-        if base_images_path.exists():
-            try:
-                base_images = yaml.safe_load(base_images_path.read_text(encoding="utf-8")) or {}
-            except (yaml.YAMLError, OSError):
-                base_images = {}
-
-        taxonomy: dict = {}
-        taxonomy_path = policy_dir / "tag-taxonomy.yaml"
-        if taxonomy_path.exists():
-            try:
-                taxonomy = yaml.safe_load(taxonomy_path.read_text(encoding="utf-8")) or {}
-            except (yaml.YAMLError, OSError):
-                taxonomy = {}
+        allowlist = _load("source-allowlist.yaml")
+        base_images = _load("base-images.yaml")
+        taxonomy = _load("tag-taxonomy.yaml")
 
         domain_tags: set[str] = set()
         for group in (taxonomy.get("domains") or {}).values():
@@ -156,6 +174,7 @@ class PolicyConfig:
             computed_tags=frozenset(
                 str(t).lower() for t in taxonomy.get("computed", []) or []
             ),
+            config_errors=tuple(errors),
         )
 
     def is_approved_base_image(

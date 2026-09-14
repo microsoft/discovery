@@ -1,4 +1,30 @@
-"""Orchestration for all PR validation check families."""
+"""Orchestration for all PR validation check families.
+
+Two engines run side by side, and this module is the single place that fans a
+PR out to both. To keep their responsibilities unambiguous, each rule family
+has exactly one authoritative owner:
+
+Legacy check families (``catalog_validation.*``) — authoritative for:
+  * contributor scope   (``contributor_scope``) — who may touch what
+  * repository structure (``structural``)        — required files/folders
+  * schema conformance   (``schema_checks``)     — agent/tool/metadata schemas
+  * documentation        (``documentation``)     — required docs/sections
+  * waiver-gated policy  (``policy_checks``)     — contribution-scope policy
+    that needs author/permission context the pure rules do not receive.
+
+Modular rule engine (``rules.*``, discovered by the registry) — authoritative
+for the ratcheted, waiverable content rules addressed by rule id:
+  * binary / model-weight content   (POL-008, POL-014 …)
+  * base-image provenance           (POL-018, POL-019)
+  * large/committed artifacts        (POL-015, POL-016, POL-020)
+  * tag taxonomy                     (TAG-001, TAG-002)
+
+The two sets do not overlap: a given rule id is produced by exactly one engine,
+so a PR can never receive duplicate findings for the same violation. New
+content rules should be added to the modular engine (one file per rule); the
+legacy families remain because they need orchestration context (permissions,
+schema objects) that the per-rule contract intentionally omits.
+"""
 
 from __future__ import annotations
 
@@ -81,6 +107,14 @@ def run_validation(
         head_ref=head_ref,
     ))
     failures.extend(check_documentation(repo, context.agent_folders))
+
+    # A policy file that could not be loaded as a mapping is a blocking config
+    # error, not an empty policy: a malformed source-allowlist / base-images /
+    # tag-taxonomy must never silently disable the checks that depend on it.
+    failures.extend(
+        Failure("CFG-002", rel_path, message)
+        for rel_path, message in context.policy.config_errors
+    )
 
     rules = discover_rules()
     guidance = {rule.id: rule for rule in rules}

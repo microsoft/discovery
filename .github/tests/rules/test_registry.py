@@ -13,7 +13,7 @@ from pathlib import Path
 import pytest
 from conftest import ELF_BYTES, run_rule, write, write_policy
 
-from rules.base import Rule, Scope, Severity
+from rules.base import Finding, Rule, Scope, Severity
 from rules.pol_008 import RULE as POL_008
 from rules.registry import MAX_WAIVER_DAYS, discover_rules, load_waivers
 
@@ -193,22 +193,69 @@ def _write_baseline(repo: Path, entries: list[dict]) -> None:
     path.write_text(json.dumps({"violations": entries}), encoding="utf-8")
 
 
-def test_baselined_violation_is_downgraded_to_a_warning(repo):
-    rel = write(repo, "agents/legacy/notes.txt", ELF_BYTES)
-    _write_baseline(repo, [{"rule_id": "POL-008", "file": rel}])
-    result = run_rule(repo, POL_008, [rel])
+def _folder_rule(targets: list[str], rule_id: str = "ZZZ-001") -> Rule:
+    """A synthetic agent-folder rule that flags fixed files.
+
+    Folder-scoped rules scan an agent's whole folder, so they are the only
+    rules that can report a violation in a file the PR does *not* change —
+    exactly the case the ratchet is meant to keep quiet. Using a synthetic
+    rule keeps these ratchet tests decoupled from any real rule's specifics.
+    """
+
+    def check(ctx):
+        return [Finding(rule_id=rule_id, file=t, message="synthetic finding") for t in targets]
+
+    return Rule(
+        id=rule_id,
+        summary="synthetic folder rule for ratchet tests",
+        scope=Scope.AGENT_FOLDER,
+        remediation="n/a",
+        check=check,
+    )
+
+
+def test_baselined_violation_in_an_unchanged_file_is_downgraded(repo):
+    """A pre-existing violation the PR does not touch stays a warning."""
+    write(repo, "agents/legacy/agent.yaml", "name: legacy\n")
+    unchanged = write(repo, "agents/legacy/legacy-artifact.bin", ELF_BYTES)
+    _write_baseline(repo, [{"rule_id": "ZZZ-001", "file": unchanged}])
+    # The PR touches the folder (agent.yaml) but not the offending artifact.
+    result = run_rule(repo, _folder_rule([unchanged]), ["agents/legacy/agent.yaml"])
     assert result.blocking == []
     assert len(result.warnings) == 1
     assert "pre-existing" in result.warnings[0].message
 
 
-def test_new_violation_still_blocks_when_a_baseline_exists(repo):
-    old = write(repo, "agents/legacy/notes.txt", ELF_BYTES)
-    new = write(repo, "agents/legacy/fresh.txt", ELF_BYTES)
-    _write_baseline(repo, [{"rule_id": "POL-008", "file": old}])
-    result = run_rule(repo, POL_008, [old, new])
-    assert [f.file for f in result.blocking] == [new]
-    assert [f.file for f in result.warnings] == [old]
+def test_baselined_violation_in_a_changed_file_still_blocks(repo):
+    """Touching a baselined file re-subjects it to full scrutiny — it blocks.
+
+    Regression guard for the ratchet bypass: a new violation introduced into
+    an already-baselined file must never be silently downgraded just because
+    a stale baseline entry names it.
+    """
+    rel = write(repo, "agents/legacy/notes.txt", ELF_BYTES)
+    _write_baseline(repo, [{"rule_id": "POL-008", "file": rel}])
+    result = run_rule(repo, POL_008, [rel])
+    assert [f.file for f in result.blocking] == [rel]
+    assert result.warnings == []
+
+
+def test_only_unchanged_baselined_files_are_downgraded(repo):
+    """With two identical baselined findings, only the untouched file relaxes."""
+    write(repo, "agents/legacy/agent.yaml", "name: legacy\n")
+    unchanged = write(repo, "agents/legacy/old.bin", ELF_BYTES)
+    changed = write(repo, "agents/legacy/new.bin", ELF_BYTES)
+    _write_baseline(repo, [
+        {"rule_id": "ZZZ-001", "file": unchanged},
+        {"rule_id": "ZZZ-001", "file": changed},
+    ])
+    result = run_rule(
+        repo,
+        _folder_rule([unchanged, changed]),
+        ["agents/legacy/agent.yaml", changed],
+    )
+    assert [f.file for f in result.blocking] == [changed]
+    assert [f.file for f in result.warnings] == [unchanged]
 
 
 def test_ratchet_can_be_disabled_for_full_repo_audits(repo):
