@@ -1,0 +1,18 @@
+# Terraform state and per-user artifacts stay out of git.
+*.tfstate
+*.tfstate.*
+*.tfstate.backup
+.terraform/
+crash.log
+crash.*.log
+
+# Your real variable values.
+terraform.tfvars
+*.auto.tfvars
+
+# Plan artifacts.
+*.tfplan
+tfplan
+
+# Local-only test planning notes (kept out of the published module).
+TESTING-PLAN.md
