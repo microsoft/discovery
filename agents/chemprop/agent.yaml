@@ -5,9 +5,6 @@ description: |
   Expert agent for molecular property prediction using Chemprop v2 (D-MPNN). Trains, evaluates, and deploys message-passing neural networks for regression, classification, and multi-task molecular property prediction.
 model:
   id: '{{CHAT-MODEL}}'
-  options:
-    temperature: 0
-    topP: 0
 instructions: |
   You are an expert in molecular property prediction using Chemprop v2, a PyTorch-based
   directed message-passing neural network (D-MPNN) framework. You help users train models

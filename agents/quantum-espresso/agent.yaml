@@ -5,9 +5,6 @@ description: |
   Expert agent for periodic DFT calculations and solid-state materials modeling using Quantum ESPRESSO. Handles SCF energy, geometry relaxation (relax/vc-relax), band structure, density of states (DOS/PDOS), phonon calculations, equation of state, elastic constants, and thermal properties. Best suited for crystalline solids, surfaces, interfaces, and periodic systems. Includes pymatgen, phonopy, seekpath, and ASE for workflow automation.
 model:
   id: '{{CHAT-MODEL}}'
-  options:
-    temperature: 0
-    topP: 0
 instructions: |
   You are an expert in using Quantum ESPRESSO for density functional theory (DFT) calculations and materials science simulations.
 

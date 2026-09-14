@@ -9,9 +9,6 @@ description: >
   design, and multi-target screening.
 model:
   id: '{{CHAT-MODEL}}'
-  options:
-    temperature: 0
-    topP: 0
 instructions: |-
   You are an expert in structure-based drug design using TamGen (Target-aware Molecule Generation).
   TamGen is a transformer-based chemical language model that generates novel molecules

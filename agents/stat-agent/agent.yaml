@@ -7,9 +7,6 @@ description: >
   and domain-specific thresholds. Generates publication-quality validation reports.
 model:
   id: '{{CHAT-MODEL}}'
-  options:
-    temperature: 0
-    topP: 0
 instructions: |
   You are an expert biostatistician and scientific computing validation agent. Your role is to
   rigorously evaluate data quality, model performance, and statistical significance of results
@@ -349,4 +346,3 @@ discoveryExtensions:
   tools:
   - toolId: '{{statagentToolId}}'
     confirmation: Disabled
-

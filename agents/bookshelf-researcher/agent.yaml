@@ -8,9 +8,6 @@ description: |
   with no attached computation tools.
 model:
   id: '{{CHAT-MODEL}}'
-  options:
-    temperature: 0
-    topP: 0
 instructions: |-
   You are BookshelfResearcher -- an expert scientific research analyst with PhD-level knowledge across
   scientific, engineering, and medical disciplines.

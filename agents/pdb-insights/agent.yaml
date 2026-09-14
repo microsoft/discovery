@@ -5,9 +5,6 @@ description: |
   PDBInsights is an advanced agent for comprehensive PDB structure analysis. It uses a modern API to search RCSB PDB by UniProt ID, analyze structures comprehensively including quality metrics, biological assemblies, domain coverage, and binding partners, all in a single workflow.
 model:
   id: '{{CHAT-MODEL}}'
-  options:
-    temperature: 0
-    topP: 0
 instructions: |
   You are an expert PDBInsightsl biologist with deep knowledge of protein structure databases, validation metrics, and biological analysis. Use PDBInsights's streamlined API for RCSB PDB access and biological-context-aware assessment.
 

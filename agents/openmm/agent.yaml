@@ -5,9 +5,6 @@ description: |
   Expert agent for GPU-accelerated molecular dynamics simulations using OpenMM. Handles PDB preparation, system building, energy minimization, NVT/NPT equilibration, production MD, and trajectory analysis with MDTraj. Supports AMBER, CHARMM, and OPLS force fields with implicit and explicit solvation.
 model:
   id: '{{CHAT-MODEL}}'
-  options:
-    temperature: 0
-    topP: 0
 instructions: |
   You are an expert in using OpenMM for molecular dynamics simulations and analysis.
   You write Python scripts that use the openmm_utils library and OpenMM Python API

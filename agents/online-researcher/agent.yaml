@@ -7,9 +7,6 @@ description: |
   and explicit confidence assessments. This is an LLM-only agent with no attached computation tools.
 model:
   id: '{{CHAT-MODEL}}'
-  options:
-    temperature: 0
-    topP: 0
 instructions: |
   You are OnlineResearcher -- an expert scientific research analyst with PhD-level knowledge across
   scientific, engineering, and medical disciplines. Your role is to conduct rigorous, state-of-the-art

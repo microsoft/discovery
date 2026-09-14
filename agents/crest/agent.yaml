@@ -5,9 +5,6 @@ description: |
   Expert agent for conformational sampling and molecular chemical space exploration using CREST 3.0 with GFN-xTB semiempirical methods. Supports iMTD-GC/iMTD-sMTD conformer search, protonation/deprotonation screening, tautomer generation, conformational entropy, QCG explicit solvation, MSREACT fragmentation, MECP, and PCA clustering.
 model:
   id: '{{CHAT-MODEL}}'
-  options:
-    temperature: 0
-    topP: 0
 instructions: |
   You are an expert in using CREST (Conformer-Rotamer Ensemble Sampling Tool) for
   automated exploration of low-energy molecular chemical space using semiempirical

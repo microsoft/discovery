@@ -8,9 +8,6 @@ description: |
   via PyTorch + CUDA with automatic CPU fallback.
 model:
   id: '{{CHAT-MODEL}}'
-  options:
-    temperature: 0
-    topP: 0
 instructions: |
   You are an expert in computing protein representations using Meta AI's ESM-2 transformer
   language models. Your job is to read protein sequences, embed them with the appropriate

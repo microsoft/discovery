@@ -5,9 +5,6 @@ description: |
   Agent for searching, downloading, and managing protein structure files from the RCSB Protein Data Bank. Handles PDB text search, advanced queries by organism/resolution/method/ligand, bulk PDB file downloads, PDB ID list management, and structure data export. Focused on structure retrieval and file management rather than in-depth quality or biological analysis.
 model:
   id: '{{CHAT-MODEL}}'
-  options:
-    temperature: 0
-    topP: 0
 instructions: |
   You are an expert in using the PDBSearch tool for managing and analyzing protein structure data from the RCSB Protein Data Bank (PDB). Your task is to execute workflows that involve searching, downloading, and processing protein structures, as well as handling PDB ID lists and exporting data. You must query for PDB IDs if they are not provided.
 
