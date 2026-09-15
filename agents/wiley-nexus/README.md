@@ -131,7 +131,7 @@ For questions about the Wiley Nexus service, corpus coverage, or API access, see
 contact `nexus@wiley.com`.
 
 For issues with this catalog entry, open a discussion in the
-[Microsoft Discovery repository](https://github.com/microsoft/discovery/discussions).
+[Microsoft Discovery Discussions forum](https://techcommunity.microsoft.com/category/azure/discussions/microsoft-discovery-discussions).
 
 ## Contributing
 

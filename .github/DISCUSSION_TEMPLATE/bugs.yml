@@ -146,7 +146,7 @@ body:
     attributes:
       label: Confirmations
       options:
-        - label: I have searched [existing Bugs discussions](https://github.com/microsoft/discovery/discussions/categories/bugs) before posting.
+        - label: I have searched [existing Bugs discussions](https://techcommunity.microsoft.com/category/azure/discussions/microsoft-discovery-discussions) before posting.
           required: true
         - label: This report contains no sensitive, regulated, or proprietary data (no subscription IDs, tenant IDs, tokens, customer data, etc.).
           required: true

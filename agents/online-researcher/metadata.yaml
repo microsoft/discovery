@@ -5,7 +5,7 @@ associated_tools: []
 publisher:
   name: Microsoft
   contact: discovery-catalog@microsoft.com
-  support_url: https://github.com/microsoft/discovery/discussions/categories/bugs
+  support_url: https://techcommunity.microsoft.com/category/azure/discussions/microsoft-discovery-discussions
   party: 1p
 description: >
   Expert research agent for conducting state-of-the-art literature reviews and research analyses in scientific,

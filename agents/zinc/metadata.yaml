@@ -6,7 +6,7 @@ associated_tools:
 publisher:
   name: Microsoft
   contact: discovery-catalog@microsoft.com
-  support_url: https://github.com/microsoft/discovery/discussions/categories/bugs
+  support_url: https://techcommunity.microsoft.com/category/azure/discussions/microsoft-discovery-discussions
   party: 1p
 description: >
   Agent for searching and retrieving molecular structures from the ZINC22 / CartBlanche database of commercially
