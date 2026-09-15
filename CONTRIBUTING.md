@@ -31,16 +31,16 @@ Code contributions to the Microsoft Discovery app itself — its plugin, MCP too
 
 | Type of contribution | Where it goes | Best for |
 | --- | --- | --- |
-| **Idea / feature request** | [Discussions → Ideas](https://github.com/microsoft/discovery/discussions/categories/ideas) | "It would be great if…", feedback on what could be better. |
-| **Something you built** | [Discussions → Show and tell](https://github.com/microsoft/discovery/discussions/categories/show-and-tell) | Workflows, prompts, notebooks, or anything you've put together on top of Microsoft Discovery. |
-| **Question** | [Discussions → Q&A](https://github.com/microsoft/discovery/discussions/categories/q-a) | "How do I…?", "Why does…?" |
-| **Bug** | [Discussions → Bugs](https://github.com/microsoft/discovery/discussions/categories/bugs) | The Bug template prompts you for version, repro steps, logs, etc. |
+| **Idea / feature request** | [Discussions → Ideas](https://techcommunity.microsoft.com/category/azure/discussions/microsoft-discovery-discussions) | "It would be great if…", feedback on what could be better. |
+| **Something you built** | [Discussions → Show and tell](https://techcommunity.microsoft.com/category/azure/discussions/microsoft-discovery-discussions) | Workflows, prompts, notebooks, or anything you've put together on top of Microsoft Discovery. |
+| **Question** | [Discussions → Q&A](https://techcommunity.microsoft.com/category/azure/discussions/microsoft-discovery-discussions) | "How do I…?", "Why does…?" |
+| **Bug** | [Discussions → Bugs](https://techcommunity.microsoft.com/category/azure/discussions/microsoft-discovery-discussions) | The Bug template prompts you for version, repro steps, logs, etc. |
 | **Documentation fix** | Pull request against `docs/`, `README.md`, etc. | Typos, broken links, clarifications, missing prerequisites. |
 | **New agent** | Pull request adding `agents/<agent-name>/` | A prompt agent + optional Discovery-managed tools. See the [Agent authoring guide](docs/authoring-guides/agent-authoring-guide.md). |
 | **New starter kit** | Pull request adding `starter-kits/<starter-kit-name>/` | A `kit.json` manifest that bundles one or more agents into a launchable kit. See the [Starter-kit authoring guide](docs/authoring-guides/starter-kit-authoring-guide.md). |
 | **Discovery services utility** | Pull request against `utilities/<utility-name>/` | Operator-facing PowerShell scripts that set up or maintain Discovery services (resource-provider registration, RBAC, data-asset migration). See [`utilities/README.md`](utilities/README.md). |
 | **Schema / workflow change** | Pull request against `docs/schemas/` or `.github/workflows/` — **Microsoft maintainers only** (enforced by CODEOWNERS + branch protection). External contributors should open an **Idea in Discussions** first; a Microsoft maintainer will land the change once it is agreed. | All PRs (including maintainers') come from forks. CODEOWNERS makes schema and workflow edits land only when a maintainer approves. |
-| **Discussion triage / answers** | [Discussions](https://github.com/microsoft/discovery/discussions) | Helping other community members. |
+| **Discussion triage / answers** | [Discussions](https://techcommunity.microsoft.com/category/azure/discussions/microsoft-discovery-discussions) | Helping other community members. |
 
 ---
 
@@ -97,7 +97,7 @@ Before opening a PR, verify:
 
 ### Schema changes
 
-> **Microsoft maintainers only.** Edits under `docs/schemas/` define the contract every agent and kit in the repo must satisfy. **This is enforced by `.github/CODEOWNERS` plus branch protection's "Require review from Code Owners"** — a schema PR cannot land without a Microsoft maintainer's approval, regardless of who opened it. If you are an external contributor and need a schema change, please [open an Idea in Discussions](https://github.com/microsoft/discovery/discussions/categories/ideas) describing the use case so a Microsoft maintainer can land the change.
+> **Microsoft maintainers only.** Edits under `docs/schemas/` define the contract every agent and kit in the repo must satisfy. **This is enforced by `.github/CODEOWNERS` plus branch protection's "Require review from Code Owners"** — a schema PR cannot land without a Microsoft maintainer's approval, regardless of who opened it. If you are an external contributor and need a schema change, please [open an Idea in Discussions](https://techcommunity.microsoft.com/category/azure/discussions/microsoft-discovery-discussions) describing the use case so a Microsoft maintainer can land the change.
 
 ---
 

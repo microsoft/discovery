@@ -12,7 +12,7 @@ infra:
   - name: worker
     infra_type: container
     image:
-      acr: "{name}/opensta:latest"
+      acr: "{name}.azurecr.io/opensta:latest"
     compute:
       pool_type: static
       pool_size: 1

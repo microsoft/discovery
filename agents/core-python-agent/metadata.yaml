@@ -6,7 +6,7 @@ associated_tools:
 publisher:
   name: Microsoft
   contact: discovery-catalog@microsoft.com
-  support_url: https://github.com/microsoft/discovery/discussions/categories/bugs
+  support_url: https://techcommunity.microsoft.com/category/azure/discussions/microsoft-discovery-discussions
   party: 1p
 description: >
   A reusable worker agent for RDKit cheminformatics and general Python execution. Writes and runs Python scripts

@@ -1,15 +1,15 @@
 # Feedback Guide
 
-Use [**Discussions**](https://github.com/microsoft/discovery/discussions) to file bugs, ideas, questions, and to share what you've built. Pick the matching category.
+Use [**Discussions**](https://techcommunity.microsoft.com/category/azure/discussions/microsoft-discovery-discussions) to file bugs, ideas, questions, and to share what you've built. Pick the matching category.
 
 ## At a glance
 
 | What you have | Where to post it |
 | --- | --- |
-| A **question** about how to do something | [Discussions → Q&A](https://github.com/microsoft/discovery/discussions/categories/q-a) |
-| A **bug** or unexpected behavior | [Discussions → Bugs](https://github.com/microsoft/discovery/discussions/categories/bugs) (use the Bug template) |
-| A **feature idea** or improvement | [Discussions → Ideas](https://github.com/microsoft/discovery/discussions/categories/ideas) |
-| A **plugin, agent, skill, MCP tool, or use case** you built | [Discussions → Show and tell](https://github.com/microsoft/discovery/discussions/categories/show-and-tell) (and a PR if you want to land it) |
+| A **question** about how to do something | [Discussions → Q&A](https://techcommunity.microsoft.com/category/azure/discussions/microsoft-discovery-discussions) |
+| A **bug** or unexpected behavior | [Discussions → Bugs](https://techcommunity.microsoft.com/category/azure/discussions/microsoft-discovery-discussions) (use the Bug template) |
+| A **feature idea** or improvement | [Discussions → Ideas](https://techcommunity.microsoft.com/category/azure/discussions/microsoft-discovery-discussions) |
+| A **plugin, agent, skill, MCP tool, or use case** you built | [Discussions → Show and tell](https://techcommunity.microsoft.com/category/azure/discussions/microsoft-discovery-discussions) (and a PR if you want to land it) |
 | A **security vulnerability** | [MSRC](https://aka.ms/security.md/msrc/create-report) — see [SECURITY.md](../../SECURITY.md). **Do not** post in public Discussions. |
 
 ## How to file a useful bug
@@ -45,6 +45,6 @@ Ideas with clear problem statements get traction fastest.
 
 ## How to share something you've built
 
-Open a [Discussion in **Show and tell**](https://github.com/microsoft/discovery/discussions/categories/show-and-tell) describing what you built and what it's for — workflows, prompts, notebooks, or anything you've put together on top of Microsoft Discovery.
+Open a [Discussion in **Show and tell**](https://techcommunity.microsoft.com/category/azure/discussions/microsoft-discovery-discussions) describing what you built and what it's for — workflows, prompts, notebooks, or anything you've put together on top of Microsoft Discovery.
 
 If you'd like to land your work in the catalog, see [`CONTRIBUTING.md`](../../CONTRIBUTING.md) for the PR workflow and the per-content authoring guides.

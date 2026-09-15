@@ -6,7 +6,7 @@ body:
       value: |
         Have a question about how to do something in Microsoft Discovery? Ask here so the answer is searchable for the whole community.
 
-        Before posting, please check existing [Q&A](https://github.com/microsoft/discovery/discussions/categories/q-a).
+        Before posting, please check existing [Q&A](https://techcommunity.microsoft.com/category/azure/discussions/microsoft-discovery-discussions).
 
   - type: dropdown
     id: surface
