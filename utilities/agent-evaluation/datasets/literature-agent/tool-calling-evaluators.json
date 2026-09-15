@@ -1,0 +1,28 @@
+{
+  "name": "tool-calling-evaluators",
+  "_comment": "Evaluators for agents that call tools (e.g. a literature-search or knowledge-base tool). The pipeline restores tool_call_id from the captured Responses object so these tool-aware evaluators can score tool selection, inputs, and output use. Replace these placeholder queries with prompts that exercise your agent's tools.",
+  "evaluators": [
+    "builtin.groundedness",
+    "builtin.tool_call_accuracy",
+    "builtin.tool_input_accuracy",
+    "builtin.tool_output_utilization",
+    "builtin.tool_call_success"
+  ],
+  "data": [
+    {
+      "query": "Search the knowledge base for papers on lithium metal anode dendrite suppression and summarize the top results."
+    },
+    {
+      "query": "Find publications from the last five years on CRISPR off-target effects and list their key findings."
+    },
+    {
+      "query": "Look up review articles on carbon capture sorbents and report the most cited one."
+    },
+    {
+      "query": "Retrieve studies measuring the thermal conductivity of hexagonal boron nitride and summarize the reported values."
+    },
+    {
+      "query": "Search for papers on transformer models applied to protein structure prediction and outline their methods."
+    }
+  ]
+}

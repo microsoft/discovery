@@ -1,0 +1,121 @@
+# =============================================================================
+# SAMPLE GitHub Actions workflow for evaluating a Microsoft Discovery / Foundry
+# agent. Copy this into your own repository's .github/workflows/ and adjust the
+# repository variables below. It is intentionally single-agent and generic --
+# see utilities/agent-evaluation/README.md for how to extend it to a matrix of
+# agents/projects.
+#
+# What it does: drives the ONLINE agent against the selected dataset suites
+# through the Discovery workspace data-plane, captures each response, and scores
+# the captured responses with Foundry built-in evaluators. Results are uploaded
+# as a build artifact.
+#
+# Auth: GitHub OIDC (azure/login@v2). Required repository variables:
+#   AZURE_CLIENT_ID, AZURE_TENANT_ID, AZURE_SUBSCRIPTION_ID
+#   DISCOVERY_WORKSPACE_API_URL       workspace API URL (workspace data-plane base URL)
+#   FOUNDRY_PROJECT_ENDPOINT          Foundry project endpoint for the evaluators
+#   LLM_JUDGE_MODEL_DEPLOYMENT_NAME   model deployment for LLM-judge evaluators
+# =============================================================================
+name: Agent Evaluation (sample)
+
+on:
+  workflow_dispatch:
+    inputs:
+      discoveryProject:
+        description: "Discovery project name (data-plane)"
+        type: string
+        default: "Literature-Research"
+      agent:
+        description: "Agent name (agent_reference) to invoke"
+        type: string
+        default: "LiteratureAgent"
+      datasetDir:
+        description: "Dataset directory (relative to the repo) with the *-evaluators.json files"
+        type: string
+        default: "utilities/agent-evaluation/datasets/literature-agent"
+      suites:
+        description: "Comma-separated suites, or 'all'"
+        type: string
+        default: "shared,tool-calling,retrieval"
+      maxQueries:
+        description: "Max queries per suite (0 = no cap)"
+        type: string
+        default: "0"
+      concurrency:
+        description: "Agent queries to invoke concurrently per suite (1 = sequential)"
+        type: string
+        default: "1"
+      failOn:
+        description: "Fail build on"
+        type: choice
+        options: [errored, failed, none]
+        default: errored
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  evaluate:
+    name: "Eval: ${{ inputs.agent }}"
+    runs-on: ubuntu-latest
+    # Selects the OIDC subject that matches the federated identity credential
+    # configured on your Azure app registration.
+    environment: dev
+    timeout-minutes: 120
+    env:
+      WORKSPACE_API_URL: ${{ vars.DISCOVERY_WORKSPACE_API_URL }}
+      FOUNDRY_PROJECT_ENDPOINT: ${{ vars.FOUNDRY_PROJECT_ENDPOINT }}
+      MODEL_DEPLOYMENT_NAME: ${{ vars.LLM_JUDGE_MODEL_DEPLOYMENT_NAME }}
+      MAX_QUERIES: ${{ inputs.maxQueries }}
+      CONCURRENCY: ${{ inputs.concurrency }}
+      FAIL_ON: ${{ inputs.failOn }}
+    steps:
+      - name: Checkout source code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Azure login (OIDC)
+        uses: azure/login@v2
+        with:
+          client-id: ${{ vars.AZURE_CLIENT_ID }}
+          tenant-id: ${{ vars.AZURE_TENANT_ID }}
+          subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Install evaluation dependencies
+        # Point this at wherever you vendored the agent-evaluation sample.
+        run: pip install "${GITHUB_WORKSPACE}/utilities/agent-evaluation[evaluation]"
+
+      - name: Run investigation-driven evaluation
+        # AZURE_CLIENT_ID / AZURE_TENANT_ID let the pipeline use a
+        # ClientAssertionCredential that re-mints a fresh GitHub OIDC token on
+        # every refresh, so long investigations never outlive the short-lived
+        # federated assertion (avoids AADSTS700024 mid-run).
+        env:
+          AZURE_CLIENT_ID: ${{ vars.AZURE_CLIENT_ID }}
+          AZURE_TENANT_ID: ${{ vars.AZURE_TENANT_ID }}
+        run: |
+          python3 "${GITHUB_WORKSPACE}/utilities/agent-evaluation/evaluators/pipeline.py" \
+            --workspace-api-url "${WORKSPACE_API_URL}" \
+            --discovery-project "${{ inputs.discoveryProject }}" \
+            --investigation-prefix "eval" \
+            --agent "${{ inputs.agent }}" \
+            --foundry-project-endpoint "${FOUNDRY_PROJECT_ENDPOINT}" \
+            --llm-judge-model-deployment-name "${MODEL_DEPLOYMENT_NAME}" \
+            --dataset-dir "${GITHUB_WORKSPACE}/${{ inputs.datasetDir }}" \
+            --suites "${{ inputs.suites }}" \
+            --max-queries "${MAX_QUERIES}" \
+            --concurrency "${CONCURRENCY}" \
+            --fail-on "${FAIL_ON}" \
+            --output-dir "${GITHUB_WORKSPACE}/artifacts/agent-eval"
+
+      - name: Publish evaluation results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: agent-eval-${{ inputs.agent }}
+          path: artifacts/agent-eval

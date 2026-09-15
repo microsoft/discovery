@@ -1,0 +1,22 @@
+# SAMPLE agent metadata for the agent-evaluation utility.
+# This is an illustrative literature-research agent used only as the evaluation
+# target in this sample. It is intentionally generic. To publish a real agent to
+# the Discovery catalog, place a folder under agents/<name>/ and follow the Agent
+# authoring guide (docs/authoring-guides/agent-authoring-guide.md).
+name: literature-agent
+type: agent
+version: 1.0.0
+publisher:
+  name: Discovery Community
+  contact: discovery-catalog@example.com
+  support_url: https://github.com/microsoft/discovery/discussions/categories/q-a
+  party: 3p
+description: >
+  Sample literature-research agent that searches an indexed bookshelf / knowledge
+  base and answers questions with cited sources. Used as the evaluation target in
+  the agent-evaluation utility to demonstrate retrieval, tool-calling, and shared
+  quality/safety scoring.
+tags:
+  - literature-review
+  - retrieval
+  - evaluation-sample
