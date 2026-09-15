@@ -2,7 +2,7 @@
 
 ## How to file issues and get help
 
-This project uses the **Microsoft Discovery Discussions forum** for all community support. Please use the category that best matches what you need:
+This project uses **GitHub Discussions** for all community support. Please use the category that best matches what you need:
 
 | You want to… | Post to |
 | --- | --- |
@@ -15,7 +15,7 @@ Before opening a new discussion, please search existing posts — the answer or 
 
 ## Reporting security vulnerabilities
 
-**Do not** open a public discussion or issue for security vulnerabilities. Instead, follow the private reporting process documented in [`SECURITY.md`](SECURITY.md).
+**Do not** open a public GitHub Discussion or issue for security vulnerabilities. Instead, follow the private reporting process documented in [`SECURITY.md`](SECURITY.md).
 
 ## Microsoft Discovery app and Microsoft Discovery services
 

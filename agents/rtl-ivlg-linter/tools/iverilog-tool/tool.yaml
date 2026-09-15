@@ -8,7 +8,7 @@ infra:
   - name: worker
     infra_type: container
     image:
-      acr: "{name}/siphys2r.5-iverilog:latest"
+      acr: "{name}.azurecr.io/siphys2r.5-iverilog:latest"
     compute:
       pool_type: static
       pool_size: 1
