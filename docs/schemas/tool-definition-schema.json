@@ -10,30 +10,35 @@
     "name": {
       "type": "string",
       "minLength": 1,
+      "maxLength": 128,
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{0,126}[A-Za-z0-9]$",
       "description": "Unique name of the tool."
     },
     "description": {
       "type": "string",
       "minLength": 1,
+      "maxLength": 2000,
       "description": "Human-readable description of the tool."
     },
     "version": {
-      "type": "string",
-      "minLength": 1,
+      "allOf": [{ "$ref": "common-schema.json#/definitions/semanticVersion" }],
       "description": "Version of the tool definition (e.g. '1.0.0')."
     },
     "category": {
       "type": "string",
       "minLength": 1,
+      "maxLength": 128,
       "description": "Category used to group and discover the tool."
     },
     "license": {
       "type": "string",
+      "maxLength": 512,
       "description": "Optional SPDX license identifier or license text."
     },
     "infra": {
       "type": "array",
       "minItems": 1,
+      "maxItems": 32,
       "description": "One or more infrastructure definitions that back the tool's actions.",
       "items": {
         "$ref": "#/$defs/InfraDefinition"
@@ -41,6 +46,7 @@
     },
     "actions": {
       "type": "array",
+      "maxItems": 128,
       "description": "Tool actions that can be invoked by Discovery.",
       "default": [],
       "items": {
@@ -49,6 +55,7 @@
     },
     "code_environments": {
       "type": "array",
+      "maxItems": 32,
       "description": "Code execution environments available for this tool.",
       "default": [],
       "items": {
@@ -67,11 +74,15 @@
         "name": {
           "type": "string",
           "minLength": 1,
+          "maxLength": 64,
+          "pattern": "^[A-Za-z][A-Za-z0-9_-]{0,63}$",
           "description": "Logical name for this infra node; referenced by actions via infra_node."
         },
         "infra_type": {
           "type": "string",
           "minLength": 1,
+          "maxLength": 32,
+          "pattern": "^[a-z][a-z0-9_-]{0,31}$",
           "description": "Infrastructure type identifier (e.g. 'container')."
         },
         "image": {
@@ -92,6 +103,8 @@
         "acr": {
           "type": "string",
           "minLength": 1,
+          "maxLength": 512,
+          "pattern": "^\\{name\\}\\.azurecr\\.io/[A-Za-z0-9][A-Za-z0-9._/-]{0,382}(?::[A-Za-z0-9][A-Za-z0-9._-]{0,127})?$",
           "description": "Azure Container Registry image reference using the deployer-substituted registry placeholder (e.g. '{name}.azurecr.io/myimage:latest'). Do not hardcode a registry name."
         }
       }
@@ -101,7 +114,7 @@
       "description": "Compute resource requirements and scaling configuration for an infrastructure node.",
       "type": "object",
       "required": ["min_resources", "max_resources"],
-      "additionalProperties": true,
+      "additionalProperties": false,
       "properties": {
         "min_resources": {
           "$ref": "#/$defs/VmSku",
@@ -118,25 +131,37 @@
         "recommended_sku": {
           "type": "array",
           "minItems": 1,
+          "maxItems": 32,
+          "uniqueItems": true,
           "description": "Ordered list of recommended Azure VM SKU names (e.g. 'Standard_NC24ads_A100_v4').",
           "items": {
-            "type": "string"
+            "type": "string",
+            "maxLength": 128,
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$"
           }
         },
         "pool_type": {
           "type": "string",
+          "maxLength": 32,
+          "pattern": "^[a-z][a-z0-9_-]{0,31}$",
           "description": "Pool type for the compute node (snake_case variant)."
         },
         "poolType": {
           "type": "string",
+          "maxLength": 32,
+          "pattern": "^[a-z][a-z0-9_-]{0,31}$",
           "description": "Pool type for the compute node (camelCase variant; use either pool_type or poolType)."
         },
         "pool_size": {
           "type": "integer",
+          "minimum": 1,
+          "maximum": 1000,
           "description": "Number of nodes in the pool (snake_case variant)."
         },
         "poolSize": {
           "type": "integer",
+          "minimum": 1,
+          "maximum": 1000,
           "description": "Number of nodes in the pool (camelCase variant; use either pool_size or poolSize)."
         }
       }
@@ -150,29 +175,29 @@
       "properties": {
         "cpu": {
           "oneOf": [
-            { "type": "string", "minLength": 1 },
-            { "type": "integer", "minimum": 1 }
+            { "type": "string", "minLength": 1, "maxLength": 3, "pattern": "^[1-9][0-9]{0,2}$" },
+            { "type": "integer", "minimum": 1, "maximum": 4096 }
           ],
           "description": "Number of vCPUs."
         },
         "ram": {
           "oneOf": [
-            { "type": "string", "minLength": 1 },
-            { "type": "integer", "minimum": 1 }
+            { "type": "string", "minLength": 1, "maxLength": 8, "pattern": "^[1-9][0-9]{0,5}(?:Mi|Gi)?$" },
+            { "type": "integer", "minimum": 1, "maximum": 1048576 }
           ],
           "description": "RAM in GB."
         },
         "storage": {
           "oneOf": [
-            { "type": "string", "minLength": 1 },
-            { "type": "integer", "minimum": 0 }
+            { "type": "string", "minLength": 1, "maxLength": 9, "pattern": "^(?:0|[1-9][0-9]{0,6})(?:Mi|Gi)?$" },
+            { "type": "integer", "minimum": 0, "maximum": 10485760 }
           ],
           "description": "Ephemeral storage in GB (optional)."
         },
         "gpu": {
           "oneOf": [
-            { "type": "string", "minLength": 1 },
-            { "type": "integer", "minimum": 0 }
+            { "type": "string", "minLength": 1, "maxLength": 3, "pattern": "^(?:0|[1-9][0-9]{0,2})$" },
+            { "type": "integer", "minimum": 0, "maximum": 4096 }
           ],
           "description": "Number of GPUs (optional)."
         }
@@ -188,16 +213,21 @@
         "name": {
           "type": "string",
           "minLength": 1,
+          "maxLength": 64,
+          "pattern": "^[A-Za-z][A-Za-z0-9_-]{0,63}$",
           "description": "Unique action name within this tool."
         },
         "description": {
           "type": "string",
           "minLength": 1,
+          "maxLength": 2000,
           "description": "Human-readable description of what this action does."
         },
         "infra_node": {
           "type": "string",
           "minLength": 1,
+          "maxLength": 64,
+          "pattern": "^[A-Za-z][A-Za-z0-9_-]{0,63}$",
           "description": "Reference to an infra[].name entry that runs this action."
         },
         "input_schema": {
@@ -206,10 +236,12 @@
         "command": {
           "type": "string",
           "minLength": 1,
+          "maxLength": 8192,
           "description": "Entrypoint command executed inside the container for this action."
         },
         "environment_variables": {
           "type": "array",
+          "maxItems": 64,
           "description": "Static environment variables injected into the container.",
           "default": [],
           "items": {
@@ -218,6 +250,7 @@
         },
         "inline_files": {
           "type": "array",
+          "maxItems": 32,
           "description": "Files written into the container at the specified mount paths before execution.",
           "default": [],
           "items": {
@@ -226,6 +259,7 @@
         },
         "output_mount_configurations": {
           "type": "array",
+          "maxItems": 32,
           "description": "Container paths that produce output assets after action execution.",
           "default": [],
           "items": {
@@ -243,21 +277,84 @@
       "properties": {
         "type": {
           "type": "string",
-          "minLength": 1,
+          "const": "object",
           "description": "JSON Schema type (typically 'object')."
         },
         "properties": {
           "type": "object",
-          "description": "Map of parameter name to its JSON Schema definition. Values are open-ended JSON Schema objects.",
-          "additionalProperties": true,
+          "description": "Map of parameter names to bounded JSON Schema definitions.",
+          "maxProperties": 64,
+          "propertyNames": {
+            "type": "string",
+            "maxLength": 64,
+            "pattern": "^[A-Za-z][A-Za-z0-9_-]{0,63}$"
+          },
+          "additionalProperties": { "$ref": "#/$defs/ParameterSchema" },
           "default": {}
         },
         "required": {
           "type": "array",
           "description": "List of property names that are required when invoking this action.",
+          "maxItems": 64,
+          "uniqueItems": true,
           "items": {
-            "type": "string"
+            "type": "string",
+            "maxLength": 64,
+            "pattern": "^[A-Za-z][A-Za-z0-9_-]{0,63}$"
           }
+        }
+      }
+    },
+    "ParameterSchema": {
+      "title": "ParameterSchema",
+      "description": "Bounded JSON Schema keywords accepted for one tool input parameter.",
+      "type": "object",
+      "required": ["type"],
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": ["string", "integer", "number", "boolean"]
+        },
+        "description": {
+          "type": "string",
+          "maxLength": 2000
+        },
+        "enum": {
+          "type": "array",
+          "maxItems": 64,
+          "uniqueItems": true,
+          "items": {
+            "oneOf": [
+              { "type": "string", "maxLength": 1024 },
+              { "type": "number", "minimum": -1000000000000000, "maximum": 1000000000000000 },
+              { "type": "boolean" }
+            ]
+          }
+        },
+        "minimum": {
+          "type": "number",
+          "minimum": -1000000000000000,
+          "maximum": 1000000000000000
+        },
+        "maximum": {
+          "type": "number",
+          "minimum": -1000000000000000,
+          "maximum": 1000000000000000
+        },
+        "minLength": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 65536
+        },
+        "maxLength": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 65536
+        },
+        "pattern": {
+          "type": "string",
+          "maxLength": 1024
         }
       }
     },
@@ -265,14 +362,18 @@
       "title": "ToolEnvironmentVariable",
       "description": "A static environment variable injected into the container at runtime.",
       "type": "object",
+      "required": ["name", "value"],
       "additionalProperties": false,
       "properties": {
         "name": {
           "type": "string",
+          "maxLength": 128,
+          "pattern": "^[A-Za-z_][A-Za-z0-9_]{0,127}$",
           "description": "Environment variable name."
         },
         "value": {
           "type": "string",
+          "maxLength": 8192,
           "description": "Environment variable value."
         }
       }
@@ -287,11 +388,14 @@
         "mount_path": {
           "type": "string",
           "minLength": 1,
+          "maxLength": 1024,
+          "pattern": "^/(?!.*(?:^|/)\\.\\.(?:/|$))[A-Za-z0-9._/-]+$",
           "description": "Absolute path inside the container where the file is written."
         },
         "content": {
           "type": "string",
           "minLength": 1,
+          "maxLength": 1048576,
           "description": "Raw file content."
         }
       }
@@ -306,6 +410,8 @@
         "mount_path": {
           "type": "string",
           "minLength": 1,
+          "maxLength": 1024,
+          "pattern": "^/(?!.*(?:^|/)\\.\\.(?:/|$))[A-Za-z0-9._/-]+$",
           "description": "Absolute container path that will contain the output after execution."
         },
         "auto_promote": {
@@ -315,11 +421,13 @@
         "output_name": {
           "type": "string",
           "minLength": 1,
+          "maxLength": 128,
           "description": "Name of the resulting output asset."
         },
         "output_description": {
           "type": "string",
           "minLength": 1,
+          "maxLength": 1000,
           "description": "Description of the resulting output asset."
         }
       }
@@ -334,21 +442,27 @@
         "language": {
           "type": "string",
           "minLength": 1,
+          "maxLength": 32,
+          "pattern": "^[A-Za-z][A-Za-z0-9_+.-]{0,31}$",
           "description": "Programming language identifier (e.g. 'python', 'r')."
         },
         "command": {
           "type": "string",
           "minLength": 1,
+          "maxLength": 8192,
           "description": "Entrypoint command that starts the code execution environment."
         },
         "description": {
           "type": "string",
           "minLength": 1,
+          "maxLength": 2000,
           "description": "Human-readable description of this code environment."
         },
         "infra_node": {
           "type": "string",
           "minLength": 1,
+          "maxLength": 64,
+          "pattern": "^[A-Za-z][A-Za-z0-9_-]{0,63}$",
           "description": "Reference to an infra[].name entry that hosts this environment."
         }
       }

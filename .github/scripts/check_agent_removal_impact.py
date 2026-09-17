@@ -25,29 +25,16 @@ Usage (called from check-agent-removal-impact.yml):
 
 import argparse
 import json
-import os
 import subprocess
 import sys
-import tempfile
 import urllib.request
 import urllib.error
 from pathlib import Path
-
-try:
-    import yaml
-except ImportError:
-    print("ERROR: pyyaml not installed. Run: pip install pyyaml", file=sys.stderr)
-    sys.exit(1)
 
 
 def load_json(path: Path) -> dict:
     with path.open() as f:
         return json.load(f)
-
-
-def load_yaml_safe(path: Path) -> dict:
-    with path.open() as f:
-        return yaml.safe_load(f) or {}
 
 
 def github_get(url: str, token: str) -> dict:
@@ -110,27 +97,15 @@ def get_base_registry_paths(repo_root: Path, base_sha: str) -> set[str]:
 
 
 def get_head_registry_paths(repo_root: Path) -> set[str]:
-    """Run update_registry.py on current checkout; return set of agent path strings."""
-    script = repo_root / ".github" / "scripts" / "update_registry.py"
-    if not script.exists():
-        raise FileNotFoundError(f"update_registry.py not found: {script}")
-    with tempfile.NamedTemporaryFile(suffix=".json", delete=False) as tmp:
-        tmp_path = tmp.name
-    try:
-        result = subprocess.run(
-            [sys.executable, str(script), "--repo-root", str(repo_root), "--output", tmp_path],
-            capture_output=True, text=True,
-        )
-        if result.returncode != 0:
-            raise RuntimeError(f"update_registry.py failed:\n{result.stderr}")
-        registry = load_json(Path(tmp_path))
-        return {
-            e["path"]
-            for e in registry.get("entries", [])
-            if e.get("type") == "agent"
-        }
-    finally:
-        os.unlink(tmp_path)
+    """Return agent paths represented by metadata files in the PR checkout."""
+    agents_dir = repo_root / "agents"
+    if not agents_dir.is_dir():
+        return set()
+    return {
+        f"agents/{agent_dir.name}"
+        for agent_dir in agents_dir.iterdir()
+        if agent_dir.is_dir() and (agent_dir / "metadata.yaml").is_file()
+    }
 
 
 def get_active_kits(repo_root: Path) -> list[tuple[str, dict]]:

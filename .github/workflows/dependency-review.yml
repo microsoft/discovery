@@ -1,0 +1,29 @@
+name: Dependency Review
+
+# Dependabot remediates dependencies already present on the default branch.
+# Dependency Review prevents newly introduced vulnerable versions from landing.
+
+on:
+  pull_request:
+    paths:
+      - "agents/**"
+      - "starter-kits/**"
+
+permissions:
+  contents: read
+
+jobs:
+  dependency-review:
+    name: Review dependency changes
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Reject vulnerable dependency changes
+        uses: actions/dependency-review-action@v5
+        with:
+          fail-on-severity: high
+          fail-on-scopes: runtime, development, unknown
+          show-patched-versions: true

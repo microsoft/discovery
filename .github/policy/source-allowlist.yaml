@@ -1,0 +1,163 @@
+# Source allowlist — POL-008 / POL-015
+#
+# `agents/` and `starter-kits/` accept SOURCE CODE ONLY. Every added file in
+# those trees must (a) carry an extension or filename listed here, and (b) pass
+# file/libmagic content classification plus strict UTF-8 validation (see
+# .github/scripts/content_sniffer.py and rules/pol_020.py).
+#
+# Both gates must pass. The extension list alone is not a security control —
+# it exists so the tree stays reviewable; the content sniffer is what stops a
+# renamed binary.
+#
+# To add an entry: open a PR touching this file. It is CODEOWNERS-gated.
+
+# Extensions permitted anywhere under agents/ and starter-kits/.
+extensions:
+  # Markup and documentation
+  - .md
+  - .markdown
+  - .rst
+  - .txt
+
+  # Structured configuration and data
+  - .yaml
+  - .yml
+  - .json
+  - .jsonl
+  - .toml
+  - .ini
+  - .cfg
+  - .conf
+  - .csv
+  - .tsv
+  - .env.example
+  - .properties
+
+  # Source code
+  - .py
+  - .pyi
+  - .sh
+  - .bash
+  - .ps1
+  - .r
+  - .R
+  - .jl
+  - .c
+  - .h
+  - .cpp
+  - .hpp
+  - .cc
+  - .rs
+  - .go
+  - .js
+  - .ts
+  - .sql
+  - .cmake
+
+  # Hardware description (silicon agents)
+  - .v
+  - .sv
+  - .vh
+  - .svh
+  - .vhd
+  - .vhdl
+  - .sdc
+  - .xdc
+  - .lib
+  - .lef
+  - .def
+
+  # Scientific text formats used as example inputs
+  - .pdb
+  - .cif
+  - .mmcif
+  - .sdf
+  - .mol
+  - .mol2
+  - .smi
+  - .smiles
+  - .fasta
+  - .fa
+  - .faa
+  - .fna
+  - .xyz
+  - .gro
+  - .itp
+  - .top
+  - .mdp
+  - .inp
+  - .out
+  - .log
+  - .nw
+  - .com
+  - .gjf
+  - .cube
+  - .dat
+  - .params
+  - .prmtop
+  - .inpcrd
+  - .psf
+  - .rtf
+  - .str
+  - .frcmod
+  - .off
+  - .cml
+
+  # Markdown review assets. POL-016 verifies content, limits each image to
+  # 1 MiB, and requires an embed from Markdown in the same catalog item.
+  - .png
+  - .jpg
+  - .jpeg
+  - .gif
+  - .webp
+  - .svg
+
+# Exact filenames permitted regardless of extension.
+filenames:
+  - Dockerfile
+  - LICENSE
+  - NOTICE
+  - Makefile
+  - CMakeLists.txt
+  - .dockerignore
+  - .gitignore
+  - .gitattributes
+  - requirements.txt
+  - requirements-dev.txt
+  - environment.yml
+  - pyproject.toml
+  - setup.cfg
+
+# Filename patterns (fnmatch) permitted in addition to the lists above.
+patterns:
+  - "Dockerfile.*"
+  - "*.Dockerfile"
+  - "requirements*.txt"
+  - "CMakeLists.txt"
+
+# Directory names whose contents are exempt from the extension allowlist.
+#
+# Scientific example inputs use domain conventions where the extension is
+# meaningless or absent — LAMMPS ships `in.lj.ehex` and `data.spce`, Quantum
+# ESPRESSO ships `si.scf.in`. Enumerating those suffixes would be endless and
+# would still miss the next simulator.
+#
+# This exemption is safe because it only relaxes POL-015 (reviewability).
+# POL-008 still inspects the CONTENT of every one of these files and rejects
+# anything that is not UTF-8 text, which is the actual security boundary.
+exempt_directories:
+  - example-input-files
+
+# Model-weight extensions handled by POL-009 instead of POL-008. These are the
+# only binary payloads that may exist in the tree, and only when Git-LFS
+# tracked, under the size cap, header-validated, and picklescan-clean.
+# 3p (community) contributions may not use these at all — see POL-016.
+model_weight_extensions:
+  - .pt
+  - .pth
+  - .ckpt
+  - .safetensors
+  - .onnx
+  - .h5
+  - .hdf5
+  - .npz
