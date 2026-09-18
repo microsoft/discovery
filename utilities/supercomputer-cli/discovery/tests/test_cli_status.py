@@ -5,9 +5,11 @@ from __future__ import annotations
 import asyncio
 import os
 from datetime import datetime, timedelta, timezone
+from io import StringIO
 from unittest.mock import MagicMock, patch
 
 import pytest
+from rich.console import Console
 
 from discovery.poll import cli_status
 from discovery.poll.cli_status import _format_duration
@@ -170,6 +172,56 @@ class TestPageSizeAutoDetection:
             )
 
         assert displayed_batches[0] == 3
+
+
+class TestRuntimeDetailsRendering:
+    """Ensure service-backed list views expose operation diagnostics."""
+
+    def test_runtime_details_rendered(self) -> None:
+        diagnostic = "Pending: scheduling will retry."
+        operations = _make_operations(2)
+        operations[0].runtime_details = diagnostic
+        operations[1].runtime_details = None
+        fake_env = MagicMock()
+        fake_env.project_name = "proj"
+        fake_env.workspace_url = "https://example.com"
+        output = StringIO()
+
+        class CapturingConsole:
+            def __init__(self, *args, **kwargs):
+                self._console = Console(
+                    file=output,
+                    width=200,
+                    color_system=None,
+                )
+
+            def print(self, renderable):
+                self._console.print(renderable)
+
+            def status(self, *args, **kwargs):
+                return MagicMock()
+
+        with (
+            patch.object(cli_status, "Console", CapturingConsole),
+            patch.object(
+                cli_status,
+                "list_operations",
+                return_value=_make_list_response(operations),
+            ),
+            patch.object(cli_status, "info"),
+        ):
+            asyncio.run(
+                cli_status._paginated_list(
+                    env_cfg=fake_env,
+                    filter_fn=lambda op: True,
+                    limit=2,
+                    page_size=2,
+                )
+            )
+
+        rendered = output.getvalue()
+        assert "Runtime Details" in rendered
+        assert diagnostic in rendered
 
 
 class TestFormatDuration:
