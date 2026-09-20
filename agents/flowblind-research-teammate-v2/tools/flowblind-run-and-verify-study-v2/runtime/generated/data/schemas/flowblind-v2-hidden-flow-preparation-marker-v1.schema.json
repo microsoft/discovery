@@ -1,0 +1,164 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://flowblind.local/schemas/flowblind-v2-hidden-flow-preparation-marker-v1.schema.json",
+  "title": "FlowBlind v2 hidden-flow outer preparation marker",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "$schema",
+    "schemaVersion",
+    "recordType",
+    "status",
+    "capability",
+    "package",
+    "reviewedCommits",
+    "problemSnapshot",
+    "preparation",
+    "publication"
+  ],
+  "properties": {
+    "$schema": {
+      "const": "https://flowblind.local/schemas/flowblind-v2-hidden-flow-preparation-marker-v1.schema.json"
+    },
+    "schemaVersion": {
+      "const": 1
+    },
+    "recordType": {
+      "const": "flowblind-v2-hidden-flow-preparation-marker-v1"
+    },
+    "status": {
+      "const": "committed"
+    },
+    "capability": {
+      "const": {
+        "familyId": "hidden-flow",
+        "methodId": "finite-basis-hidden-flow-v1",
+        "methodVersion": "1.1.0"
+      }
+    },
+    "package": {
+      "const": {
+        "packageId": "flowblind-catalog-hidden-flow-package-lock-v1",
+        "packageVersion": "1.0.0",
+        "compatibilityKey": "sha256:91b2644f438ec6e98593476412429b7a0203c4f3f8cde6f4849e6e1cb1507d48"
+      }
+    },
+    "reviewedCommits": {
+      "const": {
+        "authorityRuntimeBase": "123bd990f48e7351884f035c0941367b8bd5f942",
+        "independentHardening": "272e69ed95a6730bd68ca2033da4933e9759c883"
+      }
+    },
+    "problemSnapshot": {
+      "$ref": "#/$defs/problemJsonArtifact"
+    },
+    "preparation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "nativeBundle",
+        "v2Bundle"
+      ],
+      "properties": {
+        "nativeBundle": {
+          "$ref": "#/$defs/jsonArtifact"
+        },
+        "v2Bundle": {
+          "allOf": [
+            {
+              "$ref": "#/$defs/jsonArtifact"
+            },
+            {
+              "type": "object",
+              "properties": {
+                "reference": {
+                  "const": "preparation.json"
+                }
+              }
+            }
+          ]
+        }
+      }
+    },
+    "publication": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "marker",
+        "pointOfNoReturn",
+        "distributedExactlyOnceClaim"
+      ],
+      "properties": {
+        "marker": {
+          "const": "preparation-commit.json"
+        },
+        "pointOfNoReturn": {
+          "const": "exclusive-preparation-commit-marker"
+        },
+        "distributedExactlyOnceClaim": {
+          "const": false
+        }
+      }
+    }
+  },
+  "$defs": {
+    "problemJsonArtifact": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "reference",
+        "byteLength",
+        "sha256",
+        "mediaType"
+      ],
+      "properties": {
+        "reference": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 512
+        },
+        "byteLength": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 16777216
+        },
+        "sha256": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "mediaType": {
+          "const": "application/json"
+        }
+      }
+    },
+    "jsonArtifact": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "reference",
+        "byteLength",
+        "sha256",
+        "mediaType"
+      ],
+      "properties": {
+        "reference": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 512
+        },
+        "byteLength": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 17825792
+        },
+        "sha256": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "mediaType": {
+          "const": "application/json"
+        }
+      }
+    }
+  }
+}

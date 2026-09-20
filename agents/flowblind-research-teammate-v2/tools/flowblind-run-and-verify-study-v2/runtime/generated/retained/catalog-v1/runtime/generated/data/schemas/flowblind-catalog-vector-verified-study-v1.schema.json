@@ -1,0 +1,512 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://flowblind.local/schemas/flowblind-catalog-vector-verified-study-v1.schema.json",
+  "title": "FlowBlind catalog vector/time verified study v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "$schema",
+    "schemaVersion",
+    "recordType",
+    "status",
+    "containsResults",
+    "humanContext",
+    "capability",
+    "preparation",
+    "source",
+    "protocol",
+    "verification",
+    "study"
+  ],
+  "properties": {
+    "$schema": {
+      "const": "https://flowblind.local/schemas/flowblind-catalog-vector-verified-study-v1.schema.json"
+    },
+    "schemaVersion": { "const": 1 },
+    "recordType": {
+      "const": "flowblind-catalog-vector-verified-study-v1"
+    },
+    "status": { "const": "verified" },
+    "containsResults": { "const": true },
+    "humanContext": {
+      "$ref": "flowblind-catalog-research-input-v1.schema.json"
+    },
+    "capability": {
+      "$ref": "flowblind-catalog-vector-preparation-bundle-v1.schema.json#/$defs/capability"
+    },
+    "preparation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "associationSha256", "bundle"],
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^flowblind-preparation-[a-f0-9]{32}$"
+        },
+        "associationSha256": { "$ref": "#/$defs/sha256" },
+        "bundle": { "$ref": "#/$defs/identity" }
+      }
+    },
+    "source": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["candidate", "trustedSidecar"],
+      "properties": {
+        "candidate": { "$ref": "#/$defs/identity" },
+        "trustedSidecar": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "reference",
+            "byteLength",
+            "sha256",
+            "schemaId"
+          ],
+          "properties": {
+            "reference": { "$ref": "#/$defs/text" },
+            "byteLength": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 16777216
+            },
+            "sha256": { "$ref": "#/$defs/sha256" },
+            "schemaId": {
+              "const": "https://flowblind.local/schemas/flowblind-catalog-vector-source-sidecar-v1.schema.json"
+            }
+          }
+        }
+      }
+    },
+    "protocol": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["sha256", "freezeReceipt"],
+      "properties": {
+        "sha256": { "$ref": "#/$defs/sha256" },
+        "freezeReceipt": {
+          "$ref": "flowblind-catalog-vector-preparation-bundle-v1.schema.json#/$defs/protocol/properties/freezeReceipt"
+        }
+      }
+    },
+    "verification": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "artifactVerificationStatus",
+        "deterministicReplayMatched",
+        "sourceIdentityMatched",
+        "softwareIdentityMatched"
+      ],
+      "properties": {
+        "artifactVerificationStatus": { "const": "verified" },
+        "deterministicReplayMatched": { "const": true },
+        "sourceIdentityMatched": { "const": true },
+        "softwareIdentityMatched": { "const": true }
+      }
+    },
+    "study": { "$ref": "#/$defs/scientificProjection" }
+  },
+  "$defs": {
+    "text": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 4096
+    },
+    "sha256": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "identity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["reference", "byteLength", "sha256"],
+      "properties": {
+        "reference": { "$ref": "#/$defs/text" },
+        "byteLength": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 16777216
+        },
+        "sha256": { "$ref": "#/$defs/sha256" },
+        "mediaType": { "$ref": "#/$defs/text" }
+      }
+    },
+    "coverage": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["valid", "eligible", "fraction"],
+      "properties": {
+        "valid": { "type": "integer", "minimum": 0 },
+        "eligible": { "type": "integer", "minimum": 0 },
+        "fraction": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        }
+      }
+    },
+    "gate": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "passed",
+        "observed",
+        "criterion",
+        "detail"
+      ],
+      "properties": {
+        "id": { "$ref": "#/$defs/text" },
+        "passed": { "type": "boolean" },
+        "observed": {
+          "oneOf": [
+            { "type": "number" },
+            { "$ref": "#/$defs/text" }
+          ]
+        },
+        "criterion": {
+          "oneOf": [
+            { "type": "number" },
+            { "$ref": "#/$defs/text" }
+          ]
+        },
+        "detail": { "$ref": "#/$defs/text" }
+      }
+    },
+    "unavailable": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "reason", "detail", "gates"],
+      "properties": {
+        "status": {
+          "enum": ["unavailable", "insufficient-evidence"]
+        },
+        "reason": { "$ref": "#/$defs/text" },
+        "detail": { "$ref": "#/$defs/text" },
+        "coverage": { "$ref": "#/$defs/coverage" },
+        "gates": {
+          "type": "array",
+          "maxItems": 64,
+          "items": { "$ref": "#/$defs/gate" }
+        }
+      }
+    },
+    "speedValue": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "quantity",
+        "unit",
+        "minimum",
+        "mean",
+        "rms",
+        "maximum"
+      ],
+      "properties": {
+        "quantity": {
+          "enum": ["in-plane-speed", "speed"]
+        },
+        "unit": { "enum": ["m/s", "cm/s", "mm/s"] },
+        "minimum": { "type": "number" },
+        "mean": { "type": "number" },
+        "rms": { "type": "number" },
+        "maximum": { "type": "number" }
+      }
+    },
+    "speedEvidence": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["status", "value", "coverage", "gates"],
+          "properties": {
+            "status": { "const": "available" },
+            "value": { "$ref": "#/$defs/speedValue" },
+            "coverage": { "$ref": "#/$defs/coverage" },
+            "gates": {
+              "type": "array",
+              "maxItems": 64,
+              "items": { "$ref": "#/$defs/gate" }
+            }
+          }
+        },
+        { "$ref": "#/$defs/unavailable" }
+      ]
+    },
+    "derivativeEvidence": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["status", "value", "coverage", "gates"],
+          "properties": {
+            "status": { "const": "available" },
+            "value": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "coverageDetail",
+                "divergence",
+                "vorticity",
+                "strainRate"
+              ],
+              "properties": {
+                "coverageDetail": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "totalPoints",
+                    "boundaryExcluded",
+                    "interiorCenters",
+                    "maskExcludedStencils",
+                    "completeStencils"
+                  ],
+                  "properties": {
+                    "totalPoints": { "type": "integer", "minimum": 0 },
+                    "boundaryExcluded": { "type": "integer", "minimum": 0 },
+                    "interiorCenters": { "type": "integer", "minimum": 0 },
+                    "maskExcludedStencils": { "type": "integer", "minimum": 0 },
+                    "completeStencils": { "type": "integer", "minimum": 0 }
+                  }
+                },
+                "divergence": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "unit",
+                    "signedMean",
+                    "rms",
+                    "p95Absolute",
+                    "maximumAbsolute"
+                  ],
+                  "properties": {
+                    "unit": { "const": "1/s" },
+                    "signedMean": { "type": "number" },
+                    "rms": { "type": "number" },
+                    "p95Absolute": { "type": "number" },
+                    "maximumAbsolute": { "type": "number" }
+                  }
+                },
+                "vorticity": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "unit",
+                    "representation",
+                    "signedMeanOutOfPlane",
+                    "meanMagnitude",
+                    "maximumMagnitude"
+                  ],
+                  "properties": {
+                    "unit": { "const": "1/s" },
+                    "representation": {
+                      "const": "signed-out-of-plane"
+                    },
+                    "signedMeanOutOfPlane": {
+                      "type": ["number", "null"]
+                    },
+                    "meanMagnitude": { "type": "number" },
+                    "maximumMagnitude": { "type": "number" }
+                  }
+                },
+                "strainRate": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": ["unit", "convention", "mean", "maximum"],
+                  "properties": {
+                    "unit": { "const": "1/s" },
+                    "convention": { "const": "sqrt(2 D:D)" },
+                    "mean": { "type": "number" },
+                    "maximum": { "type": "number" }
+                  }
+                }
+              }
+            },
+            "coverage": { "$ref": "#/$defs/coverage" },
+            "gates": {
+              "type": "array",
+              "maxItems": 64,
+              "items": { "$ref": "#/$defs/gate" }
+            }
+          }
+        },
+        { "$ref": "#/$defs/unavailable" }
+      ]
+    },
+    "temporalValue": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "scope",
+        "unit",
+        "spatialMeanSpeed",
+        "instantaneousMaximumSpeedMean",
+        "maximumObservedSpeed",
+        "contributingFrames",
+        "totalFrames",
+        "duration"
+      ],
+      "properties": {
+        "scope": {
+          "enum": [
+            "unweighted-frame-mean",
+            "complete-cycle-time-mean"
+          ]
+        },
+        "unit": { "enum": ["m/s", "cm/s", "mm/s"] },
+        "spatialMeanSpeed": { "type": "number" },
+        "instantaneousMaximumSpeedMean": { "type": "number" },
+        "maximumObservedSpeed": { "type": "number" },
+        "contributingFrames": { "type": "integer", "minimum": 1 },
+        "totalFrames": { "type": "integer", "minimum": 1 },
+        "duration": { "type": ["number", "null"] }
+      }
+    },
+    "temporalEvidence": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["status", "value", "coverage", "gates"],
+          "properties": {
+            "status": { "const": "available" },
+            "value": { "$ref": "#/$defs/temporalValue" },
+            "coverage": { "$ref": "#/$defs/coverage" },
+            "gates": {
+              "type": "array",
+              "maxItems": 64,
+              "items": { "$ref": "#/$defs/gate" }
+            }
+          }
+        },
+        { "$ref": "#/$defs/unavailable" }
+      ]
+    },
+    "scientificProjection": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "capabilityId",
+        "report",
+        "claimBoundary"
+      ],
+      "properties": {
+        "capabilityId": {
+          "const": "vector-time-readiness-audit-v1"
+        },
+        "report": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "schemaVersion",
+            "reportId",
+            "software",
+            "dataset",
+            "scenario",
+            "metrics",
+            "limitations"
+          ],
+          "properties": {
+            "schemaVersion": { "const": 1 },
+            "reportId": { "$ref": "#/$defs/text" },
+            "software": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["name", "version"],
+              "properties": {
+                "name": { "const": "FlowBlind" },
+                "version": { "$ref": "#/$defs/text" }
+              }
+            },
+            "dataset": {
+              "type": "object",
+              "additionalProperties": true,
+              "required": [
+                "id",
+                "title",
+                "description",
+                "kind",
+                "pointCount",
+                "frameCount",
+                "coordinateFrame",
+                "components",
+                "temporal",
+                "wall",
+                "provenance",
+                "documentSource"
+              ]
+            },
+            "scenario": {
+              "$ref": "flowblind-catalog-vector-preparation-bundle-v1.schema.json#/$defs/scenario"
+            },
+            "metrics": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "instantaneous",
+                "frameMean",
+                "completeCycle"
+              ],
+              "properties": {
+                "instantaneous": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "requestedTime",
+                    "resolvedTime",
+                    "interpolated",
+                    "speed",
+                    "derivatives",
+                    "wallShear"
+                  ],
+                  "properties": {
+                    "requestedTime": { "type": "number" },
+                    "resolvedTime": {
+                      "type": ["number", "null"]
+                    },
+                    "interpolated": { "type": "boolean" },
+                    "speed": { "$ref": "#/$defs/speedEvidence" },
+                    "derivatives": {
+                      "$ref": "#/$defs/derivativeEvidence"
+                    },
+                    "wallShear": {
+                      "allOf": [
+                        { "$ref": "#/$defs/unavailable" },
+                        {
+                          "properties": {
+                            "status": { "const": "unavailable" },
+                            "reason": {
+                              "const": "wall-evidence-missing"
+                            }
+                          }
+                        }
+                      ]
+                    }
+                  }
+                },
+                "frameMean": {
+                  "$ref": "#/$defs/temporalEvidence"
+                },
+                "completeCycle": {
+                  "$ref": "#/$defs/temporalEvidence"
+                }
+              }
+            },
+            "limitations": {
+              "type": "array",
+              "minItems": 2,
+              "maxItems": 16,
+              "items": { "$ref": "#/$defs/text" }
+            }
+          }
+        },
+        "claimBoundary": {
+          "type": "array",
+          "minItems": 3,
+          "maxItems": 16,
+          "items": { "$ref": "#/$defs/text" }
+        }
+      }
+    }
+  }
+}

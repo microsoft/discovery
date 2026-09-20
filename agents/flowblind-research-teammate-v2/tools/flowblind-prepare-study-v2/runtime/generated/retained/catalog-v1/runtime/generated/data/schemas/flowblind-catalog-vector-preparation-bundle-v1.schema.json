@@ -1,0 +1,530 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://flowblind.local/schemas/flowblind-catalog-vector-preparation-bundle-v1.schema.json",
+  "title": "FlowBlind catalog vector/time preparation bundle v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "$schema",
+    "schemaVersion",
+    "recordType",
+    "id",
+    "status",
+    "containsResults",
+    "association",
+    "humanContext",
+    "source",
+    "declarations",
+    "canonicalSource",
+    "capability",
+    "protocol",
+    "resourceLimits",
+    "dataHandling",
+    "software"
+  ],
+  "properties": {
+    "$schema": {
+      "const": "https://flowblind.local/schemas/flowblind-catalog-vector-preparation-bundle-v1.schema.json"
+    },
+    "schemaVersion": { "const": 1 },
+    "recordType": {
+      "const": "flowblind-catalog-vector-preparation-v1"
+    },
+    "id": {
+      "type": "string",
+      "pattern": "^flowblind-preparation-[a-f0-9]{32}$"
+    },
+    "status": { "const": "prepared-awaiting-confirmation" },
+    "containsResults": { "const": false },
+    "association": {
+      "$ref": "flowblind-catalog-preparation-bundle-v1.schema.json#/$defs/digest"
+    },
+    "humanContext": {
+      "$ref": "flowblind-catalog-research-input-v1.schema.json"
+    },
+    "source": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "candidate",
+        "trustedSidecar",
+        "candidateBinding"
+      ],
+      "properties": {
+        "candidate": {
+          "$ref": "flowblind-catalog-preparation-bundle-v1.schema.json#/$defs/identity"
+        },
+        "trustedSidecar": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "reference",
+            "byteLength",
+            "sha256",
+            "schemaId"
+          ],
+          "properties": {
+            "reference": { "$ref": "#/$defs/text" },
+            "byteLength": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 16777216
+            },
+            "sha256": { "$ref": "#/$defs/sha256" },
+            "schemaId": {
+              "const": "https://flowblind.local/schemas/flowblind-catalog-vector-source-sidecar-v1.schema.json"
+            }
+          }
+        },
+        "candidateBinding": {
+          "$ref": "flowblind-catalog-preparation-bundle-v1.schema.json#/$defs/identity"
+        }
+      }
+    },
+    "declarations": { "$ref": "#/$defs/declarations" },
+    "canonicalSource": { "$ref": "#/$defs/canonicalSource" },
+    "capability": { "$ref": "#/$defs/capability" },
+    "protocol": { "$ref": "#/$defs/protocol" },
+    "resourceLimits": {
+      "$ref": "flowblind-catalog-preparation-bundle-v1.schema.json#/$defs/resourceLimits"
+    },
+    "dataHandling": {
+      "$ref": "flowblind-catalog-preparation-bundle-v1.schema.json#/$defs/dataHandling"
+    },
+    "software": {
+      "$ref": "flowblind-catalog-preparation-bundle-v1.schema.json#/$defs/software"
+    }
+  },
+  "$defs": {
+    "text": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 4096
+    },
+    "sha256": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "cycle": {
+      "oneOf": [
+        { "type": "null" },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "startTime",
+            "endTime",
+            "period",
+            "phaseOrigin"
+          ],
+          "properties": {
+            "startTime": { "type": "number" },
+            "endTime": { "type": "number" },
+            "period": {
+              "type": "number",
+              "exclusiveMinimum": 0
+            },
+            "phaseOrigin": { "type": "number" }
+          }
+        }
+      ]
+    },
+    "declarations": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "quantity",
+        "sourceMeaning",
+        "vectorMeaning",
+        "vectorSourceKind",
+        "coordinateUnit",
+        "valueUnit",
+        "timeUnit",
+        "samplingKind",
+        "selectedTime",
+        "exposureDuration",
+        "exposureOperator",
+        "timestampAnchor",
+        "cycle",
+        "provenance",
+        "license",
+        "coordinateDimensionality",
+        "topology",
+        "componentX",
+        "componentY"
+      ],
+      "properties": {
+        "quantity": { "$ref": "#/$defs/text" },
+        "sourceMeaning": { "$ref": "#/$defs/text" },
+        "vectorMeaning": { "$ref": "#/$defs/text" },
+        "vectorSourceKind": {
+          "enum": ["generated", "measured", "simulation"]
+        },
+        "coordinateUnit": { "enum": ["m", "cm", "mm"] },
+        "valueUnit": { "enum": ["m/s", "cm/s", "mm/s"] },
+        "timeUnit": { "enum": ["s", "ms"] },
+        "samplingKind": {
+          "enum": [
+            "instantaneous",
+            "steady-state",
+            "frame-average"
+          ]
+        },
+        "selectedTime": { "type": ["number", "null"] },
+        "exposureDuration": {
+          "type": ["number", "null"],
+          "exclusiveMinimum": 0
+        },
+        "exposureOperator": {
+          "enum": [
+            "uniform-window-average",
+            "unspecified",
+            null
+          ]
+        },
+        "timestampAnchor": {
+          "enum": [
+            "start",
+            "midpoint",
+            "end",
+            "unspecified",
+            null
+          ]
+        },
+        "cycle": { "$ref": "#/$defs/cycle" },
+        "provenance": { "$ref": "#/$defs/text" },
+        "license": { "$ref": "#/$defs/text" },
+        "coordinateDimensionality": { "const": 2 },
+        "topology": {
+          "const": "complete-rectilinear-grid"
+        },
+        "componentX": { "const": "u" },
+        "componentY": { "const": "v" }
+      }
+    },
+    "canonicalSource": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "datasetId",
+        "parser",
+        "structure",
+        "geometry",
+        "temporalSampling"
+      ],
+      "properties": {
+        "datasetId": {
+          "type": "string",
+          "pattern": "^attached-vector-[a-f0-9]{32}$"
+        },
+        "parser": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["version", "encoding", "header"],
+          "properties": {
+            "version": {
+              "const": "flowblind-catalog-vector-csv-v1"
+            },
+            "encoding": { "const": "utf-8" },
+            "header": {
+              "enum": [
+                ["x", "y", "u", "v"],
+                ["x", "y", "u", "v", "valid"],
+                ["time", "x", "y", "u", "v"],
+                ["time", "x", "y", "u", "v", "valid"]
+              ]
+            }
+          }
+        },
+        "structure": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "dataRows",
+            "pointCount",
+            "frameCount",
+            "width",
+            "height",
+            "validPointSamples",
+            "hasValidityColumn",
+            "completeCartesianGrid",
+            "sharedCoordinatesAcrossFrames"
+          ],
+          "properties": {
+            "dataRows": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 250000
+            },
+            "pointCount": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 250000
+            },
+            "frameCount": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 10000
+            },
+            "width": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 250000
+            },
+            "height": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 250000
+            },
+            "validPointSamples": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 250000
+            },
+            "hasValidityColumn": { "type": "boolean" },
+            "completeCartesianGrid": { "const": true },
+            "sharedCoordinatesAcrossFrames": { "const": true }
+          }
+        },
+        "geometry": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "topology",
+            "coordinateDimensions",
+            "coordinateUnit",
+            "areaSemantics"
+          ],
+          "properties": {
+            "topology": {
+              "const": "complete-rectilinear-grid"
+            },
+            "coordinateDimensions": { "const": 2 },
+            "coordinateUnit": { "enum": ["m", "cm", "mm"] },
+            "areaSemantics": {
+              "const": "planar-cartesian-no-wall-evidence"
+            }
+          }
+        },
+        "temporalSampling": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "kind",
+            "timeUnit",
+            "samplingKind",
+            "selectedTime",
+            "nominalCadence",
+            "exposureDuration",
+            "exposureOperator",
+            "timestampAnchor",
+            "cycle"
+          ],
+          "properties": {
+            "kind": {
+              "enum": ["single-frame", "time-series"]
+            },
+            "timeUnit": { "enum": ["s", "ms"] },
+            "samplingKind": {
+              "enum": [
+                "instantaneous",
+                "steady-state",
+                "frame-average"
+              ]
+            },
+            "selectedTime": { "type": "number" },
+            "nominalCadence": {
+              "type": ["number", "null"],
+              "exclusiveMinimum": 0
+            },
+            "exposureDuration": {
+              "type": ["number", "null"],
+              "exclusiveMinimum": 0
+            },
+            "exposureOperator": {
+              "enum": [
+                "uniform-window-average",
+                "unspecified",
+                null
+              ]
+            },
+            "timestampAnchor": {
+              "enum": [
+                "start",
+                "midpoint",
+                "end",
+                "unspecified",
+                null
+              ]
+            },
+            "cycle": { "$ref": "#/$defs/cycle" }
+          }
+        }
+      }
+    },
+    "capability": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "capabilityId",
+        "familyId",
+        "methodFamily",
+        "protocolPresetId"
+      ],
+      "properties": {
+        "capabilityId": {
+          "const": "vector-time-readiness-audit-v1"
+        },
+        "familyId": { "const": "vector-time-readiness" },
+        "methodFamily": {
+          "const": "vector-time-readiness-audit-v1"
+        },
+        "protocolPresetId": {
+          "const": "structured-planar-vector-time-readiness-standard-v1"
+        }
+      }
+    },
+    "scenario": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schemaVersion",
+        "id",
+        "title",
+        "selectedTime",
+        "gates"
+      ],
+      "properties": {
+        "schemaVersion": { "const": 1 },
+        "id": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$"
+        },
+        "title": { "$ref": "#/$defs/text" },
+        "selectedTime": { "type": "number" },
+        "gates": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "minimumSpeedPointCoverage",
+            "minimumDerivativeStencilCoverage",
+            "maximumInterpolationGap",
+            "minimumFrameSummaryCoverage",
+            "minimumWallPairCoverage",
+            "cycle"
+          ],
+          "properties": {
+            "minimumSpeedPointCoverage": { "const": 0.6 },
+            "minimumDerivativeStencilCoverage": { "const": 0.5 },
+            "maximumInterpolationGap": {
+              "type": "number",
+              "exclusiveMinimum": 0
+            },
+            "minimumFrameSummaryCoverage": { "const": 1 },
+            "minimumWallPairCoverage": { "const": 1 },
+            "cycle": {
+              "oneOf": [
+                { "type": "null" },
+                {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "minimumIntervals",
+                    "maximumGapFractionOfPeriod",
+                    "maximumCadenceDeviationFraction",
+                    "endpointToleranceFraction"
+                  ],
+                  "properties": {
+                    "minimumIntervals": { "const": 20 },
+                    "maximumGapFractionOfPeriod": {
+                      "const": 0.0500001
+                    },
+                    "maximumCadenceDeviationFraction": {
+                      "const": 1e-9
+                    },
+                    "endpointToleranceFraction": {
+                      "const": 1e-9
+                    }
+                  }
+                }
+              ]
+            }
+          }
+        }
+      }
+    },
+    "protocol": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "canonicalization",
+        "scenario",
+        "byteLength",
+        "sha256",
+        "freezeReceipt"
+      ],
+      "properties": {
+        "canonicalization": { "const": "stable-json-v1" },
+        "scenario": { "$ref": "#/$defs/scenario" },
+        "byteLength": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 1048576
+        },
+        "sha256": { "$ref": "#/$defs/sha256" },
+        "freezeReceipt": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "schemaVersion",
+            "id",
+            "capabilityId",
+            "protocolPresetId",
+            "sourceArtifact",
+            "sidecarArtifact",
+            "protocol",
+            "resourceBounds"
+          ],
+          "properties": {
+            "schemaVersion": { "const": 1 },
+            "id": {
+              "type": "string",
+              "pattern": "^vector-readiness-freeze-[a-f0-9]{32}$"
+            },
+            "capabilityId": {
+              "const": "vector-time-readiness-audit-v1"
+            },
+            "protocolPresetId": {
+              "const": "structured-planar-vector-time-readiness-standard-v1"
+            },
+            "sourceArtifact": {
+              "$ref": "flowblind-catalog-preparation-bundle-v1.schema.json#/$defs/identity"
+            },
+            "sidecarArtifact": {
+              "$ref": "flowblind-catalog-preparation-bundle-v1.schema.json#/$defs/identity"
+            },
+            "protocol": {
+              "$ref": "flowblind-catalog-preparation-bundle-v1.schema.json#/$defs/digest"
+            },
+            "resourceBounds": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "maximumDataRows",
+                "maximumVectorFrames",
+                "maximumVectorPointSamples",
+                "maximumVectorValues"
+              ],
+              "properties": {
+                "maximumDataRows": { "const": 250000 },
+                "maximumVectorFrames": { "const": 10000 },
+                "maximumVectorPointSamples": { "const": 250000 },
+                "maximumVectorValues": { "const": 500000 }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

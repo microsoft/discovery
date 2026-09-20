@@ -1,0 +1,81 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://flowblind.local/schemas/flowblind-catalog-hidden-flow-package-evidence-v1.schema.json",
+  "title": "FlowBlind catalog hidden-flow package evidence v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "policy",
+    "packageVersion",
+    "runtimeNetworkRequired",
+    "runtime",
+    "bundleLock",
+    "reviewPolicy",
+    "declaration",
+    "problemSchema",
+    "problemAcceptanceSchema",
+    "parser",
+    "verifier",
+    "pythonRequirements",
+    "pythonSolverSources",
+    "containerDefinition",
+    "schemas"
+  ],
+  "properties": {
+    "policy": {
+      "const": "attested-generic-hidden-flow-contract-parser-runtime-and-neutral-claims"
+    },
+    "packageVersion": { "const": "1.0.0" },
+    "runtimeNetworkRequired": { "const": false },
+    "runtime": { "$ref": "#/$defs/artifact" },
+    "bundleLock": { "$ref": "#/$defs/artifact" },
+    "reviewPolicy": { "$ref": "#/$defs/artifact" },
+    "declaration": { "$ref": "#/$defs/artifact" },
+    "problemSchema": { "$ref": "#/$defs/artifact" },
+    "problemAcceptanceSchema": { "$ref": "#/$defs/artifact" },
+    "parser": { "$ref": "#/$defs/artifact" },
+    "verifier": { "$ref": "#/$defs/artifact" },
+    "pythonRequirements": { "$ref": "#/$defs/artifact" },
+    "pythonSolverSources": {
+      "type": "array",
+      "minItems": 4,
+      "maxItems": 4,
+      "items": { "$ref": "#/$defs/artifact" }
+    },
+    "containerDefinition": { "$ref": "#/$defs/artifact" },
+    "schemas": {
+      "type": "array",
+      "minItems": 12,
+      "maxItems": 12,
+      "items": { "$ref": "#/$defs/artifact" }
+    }
+  },
+  "$defs": {
+    "artifact": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["reference", "byteLength", "sha256", "mediaType"],
+      "properties": {
+        "reference": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 512
+        },
+        "byteLength": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 134217728
+        },
+        "sha256": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "mediaType": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        }
+      }
+    }
+  }
+}

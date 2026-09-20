@@ -1,0 +1,93 @@
+{
+  "id": "flowblind-catalog-research-v2-source-modules-v1",
+  "moduleCount": 17,
+  "modules": [
+    {
+      "byteLength": 19669,
+      "reference": "tools/catalogResearch/catalogResearchProfile.ts",
+      "sha256": "2053cb59cbdbb356d0fd20b2faac9176a682fbb0c142251b10fdea7c0216d967"
+    },
+    {
+      "byteLength": 6519,
+      "reference": "tools/catalogResearchV2/authority.ts",
+      "sha256": "a0b433fe100e841a4c447d8b05b2743c2700e57662f30463a2f1c9bf50740f09"
+    },
+    {
+      "byteLength": 15493,
+      "reference": "tools/catalogResearchV2/capabilityAdapter.ts",
+      "sha256": "ecfa6392b2817c8536277eda65c55c84ea132724974ac4d9a1c13eb71ba54d3c"
+    },
+    {
+      "byteLength": 5275,
+      "reference": "tools/catalogResearchV2/confirmation.ts",
+      "sha256": "c865bb88bcf031a4b695b6b74bd7af4c29a014e2dc6447846e65d69d587c9746"
+    },
+    {
+      "byteLength": 13896,
+      "reference": "tools/catalogResearchV2/contract.ts",
+      "sha256": "b65967439fa3e681e2aab06c466e27b5d633cb39e6accb5463d06ac34fb2b52a"
+    },
+    {
+      "byteLength": 25394,
+      "reference": "tools/catalogResearchV2/descriptors.ts",
+      "sha256": "2f0643906e4f1a8e2f51689fe830f6b26448f63c69c6137a52a652370c57f5d5"
+    },
+    {
+      "byteLength": 5507,
+      "reference": "tools/catalogResearchV2/hiddenFlowV1Authority.ts",
+      "sha256": "3069802e4f4363ecc37bedd760254c70308d9096a2f880955126d0306586f2dc"
+    },
+    {
+      "byteLength": 23851,
+      "reference": "tools/catalogResearchV2/hiddenFlowV1Contract.ts",
+      "sha256": "530e497a03dd962aa37db3174834e23f92e441f002968e59471d33c0c4ea72c6"
+    },
+    {
+      "byteLength": 599,
+      "reference": "tools/catalogResearchV2/integrity.ts",
+      "sha256": "05fb56b6f27495f758d14c5e6dde861c128b7d55f8551dd85dbc68ffaf67bdc7"
+    },
+    {
+      "byteLength": 4298,
+      "reference": "tools/catalogResearchV2/intentPolicy.ts",
+      "sha256": "2945c4145c6ace9749e9489ddae3e9aecd78bb0c3ecc84c0f3e0bb35a206bb47"
+    },
+    {
+      "byteLength": 95226,
+      "reference": "tools/catalogResearchV2/package/hiddenFlowV1PortableBridge.ts",
+      "sha256": "154d29dc5b5a0de67096fcb975fb90e310753af9ab6cb882a76d61d8af42181f"
+    },
+    {
+      "byteLength": 36561,
+      "reference": "tools/catalogResearchV2/package/portableIo.ts",
+      "sha256": "951138d0798c029146a69a96b031b35921ab06d7ce9efaf280a69c0eb0296ef6"
+    },
+    {
+      "byteLength": 48397,
+      "reference": "tools/catalogResearchV2/package/retainedCatalogV1.ts",
+      "sha256": "36c95055d1e1b99dc2c007a3be3f1e9e5f78e581221c546b2fb48697ae8cc36c"
+    },
+    {
+      "byteLength": 63277,
+      "reference": "tools/catalogResearchV2/package/retainedHiddenV1.ts",
+      "sha256": "a9ea0a12b1218d4449ae9c7c642b4e1b2cf521abcbc82fb1f52fd93c54862eaf"
+    },
+    {
+      "byteLength": 34428,
+      "reference": "tools/catalogResearchV2/package/runtime.ts",
+      "sha256": "e4c17d5ade249714f3d69fef19a786f2f40bd0a863f9701c48f0605948aeebbe"
+    },
+    {
+      "byteLength": 3088,
+      "reference": "tools/catalogResearchV2/resources.ts",
+      "sha256": "7ddd93625bfa16724b8a7f100602c402bd63d9fdf2e8b8b254241d02fa1d9fde"
+    },
+    {
+      "byteLength": 60544,
+      "reference": "tools/catalogResearchV2/router.ts",
+      "sha256": "25f6828ca86de57137fea94610043038282fc84902324d87a7bc3560fc2b8aba"
+    }
+  ],
+  "packageVersion": "2.0.0",
+  "schemaVersion": 1
+}

@@ -1,0 +1,435 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://flowblind.local/schemas/flowblind-catalog-hidden-flow-action-response-v1.schema.json",
+  "title": "FlowBlind catalog hidden-flow action response v1",
+  "$comment": "JSON Schema validation is structural only. Consumers MUST also call the package-exported assertCatalogHiddenFlowActionResponseSemanticContract validator with the associated verified-run and, for committed output, report-verification records. In particular, matched replay hashes and every report-set reference require semantic equality.",
+  "oneOf": [
+    { "$ref": "#/$defs/prepared" },
+    { "$ref": "#/$defs/reportComplete" },
+    { "$ref": "#/$defs/unavailable" },
+    { "$ref": "#/$defs/refusal" }
+  ],
+  "$defs": {
+    "sha256": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "artifact": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["reference", "byteLength", "sha256", "mediaType"],
+      "properties": {
+        "reference": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 512
+        },
+        "byteLength": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 134217728
+        },
+        "sha256": { "$ref": "#/$defs/sha256" },
+        "mediaType": {
+          "enum": ["application/json", "text/markdown"]
+        }
+      }
+    },
+    "problemSummary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "title", "targetId", "targetType"],
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$"
+        },
+        "title": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
+        },
+        "targetId": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$"
+        },
+        "targetType": {
+          "enum": [
+            "point-component",
+            "point-direction",
+            "point-speed-envelope",
+            "region-component",
+            "point-strain-component"
+          ]
+        }
+      }
+    },
+    "reviewSummary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "authorityVersion",
+        "reviewScope",
+        "claimBoundary"
+      ],
+      "properties": {
+        "authorityVersion": {
+          "const": "attested-generic-hidden-flow-problem-authority-v1"
+        },
+        "reviewScope": {
+          "const": "generic-problem-contract-parser-and-executable-preflight-only"
+        },
+        "claimBoundary": {
+          "const": "finite-basis-declared-model-only-no-physical-truth-source-validity-or-clinical-inference"
+        }
+      }
+    },
+    "prepared": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schemaVersion",
+        "capabilityVersion",
+        "status",
+        "containsResults",
+        "humanContext",
+        "problem",
+        "review",
+        "preparationBundle"
+      ],
+      "properties": {
+        "schemaVersion": { "const": 1 },
+        "capabilityVersion": { "const": "1.1.0" },
+        "status": { "const": "prepared-awaiting-confirmation" },
+        "containsResults": { "const": false },
+        "humanContext": {
+          "$ref": "flowblind-catalog-hidden-flow-input-v1.schema.json"
+        },
+        "problem": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "id",
+            "title",
+            "targetType",
+            "targetTitle",
+            "observationRows",
+            "retainedBasisFunctions",
+            "solverRequestCount"
+          ],
+          "properties": {
+            "id": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$"
+            },
+            "title": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 256
+            },
+            "targetType": {
+              "enum": [
+                "point-component",
+                "point-direction",
+                "point-speed-envelope",
+                "region-component",
+                "point-strain-component"
+              ]
+            },
+            "targetTitle": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 256
+            },
+            "observationRows": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 256
+            },
+            "retainedBasisFunctions": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 96
+            },
+            "solverRequestCount": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 64
+            }
+          }
+        },
+        "review": { "$ref": "#/$defs/reviewSummary" },
+        "preparationBundle": { "$ref": "#/$defs/artifact" }
+      }
+    },
+    "reportComplete": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schemaVersion",
+        "capabilityVersion",
+        "status",
+        "containsResults",
+        "humanContext",
+        "problem",
+        "review",
+        "deterministicReplayMatched",
+        "outcome",
+        "artifacts",
+        "publication"
+      ],
+      "properties": {
+        "schemaVersion": { "const": 1 },
+        "capabilityVersion": { "const": "1.1.0" },
+        "status": { "const": "report-complete" },
+        "containsResults": { "type": "boolean" },
+        "humanContext": {
+          "$ref": "flowblind-catalog-hidden-flow-input-v1.schema.json"
+        },
+        "problem": { "$ref": "#/$defs/problemSummary" },
+        "review": { "$ref": "#/$defs/reviewSummary" },
+        "deterministicReplayMatched": { "const": true },
+        "outcome": {
+          "$ref": "flowblind-catalog-hidden-flow-verified-run-v1.schema.json#/$defs/outcome"
+        },
+        "artifacts": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["json", "markdown"],
+          "properties": {
+            "json": { "$ref": "#/$defs/artifact" },
+            "markdown": { "$ref": "#/$defs/artifact" },
+            "verification": { "$ref": "#/$defs/artifact" }
+          }
+        },
+        "publication": {
+          "oneOf": [
+            { "$ref": "#/$defs/uncommittedPublication" },
+            { "$ref": "#/$defs/committedPublication" }
+          ]
+        }
+      },
+      "allOf": [
+        {
+          "oneOf": [
+            {
+              "properties": {
+                "containsResults": { "const": true },
+                "outcome": {
+                  "oneOf": [
+                    {
+                      "$ref": "flowblind-catalog-hidden-flow-verified-run-v1.schema.json#/$defs/numericalOutcome"
+                    },
+                    {
+                      "$ref": "flowblind-catalog-hidden-flow-verified-run-v1.schema.json#/$defs/infeasibleOutcome"
+                    }
+                  ]
+                }
+              }
+            },
+            {
+              "properties": {
+                "containsResults": { "const": false },
+                "outcome": {
+                  "$ref": "flowblind-catalog-hidden-flow-verified-run-v1.schema.json#/$defs/acceptedUnboundedOutcome"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "oneOf": [
+            {
+              "properties": {
+                "artifacts": {
+                  "required": ["json", "markdown"],
+                  "not": { "required": ["verification"] },
+                  "properties": {
+                    "json": {
+                      "properties": {
+                        "reference": {
+                          "pattern": "^flowblind-catalog-hidden-flow-run-[a-f0-9]{64}\\.json$"
+                        },
+                        "mediaType": { "const": "application/json" }
+                      }
+                    },
+                    "markdown": {
+                      "properties": {
+                        "reference": {
+                          "pattern": "^flowblind-catalog-hidden-flow-report-[a-f0-9]{64}\\.md$"
+                        },
+                        "mediaType": { "const": "text/markdown" }
+                      }
+                    }
+                  }
+                },
+                "publication": {
+                  "$ref": "#/$defs/uncommittedPublication"
+                }
+              }
+            },
+            {
+              "properties": {
+                "artifacts": {
+                  "required": [
+                    "json",
+                    "markdown",
+                    "verification"
+                  ],
+                  "properties": {
+                    "json": {
+                      "properties": {
+                        "reference": {
+                          "pattern": "^flowblind-hidden-flow-study-[a-f0-9]{64}/verified-run\\.json$"
+                        },
+                        "mediaType": { "const": "application/json" }
+                      }
+                    },
+                    "markdown": {
+                      "properties": {
+                        "reference": {
+                          "pattern": "^flowblind-hidden-flow-study-[a-f0-9]{64}/report\\.md$"
+                        },
+                        "mediaType": { "const": "text/markdown" }
+                      }
+                    },
+                    "verification": {
+                      "properties": {
+                        "reference": {
+                          "pattern": "^flowblind-hidden-flow-study-[a-f0-9]{64}/report-verification\\.json$"
+                        },
+                        "mediaType": { "const": "application/json" }
+                      }
+                    }
+                  }
+                },
+                "publication": {
+                  "$ref": "#/$defs/committedPublication"
+                }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    "unavailable": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schemaVersion",
+        "capabilityVersion",
+        "status",
+        "containsResults",
+        "deterministicReplayMatched",
+        "outcome"
+      ],
+      "properties": {
+        "schemaVersion": { "const": 1 },
+        "capabilityVersion": { "const": "1.1.0" },
+        "status": { "const": "unavailable" },
+        "containsResults": { "const": false },
+        "deterministicReplayMatched": { "const": false },
+        "outcome": {
+          "$ref": "flowblind-catalog-hidden-flow-verified-run-v1.schema.json#/$defs/failureUnavailableOutcome"
+        }
+      }
+    },
+    "refusal": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schemaVersion",
+        "capabilityVersion",
+        "status",
+        "containsResults",
+        "error"
+      ],
+      "properties": {
+        "schemaVersion": { "const": 1 },
+        "capabilityVersion": { "const": "1.1.0" },
+        "status": { "const": "refused" },
+        "containsResults": { "const": false },
+        "error": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["code", "classification", "detail"],
+          "properties": {
+            "code": {
+              "enum": [
+                "input-invalid",
+                "problem-bytes-invalid",
+                "problem-not-canonical",
+                "problem-not-executable",
+                "review-authority-unavailable",
+                "review-attestation-invalid",
+                "package-attestation-failed",
+                "preparation-bundle-invalid",
+                "human-context-mismatch",
+                "attachment-set-invalid",
+                "attachment-path-unsafe",
+                "attachment-changed-during-read",
+                "output-publication-conflict",
+                "concurrent-publication-conflict",
+                "output-publication-partial",
+                "output-artifact-tampered",
+                "operation-cancelled"
+              ]
+            },
+            "classification": {
+              "enum": [
+                "cancellation",
+                "attachment",
+                "input-validation",
+                "package-attestation",
+                "publication",
+                "review",
+                "verification"
+              ]
+            },
+            "detail": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 512
+            }
+          }
+        }
+      }
+    },
+    "uncommittedPublication": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["state", "promotable"],
+      "properties": {
+        "state": { "const": "uncommitted-core-bytes" },
+        "promotable": { "const": false }
+      }
+    },
+    "committedPublication": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "state",
+        "promotable",
+        "directory",
+        "pointOfNoReturn",
+        "policy",
+        "distributedExactlyOnceClaim"
+      ],
+      "properties": {
+        "state": { "const": "marker-verified" },
+        "promotable": { "const": true },
+        "directory": {
+          "type": "string",
+          "pattern": "^flowblind-hidden-flow-study-[a-f0-9]{64}$"
+        },
+        "pointOfNoReturn": {
+          "const": "exclusive-report-verification-commit-marker"
+        },
+        "policy": {
+          "const": "deterministic-exclusive-create-or-verify-content-then-commit-marker"
+        },
+        "distributedExactlyOnceClaim": { "const": false }
+      }
+    }
+  }
+}

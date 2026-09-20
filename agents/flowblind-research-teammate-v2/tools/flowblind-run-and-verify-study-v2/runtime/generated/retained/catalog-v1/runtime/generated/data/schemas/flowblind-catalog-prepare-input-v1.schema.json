@@ -1,0 +1,170 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://flowblind.local/schemas/flowblind-catalog-prepare-input-v1.schema.json",
+  "title": "FlowBlind catalog prepare-study input v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "researchGoal",
+    "quantity",
+    "coordinateUnit",
+    "valueUnit",
+    "provenance",
+    "license"
+  ],
+  "properties": {
+    "researchGoal": { "$ref": "#/$defs/text" },
+    "decisionQuestion": {
+      "$ref": "#/$defs/text"
+    },
+    "nextEvidenceIntent": {
+      "$ref": "#/$defs/text"
+    },
+    "quantity": { "$ref": "#/$defs/text" },
+    "referenceMeaning": { "$ref": "#/$defs/text" },
+    "candidateMeaning": { "$ref": "#/$defs/text" },
+    "vectorMeaning": { "$ref": "#/$defs/text" },
+    "vectorSourceKind": {
+      "enum": ["generated", "measured", "simulation"]
+    },
+    "timeUnit": { "enum": ["s", "ms"] },
+    "samplingKind": {
+      "enum": [
+        "instantaneous",
+        "steady-state",
+        "frame-average"
+      ]
+    },
+    "selectedTime": { "type": "number" },
+    "exposureDuration": {
+      "type": "number",
+      "exclusiveMinimum": 0
+    },
+    "exposureOperator": {
+      "enum": ["uniform-window-average", "unspecified"]
+    },
+    "timestampAnchor": {
+      "enum": ["start", "midpoint", "end", "unspecified"]
+    },
+    "cycleStartTime": { "type": "number" },
+    "cycleEndTime": { "type": "number" },
+    "cyclePeriod": {
+      "type": "number",
+      "exclusiveMinimum": 0
+    },
+    "cyclePhaseOrigin": { "type": "number" },
+    "coordinateUnit": { "$ref": "#/$defs/text" },
+    "valueUnit": { "$ref": "#/$defs/text" },
+    "provenance": { "$ref": "#/$defs/text" },
+    "license": { "$ref": "#/$defs/text" }
+  },
+  "oneOf": [
+    {
+      "required": [
+        "referenceMeaning",
+        "candidateMeaning"
+      ],
+      "not": {
+        "anyOf": [
+          { "required": ["vectorMeaning"] },
+          { "required": ["vectorSourceKind"] },
+          { "required": ["timeUnit"] },
+          { "required": ["samplingKind"] },
+          { "required": ["selectedTime"] },
+          { "required": ["exposureDuration"] },
+          { "required": ["exposureOperator"] },
+          { "required": ["timestampAnchor"] },
+          { "required": ["cycleStartTime"] },
+          { "required": ["cycleEndTime"] },
+          { "required": ["cyclePeriod"] },
+          { "required": ["cyclePhaseOrigin"] }
+        ]
+      }
+    },
+    {
+      "required": [
+        "vectorMeaning",
+        "vectorSourceKind",
+        "timeUnit",
+        "samplingKind"
+      ],
+      "properties": {
+        "coordinateUnit": {
+          "enum": ["m", "cm", "mm"]
+        },
+        "valueUnit": {
+          "enum": ["m/s", "cm/s", "mm/s"]
+        }
+      },
+      "not": {
+        "anyOf": [
+          { "required": ["referenceMeaning"] },
+          { "required": ["candidateMeaning"] }
+        ]
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "samplingKind": {
+                "const": "frame-average"
+              }
+            },
+            "required": ["samplingKind"]
+          },
+          "then": {
+            "required": ["exposureDuration"]
+          },
+          "else": {
+            "not": {
+              "anyOf": [
+                { "required": ["exposureDuration"] },
+                { "required": ["exposureOperator"] },
+                { "required": ["timestampAnchor"] }
+              ]
+            }
+          }
+        },
+        {
+          "if": {
+            "anyOf": [
+              { "required": ["exposureOperator"] },
+              { "required": ["timestampAnchor"] }
+            ]
+          },
+          "then": {
+            "required": [
+              "exposureOperator",
+              "timestampAnchor"
+            ]
+          }
+        },
+        {
+          "if": {
+            "anyOf": [
+              { "required": ["cycleStartTime"] },
+              { "required": ["cycleEndTime"] },
+              { "required": ["cyclePeriod"] },
+              { "required": ["cyclePhaseOrigin"] }
+            ]
+          },
+          "then": {
+            "required": [
+              "cycleStartTime",
+              "cycleEndTime",
+              "cyclePeriod",
+              "cyclePhaseOrigin"
+            ]
+          }
+        }
+      ]
+    }
+  ],
+  "$defs": {
+    "text": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 4096
+    }
+  }
+}
