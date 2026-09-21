@@ -5,7 +5,11 @@ from __future__ import annotations
 
 import json
 
-from contact_network_validator import ContactNetworkPolicy, validate_email_domain
+from contact_network_validator import (
+    ContactNetworkPolicy,
+    is_unverifiable_error,
+    validate_email_domain,
+)
 from rules.base import Finding, Rule, RuleContext, Scope
 from source_locations import line_for_key_path
 
@@ -62,11 +66,18 @@ def check(ctx: RuleContext) -> list[Finding]:
             checked[cache_key] = validate_email_domain(value, policy.email_domain)
         error = checked[cache_key]
         if error:
+            if is_unverifiable_error(error):
+                message = (
+                    f"'{field}' could not be verified; the email-domain DNS "
+                    f"check did not complete: {error}."
+                )
+            else:
+                message = f"'{field}' must use a real email domain: {error}."
             findings.append(Finding(
                 rule_id="POL-019",
                 file=rel,
                 line=line,
-                message=f"'{field}' must use a real email domain: {error}.",
+                message=message,
             ))
     return findings
 

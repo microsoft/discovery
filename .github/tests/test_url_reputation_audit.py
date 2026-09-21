@@ -53,6 +53,34 @@ def test_collect_catalog_urls_uses_nested_author_url_line(tmp_path: Path):
     assert urls[0].locations[0].line == 4
 
 
+def test_sanitize_submission_url_strips_credentials_query_and_fragment():
+    assert (
+        audit.sanitize_submission_url("https://user:pass@example.com/support?token=abc#frag")
+        == "https://example.com/support"
+    )
+    assert (
+        audit.sanitize_submission_url("https://Example.COM:8443/path?x=1")
+        == "https://example.com:8443/path"
+    )
+    assert audit.sanitize_submission_url("https://example.com") == "https://example.com/"
+    # Non-http(s) or hostless values are not reputation targets.
+    assert audit.sanitize_submission_url("mailto:owner@example.com") is None
+    assert audit.sanitize_submission_url("not a url") is None
+
+
+def test_collect_catalog_urls_submits_only_sanitized_urls(tmp_path: Path):
+    metadata = tmp_path / "agents" / "demo" / "metadata.yaml"
+    metadata.parent.mkdir(parents=True)
+    metadata.write_text(
+        "publisher:\n  support_url: https://user:secret@example.com/support?token=abc\n",
+        encoding="utf-8",
+    )
+
+    urls = audit.collect_catalog_urls(tmp_path)
+
+    assert [item.url for item in urls] == ["https://example.com/support"]
+
+
 def test_audit_checks_each_url_with_both_providers():
     checked: list[tuple[str, str, str]] = []
 

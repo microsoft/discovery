@@ -15,8 +15,9 @@ Legacy check families (``catalog_validation.*``) — authoritative for:
 Modular rule engine (``rules.*``, discovered by the registry) — authoritative
 for the ratcheted, waiverable content rules addressed by rule id:
   * binary / model-weight content   (POL-008, POL-014 …)
-  * base-image provenance           (POL-018, POL-019)
+  * base-image provenance            (base-image and tag policies …)
   * large/committed artifacts        (POL-015, POL-016, POL-020)
+  * publisher contact reachability   (POL-018, POL-019)
   * tag taxonomy                     (TAG-001, TAG-002)
 
 The two sets do not overlap: a given rule id is produced by exactly one engine,
@@ -24,6 +25,15 @@ so a PR can never receive duplicate findings for the same violation. New
 content rules should be added to the modular engine (one file per rule); the
 legacy families remain because they need orchestration context (permissions,
 schema objects) that the per-rule contract intentionally omits.
+
+Multiple findings for one file are intentional, not deduplicated. Distinct rule
+ids (for example an image-integrity rule, a committed-artifact rule, and a
+source-allowlist rule) can each flag the same file, because each reports an
+independent defect with its own remediation. Collapsing them by file+category
+would hide separately-actionable problems and could let a real violation ride
+in behind an unrelated one, so the orchestrator deliberately preserves every
+finding and relies on the single-owner rule-id contract above to prevent true
+duplicates (the same violation reported twice).
 """
 
 from __future__ import annotations

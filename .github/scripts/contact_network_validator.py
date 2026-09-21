@@ -77,6 +77,30 @@ WebRequester = Callable[[SplitResult, str, float, int], WebResponse]
 
 _REDIRECT_STATUSES = frozenset({301, 302, 303, 307, 308})
 
+#: Substrings that mark an error as "the check could not be completed" —
+#: transient or environmental (DNS timeout, connection failure, resolver
+#: unavailable) — rather than "the value itself is wrong". Callers use this to
+#: report POL-018/POL-019 as *unable to verify* instead of a content defect, so
+#: a temporary outage or corporate egress restriction is not treated the same
+#: as an invalid URL or a non-existent domain.
+_UNVERIFIABLE_SIGNATURES = (
+    "could not be resolved",
+    "could not connect",
+    "timed out",
+    "had no usable nameserver",
+    "requires the 'dnspython' package",
+)
+
+
+def is_unverifiable_error(error: str) -> bool:
+    """True when a validation error means the check could not be completed.
+
+    A ``True`` result indicates a transient or environmental failure (the
+    network probe did not finish), not proof that the URL or domain is invalid.
+    """
+    lowered = error.lower()
+    return any(signature in lowered for signature in _UNVERIFIABLE_SIGNATURES)
+
 
 def validate_email_domain(
     email: str,

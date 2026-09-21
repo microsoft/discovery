@@ -58,6 +58,26 @@ def test_starter_kit_author_url_reports_its_nested_source_line(repo, monkeypatch
     assert result.findings[0].line == 4
 
 
+def test_transient_network_failure_is_reported_as_unverifiable(repo, monkeypatch):
+    rel = write(
+        repo,
+        "agents/demo/metadata.yaml",
+        "publisher:\n  support_url: https://example.com/support\n",
+    )
+    monkeypatch.setattr(
+        pol_018,
+        "validate_webpage",
+        lambda *_: "host 'example.com' could not be resolved: timed out",
+    )
+
+    result = run_rule(repo, pol_018.RULE, [rel])
+
+    assert files(result) == [rel]
+    message = result.findings[0].message
+    assert "could not be verified" in message
+    assert "must identify a real public HTML webpage" not in message
+
+
 def test_untouched_catalog_entries_are_not_checked(repo, monkeypatch):
     write(
         repo,

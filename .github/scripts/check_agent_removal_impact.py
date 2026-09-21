@@ -31,6 +31,8 @@ import urllib.request
 import urllib.error
 from pathlib import Path
 
+import update_registry
+
 
 def load_json(path: Path) -> dict:
     with path.open() as f:
@@ -97,15 +99,35 @@ def get_base_registry_paths(repo_root: Path, base_sha: str) -> set[str]:
 
 
 def get_head_registry_paths(repo_root: Path) -> set[str]:
-    """Return agent paths represented by metadata files in the PR checkout."""
+    """Return agent paths from the PR checkout that survive registry generation.
+
+    The base set comes from the committed ``agent-registry.json``, which is
+    produced by ``update_registry``. To compare like-for-like, the head set is
+    derived through the *same* validated generation path: a directory counts as
+    present only if ``update_registry.build_entry`` yields a valid entry (valid
+    metadata with a name). A folder that merely contains a ``metadata.yaml`` but
+    would be rejected by registry generation is therefore treated as absent, so
+    a malformed or incomplete agent cannot mask a genuine removal.
+    """
+    paths: set[str] = set()
     agents_dir = repo_root / "agents"
     if not agents_dir.is_dir():
-        return set()
-    return {
-        f"agents/{agent_dir.name}"
-        for agent_dir in agents_dir.iterdir()
-        if agent_dir.is_dir() and (agent_dir / "metadata.yaml").is_file()
-    }
+        return paths
+    for agent_dir in sorted(agents_dir.iterdir()):
+        if not agent_dir.is_dir():
+            continue
+        rel_path = f"agents/{agent_dir.name}"
+        try:
+            entry = update_registry.build_entry(str(agent_dir), rel_path, "agent")
+        except Exception as exc:
+            print(
+                f"WARNING: {rel_path} does not produce a valid registry entry "
+                f"and is treated as absent: {exc}"
+            )
+            continue
+        if entry is not None:
+            paths.add(entry["path"])
+    return paths
 
 
 def get_active_kits(repo_root: Path) -> list[tuple[str, dict]]:

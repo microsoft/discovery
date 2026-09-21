@@ -3,6 +3,13 @@
 
 The audit submits catalog URLs only to the providers' lookup APIs. It never
 connects to a catalog destination or downloads a malicious payload.
+
+**Data-sharing / privacy.** Submitting a URL to URLhaus and PhishTank discloses
+that URL to those third parties. To avoid leaking secrets or user-identifying
+data, every URL is reduced to ``scheme://host[:port]/path`` before submission:
+embedded credentials (userinfo) and the query string and fragment — which can
+carry API tokens, session identifiers, or other sensitive parameters — are
+stripped and never transmitted. See ``sanitize_submission_url``.
 """
 
 from __future__ import annotations
@@ -16,7 +23,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Callable
 from urllib.error import HTTPError, URLError
-from urllib.parse import urlencode
+from urllib.parse import urlencode, urlsplit, urlunsplit
 from urllib.request import Request, urlopen
 
 import yaml
@@ -56,15 +63,45 @@ class ReputationFinding:
     locations: tuple[CatalogLocation, ...]
 
 
+def sanitize_submission_url(url: str) -> str | None:
+    """Reduce a catalog URL to ``scheme://host[:port]/path`` for third-party
+    reputation lookups.
+
+    Userinfo (embedded credentials) and the query string and fragment — which
+    may carry tokens or other sensitive parameters — are removed so they are
+    never transmitted to URLhaus or PhishTank. Returns ``None`` for values that
+    are not usable http(s) reputation targets.
+    """
+    try:
+        parts = urlsplit(url.strip())
+    except ValueError:
+        return None
+    scheme = parts.scheme.lower()
+    if scheme not in {"http", "https"} or not parts.hostname:
+        return None
+    netloc = parts.hostname
+    if parts.port is not None:
+        netloc = f"{netloc}:{parts.port}"
+    return urlunsplit((scheme, netloc, parts.path or "/", "", ""))
+
+
 def collect_catalog_urls(repo: Path) -> list[CatalogUrl]:
-    """Collect and deduplicate the webpage fields governed by POL-018."""
+    """Collect and deduplicate the webpage fields governed by POL-018.
+
+    URLs are sanitized (credentials, query, and fragment stripped) before they
+    are recorded, so deduplication and provider submission both operate on the
+    minimal ``scheme://host[:port]/path`` form.
+    """
     found: dict[str, list[CatalogLocation]] = {}
 
     def add(path: Path, field: str, key_path: tuple[str, ...], value: object) -> None:
         if not isinstance(value, str) or not value:
             return
+        submission = sanitize_submission_url(value)
+        if submission is None:
+            return
         rel = path.relative_to(repo).as_posix()
-        found.setdefault(value, []).append(
+        found.setdefault(submission, []).append(
             CatalogLocation(rel, field, line_for_key_path_in_file(path, key_path))
         )
 

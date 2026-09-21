@@ -189,6 +189,15 @@ def test_data_appended_after_image_end_is_blocked(repo):
     assert files(result) == [rel]
 
 
+def test_small_payload_appended_after_image_end_is_blocked(repo):
+    # A short append keeps IEND inside the tail window; the marker must be the
+    # actual final bytes, not merely present near the end.
+    rel = write(repo, "agents/demo/img.png", VALID_PNG + b"A" * 4)
+    result = run_rule(repo, RULE, [rel])
+    assert files(result) == [rel]
+    assert "end-of-file" in result.findings[0].message
+
+
 # ── SVG active content ───────────────────────────────────────────────────────
 
 @pytest.mark.parametrize("snippet,label", [
@@ -262,6 +271,57 @@ def test_svg_attributes_resembling_handlers_are_not_flagged(repo, attr):
     body = (
         '<svg xmlns="http://www.w3.org/2000/svg">\n'
         f"  <rect {attr} width='1' height='1'/>\n"
+        "</svg>\n"
+    )
+    rel = write(repo, "agents/demo/ok.svg", body)
+    reference_image(repo, rel)
+    result = run_rule(repo, RULE, [rel])
+    assert result.findings == []
+
+
+@pytest.mark.parametrize("snippet,label", [
+    ('<style>@import url("https://evil.example/x.css");</style>', "CSS @import"),
+    ('<rect style="fill:url(https://evil.example/p.png)"/>', "CSS url()"),
+    ('<use xlink:href="https://evil.example/x.svg#a"/>', "remote xlink"),
+    ('<use xlink:href="//evil.example/x.svg#a"/>', "protocol-relative xlink"),
+    ('<a href="java&#115;cript:alert(1)"><rect/></a>', "encoded javascript:"),
+    ('<rect o&#110;load="steal()" width="1" height="1"/>', "encoded handler"),
+])
+def test_svg_with_obfuscated_or_css_active_content_is_blocked(repo, snippet, label):
+    body = (
+        '<svg xmlns="http://www.w3.org/2000/svg" width="10" height="10">\n'
+        f"  {snippet}\n"
+        "</svg>\n"
+    )
+    rel = write(repo, "agents/demo/bad.svg", body)
+    result = run_rule(repo, RULE, [rel])
+    assert files(result) == [rel], f"expected {label} to be rejected"
+
+
+@pytest.mark.parametrize("snippet", [
+    '<rect fill="url(#grad1)" width="1" height="1"/>',   # internal paint ref
+    '<use xlink:href="#icon"/>',                          # internal symbol ref
+    '<use href="#icon"/>',                                # internal symbol ref
+])
+def test_svg_internal_references_are_not_flagged(repo, snippet):
+    body = (
+        '<svg xmlns="http://www.w3.org/2000/svg" '
+        'xmlns:xlink="http://www.w3.org/1999/xlink">\n'
+        f"  {snippet}\n"
+        "</svg>\n"
+    )
+    rel = write(repo, "agents/demo/ok.svg", body)
+    reference_image(repo, rel)
+    result = run_rule(repo, RULE, [rel])
+    assert result.findings == []
+
+
+def test_svg_with_escaped_script_text_is_not_flagged(repo):
+    # Named entities stay literal text in a browser; they must not be decoded
+    # into an executable-looking match.
+    body = (
+        '<svg xmlns="http://www.w3.org/2000/svg">\n'
+        "  <text>&lt;script&gt;alert(1)&lt;/script&gt;</text>\n"
         "</svg>\n"
     )
     rel = write(repo, "agents/demo/ok.svg", body)

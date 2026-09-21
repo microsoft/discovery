@@ -5,7 +5,11 @@ from __future__ import annotations
 
 import json
 
-from contact_network_validator import ContactNetworkPolicy, validate_webpage
+from contact_network_validator import (
+    ContactNetworkPolicy,
+    is_unverifiable_error,
+    validate_webpage,
+)
 from rules.base import Finding, Rule, RuleContext, Scope, Severity
 from source_locations import line_for_key_path
 
@@ -67,11 +71,18 @@ def check(ctx: RuleContext) -> list[Finding]:
             checked[value] = validate_webpage(value, policy.webpage)
         error = checked[value]
         if error:
+            if is_unverifiable_error(error):
+                message = (
+                    f"'{field}' could not be verified as a real public HTML "
+                    f"webpage; the reachability check did not complete: {error}."
+                )
+            else:
+                message = f"'{field}' must identify a real public HTML webpage: {error}."
             findings.append(Finding(
                 rule_id="POL-018",
                 file=rel,
                 line=line,
-                message=f"'{field}' must identify a real public HTML webpage: {error}.",
+                message=message,
             ))
     return findings
 
@@ -87,7 +98,9 @@ RULE = Rule(
     remediation=(
         "Use an HTTPS URL on port 443 that resolves only to public addresses, "
         "follows at most five public HTTPS redirects, and returns a non-empty "
-        "HTML or XHTML response with a successful HTTP status."
+        "HTML or XHTML response with a successful HTTP status. This check "
+        "validates reachability only; it does not prove the page belongs to the "
+        "named publisher."
     ),
     docs="docs/authoring-guides/agent-authoring-guide.md#metadata-reference",
     tags=("network", "publisher", "ssrf"),

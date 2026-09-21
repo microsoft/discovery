@@ -10,6 +10,7 @@ from contact_network_validator import (  # noqa: E402
     DNSNoAnswer,
     ContactNetworkPolicy,
     WebResponse,
+    is_unverifiable_error,
     validate_email_domain,
     validate_webpage,
 )
@@ -125,3 +126,15 @@ def test_webpage_rejects_non_html_response() -> None:
     )
 
     assert error == "returned 'application/json', not an HTML webpage"
+
+
+def test_unverifiable_error_classifier_distinguishes_transient_failures() -> None:
+    # Transient / environmental — the probe could not complete.
+    assert is_unverifiable_error("host 'x' could not be resolved: timed out")
+    assert is_unverifiable_error("could not connect to 'x': connection refused")
+    assert is_unverifiable_error("DNS lookup for 'x' timed out")
+    assert is_unverifiable_error("DNS lookup for 'x' had no usable nameserver")
+    # Genuine defects — the value itself is wrong.
+    assert not is_unverifiable_error("must use HTTPS")
+    assert not is_unverifiable_error("returned 'application/json', not an HTML webpage")
+    assert not is_unverifiable_error("domain 'x' has no MX, A, or AAAA records")

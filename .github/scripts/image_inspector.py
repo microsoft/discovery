@@ -226,13 +226,39 @@ _SVG_ACTIVE_PATTERNS: tuple[tuple[re.Pattern[str], str], ...] = (
     (re.compile(r"<!ENTITY", re.IGNORECASE), "an XML entity declaration (XXE vector)"),
     (re.compile(r"<\s*!\s*DOCTYPE[^>]*\[", re.IGNORECASE), "an internal DTD subset"),
     (re.compile(r"\son[a-z]+\s*=", re.IGNORECASE), "an inline event handler attribute"),
-    (re.compile(r"javascript\s*:", re.IGNORECASE), "a javascript: URI"),
+    (re.compile(r"(?:java|vb)script\s*:", re.IGNORECASE), "a script: URI"),
     (re.compile(r"data\s*:\s*text/html", re.IGNORECASE), "a data: URI containing HTML"),
-    (re.compile(r"<\s*(image|use)[^>]*\bhref\s*=\s*[\"']?https?://", re.IGNORECASE),
+    # A remote reference on *any* element (href or xlink:href). Namespace
+    # declarations such as xmlns="http://www.w3.org/2000/svg" are not `href`
+    # attributes and are deliberately excluded.
+    (re.compile(r"\b(?:xlink:)?href\s*=\s*[\"']?\s*(?:https?:)?//", re.IGNORECASE),
      "a remote resource reference"),
+    # CSS-borne external or active content inside <style> or style="".
+    (re.compile(r"@import\b", re.IGNORECASE), "a CSS @import"),
+    (re.compile(r"url\(\s*[\"']?\s*(?:https?:|(?:java|vb)script:|data:|//)",
+                re.IGNORECASE),
+     "a CSS url() with an external or active target"),
     (re.compile(r"<\s*set\b", re.IGNORECASE), "an animation <set> element"),
     (re.compile(r"<\s*animate", re.IGNORECASE), "an <animate> element"),
 )
+
+#: Numeric/hex character references (``&#106;``, ``&#x6a;``). Decoding only
+#: these — not named entities like ``&lt;`` — lets us catch encoded payloads
+#: (``java&#115;cript:``) without turning escaped, inert text such as
+#: ``&lt;script&gt;`` into a false positive.
+_NUMERIC_ENTITY_RE = re.compile(r"&#(x[0-9a-fA-F]+|\d+);")
+
+
+def _decode_numeric_entities(text: str) -> str:
+    def _replace(match: re.Match[str]) -> str:
+        token = match.group(1)
+        try:
+            code = int(token[1:], 16) if token[0] in "xX" else int(token)
+            return chr(code)
+        except (ValueError, OverflowError):
+            return match.group(0)
+
+    return _NUMERIC_ENTITY_RE.sub(_replace, text)
 
 
 def inspect_svg(text: str) -> ImageVerdict:
@@ -246,23 +272,30 @@ def inspect_svg(text: str) -> ImageVerdict:
             reason="No <svg> root element was found; the file is not an SVG document.",
         )
 
-    for pattern, label in _SVG_ACTIVE_PATTERNS:
-        match = pattern.search(scanned)
-        if match:
-            line = scanned[:match.start()].count("\n") + 1
-            return ImageVerdict(
-                ok=False,
-                detected="svg",
-                reason=(
-                    f"SVG contains {label} at line {line} "
-                    f"({match.group(0).strip()!r}). SVG is accepted as source "
-                    f"only when it is purely declarative artwork; scripting, "
-                    f"embedded documents, entity declarations, and remote "
-                    f"references execute or leak when the image is rendered."
-                ),
-            )
+    for source in _scan_sources(scanned):
+        for pattern, label in _SVG_ACTIVE_PATTERNS:
+            match = pattern.search(source)
+            if match:
+                line = source[:match.start()].count("\n") + 1
+                return ImageVerdict(
+                    ok=False,
+                    detected="svg",
+                    reason=(
+                        f"SVG contains {label} at line {line} "
+                        f"({match.group(0).strip()!r}). SVG is accepted as source "
+                        f"only when it is purely declarative artwork; scripting, "
+                        f"embedded documents, entity declarations, and remote "
+                        f"references execute or leak when the image is rendered."
+                    ),
+                )
 
     return ImageVerdict(ok=True, detected="svg", reason="Valid, inert SVG document.")
+
+
+def _scan_sources(scanned: str) -> tuple[str, ...]:
+    """The literal text plus, when it differs, a numeric-entity-decoded copy."""
+    decoded = _decode_numeric_entities(scanned)
+    return (scanned,) if decoded == scanned else (scanned, decoded)
 
 
 # ── Entry point ──────────────────────────────────────────────────────────────
@@ -337,14 +370,14 @@ def inspect(path: Path, suffix: str | None = None) -> ImageVerdict | None:
         )
 
     trailer = _TRAILERS.get(detected)
-    if trailer and trailer not in tail:
+    if trailer and not tail.endswith(trailer):
         return ImageVerdict(
             ok=False,
             detected=detected,
             reason=(
-                f"{detected.upper()} file is missing its end-of-file marker, so "
-                f"it is truncated or has data appended after the image. Both "
-                f"indicate corruption or a polyglot file."
+                f"{detected.upper()} file does not end with its end-of-file "
+                f"marker, so it is truncated or has data appended after the "
+                f"image. Both indicate corruption or a polyglot file."
             ),
         )
 

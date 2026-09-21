@@ -141,6 +141,11 @@ jobs:
       # Configure both as repository Actions secrets. The script sends the
       # URLhaus key in Auth-Key and the PhishTank key in a POST body; neither
       # credential is placed in a URL, command line, artifact, or log message.
+      #
+      # Data-sharing note: this step discloses catalog webpage URLs to URLhaus
+      # and PhishTank. url_reputation_audit.py first strips embedded credentials
+      # and the query string/fragment, submitting only scheme://host[:port]/path
+      # so tokens and sensitive parameters are never sent to the providers.
       - name: Check catalog URL reputation
         id: reputation
         env:

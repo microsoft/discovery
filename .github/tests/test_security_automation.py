@@ -679,3 +679,36 @@ def test_workflow_executables_are_immutable_and_dependency_managed():
         problems.append("Dependabot does not manage the root .NET tool manifest")
 
     assert not problems, "Unpinned workflow executables:\n- " + "\n- ".join(problems)
+
+PR_REVIEW_WORKFLOWS = ("validate-everything.yml", "pr-review.yml")
+
+# uses: owner/name@<40-hex-sha> # vX.Y.Z   (trailing version comment required)
+_PINNED_USES_RE = re.compile(
+    r"^\s*(?:-\s+)?uses:\s+(?P<ref>[^\s#]+)\s+#\s*(?P<comment>\S+)\s*$"
+)
+
+
+def test_pr_review_workflow_actions_are_sha_pinned_with_version_comments():
+    """Every action in the privileged PR workflows must be pinned to a full
+    commit SHA and carry a human-readable version comment (M12)."""
+    problems: list[str] = []
+
+    for workflow_name in PR_REVIEW_WORKFLOWS:
+        source = (REPO_ROOT / ".github" / "workflows" / workflow_name).read_text(
+            encoding="utf-8"
+        )
+        for line in source.splitlines():
+            stripped = line.strip()
+            if not stripped.startswith(("uses:", "- uses:")):
+                continue
+            match = _PINNED_USES_RE.match(line)
+            if match is None:
+                problems.append(f"{workflow_name}: not SHA-pinned with a comment -> {stripped}")
+                continue
+            digest = match.group("ref").partition("@")[2]
+            if not re.fullmatch(r"[0-9a-f]{40}", digest):
+                problems.append(f"{workflow_name}: not a full commit SHA -> {stripped}")
+            if not re.fullmatch(r"v\d+(?:\.\d+){0,2}", match.group("comment")):
+                problems.append(f"{workflow_name}: missing version comment -> {stripped}")
+
+    assert not problems, "Actions not SHA-pinned:\n- " + "\n- ".join(problems)

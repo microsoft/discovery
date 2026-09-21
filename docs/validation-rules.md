@@ -110,7 +110,7 @@ Catalog webpage URLs must resolve to reachable public HTML pages.
 
 **How to fix**
 
-Use an HTTPS URL on port 443 that resolves only to public addresses, follows at most five public HTTPS redirects, and returns a non-empty HTML or XHTML response with a successful HTTP status.
+Use an HTTPS URL on port 443 that resolves only to public addresses, follows at most five public HTTPS redirects, and returns a non-empty HTML or XHTML response with a successful HTTP status. This check validates reachability only; it does not prove the page belongs to the named publisher.
 
 Further reading: `docs/authoring-guides/agent-authoring-guide.md#metadata-reference`
 
