@@ -93,6 +93,25 @@ def test_instruction_markdown_under_trusted_automation_is_not_public_docs() -> N
 
 
 @pytest.mark.parametrize(
+    "path",
+    ["SECURITY.md", "GOVERNANCE.md", "CODE_OF_CONDUCT.md", "SUPPORT.markdown"],
+)
+def test_root_trust_documents_are_not_public_docs(path: str) -> None:
+    # Only an explicit root-doc allowlist (README/CONTRIBUTING) is public; every
+    # other root-level Markdown trust/policy file needs a maintainer change.
+    failures = check_contributor_scope([path], "read", "octocat")
+
+    assert [(failure.rule_id, failure.file) for failure in failures] == [
+        ("POL-021", path),
+    ]
+
+
+@pytest.mark.parametrize("path", ["README.md", "CONTRIBUTING.md", "readme.MD"])
+def test_root_allowlisted_documents_stay_public(path: str) -> None:
+    assert check_contributor_scope([path], "read", "octocat") == []
+
+
+@pytest.mark.parametrize(
     "author",
     ["github-actions[bot]", "discovery-registry-bot[bot]"],
 )

@@ -26,7 +26,12 @@ import sys
 from collections import Counter
 from pathlib import Path
 
-from rules.registry import build_context, discover_rules, run_rules
+from rules.registry import (
+    build_context,
+    discover_rules,
+    parse_baseline_document,
+    run_rules,
+)
 
 GUARDED_DIRS = ("agents", "starter-kits")
 BASELINE_PATH = Path(".github") / "policy" / "baseline.json"
@@ -59,8 +64,14 @@ def tracked_files(repo: Path) -> list[str]:
     return sorted(found)
 
 
-def audit(repo: Path) -> tuple[list[dict], list[dict]]:
-    """Run every rule over the whole catalog. Returns (blocking, warnings).
+def audit(repo: Path) -> tuple[list[dict], list[dict], list[str]]:
+    """Run every rule over the whole catalog.
+
+    Returns ``(blocking, warnings, config_errors)``. ``config_errors`` combines
+    policy-configuration failures (malformed source-allowlist / base-images /
+    tag-taxonomy) with run-engine config errors (waivers). A non-empty list
+    means the ruleset itself is invalid, so any baseline derived from this run
+    would be built on an incomplete ruleset and must be rejected.
 
     One pass, not two — executing the full ruleset over every tracked file is
     the expensive part of this script.
@@ -75,14 +86,15 @@ def audit(repo: Path) -> tuple[list[dict], list[dict]]:
             key=lambda v: (v["rule_id"], v["file"]),
         )
 
-    if result.config_errors:
-        for err in result.config_errors:
-            print(f"POLICY CONFIG ERROR: {err}", file=sys.stderr)
+    config_errors = [
+        f"{rel_path}: {message}" for rel_path, message in ctx.policy.config_errors
+    ]
+    config_errors.extend(result.config_errors)
 
     # Only blocking findings belong in the baseline. Warning-severity rules are
     # already non-blocking, so recording them would suppress signal the rule
     # exists to surface.
-    return _rows(result.blocking), _rows(result.warnings)
+    return _rows(result.blocking), _rows(result.warnings), config_errors
 
 
 def load_existing(repo: Path) -> list[dict]:
@@ -94,25 +106,12 @@ def load_existing(repo: Path) -> list[dict]:
     except (json.JSONDecodeError, OSError) as exc:
         raise ValueError(f"could not read {BASELINE_PATH}: {exc}") from exc
 
-    violations = payload.get("violations") if isinstance(payload, dict) else None
-    if not isinstance(violations, list):
-        raise ValueError(f"{BASELINE_PATH} must contain a 'violations' array")
-
-    pairs: list[tuple[str, str]] = []
-    for index, violation in enumerate(violations):
-        if not isinstance(violation, dict):
-            raise ValueError(f"{BASELINE_PATH} violations[{index}] must be an object")
-        rule_id = violation.get("rule_id")
-        file = violation.get("file")
-        if not isinstance(rule_id, str) or not rule_id or not isinstance(file, str) or not file:
-            raise ValueError(
-                f"{BASELINE_PATH} violations[{index}] requires non-empty rule_id and file"
-            )
-        pairs.append((rule_id, file))
-
-    if len(pairs) != len(set(pairs)):
-        raise ValueError(f"{BASELINE_PATH} contains duplicate rule_id/file entries")
-    return violations
+    # Reuse the same strict validation the runtime baseline loader applies, so
+    # `--check` and production never disagree on what a valid baseline is.
+    pairs, errors = parse_baseline_document(payload)
+    if errors:
+        raise ValueError(f"{BASELINE_PATH}: " + "; ".join(errors))
+    return [{"rule_id": rule_id, "file": file} for rule_id, file in pairs]
 
 
 def write_baseline(repo: Path, violations: list[dict]) -> None:
@@ -155,7 +154,16 @@ def main() -> int:
     args = parser.parse_args()
 
     repo = Path(args.repo_root).resolve()
-    violations, warnings = audit(repo)
+    violations, warnings, config_errors = audit(repo)
+
+    # A malformed policy makes the whole ruleset untrustworthy. Refuse to
+    # report, check, or write a baseline derived from an invalid configuration.
+    if config_errors:
+        print("POLICY CONFIGURATION ERROR — refusing to generate a baseline "
+              "from an invalid ruleset:", file=sys.stderr)
+        for err in config_errors:
+            print(f"  {err}", file=sys.stderr)
+        return 1
 
     if args.report:
         print(summarize(violations))

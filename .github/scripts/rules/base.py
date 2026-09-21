@@ -85,29 +85,48 @@ class PolicyConfig:
     domain_tags: frozenset[str] = frozenset()
     reserved_tag_prefixes: tuple[str, ...] = ()
     computed_tags: frozenset[str] = frozenset()
-    #: (rel_path, message) for every policy file that could not be loaded as a
-    #: mapping. A non-empty tuple means one or more checks would silently run
-    #: with empty configuration — the runner turns these into blocking
-    #: failures rather than letting a malformed policy fail open.
+    #: (rel_path, message) for every policy problem found at load time —
+    #: a missing/empty/malformed required file, or a field of the wrong
+    #: shape. A non-empty tuple means one or more checks would otherwise run
+    #: with empty or coerced configuration; the runner turns these into
+    #: blocking failures rather than letting a policy fail open.
     config_errors: tuple[tuple[str, str], ...] = ()
 
+    #: Policy files that are security controls. A missing, empty, or malformed
+    #: one must fail the run — never silently disable the checks it backs.
+    REQUIRED_FILES: tuple[str, ...] = (
+        "source-allowlist.yaml",
+        "base-images.yaml",
+        "tag-taxonomy.yaml",
+    )
+
     @staticmethod
-    def _load_mapping(path: Path) -> tuple[dict, str | None]:
+    def _load_mapping(path: Path, *, required: bool) -> tuple[dict, str | None]:
         """Load a policy YAML file that must be a top-level mapping.
 
-        Returns ``(mapping, error)``. A *missing* file is not an error — that
-        policy is simply unconfigured and the defaults apply. A parse failure,
-        a read failure, or a top-level document that is not a mapping IS an
-        error, so a malformed policy can never silently disable the checks
-        that depend on it.
+        Returns ``(mapping, error)``. A parse failure, a read failure, or a
+        non-mapping top-level document is always an error. For a *required*
+        security-control policy, a missing or empty file is also an error, so
+        deleting or failing to check out a policy can never fail open.
         """
         if not path.exists():
+            if required:
+                return {}, (
+                    f"{path.name} is required but is missing. This policy is a "
+                    f"security control; a missing file must not silently disable "
+                    f"the checks it backs."
+                )
             return {}, None
         try:
             raw = yaml.safe_load(path.read_text(encoding="utf-8"))
         except (yaml.YAMLError, OSError, UnicodeDecodeError) as e:
             return {}, f"{path.name} could not be parsed: {e}"
         if raw is None:
+            if required:
+                return {}, (
+                    f"{path.name} is empty. A required policy must define its "
+                    f"configuration explicitly."
+                )
             return {}, None
         if not isinstance(raw, dict):
             return (
@@ -122,57 +141,117 @@ class PolicyConfig:
         policy_dir = repo / ".github" / "policy"
         errors: list[tuple[str, str]] = []
 
-        def _load(filename: str) -> dict:
-            mapping, err = cls._load_mapping(policy_dir / filename)
+        def _load(filename: str) -> tuple[str, dict]:
+            rel = f".github/policy/{filename}"
+            mapping, err = cls._load_mapping(
+                policy_dir / filename, required=filename in cls.REQUIRED_FILES
+            )
             if err:
-                errors.append((f".github/policy/{filename}", err))
-            return mapping
+                errors.append((rel, err))
+            return rel, mapping
 
-        allowlist = _load("source-allowlist.yaml")
-        base_images = _load("base-images.yaml")
-        taxonomy = _load("tag-taxonomy.yaml")
+        def _str_list(rel: str, mapping: dict, key: str) -> list[str]:
+            """A field that must be a list of strings, or absent."""
+            val = mapping.get(key)
+            if val is None:
+                return []
+            if not isinstance(val, list):
+                errors.append((rel, f"{key!r} must be a list, got {type(val).__name__}."))
+                return []
+            out: list[str] = []
+            for i, item in enumerate(val):
+                if isinstance(item, str):
+                    out.append(item)
+                else:
+                    errors.append((rel, f"{key}[{i}] must be a string, got {type(item).__name__}."))
+            return out
 
+        def _mapping_list_field(rel: str, mapping: dict, key: str, subkey: str) -> list[str]:
+            """A field that must be a list of mappings each carrying ``subkey``."""
+            val = mapping.get(key)
+            if val is None:
+                return []
+            if not isinstance(val, list):
+                errors.append((rel, f"{key!r} must be a list, got {type(val).__name__}."))
+                return []
+            out: list[str] = []
+            for i, item in enumerate(val):
+                if not isinstance(item, dict):
+                    errors.append((rel, f"{key}[{i}] must be a mapping, got {type(item).__name__}."))
+                    continue
+                sub = item.get(subkey)
+                if sub is None:
+                    continue
+                if isinstance(sub, str):
+                    out.append(sub)
+                else:
+                    errors.append((rel, f"{key}[{i}].{subkey} must be a string, got {type(sub).__name__}."))
+            return out
+
+        def _bool_field(rel: str, mapping: dict, key: str, default: bool) -> bool:
+            """A field that must be a real boolean; strings like 'false' are rejected."""
+            if key not in mapping:
+                return default
+            val = mapping[key]
+            if not isinstance(val, bool):
+                errors.append((
+                    rel,
+                    f"{key!r} must be a boolean (true/false), got {type(val).__name__}. "
+                    f"A quoted value such as \"false\" is not accepted.",
+                ))
+                return default
+            return val
+
+        al_rel, allowlist = _load("source-allowlist.yaml")
+        bi_rel, base_images = _load("base-images.yaml")
+        tx_rel, taxonomy = _load("tag-taxonomy.yaml")
+
+        domains = taxonomy.get("domains")
         domain_tags: set[str] = set()
-        for group in (taxonomy.get("domains") or {}).values():
-            for tag in group or []:
-                domain_tags.add(str(tag).lower())
+        if domains is not None:
+            if not isinstance(domains, dict):
+                errors.append((tx_rel, f"'domains' must be a mapping of group -> list of tags, got {type(domains).__name__}."))
+            else:
+                for group, tags in domains.items():
+                    if not isinstance(tags, list):
+                        errors.append((tx_rel, f"domains.{group} must be a list of tags, got {type(tags).__name__}."))
+                        continue
+                    for i, tag in enumerate(tags):
+                        if isinstance(tag, str):
+                            domain_tags.add(tag.lower())
+                        else:
+                            errors.append((tx_rel, f"domains.{group}[{i}] must be a string, got {type(tag).__name__}."))
 
         return cls(
             allowed_extensions=frozenset(
-                str(e).lower() for e in allowlist.get("extensions", []) or []
+                e.lower() for e in _str_list(al_rel, allowlist, "extensions")
             ),
-            allowed_filenames=frozenset(
-                str(f) for f in allowlist.get("filenames", []) or []
-            ),
-            allowed_patterns=tuple(str(p) for p in allowlist.get("patterns", []) or []),
+            allowed_filenames=frozenset(_str_list(al_rel, allowlist, "filenames")),
+            allowed_patterns=tuple(_str_list(al_rel, allowlist, "patterns")),
             exempt_directories=frozenset(
-                str(d).strip("/") for d in allowlist.get("exempt_directories", []) or []
+                d.strip("/") for d in _str_list(al_rel, allowlist, "exempt_directories")
             ),
             model_weight_extensions=frozenset(
-                str(e).lower() for e in allowlist.get("model_weight_extensions", []) or []
+                e.lower() for e in _str_list(al_rel, allowlist, "model_weight_extensions")
             ),
-            allow_docker_official_images=bool(
-                base_images.get("allow_docker_official_images", True)
+            allow_docker_official_images=_bool_field(
+                bi_rel, base_images, "allow_docker_official_images", True
             ),
             trusted_registries=frozenset(
-                str(r.get("host", "")).lower()
-                for r in base_images.get("registries", []) or []
-                if isinstance(r, dict) and r.get("host")
+                h.lower() for h in _mapping_list_field(bi_rel, base_images, "registries", "host")
             ),
             approved_namespaces=frozenset(
-                str(n.get("ref", "")).lower()
-                for n in base_images.get("namespaces", []) or []
-                if isinstance(n, dict) and n.get("ref")
+                n.lower() for n in _mapping_list_field(bi_rel, base_images, "namespaces", "ref")
             ),
             floating_tags=frozenset(
-                str(t).lower() for t in base_images.get("floating_tags", []) or []
+                t.lower() for t in _str_list(bi_rel, base_images, "floating_tags")
             ),
             domain_tags=frozenset(domain_tags),
             reserved_tag_prefixes=tuple(
-                str(p).lower() for p in taxonomy.get("reserved_prefixes", []) or []
+                p.lower() for p in _str_list(tx_rel, taxonomy, "reserved_prefixes")
             ),
             computed_tags=frozenset(
-                str(t).lower() for t in taxonomy.get("computed", []) or []
+                t.lower() for t in _str_list(tx_rel, taxonomy, "computed")
             ),
             config_errors=tuple(errors),
         )

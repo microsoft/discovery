@@ -73,29 +73,32 @@ class CatalogSchemas:
             registry=build_schema_registry(common) if common is not None else None,
         )
 
-    def warnings(self) -> list[str]:
-        messages: list[str] = []
-        if self.agent is None:
-            messages.append(
-                "docs/schemas/agent-schema-v2.json could not be loaded. "
-                "SCH-010-013 skipped."
-            )
-        if self.tool is None:
-            messages.append(
-                "docs/schemas/tool-definition-schema.json could not be loaded. "
-                "SCH-014-015 skipped."
-            )
-        if self.metadata is None:
-            messages.append(
-                "docs/schemas/metadata-schema.json could not be loaded. Full "
-                "metadata schema validation skipped."
-            )
-        if self.common is None:
-            messages.append(
-                "docs/schemas/common-schema.json could not be loaded. External "
-                "schema references may not resolve."
-            )
-        return messages
+    def config_errors(self) -> list[tuple[str, str]]:
+        """Missing or invalid schemas are blocking configuration errors.
+
+        The catalog schemas are part of the validation boundary: if one cannot
+        be loaded, the rules that depend on it would silently be skipped while
+        the validator still passed. Each problem is surfaced as a blocking
+        ``CFG-003`` finding rather than a setup warning, so a deleted or
+        corrupt schema fails the run instead of failing open.
+        """
+        required = (
+            ("docs/schemas/agent-schema-v2.json", self.agent,
+             "SCH-010-013 would be skipped."),
+            ("docs/schemas/tool-definition-schema.json", self.tool,
+             "SCH-014-015 would be skipped."),
+            ("docs/schemas/metadata-schema.json", self.metadata,
+             "Metadata schema validation would be skipped."),
+            ("docs/schemas/common-schema.json", self.common,
+             "External schema references would not resolve."),
+        )
+        return [
+            (rel, f"{rel} could not be loaded as a JSON object. {consequence} "
+                  f"A schema is a validation control; a missing or corrupt "
+                  f"schema must not silently disable the checks it backs.")
+            for rel, value, consequence in required
+            if value is None
+        ]
 
 
 def iter_schema_errors(

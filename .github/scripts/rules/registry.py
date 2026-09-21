@@ -75,6 +75,12 @@ def load_waivers(repo: Path) -> tuple[list[Waiver], list[str]]:
     except (yaml.YAMLError, OSError) as e:
         return [], [f"waivers.yaml could not be parsed: {e}"]
 
+    if not isinstance(raw, dict):
+        return [], [
+            "waivers.yaml: top-level document must be a mapping, got "
+            f"{type(raw).__name__}."
+        ]
+
     entries = raw.get("waivers") or []
     if not isinstance(entries, list):
         return [], ["waivers.yaml: 'waivers' must be a list."]
@@ -142,22 +148,88 @@ def load_waivers(repo: Path) -> tuple[list[Waiver], list[str]]:
 
 # ── Ratchet baseline ─────────────────────────────────────────────────────────
 
-def load_baseline(repo: Path) -> set[tuple[str, str]]:
-    """Load recorded pre-existing violations as {(rule_id, path)}."""
+def _is_repo_relative(path: str) -> bool:
+    """Reject absolute paths and traversal so a baseline entry can only ever
+    name a file inside the repository tree."""
+    normalized = path.replace("\\", "/")
+    if not normalized or normalized.startswith("/"):
+        return False
+    # Windows drive-letter absolute paths (e.g. ``C:/x``).
+    if len(normalized) >= 2 and normalized[1] == ":":
+        return False
+    return ".." not in normalized.split("/")
+
+
+def parse_baseline_document(data: object) -> tuple[list[tuple[str, str]], list[str]]:
+    """Validate a decoded ``baseline.json`` document.
+
+    Returns ``(entries, errors)`` where ``entries`` is the list of
+    ``(rule_id, file)`` pairs and ``errors`` describes every structural problem.
+    Callers must treat a non-empty ``errors`` list as a blocking configuration
+    failure — a malformed or tampered baseline must never fail open.
+    """
+    if not isinstance(data, dict):
+        return [], ["baseline.json: top-level document must be a mapping."]
+
+    violations = data.get("violations")
+    if violations is None:
+        violations = []
+    if not isinstance(violations, list):
+        return [], ["baseline.json: 'violations' must be a list."]
+
+    pairs: list[tuple[str, str]] = []
+    errors: list[str] = []
+    seen: set[tuple[str, str]] = set()
+
+    for idx, entry in enumerate(violations):
+        where = f"baseline.json violations[{idx}]"
+        if not isinstance(entry, dict):
+            errors.append(f"{where}: must be a mapping.")
+            continue
+
+        rule_id = entry.get("rule_id")
+        file = entry.get("file")
+        if not isinstance(rule_id, str) or not rule_id.strip():
+            errors.append(f"{where}: 'rule_id' must be a non-empty string.")
+            continue
+        if not isinstance(file, str) or not file.strip():
+            errors.append(f"{where}: 'file' must be a non-empty string.")
+            continue
+
+        normalized = file.replace("\\", "/")
+        if not _is_repo_relative(normalized):
+            errors.append(
+                f"{where}: 'file' must be a repo-relative path without '..' "
+                f"(got {file!r})."
+            )
+            continue
+
+        key = (rule_id, normalized)
+        if key in seen:
+            errors.append(f"{where}: duplicate entry for {rule_id} / {normalized}.")
+            continue
+        seen.add(key)
+        pairs.append(key)
+
+    return pairs, errors
+
+
+def load_baseline(repo: Path) -> tuple[set[tuple[str, str]], list[str]]:
+    """Load recorded pre-existing violations as ``({(rule_id, path)}, errors)``.
+
+    A baseline file that exists but cannot be read, parsed, or validated is a
+    blocking configuration error — never an empty (fail-open) set.
+    """
     path = repo / ".github" / "policy" / "baseline.json"
     if not path.exists():
-        return set()
+        return set(), []
     try:
         data = json.loads(path.read_text(encoding="utf-8"))
-    except (json.JSONDecodeError, OSError):
-        return set()
+    except (json.JSONDecodeError, OSError) as e:
+        return set(), [f"baseline.json could not be parsed: {e}"]
 
-    entries = data.get("violations") or []
-    out: set[tuple[str, str]] = set()
-    for e in entries:
-        if isinstance(e, dict) and e.get("rule_id") and e.get("file"):
-            out.add((str(e["rule_id"]), str(e["file"]).replace("\\", "/")))
-    return out
+    pairs, errors = parse_baseline_document(data)
+    return set(pairs), errors
 
 
 # ── Discovery ────────────────────────────────────────────────────────────────
@@ -252,7 +324,11 @@ def run_rules(
     """Execute rules against ``ctx`` and apply waivers plus the ratchet."""
     rules = rules if rules is not None else discover_rules()
     waivers, config_errors = load_waivers(ctx.repo)
-    baseline = load_baseline(ctx.repo) if apply_ratchet else set()
+    if apply_ratchet:
+        baseline, baseline_errors = load_baseline(ctx.repo)
+        config_errors = [*config_errors, *baseline_errors]
+    else:
+        baseline = set()
     changed_set = {f.replace("\\", "/") for f in ctx.changed_files}
 
     raw: list[Finding] = []

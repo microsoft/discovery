@@ -101,13 +101,38 @@ def parse_image_ref(ref: str) -> ImageRef:
     )
 
 
+def _logical_lines(text: str) -> list[tuple[int, str]]:
+    """Join backslash-continued physical lines into logical lines.
+
+    Each result is ``(lineno, text)`` where ``lineno`` is the first physical
+    line of the logical line, so a finding still points at the ``FROM`` keyword
+    even when the reference is written across a continuation.
+    """
+    logical: list[tuple[int, str]] = []
+    buffer = ""
+    start = 0
+    for lineno, line in enumerate(text.splitlines(), start=1):
+        stripped = line.rstrip()
+        if not buffer:
+            start = lineno
+        if stripped.endswith("\\"):
+            buffer += stripped[:-1] + " "
+            continue
+        buffer += stripped
+        logical.append((start, buffer))
+        buffer = ""
+    if buffer:
+        logical.append((start, buffer))
+    return logical
+
+
 def parse_from_directives(text: str) -> list[FromDirective]:
     """Return every FROM in the file, with stage references marked."""
     args: dict[str, str] = {}
     aliases: set[str] = set()
     directives: list[FromDirective] = []
 
-    for lineno, line in enumerate(text.splitlines(), start=1):
+    for lineno, line in _logical_lines(text):
         arg_match = _ARG_RE.match(line)
         if arg_match and arg_match.group("default") is not None:
             args[arg_match.group("name")] = arg_match.group("default")

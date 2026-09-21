@@ -41,9 +41,22 @@ def check(ctx: RuleContext) -> list[Finding]:
 
             if image.digest or image.is_deployer_placeholder:
                 continue
-            # An unresolved ARG could hold anything; the author has at least
-            # made the version a deliberate build input.
+            # A tag that is still a variable after ARG-default substitution has
+            # no pinned default: the version can be changed at build time, so
+            # the build is not reproducible. Report it rather than exempting it.
             if image.tag_is_variable:
+                findings.append(Finding(
+                    rule_id="POL-017",
+                    file=rel,
+                    line=directive.line,
+                    message=(
+                        f"Base image '{image.raw}' takes its tag from an "
+                        f"unresolved build argument with no pinned ARG default, "
+                        f"so the version can be changed at build time and the "
+                        f"build is not reproducible. Give the ARG a pinned "
+                        f"default (for example 'ARG TAG=1.2.3') or use a digest."
+                    ),
+                ))
                 continue
 
             tag = image.tag

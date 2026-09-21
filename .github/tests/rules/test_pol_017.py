@@ -66,12 +66,15 @@ def test_arg_default_resolves_the_tag(repo):
     assert result.findings == []
 
 
-def test_unresolved_arg_tag_is_not_flagged(repo):
-    # Version is a deliberate build input even though its value is external.
+def test_unresolved_arg_tag_is_flagged(repo):
+    # No pinned ARG default: the version can be changed at build time, so the
+    # build is not reproducible. POL-017 warns rather than exempting it.
     body = "ARG UBUNTU_TAG\nFROM ubuntu:${UBUNTU_TAG}\n"
     rel = write(repo, "agents/demo/tools/t/Dockerfile", body)
     result = run_rule(repo, RULE, [rel])
-    assert result.findings == []
+    assert files(result) == [rel]
+    assert "unresolved build argument" in result.findings[0].message
+    assert result.findings[0].severity is Severity.WARNING
 
 
 def test_arg_default_pointing_at_latest_is_flagged(repo):

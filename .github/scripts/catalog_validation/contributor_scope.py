@@ -9,6 +9,12 @@ _MAINTAINER_PERMISSIONS = frozenset({"admin", "maintain", "write"})
 _PUBLIC_CATALOG_ROOTS = frozenset({"agents", "starter-kits"})
 _PROTECTED_ROOTS = frozenset({".auto-registry", ".github", ".vscode"})
 _PROTECTED_PATHS = frozenset({"docs/validation-rules.md"})
+#: Root-level Markdown a public contributor may edit. Every *other* root-level
+#: Markdown file — SECURITY.md, GOVERNANCE.md, CODE_OF_CONDUCT.md, and any
+#: future trust or policy document — is maintainer-owned, so the boundary must
+#: be an explicit allowlist rather than "any file ending in .md".
+_PUBLIC_ROOT_DOCS = frozenset({"readme.md", "contributing.md"})
+_DOC_SUFFIXES = (".md", ".markdown")
 _REGISTRY_REFRESH_BOT_AUTHORS = frozenset({
     "github-actions[bot]",
     "discovery-registry-bot[bot]",
@@ -40,7 +46,16 @@ def _is_public_contribution_path(path: str) -> bool:
     if len(parts) >= 3 and parts[:2] == ["includes", "media"]:
         return True
 
-    return normalized.lower().endswith(".md")
+    # Documentation Markdown is public. At the repository root it is restricted
+    # to an explicit allowlist so trust/policy documents stay maintainer-owned;
+    # nested Markdown (utility READMEs, guide fragments) remains public docs.
+    name = parts[-1].lower()
+    if name.endswith(_DOC_SUFFIXES):
+        if len(parts) == 1:
+            return name in _PUBLIC_ROOT_DOCS
+        return True
+
+    return False
 
 
 def check_contributor_scope(

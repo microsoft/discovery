@@ -30,7 +30,6 @@ extensions:
   - .conf
   - .csv
   - .tsv
-  - .env.example
   - .properties
 
   # Source code
@@ -122,6 +121,7 @@ filenames:
   - .dockerignore
   - .gitignore
   - .gitattributes
+  - .env.example
   - requirements.txt
   - requirements-dev.txt
   - environment.yml

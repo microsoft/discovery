@@ -29,12 +29,68 @@ def test_real_policy_loads_without_config_errors(repo):
     assert PolicyConfig.load(repo).config_errors == ()
 
 
-def test_missing_policy_file_is_not_a_config_error(repo):
-    """An absent optional policy file is unconfigured, not broken."""
-    (repo / ".github" / "policy" / "tag-taxonomy.yaml").unlink()
+def test_missing_required_policy_file_is_a_config_error(repo):
+    """A required security-control policy file must fail closed when absent.
+
+    ``source-allowlist.yaml``, ``base-images.yaml`` and ``tag-taxonomy.yaml``
+    back TAG/POL enforcement; deleting one must not silently skip those checks.
+    """
+    for name in POLICY_FILES:
+        scratch = repo
+        target = scratch / ".github" / "policy" / name
+        backup = target.read_text(encoding="utf-8")
+        target.unlink()
+        try:
+            policy = PolicyConfig.load(scratch)
+            assert f".github/policy/{name}" in _errored_files(policy), name
+        finally:
+            target.write_text(backup, encoding="utf-8")
+
+
+def test_empty_required_policy_file_is_a_config_error(repo):
+    """An empty required policy file disables enforcement just like a missing
+    one, so it must also be a config error rather than an empty policy."""
+    write_policy(repo, "tag-taxonomy.yaml", "\n")
     policy = PolicyConfig.load(repo)
-    assert ".github/policy/tag-taxonomy.yaml" not in _errored_files(policy)
-    assert policy.domain_tags == frozenset()
+    assert ".github/policy/tag-taxonomy.yaml" in _errored_files(policy)
+
+
+def test_missing_required_file_blocks_validation_with_cfg_002(repo):
+    """A missing required policy file must surface as a blocking CFG-002."""
+    changed = write(repo, "agents/demo/README.md", "# demo\n")
+    (repo / ".github" / "policy" / "tag-taxonomy.yaml").unlink()
+    result = run_validation(repo, [changed])
+    cfg = [f for f in result.blocking if f.rule_id == "CFG-002"]
+    assert cfg, "a missing required policy must produce a blocking CFG-002 failure"
+    assert any("tag-taxonomy.yaml" in f.file for f in cfg)
+
+
+def test_wrong_typed_extensions_is_a_config_error(repo):
+    """A scalar where a list of extensions is expected must be rejected, not
+    coerced into a one-element string list."""
+    write_policy(repo, "source-allowlist.yaml", "extensions: .py\n")
+    policy = PolicyConfig.load(repo)
+    assert ".github/policy/source-allowlist.yaml" in _errored_files(policy)
+
+
+def test_wrong_typed_bool_is_a_config_error(repo):
+    """``allow_docker_official_images: "false"`` must not silently become
+    ``True`` via ``bool("false")``."""
+    write_policy(
+        repo,
+        "base-images.yaml",
+        "registries:\n  - host: mcr.microsoft.com\n"
+        'allow_docker_official_images: "false"\n',
+    )
+    policy = PolicyConfig.load(repo)
+    assert ".github/policy/base-images.yaml" in _errored_files(policy)
+
+
+def test_wrong_typed_domains_is_a_config_error(repo):
+    """``domains`` must be a mapping of tag-lists, not a bare list."""
+    write_policy(repo, "tag-taxonomy.yaml", "domains:\n  - chemistry\n  - biology\n")
+    policy = PolicyConfig.load(repo)
+    assert ".github/policy/tag-taxonomy.yaml" in _errored_files(policy)
 
 
 def test_malformed_source_allowlist_is_a_config_error(repo):

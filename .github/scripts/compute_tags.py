@@ -49,6 +49,17 @@ def _tool_dirs(agent: Path) -> list[Path]:
     return sorted(d for d in tools.iterdir() if d.is_dir() and (d / "tool.yaml").is_file())
 
 
+def _has_test_files(root: Path) -> bool:
+    """True when a Python test file exists anywhere under ``root``.
+
+    Tests are recognised whether they sit directly in a tool directory, in a
+    ``tests/`` subtree, or in nested source directories — a single supported
+    layout would miss the several conventions agents already use. ``rglob`` on a
+    non-existent path yields nothing, so callers need not pre-check existence.
+    """
+    return any(root.rglob("test_*.py")) or any(root.rglob("*_test.py"))
+
+
 def _requests_gpu(tool_yaml: dict) -> bool:
     for infra in tool_yaml.get("infra") or []:
         if not isinstance(infra, dict):
@@ -73,9 +84,7 @@ def compute_for_agent(repo: Path, agent: Path, policy: PolicyConfig) -> dict:
     # ── Capability ───────────────────────────────────────────────────────
     tags.add("auto:has-tools" if tools else "auto:no-tools")
 
-    has_tests = any(
-        any(t.glob("test_*.py")) or any(t.glob("*_test.py")) for t in tools
-    )
+    has_tests = any(_has_test_files(t) for t in tools) or _has_test_files(agent / "tests")
     if has_tests:
         tags.add("auto:has-tests")
 
@@ -105,8 +114,11 @@ def compute_for_agent(repo: Path, agent: Path, policy: PolicyConfig) -> dict:
             tags.add("auto:official-base-image")
         pinned = all(
             img.digest
-            or img.tag_is_variable
-            or (img.tag and img.tag.lower() not in policy.floating_tags)
+            or (
+                img.tag
+                and not img.tag_is_variable
+                and img.tag.lower() not in policy.floating_tags
+            )
             for img in images
         )
         if pinned:

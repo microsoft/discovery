@@ -72,6 +72,19 @@ class ValidationRun:
         }
 
 
+def _config_error_path(message: str) -> str:
+    """Attribute a run-engine config error to the policy file it names.
+
+    Waiver and baseline errors are both surfaced as CFG-001; the message always
+    begins with the offending file name so we can point the failure at the right
+    file instead of a hard-coded default.
+    """
+    leading = message.split(":", 1)[0].split()[0] if message.strip() else ""
+    if leading in {"waivers.yaml", "baseline.json"}:
+        return f".github/policy/{leading}"
+    return ".github/policy/waivers.yaml"
+
+
 def run_validation(
     repo: Path,
     changed_files: list[str],
@@ -116,11 +129,19 @@ def run_validation(
         for rel_path, message in context.policy.config_errors
     )
 
+    # A missing or corrupt catalog schema is part of the validation boundary:
+    # it must block, not merely warn, so schema-backed checks can never be
+    # silently skipped while the validator still passes.
+    failures.extend(
+        Failure("CFG-003", rel_path, message)
+        for rel_path, message in schemas.config_errors()
+    )
+
     rules = discover_rules()
     guidance = {rule.id: rule for rule in rules}
     engine = run_rules(context, rules)
     failures.extend(
-        Failure("CFG-001", ".github/policy/waivers.yaml", error)
+        Failure("CFG-001", _config_error_path(error), error)
         for error in engine.config_errors
     )
     failures.extend(
@@ -145,5 +166,5 @@ def run_validation(
             context.agent_folders,
             context.kit_folders,
         ),
-        setup_warnings=schemas.warnings(),
+        setup_warnings=[],
     )

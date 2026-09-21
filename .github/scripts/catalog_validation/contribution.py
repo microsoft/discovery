@@ -90,7 +90,10 @@ def classify_contribution(
         ),
         has_markdown_only=(
             bool(normalized_files)
-            and all(Path(path).suffix.lower() == ".md" for path in normalized_files)
+            and all(
+                Path(path).suffix.lower() in (".md", ".markdown")
+                for path in normalized_files
+            )
         ),
         has_dockerfile=any(_is_dockerfile(path) for path in normalized_files),
         has_code=any(_is_code(path) for path in normalized_files),

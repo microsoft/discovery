@@ -288,3 +288,49 @@ def test_starter_kit_registry_rejects_unvalidated_pass_through_fields():
     injected["kits"][0]["privateConfig"] = {"token": "not-allowed"}
 
     assert not validator.is_valid(injected)
+
+
+def test_real_schemas_load_without_config_errors():
+    """The shipped catalog schemas must always load as JSON objects."""
+    assert CatalogSchemas.load(REPO_ROOT).config_errors() == []
+
+
+def test_missing_schema_is_a_blocking_config_error():
+    """A schema that cannot be loaded is a blocking CFG-003 configuration error,
+    never a silent skip."""
+    schemas = CatalogSchemas(
+        agent=None,
+        tool={"type": "object"},
+        metadata={"type": "object"},
+        common={"type": "object"},
+        registry=None,
+    )
+    errors = dict(schemas.config_errors())
+    assert "docs/schemas/agent-schema-v2.json" in errors
+    assert "docs/schemas/tool-definition-schema.json" not in errors
+
+
+def test_missing_schema_blocks_run_validation(tmp_path: Path):
+    """run_validation surfaces a missing schema as a blocking CFG-003 finding."""
+    from catalog_validation.runner import run_validation
+
+    # Seed real policy so the only configuration gap is the deleted schema.
+    for src in (REPO_ROOT / ".github" / "policy").iterdir():
+        if src.is_file():
+            dst = tmp_path / ".github" / "policy" / src.name
+            dst.parent.mkdir(parents=True, exist_ok=True)
+            dst.write_bytes(src.read_bytes())
+    schema_dst = tmp_path / "docs" / "schemas"
+    schema_dst.mkdir(parents=True)
+    for src in SCHEMA_DIR.glob("*.json"):
+        (schema_dst / src.name).write_bytes(src.read_bytes())
+    (schema_dst / "agent-schema-v2.json").unlink()
+
+    changed = "agents/demo/README.md"
+    (tmp_path / changed).parent.mkdir(parents=True, exist_ok=True)
+    (tmp_path / changed).write_text("# demo\n", encoding="utf-8")
+
+    result = run_validation(tmp_path, [changed])
+    cfg = [failure for failure in result.blocking if failure.rule_id == "CFG-003"]
+    assert cfg, "a missing schema must produce a blocking CFG-003 failure"
+    assert any("agent-schema-v2.json" in failure.file for failure in cfg)

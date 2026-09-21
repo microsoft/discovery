@@ -146,8 +146,9 @@ def test_baseline_loader_rejects_malformed_state(tmp_path: Path, payload: str):
 
 
 def test_baseline_check_fails_closed_on_corrupt_state(tmp_path: Path):
+    seed_policy(tmp_path)
     path = tmp_path / BASELINE_PATH
-    path.parent.mkdir(parents=True)
+    path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text("{not-json", encoding="utf-8")
 
     result = run_script("generate_baseline.py", tmp_path, "--check")
