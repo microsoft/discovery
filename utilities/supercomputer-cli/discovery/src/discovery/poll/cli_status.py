@@ -449,7 +449,7 @@ async def _paginated_list(
 
     while True:
         # Collect up to page_size matching results
-        batch: list[tuple[str, str, str, str | None, str, str]] = []
+        batch: list[tuple[str, str, str, str, str | None, str, str, str]] = []
 
         while len(batch) < page_size:
             # Check limit on total results searched
@@ -499,7 +499,18 @@ async def _paginated_list(
                     # Resolve nodepool_id to friendly sc/pool name
                     raw_pool = op.nodepool_id or ""
                     pool_name = pool_display.get(raw_pool) or pool_display.get(raw_pool.split("/")[-1], raw_pool.split("/")[-1])
-                    batch.append((op.id, formatted_time, completed_time, runtime_str, op.created_by, pool_name, op.status))
+                    batch.append(
+                        (
+                            op.id,
+                            formatted_time,
+                            completed_time,
+                            runtime_str,
+                            op.created_by,
+                            pool_name,
+                            op.status,
+                            op.runtime_details or "",
+                        )
+                    )
 
                     # ID-based early-exit: every target accounted for.
                     if target_ids is not None and matches_seen >= target_ids:
@@ -567,6 +578,7 @@ async def _paginated_list(
         table.add_column("Owner", style="bright_black")
         table.add_column("Pool", style="yellow")
         table.add_column("Status", style="green")
+        table.add_column("Runtime Details", overflow="fold", ratio=2)
 
         for row in batch:
             table.add_row(*row)
