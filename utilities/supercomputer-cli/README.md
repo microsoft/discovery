@@ -254,8 +254,9 @@ discovery job vscode
 # ...or override the tunnel name
 discovery job vscode --tunnel-name my-box
 
-# Start with resource requirements
-discovery job start --cpus 4 --gpus 2 --memory 32Gi "python train.py"
+# Start with resource requirements, including a 2 GiB /dev/shm tmpfs
+# --shm requires API version 2026-06-01 or later and must be less than RAM.
+discovery job start --cpus 4 --gpus 2 --memory 32Gi --shm 2Gi "python train.py"
 
 # Start with the per-SC Scratch ANF mounted at /scratch
 discovery job start --scratch "python train.py --workdir /scratch/run"
