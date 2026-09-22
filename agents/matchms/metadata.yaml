@@ -1,0 +1,18 @@
+name: matchms
+type: agent
+version: 1.0.0
+associated_tools:
+  - agents/matchms/tools/matchms
+publisher:
+  name: Microsoft
+  contact: discovery-catalog@microsoft.com
+  support_url: https://techcommunity.microsoft.com/category/azure/discussions/microsoft-discovery-discussions
+  party: 1p
+description: >
+  Import, process, and compute similarity between tandem mass spectra for metabolomics and small-molecule
+  identification.
+tags:
+  - metabolomics
+  - mass-spectrometry
+  - spectral-similarity
+  - matchms

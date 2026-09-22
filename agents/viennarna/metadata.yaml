@@ -1,0 +1,18 @@
+name: viennarna
+type: agent
+version: 1.0.0
+associated_tools:
+  - agents/viennarna/tools/viennarna
+publisher:
+  name: Microsoft
+  contact: discovery-catalog@microsoft.com
+  support_url: https://techcommunity.microsoft.com/category/azure/discussions/microsoft-discovery-discussions
+  party: 1p
+description: >
+  RNA secondary-structure prediction and thermodynamics: minimum free energy folding, partition functions, and
+  base-pair probabilities.
+tags:
+  - bioinformatics
+  - rna
+  - secondary-structure
+  - viennarna

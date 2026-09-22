@@ -1,0 +1,17 @@
+name: spglib
+type: agent
+version: 1.0.0
+associated_tools:
+  - agents/spglib/tools/spglib
+publisher:
+  name: Microsoft
+  contact: discovery-catalog@microsoft.com
+  support_url: https://techcommunity.microsoft.com/category/azure/discussions/microsoft-discovery-discussions
+  party: 1p
+description: >
+  Crystal symmetry analysis: find space groups, symmetry operations, standardized cells, and Wyckoff positions.
+tags:
+  - materials-science
+  - crystallography
+  - symmetry
+  - spglib

@@ -1,0 +1,19 @@
+name: msa-align
+type: agent
+version: 1.0.0
+associated_tools:
+  - agents/msa-align/tools/msa-align
+publisher:
+  name: Microsoft
+  contact: discovery-catalog@microsoft.com
+  support_url: https://techcommunity.microsoft.com/category/azure/discussions/microsoft-discovery-discussions
+  party: 1p
+description: >
+  Multiple sequence alignment via MAFFT, MUSCLE, or Clustal Omega for protein and nucleotide sequences.
+tags:
+  - bioinformatics
+  - msa
+  - alignment
+  - mafft
+  - muscle
+  - clustal
