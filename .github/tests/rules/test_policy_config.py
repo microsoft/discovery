@@ -65,6 +65,26 @@ def test_missing_required_file_blocks_validation_with_cfg_002(repo):
     assert any("tag-taxonomy.yaml" in f.file for f in cfg)
 
 
+def test_empty_mapping_required_policy_file_is_a_config_error(repo):
+    """A required policy reduced to an empty mapping (``{}``) disables its
+    checks just like an empty or missing file, so it must be a config error."""
+    write_policy(repo, "tag-taxonomy.yaml", "{}\n")
+    policy = PolicyConfig.load(repo)
+    assert ".github/policy/tag-taxonomy.yaml" in _errored_files(policy)
+
+
+def test_taxonomy_without_control_keys_is_a_config_error(repo):
+    """A tag-taxonomy that parses as a mapping but omits ``domains`` and
+    ``reserved_prefixes`` would silently pass TAG-001/TAG-002, so its missing
+    control keys must be a config error."""
+    write_policy(repo, "tag-taxonomy.yaml", "unrelated: true\n")
+    policy = PolicyConfig.load(repo)
+    errors = dict(policy.config_errors)
+    assert ".github/policy/tag-taxonomy.yaml" in errors
+    joined = errors[".github/policy/tag-taxonomy.yaml"]
+    assert "domains" in joined or "reserved_prefixes" in joined
+
+
 def test_wrong_typed_extensions_is_a_config_error(repo):
     """A scalar where a list of extensions is expected must be rejected, not
     coerced into a one-element string list."""

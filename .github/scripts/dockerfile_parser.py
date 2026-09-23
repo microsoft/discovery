@@ -42,7 +42,16 @@ class ImageRef:
 
     @property
     def is_docker_official(self) -> bool:
-        return self.registry == DEFAULT_REGISTRY and self.namespace == DOCKER_OFFICIAL_NAMESPACE
+        # Docker Official Images are single-component repositories in the
+        # implicit ``library`` namespace (``docker.io/library/ubuntu``). A
+        # nested path such as ``docker.io/library/untrusted/payload`` is *not*
+        # official — the extra path segment means ``library`` is only the first
+        # of several components — so the exemption requires a slash-free repo.
+        return (
+            self.registry == DEFAULT_REGISTRY
+            and self.namespace == DOCKER_OFFICIAL_NAMESPACE
+            and "/" not in self.repository
+        )
 
     @property
     def namespace_ref(self) -> str:

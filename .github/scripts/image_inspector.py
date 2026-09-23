@@ -213,7 +213,36 @@ def is_referenced_by_markdown(image_path: Path, owner_dir: Path) -> bool:
 
 # ── SVG structure and active content ─────────────────────────────────────────
 
-_SVG_ROOT_RE = re.compile(r"<svg[\s>]", re.IGNORECASE)
+_SVG_ROOT_RE = re.compile(r"^\s*<svg(?=[\s/>])", re.IGNORECASE)
+
+#: Leading document noise that legitimately precedes an SVG root element: an XML
+#: declaration or processing instruction, a comment, or a DOCTYPE (optionally
+#: carrying an internal subset). Stripped one token at a time so the *first*
+#: real element can be checked structurally — a ``<svg`` buried inside a comment
+#: or text node must not be mistaken for the root.
+_SVG_LEADING_NOISE_RE = re.compile(
+    r"^\s*(?:"
+    r"<\?[^>]*\?>"                        # XML declaration / processing instruction
+    r"|<!--.*?-->"                        # comment
+    r"|<!DOCTYPE(?:[^>\[]|\[[^\]]*\])*>"  # DOCTYPE with optional internal subset
+    r")",
+    re.IGNORECASE | re.DOTALL,
+)
+
+
+def _has_svg_root(text: str) -> bool:
+    """True when the first real element of ``text`` is an ``<svg>`` root.
+
+    Bounded and parser-free: leading whitespace, XML declarations, comments, and
+    DOCTYPEs are peeled off, then the next token must open an ``svg`` element.
+    A ``<svg`` that appears only inside a comment, CDATA, or text is not a root.
+    """
+    prev: str | None = None
+    current = text
+    while prev != current:
+        prev = current
+        current = _SVG_LEADING_NOISE_RE.sub("", current, count=1)
+    return bool(_SVG_ROOT_RE.match(current))
 
 #: Patterns that make an SVG executable or able to reach off-host. Each entry
 #: is (regex, short label used in the failure message).
@@ -265,7 +294,7 @@ def inspect_svg(text: str) -> ImageVerdict:
     """Validate SVG structure and reject active content."""
     scanned = text[:SVG_SCAN_BYTES]
 
-    if not _SVG_ROOT_RE.search(scanned):
+    if not _has_svg_root(scanned):
         return ImageVerdict(
             ok=False,
             detected=None,
@@ -312,11 +341,19 @@ def inspect(path: Path, suffix: str | None = None) -> ImageVerdict | None:
         return None
 
     try:
-        raw = path.read_bytes() if ext == ".svg" else _read_ends(path)
+        if ext == ".svg":
+            # Read only what the scan needs (plus one byte to detect
+            # truncation) so an oversized SVG cannot force a full-file
+            # allocation before POL-016 rejects it on size.
+            raw = _read_prefix(path, SVG_SCAN_BYTES + 1)
+        else:
+            raw = _read_ends(path)
     except OSError as e:
         return ImageVerdict(False, None, f"Could not read file: {e}")
 
     if ext == ".svg":
+        truncated = len(raw) > SVG_SCAN_BYTES
+        raw = raw[:SVG_SCAN_BYTES]
         # A NUL byte or a raster signature settles it before any decode: an SVG
         # is an XML text document, and ELF-style payloads are pure ASCII, so
         # decodability alone would misreport them as malformed markup.
@@ -335,14 +372,19 @@ def inspect(path: Path, suffix: str | None = None) -> ImageVerdict | None:
         try:
             text = raw.decode("utf-8")
         except UnicodeDecodeError:
-            return ImageVerdict(
-                ok=False,
-                detected=None,
-                reason=(
-                    "File is named .svg but is not UTF-8 text. SVG is an XML "
-                    "document; binary content here means the file is mislabelled."
-                ),
-            )
+            if truncated:
+                # A multibyte character was split at the scan boundary; decode
+                # the valid prefix and let the active-content scan proceed.
+                text = raw.decode("utf-8", errors="ignore")
+            else:
+                return ImageVerdict(
+                    ok=False,
+                    detected=None,
+                    reason=(
+                        "File is named .svg but is not UTF-8 text. SVG is an XML "
+                        "document; binary content here means the file is mislabelled."
+                    ),
+                )
         return inspect_svg(text)
 
     head, tail = raw[:HEADER_BYTES], raw[-TRAILER_BYTES:]
@@ -382,6 +424,12 @@ def inspect(path: Path, suffix: str | None = None) -> ImageVerdict | None:
         )
 
     return ImageVerdict(ok=True, detected=detected, reason=f"Valid {detected.upper()} image.")
+
+
+def _read_prefix(path: Path, limit: int) -> bytes:
+    """Read at most ``limit`` bytes from the head of a file."""
+    with open(path, "rb") as fh:
+        return fh.read(limit)
 
 
 def _read_ends(path: Path) -> bytes:

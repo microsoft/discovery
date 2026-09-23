@@ -680,7 +680,13 @@ def test_workflow_executables_are_immutable_and_dependency_managed():
 
     assert not problems, "Unpinned workflow executables:\n- " + "\n- ".join(problems)
 
-PR_REVIEW_WORKFLOWS = ("validate-everything.yml", "pr-review.yml")
+PR_REVIEW_WORKFLOWS = (
+    "validate-everything.yml",
+    "pr-review.yml",
+    # pull_request_target job with pull-requests: write — same privileged trust
+    # boundary, so every action it runs must be SHA-pinned too.
+    "check-agent-removal-impact.yml",
+)
 
 # uses: owner/name@<40-hex-sha> # vX.Y.Z   (trailing version comment required)
 _PINNED_USES_RE = re.compile(

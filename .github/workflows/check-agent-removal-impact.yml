@@ -22,7 +22,7 @@ jobs:
     steps:
       - name: Detect relevant changes
         id: changes
-        uses: actions/github-script@v9
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
@@ -49,10 +49,11 @@ jobs:
 
       - name: Checkout PR head as data
         if: steps.changes.outputs.relevant == 'true'
-        uses: actions/checkout@v6
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           repository: ${{ github.event.pull_request.head.repo.full_name }}
           ref: ${{ github.event.pull_request.head.sha }}
+          allow-unsafe-pr-checkout: true
           fetch-depth: 0
           persist-credentials: false
           path: pr
@@ -62,6 +63,12 @@ jobs:
         uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
           python-version: "3.12"
+
+      - name: Install trusted validator dependencies
+        if: steps.changes.outputs.relevant == 'true'
+        # check_agent_removal_impact.py imports update_registry, which requires
+        # PyYAML; the module exits at import time when it is unavailable.
+        run: python -m pip install -c trusted/.github/requirements-ci.txt pyyaml
 
       - name: Detect fork PR
         if: steps.changes.outputs.relevant == 'true'
@@ -82,6 +89,7 @@ jobs:
           fi
           python trusted/.github/scripts/check_agent_removal_impact.py \
             --repo-root pr \
+            --base-registry-root trusted \
             --base-sha "${{ github.event.pull_request.base.sha }}" \
             --pr-number "${{ github.event.pull_request.number }}" \
             --github-token "${{ secrets.GITHUB_TOKEN }}" \

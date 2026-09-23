@@ -310,6 +310,56 @@ def test_missing_schema_is_a_blocking_config_error():
     assert "docs/schemas/tool-definition-schema.json" not in errors
 
 
+def test_empty_or_neutered_schema_is_treated_as_absent(tmp_path: Path):
+    """A schema replaced with ``{}`` or a metadata-only document accepts every
+    instance; the loader must reject it so CFG-003 fires instead of the check
+    passing open."""
+    from catalog_validation.schemas import load_json_schema
+
+    empty = tmp_path / "empty.json"
+    empty.write_text("{}", encoding="utf-8")
+    assert load_json_schema(empty) is None
+
+    metadata_only = tmp_path / "metadata-only.json"
+    metadata_only.write_text(
+        json.dumps({"title": "x", "description": "y"}), encoding="utf-8"
+    )
+    assert load_json_schema(metadata_only) is None
+
+    malformed = tmp_path / "malformed.json"
+    malformed.write_text(json.dumps({"type": "not-a-type"}), encoding="utf-8")
+    assert load_json_schema(malformed) is None
+
+    valid = tmp_path / "valid.json"
+    valid.write_text(json.dumps({"type": "object"}), encoding="utf-8")
+    assert load_json_schema(valid) == {"type": "object"}
+
+
+def test_neutered_schema_blocks_run_validation(tmp_path: Path):
+    """A schema neutered to ``{}`` produces a blocking CFG-003 finding."""
+    from catalog_validation.runner import run_validation
+
+    for src in (REPO_ROOT / ".github" / "policy").iterdir():
+        if src.is_file():
+            dst = tmp_path / ".github" / "policy" / src.name
+            dst.parent.mkdir(parents=True, exist_ok=True)
+            dst.write_bytes(src.read_bytes())
+    schema_dst = tmp_path / "docs" / "schemas"
+    schema_dst.mkdir(parents=True)
+    for src in SCHEMA_DIR.glob("*.json"):
+        (schema_dst / src.name).write_bytes(src.read_bytes())
+    (schema_dst / "agent-schema-v2.json").write_text("{}", encoding="utf-8")
+
+    changed = "agents/demo/README.md"
+    (tmp_path / changed).parent.mkdir(parents=True, exist_ok=True)
+    (tmp_path / changed).write_text("# demo\n", encoding="utf-8")
+
+    result = run_validation(tmp_path, [changed])
+    cfg = [failure for failure in result.blocking if failure.rule_id == "CFG-003"]
+    assert cfg, "a neutered schema must produce a blocking CFG-003 failure"
+    assert any("agent-schema-v2.json" in failure.file for failure in cfg)
+
+
 def test_missing_schema_blocks_run_validation(tmp_path: Path):
     """run_validation surfaces a missing schema as a blocking CFG-003 finding."""
     from catalog_validation.runner import run_validation

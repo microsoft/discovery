@@ -134,6 +134,12 @@ class PolicyConfig:
                 f"{path.name}: top-level document must be a mapping, "
                 f"got {type(raw).__name__}.",
             )
+        if required and not raw:
+            return {}, (
+                f"{path.name} is an empty mapping. A required policy must "
+                f"define its configuration explicitly; an empty control would "
+                f"silently disable the checks it backs."
+            )
         return raw, None
 
     @classmethod
@@ -205,6 +211,21 @@ class PolicyConfig:
         al_rel, allowlist = _load("source-allowlist.yaml")
         bi_rel, base_images = _load("base-images.yaml")
         tx_rel, taxonomy = _load("tag-taxonomy.yaml")
+
+        # tag-taxonomy.yaml backs TAG-001 (declared-vocabulary) and TAG-002
+        # (reserved-prefix) enforcement. A file that parses as a mapping but
+        # omits ``domains`` or ``reserved_prefixes`` — or defines them empty —
+        # would make those controls silently pass everything, so their presence
+        # and non-emptiness is a blocking configuration requirement.
+        if not errors or all(rel != tx_rel for rel, _ in errors):
+            if not taxonomy.get("domains"):
+                errors.append((tx_rel, (
+                    "'domains' is required and must be a non-empty mapping; "
+                    "without it TAG-001 would accept any declared tag.")))
+            if not taxonomy.get("reserved_prefixes"):
+                errors.append((tx_rel, (
+                    "'reserved_prefixes' is required and must be a non-empty "
+                    "list; without it TAG-002 would enforce nothing.")))
 
         domains = taxonomy.get("domains")
         domain_tags: set[str] = set()

@@ -56,20 +56,39 @@ jobs:
             if (!relevant) {
               core.notice('No agent/tool/metadata schema files changed; reporting success without running regression guard.');
             }
-      - name: Checkout PR branch
+      # Security boundary: the regression guard is *trusted* code checked out
+      # from the PR base, run against the PR's proposed schemas as data. The PR
+      # can therefore change the schemas under review but cannot alter or skip
+      # the assertions that guard them.
+      - name: Checkout trusted base (regression guard code)
         if: steps.changes.outputs.relevant == 'true'
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event.pull_request.base.sha }}
+          fetch-depth: 1
+          persist-credentials: false
+          path: trusted
+      - name: Checkout PR content as data
+        if: steps.changes.outputs.relevant == 'true'
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          path: pr
       - name: Set up Python
         if: steps.changes.outputs.relevant == 'true'
         uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
           python-version: '3.12'
           cache: pip
-          cache-dependency-path: .github/requirements-ci.txt
+          cache-dependency-path: trusted/.github/requirements-ci.txt
       - name: Install dependencies
         if: steps.changes.outputs.relevant == 'true'
         run: >
-          python -m pip install -c .github/requirements-ci.txt pytest jsonschema pyyaml referencing
-      - name: Run AS-001 through AS-005 schema checks
+          python -m pip install -c trusted/.github/requirements-ci.txt pytest jsonschema pyyaml referencing
+      - name: Run AS-001 through AS-005 schema checks against PR data
         if: steps.changes.outputs.relevant == 'true'
-        run: python -m pytest .github/tests/test_schema_security.py -q
+        env:
+          # Trusted test code (trusted/) validates the PR-proposed catalog (pr/).
+          DISCOVERY_CATALOG_ROOT: ${{ github.workspace }}/pr
+          PYTHONPATH: ${{ github.workspace }}/trusted/.github/scripts
+        run: python -m pytest trusted/.github/tests/test_schema_security.py -q

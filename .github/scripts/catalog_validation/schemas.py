@@ -28,12 +28,45 @@ def load_yaml(path: Path) -> tuple[Any, str | None]:
         return None, str(error)
 
 
+#: JSON Schema keywords that actually constrain an instance. A schema document
+#: carrying none of these — ``{}`` most obviously, but also a metadata-only file
+#: with just ``title``/``description`` — accepts every input, so treating it as a
+#: valid schema would silently disable the checks it is meant to enforce.
+_SCHEMA_CONSTRAINT_KEYWORDS = frozenset({
+    "type", "properties", "required", "items", "prefixItems",
+    "additionalProperties", "patternProperties", "enum", "const",
+    "$ref", "allOf", "anyOf", "oneOf", "not", "pattern", "format",
+    "minimum", "maximum", "exclusiveMinimum", "exclusiveMaximum",
+    "minLength", "maxLength", "minItems", "maxItems", "uniqueItems",
+    "minProperties", "maxProperties", "dependentRequired",
+    "dependentSchemas", "if", "then", "else", "propertyNames",
+    "contains", "multipleOf",
+})
+
+
 def load_json_schema(path: Path) -> dict[str, Any] | None:
+    """Load a JSON Schema, returning ``None`` for anything that is not a usable
+    validation control.
+
+    A document is rejected (treated as absent so the caller emits a blocking
+    ``CFG-003``) when it is not a JSON object, is empty, carries no constraining
+    keywords (e.g. ``{}``, which accepts every instance), or is not a well-formed
+    Draft 7 schema. Failing closed here stops a deleted or neutered schema from
+    passing validation open.
+    """
     try:
         data = load_json(path)
     except (json.JSONDecodeError, OSError):
         return None
-    return data if isinstance(data, dict) else None
+    if not isinstance(data, dict) or not data:
+        return None
+    if not _SCHEMA_CONSTRAINT_KEYWORDS.intersection(data):
+        return None
+    try:
+        jsonschema.Draft7Validator.check_schema(data)
+    except jsonschema.exceptions.SchemaError:
+        return None
+    return data
 
 
 def load_schema(repo_root: Path, schema_name: str) -> dict[str, Any]:

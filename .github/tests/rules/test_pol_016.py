@@ -261,6 +261,32 @@ def test_svg_without_a_root_element_is_blocked(repo):
     assert "root element" in result.findings[0].message
 
 
+def test_svg_root_only_inside_a_comment_is_blocked(repo):
+    """A ``<svg`` that appears only inside a comment or text node is not a root
+    element; the file must be rejected rather than accepted as an SVG."""
+    rel = write(repo, "agents/demo/fake.svg", "<!-- <svg> not really -->\nplain text\n")
+    reference_image(repo, rel)
+    result = run_rule(repo, RULE, [rel])
+    assert files(result) == [rel]
+    assert "root element" in result.findings[0].message
+
+
+def test_svg_with_leading_comment_and_doctype_still_passes(repo):
+    """Legitimate leading noise — an XML declaration, a comment, a DOCTYPE —
+    before the real ``<svg>`` root must not cause a false rejection."""
+    svg = (
+        '<?xml version="1.0" encoding="UTF-8"?>\n'
+        "<!-- a copyright banner -->\n"
+        "<!DOCTYPE svg>\n"
+        '<svg xmlns="http://www.w3.org/2000/svg" width="1" height="1">'
+        '<rect width="1" height="1"/></svg>\n'
+    )
+    rel = write(repo, "agents/demo/ok.svg", svg)
+    reference_image(repo, rel)
+    result = run_rule(repo, RULE, [rel])
+    assert files(result) == []
+
+
 @pytest.mark.parametrize("attr", [
     'origin="left"',      # starts with "o" but is not an on* handler
     'opacity="0.5"',

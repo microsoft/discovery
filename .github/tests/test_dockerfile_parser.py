@@ -111,3 +111,14 @@ def test_deployer_placeholder_is_recognized(line):
 def test_docker_official_image_detection():
     assert parse_image_ref("ubuntu:24.04").is_docker_official
     assert not parse_image_ref("condaforge/mambaforge:24.3.0-0").is_docker_official
+
+
+def test_nested_library_path_is_not_docker_official():
+    """``library`` as the first of several path components does not make an
+    image official — only a single-component repo under it does."""
+    ref = parse_image_ref("docker.io/library/untrusted/payload:tag")
+    assert ref.namespace == "library"
+    assert ref.repository == "untrusted/payload"
+    assert not ref.is_docker_official
+    # The genuine official form still resolves.
+    assert parse_image_ref("docker.io/library/ubuntu:24.04").is_docker_official

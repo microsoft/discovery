@@ -54,13 +54,19 @@ jobs:
           from referencing import Registry, Resource
           with open('docs/schemas/common-schema.json') as f:
               common_schema = json.load(f)
+          with open('docs/schemas/metadata-schema.json') as f:
+              metadata_schema = json.load(f)
           with open('docs/schemas/registry-schema.json') as f:
               schema = json.load(f)
           with open('.auto-registry/agent-registry.json') as f:
               data = json.load(f)
-          schema_registry = Registry().with_resource(
-              'common-schema.json', Resource.from_contents(common_schema)
-          )
+          # registry-schema.json \$refs both common-schema.json and
+          # metadata-schema.json (associated_tools); register both so the
+          # references resolve instead of raising an unresolvable-reference error.
+          schema_registry = Registry().with_resources([
+              ('common-schema.json', Resource.from_contents(common_schema)),
+              ('metadata-schema.json', Resource.from_contents(metadata_schema)),
+          ])
           v = jsonschema.Draft7Validator(
               schema, registry=schema_registry, format_checker=jsonschema.FormatChecker()
           )
@@ -92,14 +98,20 @@ jobs:
                   sys.exit(0)
               with open('docs/schemas/common-schema.json') as f:
                   common_schema = json.load(f)
+              with open('docs/schemas/starter-kit-schema.json') as f:
+                  starter_kit_schema = json.load(f)
               with open('docs/schemas/starter-kit-registry-schema.json') as f:
                   schema = json.load(f)
               with open('.auto-registry/starter-kit-registry.json') as f:
                   registry = json.load(f)
               jsonschema.Draft7Validator.check_schema(schema)
-              schema_registry = Registry().with_resource(
-                  'common-schema.json', Resource.from_contents(common_schema)
-              )
+              # starter-kit-registry-schema.json \$refs both common-schema.json
+              # and starter-kit-schema.json; register both so those references
+              # resolve instead of raising an unresolvable-reference error.
+              schema_registry = Registry().with_resources([
+                  ('common-schema.json', Resource.from_contents(common_schema)),
+                  ('starter-kit-schema.json', Resource.from_contents(starter_kit_schema)),
+              ])
               validator = jsonschema.Draft7Validator(
                 schema, registry=schema_registry, format_checker=jsonschema.FormatChecker()
               )
