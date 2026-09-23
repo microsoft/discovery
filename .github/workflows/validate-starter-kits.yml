@@ -85,13 +85,22 @@ jobs:
         with:
           python-version: "3.12"
           cache: pip
-          cache-dependency-path: trusted/.github/requirements-ci.txt
+          cache-dependency-path: pr/.github/requirements-ci.txt
 
       - name: Install dependencies
         if: steps.changes.outputs.relevant == 'true'
-        run: >-
-          python -m pip install -c trusted/.github/requirements-ci.txt
-          jsonschema pyyaml referencing
+        run: |
+          # Pin CI dependency versions from the trusted base checkout. During
+          # the bootstrap window - before this constraints file exists on the
+          # base branch - install unpinned rather than reading the untrusted PR
+          # copy. This self-heals to the pinned path once the PR merges.
+          constraint="trusted/.github/requirements-ci.txt"
+          if [ -f "$constraint" ]; then
+            python -m pip install -c "$constraint" jsonschema pyyaml referencing
+          else
+            echo "::notice::trusted constraints file absent on base (bootstrap); installing unpinned"
+            python -m pip install jsonschema pyyaml referencing
+          fi
 
       - name: Run validation
         if: steps.changes.outputs.relevant == 'true'

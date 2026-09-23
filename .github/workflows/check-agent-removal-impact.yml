@@ -66,9 +66,19 @@ jobs:
 
       - name: Install trusted validator dependencies
         if: steps.changes.outputs.relevant == 'true'
-        # check_agent_removal_impact.py imports update_registry, which requires
-        # PyYAML; the module exits at import time when it is unavailable.
-        run: python -m pip install -c trusted/.github/requirements-ci.txt pyyaml
+        run: |
+          # check_agent_removal_impact.py imports update_registry, which
+          # requires PyYAML; pin from the trusted base checkout when present.
+          # During the bootstrap window - before this constraints file exists
+          # on the base branch - install unpinned rather than reading the
+          # untrusted PR copy. Self-heals to the pinned path once the PR merges.
+          constraint="trusted/.github/requirements-ci.txt"
+          if [ -f "$constraint" ]; then
+            python -m pip install -c "$constraint" pyyaml
+          else
+            echo "::notice::trusted constraints file absent on base (bootstrap); installing unpinned"
+            python -m pip install pyyaml
+          fi
 
       - name: Detect fork PR
         if: steps.changes.outputs.relevant == 'true'
