@@ -15,6 +15,16 @@ _PROTECTED_PATHS = frozenset({"docs/validation-rules.md"})
 #: be an explicit allowlist rather than "any file ending in .md".
 _PUBLIC_ROOT_DOCS = frozenset({"readme.md", "contributing.md"})
 _DOC_SUFFIXES = (".md", ".markdown")
+#: Executable or infrastructure file types that are maintainer-owned wherever
+#: they appear — including under ``docs/`` (e.g. ``docs/discovery-services``
+#: ships ``.bicep``/``.sh``/``.ps1``). A non-maintainer may add documentation
+#: prose and data, but not code that runs.
+_EXECUTABLE_SUFFIXES = frozenset({
+    ".sh", ".bash", ".zsh", ".ps1", ".psm1", ".psd1", ".bat", ".cmd",
+    ".py", ".pyw", ".js", ".mjs", ".cjs", ".ts", ".rb", ".pl", ".php",
+    ".bicep", ".tf", ".tfvars", ".hcl",
+    ".exe", ".dll", ".so", ".dylib", ".bin", ".com",
+})
 _REGISTRY_REFRESH_BOT_AUTHORS = frozenset({
     "github-actions[bot]",
     "discovery-registry-bot[bot]",
@@ -26,6 +36,13 @@ def is_trusted_registry_refresh(author: str, head_ref: str) -> bool:
         head_ref.startswith("chore/registry-refresh")
         and author in _REGISTRY_REFRESH_BOT_AUTHORS
     )
+
+
+def _suffix(name: str) -> str:
+    """Lowercased final extension of a filename, or '' if none."""
+    base = name.lower()
+    dot = base.rfind(".")
+    return base[dot:] if dot > 0 else ""
 
 
 def _is_public_contribution_path(path: str) -> bool:
@@ -42,6 +59,11 @@ def _is_public_contribution_path(path: str) -> bool:
     if len(parts) >= 2 and parts[0] in _PUBLIC_CATALOG_ROOTS:
         return True
     if len(parts) >= 2 and parts[0] == "docs":
+        # Documentation prose and data are public, but executable or
+        # infrastructure files under docs/ (e.g. docs/discovery-services/*.bicep,
+        # *.sh, *.ps1) remain maintainer-owned.
+        if _suffix(parts[-1]) in _EXECUTABLE_SUFFIXES:
+            return False
         return True
     if len(parts) >= 3 and parts[:2] == ["includes", "media"]:
         return True

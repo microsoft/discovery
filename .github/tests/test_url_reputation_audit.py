@@ -66,6 +66,9 @@ def test_sanitize_submission_url_strips_credentials_query_and_fragment():
     # Non-http(s) or hostless values are not reputation targets.
     assert audit.sanitize_submission_url("mailto:owner@example.com") is None
     assert audit.sanitize_submission_url("not a url") is None
+    # A malformed port must not raise; it is simply unusable.
+    assert audit.sanitize_submission_url("https://example.com:abc/path") is None
+    assert audit.sanitize_submission_url("https://example.com:99999/") is None
 
 
 def test_collect_catalog_urls_submits_only_sanitized_urls(tmp_path: Path):

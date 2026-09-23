@@ -101,11 +101,50 @@ def test_stage_alias_reference_is_not_external():
 
 @pytest.mark.parametrize("line", [
     "FROM {acr}.azurecr.io/tool:1.0.0",
-    "FROM {registry}.example.io/library/python:3.12",
+    "FROM {registry}.azurecr.io/library/python:3.12",
 ])
 def test_deployer_placeholder_is_recognized(line):
     directives = parse_from_directives(line + "\n")
     assert directives[0].image.is_deployer_placeholder
+
+
+@pytest.mark.parametrize("line", [
+    "FROM {attacker}.evil.example/payload:latest",
+    "FROM {registry}.example.io/library/python:3.12",
+    "FROM {acr}.azurecr.io.evil.example/payload:latest",
+])
+def test_non_acr_brace_registry_is_not_a_placeholder(line):
+    # Only a genuine ``{name}.azurecr.io`` placeholder is rewritten by the
+    # deployer; any other braced host must not be waved through.
+    directives = parse_from_directives(line + "\n")
+    assert not directives[0].image.is_deployer_placeholder
+
+
+def test_arg_inside_earlier_stage_does_not_leak_to_a_later_stage():
+    # ARG declared *after* the first FROM is stage-local; it must not resolve a
+    # ``${VAR}`` in a subsequent stage's base image.
+    text = (
+        "FROM ubuntu:24.04 AS build\n"
+        "ARG TAG=24.04\n"
+        "FROM debian:${TAG}\n"
+    )
+    images = external_images(text)
+    assert images[-1].image.tag == "${TAG}"
+    assert images[-1].image.tag_is_variable
+
+
+def test_unresolved_variable_image_is_not_docker_official():
+    # ``FROM ${IMAGE}`` parses as ``docker.io/library/${IMAGE}`` but its identity
+    # is unknown, so it must never qualify for the official-image exemption.
+    image = _only("FROM ${IMAGE}\n")
+    assert image.has_unresolved_variable
+    assert not image.is_docker_official
+
+
+def test_unresolved_variable_in_registry_is_detected():
+    image = _only("FROM ${REGISTRY}/library/ubuntu:24.04\n")
+    assert image.has_unresolved_variable
+    assert not image.is_docker_official
 
 
 def test_docker_official_image_detection():

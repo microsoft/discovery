@@ -24,6 +24,10 @@ _FROM_RE = re.compile(
 _ARG_RE = re.compile(r"^\s*ARG\s+(?P<name>[A-Za-z_][A-Za-z0-9_]*)(?:=(?P<default>\S*))?", re.IGNORECASE)
 _VAR_RE = re.compile(r"\$\{?([A-Za-z_][A-Za-z0-9_]*)\}?")
 
+#: Discovery deployer placeholder: ``{acr}.azurecr.io`` (any single ``{name}``
+#: label, no slashes or nested braces) rewritten to the target registry.
+_ACR_PLACEHOLDER_RE = re.compile(r"^\{[^{}/]+\}\.azurecr\.io$", re.IGNORECASE)
+
 #: Docker Official Images live in the implicit `library` namespace.
 DOCKER_OFFICIAL_NAMESPACE = "library"
 DEFAULT_REGISTRY = "docker.io"
@@ -47,10 +51,23 @@ class ImageRef:
         # nested path such as ``docker.io/library/untrusted/payload`` is *not*
         # official — the extra path segment means ``library`` is only the first
         # of several components — so the exemption requires a slash-free repo.
+        # An unresolved variable (``FROM ${IMAGE}``) leaves the image identity
+        # unknown, so it can never qualify for the official-image exemption.
+        if self.has_unresolved_variable:
+            return False
         return (
             self.registry == DEFAULT_REGISTRY
             and self.namespace == DOCKER_OFFICIAL_NAMESPACE
             and "/" not in self.repository
+        )
+
+    @property
+    def has_unresolved_variable(self) -> bool:
+        """True when any component still contains a ``$VAR`` / ``${VAR}`` that
+        was never substituted, leaving the image identity indeterminate."""
+        return any(
+            component is not None and bool(_VAR_RE.search(component))
+            for component in (self.registry, self.namespace, self.repository, self.tag)
         )
 
     @property
@@ -64,8 +81,10 @@ class ImageRef:
     @property
     def is_deployer_placeholder(self) -> bool:
         """True for refs like ``{acr}.azurecr.io/...`` that the Discovery deployer
-        rewrites to the target subscription's own registry at build time."""
-        return "{" in self.registry
+        rewrites to the target subscription's own registry at build time. Only a
+        ``{name}.azurecr.io`` placeholder qualifies; an arbitrary registry that
+        merely contains a brace (e.g. ``{attacker}.evil.example``) does not."""
+        return bool(_ACR_PLACEHOLDER_RE.match(self.registry))
 
 
 @dataclass(frozen=True)
@@ -140,17 +159,23 @@ def parse_from_directives(text: str) -> list[FromDirective]:
     args: dict[str, str] = {}
     aliases: set[str] = set()
     directives: list[FromDirective] = []
+    seen_from = False
 
     for lineno, line in _logical_lines(text):
         arg_match = _ARG_RE.match(line)
         if arg_match and arg_match.group("default") is not None:
-            args[arg_match.group("name")] = arg_match.group("default")
+            # Only ARGs declared before the first FROM are global and available
+            # for FROM substitution. An ARG inside a build stage belongs to that
+            # stage and must not leak into later stages' base-image resolution.
+            if not seen_from:
+                args[arg_match.group("name")] = arg_match.group("default")
             continue
 
         match = _FROM_RE.match(line)
         if not match:
             continue
 
+        seen_from = True
         ref = match.group("ref")
         alias = match.group("alias")
 

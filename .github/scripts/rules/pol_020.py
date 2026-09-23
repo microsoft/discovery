@@ -115,7 +115,7 @@ def check(ctx: RuleContext) -> list[Finding]:
             continue
 
         classification = classify(ctx.abs(rel))
-        if classification.is_binary and classification.format != "unknown-binary":
+        if classification.is_binary and classification.format != "non-utf8-text":
             continue
 
         issue = scan_text(ctx.abs(rel))

@@ -145,3 +145,39 @@ def test_multiple_binaries_all_reported_in_one_pass(repo):
     c = write(repo, "agents/demo/c.py", "print('ok')\n")
     result = run_rule(repo, RULE, [a, b, c])
     assert sorted(files(result)) == sorted([a, b])
+
+
+# ── Format routing: generic binary blocks, non-UTF-8 text defers ────────────
+
+def test_generic_binary_is_blocked_here(repo, monkeypatch):
+    from content_sniffer import Classification
+
+    rel = write(repo, "agents/demo/data.txt", b"opaque bytes")
+    monkeypatch.setattr(
+        "rules.pol_008.classify",
+        lambda _p: Classification(
+            kind="binary",
+            format="generic-binary",
+            detail="libmagic reported generic binary data.",
+            spoofed=True,
+        ),
+    )
+    result = run_rule(repo, RULE, [rel])
+    assert files(result) == [rel]
+
+
+def test_non_utf8_text_is_deferred_to_pol_020(repo, monkeypatch):
+    from content_sniffer import Classification
+
+    rel = write(repo, "agents/demo/legacy.txt", b"legacy bytes")
+    monkeypatch.setattr(
+        "rules.pol_008.classify",
+        lambda _p: Classification(
+            kind="binary",
+            format="non-utf8-text",
+            detail="libmagic reported non-UTF-8 text.",
+            spoofed=False,
+        ),
+    )
+    result = run_rule(repo, RULE, [rel])
+    assert result.findings == []

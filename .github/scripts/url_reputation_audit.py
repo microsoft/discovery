@@ -74,14 +74,19 @@ def sanitize_submission_url(url: str) -> str | None:
     """
     try:
         parts = urlsplit(url.strip())
+        scheme = parts.scheme.lower()
+        hostname = parts.hostname
+        port = parts.port
     except ValueError:
+        # A malformed port (e.g. ``https://example.com:abc``) raises when the
+        # port property is read; treat the whole URL as unusable rather than
+        # aborting the audit.
         return None
-    scheme = parts.scheme.lower()
-    if scheme not in {"http", "https"} or not parts.hostname:
+    if scheme not in {"http", "https"} or not hostname:
         return None
-    netloc = parts.hostname
-    if parts.port is not None:
-        netloc = f"{netloc}:{parts.port}"
+    netloc = hostname
+    if port is not None:
+        netloc = f"{netloc}:{port}"
     return urlunsplit((scheme, netloc, parts.path or "/", "", ""))
 
 

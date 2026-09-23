@@ -112,6 +112,34 @@ def test_root_allowlisted_documents_stay_public(path: str) -> None:
 
 
 @pytest.mark.parametrize(
+    "path",
+    [
+        "docs/discovery-services/deploy.bicep",
+        "docs/discovery-services/setup.sh",
+        "docs/discovery-services/setup.ps1",
+        "docs/tools/helper.py",
+        "docs/infra/main.tf",
+    ],
+)
+def test_executable_files_under_docs_are_not_public(path: str) -> None:
+    # docs/ prose and data are public, but executable/infra files under docs/
+    # remain maintainer-owned.
+    failures = check_contributor_scope([path], "read", "octocat")
+
+    assert [(failure.rule_id, failure.file) for failure in failures] == [
+        ("POL-021", path),
+    ]
+
+
+@pytest.mark.parametrize(
+    "path",
+    ["docs/guide.md", "docs/data/table.csv", "docs/example/config.json"],
+)
+def test_documentation_prose_and_data_under_docs_stay_public(path: str) -> None:
+    assert check_contributor_scope([path], "read", "octocat") == []
+
+
+@pytest.mark.parametrize(
     "author",
     ["github-actions[bot]", "discovery-registry-bot[bot]"],
 )

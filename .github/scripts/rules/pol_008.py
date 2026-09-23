@@ -43,7 +43,7 @@ def check(ctx: RuleContext) -> list[Finding]:
         result = classify(ctx.abs(rel))
         if not result.is_binary:
             continue
-        if result.format == "unknown-binary":
+        if result.format == "non-utf8-text":
             continue  # POL-020 owns malformed UTF-8 and unsafe text controls.
 
         if result.spoofed:

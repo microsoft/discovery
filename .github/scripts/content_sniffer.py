@@ -107,10 +107,10 @@ def _from_mime_output(output: str, suffix: str) -> Classification:
     if mime_type == "application/octet-stream":
         return Classification(
             kind="binary",
-            format="unknown-binary",
+            format="generic-binary",
             detail=(
-                "libmagic reported generic binary data; POL-020 will verify "
-                "whether the content is malformed or unsafe text."
+                "libmagic reported generic binary data (application/"
+                "octet-stream); POL-008 blocks it as an unrecognized binary."
             ),
             spoofed=not expected_binary,
         )
@@ -126,7 +126,7 @@ def _from_mime_output(output: str, suffix: str) -> Classification:
     if charset not in _UTF8_ENCODINGS:
         return Classification(
             kind="binary",
-            format="unknown-binary",
+            format="non-utf8-text",
             detail=(
                 f"libmagic reported {mime_type} with charset {charset}; "
                 "POL-020 will verify that the content is valid UTF-8."

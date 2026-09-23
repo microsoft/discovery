@@ -118,7 +118,7 @@ def test_non_utf8_charset_is_deferred_to_pol_020(repo, monkeypatch):
     result = classify(repo / rel)
 
     assert result.is_binary
-    assert result.format == "unknown-binary"
+    assert result.format == "non-utf8-text"
 
 
 def test_binary_mime_wins_over_textual_charset(repo, monkeypatch):
@@ -131,14 +131,14 @@ def test_binary_mime_wins_over_textual_charset(repo, monkeypatch):
     assert result.format == "application/pdf"
 
 
-def test_generic_binary_data_is_deferred_to_pol_020(repo, monkeypatch):
+def test_generic_binary_data_is_blocked_by_pol_008(repo, monkeypatch):
     rel = write(repo, "source.md", b"text with an unsafe byte")
     _mock_file(monkeypatch, "application/octet-stream; charset=binary\n")
 
     result = classify(repo / rel)
 
     assert result.is_binary
-    assert result.format == "unknown-binary"
+    assert result.format == "generic-binary"
 
 
 def test_empty_file_does_not_invoke_libmagic(repo, monkeypatch):
