@@ -1,6 +1,6 @@
 {
   "version": "1.0",
-  "generated_at": "2026-06-01T21:28:53Z",
+  "generated_at": "2026-09-23T18:31:41Z",
   "entries": [
     {
       "name": "aizynthfinder",
@@ -41,6 +41,25 @@
       ]
     },
     {
+      "name": "alphafold-db",
+      "type": "agent",
+      "publisher_name": "Microsoft",
+      "path": "agents/alphafold-db",
+      "version": "1.0.0",
+      "associated_tools": [
+        "agents/alphafold-db/tools/alphafold-db"
+      ],
+      "foundry_tools": [],
+      "supported_regions": [],
+      "description": "Retrieve precomputed protein structure predictions and confidence scores from the AlphaFold Protein Structure Database (no inference).\n",
+      "tags": [
+        "structural-biology",
+        "protein-structure",
+        "alphafold",
+        "api"
+      ]
+    },
+    {
       "name": "ambertools",
       "type": "agent",
       "publisher_name": "Microsoft",
@@ -55,6 +74,25 @@
       "tags": [
         "molecular-dynamics",
         "biomolecular-simulation"
+      ]
+    },
+    {
+      "name": "ase",
+      "type": "agent",
+      "publisher_name": "Microsoft",
+      "path": "agents/ase",
+      "version": "1.0.0",
+      "associated_tools": [
+        "agents/ase/tools/ase"
+      ],
+      "foundry_tools": [],
+      "supported_regions": [],
+      "description": "Workflow layer for atomistic simulations. Builds, manipulates, and optimizes atomic structures and orchestrates calculators, with a built-in EMT potential for fast CPU relaxations.\n",
+      "tags": [
+        "materials-science",
+        "atomistic",
+        "optimization",
+        "ase"
       ]
     },
     {
@@ -91,6 +129,45 @@
         "binding-affinity",
         "drug-discovery",
         "database"
+      ]
+    },
+    {
+      "name": "biopython",
+      "type": "agent",
+      "publisher_name": "Microsoft",
+      "path": "agents/biopython",
+      "version": "1.0.0",
+      "associated_tools": [
+        "agents/biopython/tools/biopython"
+      ],
+      "foundry_tools": [],
+      "supported_regions": [],
+      "description": "Foundational bioinformatics toolkit for sequence I/O and analysis: parse FASTA/GenBank/PDB, compute sequence statistics, translate, and manipulate biological sequences.\n",
+      "tags": [
+        "bioinformatics",
+        "sequences",
+        "fasta",
+        "genbank",
+        "biopython"
+      ]
+    },
+    {
+      "name": "blast-plus",
+      "type": "agent",
+      "publisher_name": "Microsoft",
+      "path": "agents/blast-plus",
+      "version": "1.0.0",
+      "associated_tools": [
+        "agents/blast-plus/tools/blast-plus"
+      ],
+      "foundry_tools": [],
+      "supported_regions": [],
+      "description": "Local sequence similarity search using the NCBI BLAST+ suite. Build custom databases and run blastn/blastp/blastx against them entirely offline.\n",
+      "tags": [
+        "bioinformatics",
+        "sequence-search",
+        "blast",
+        "alignment"
       ]
     },
     {
@@ -147,6 +224,25 @@
         "literature-review",
         "research",
         "knowledge-base"
+      ]
+    },
+    {
+      "name": "cantera",
+      "type": "agent",
+      "publisher_name": "Microsoft",
+      "path": "agents/cantera",
+      "version": "1.0.0",
+      "associated_tools": [
+        "agents/cantera/tools/cantera"
+      ],
+      "foundry_tools": [],
+      "supported_regions": [],
+      "description": "Chemical kinetics, thermodynamics, and transport for combustion and reacting flows. Compute equilibria and simulate reactors on CPU.\n",
+      "tags": [
+        "chemical-kinetics",
+        "thermodynamics",
+        "combustion",
+        "cantera"
       ]
     },
     {
@@ -223,6 +319,25 @@
       ]
     },
     {
+      "name": "cobrapy",
+      "type": "agent",
+      "publisher_name": "Microsoft",
+      "path": "agents/cobrapy",
+      "version": "1.0.0",
+      "associated_tools": [
+        "agents/cobrapy/tools/cobrapy"
+      ],
+      "foundry_tools": [],
+      "supported_regions": [],
+      "description": "Constraint-based reconstruction and analysis of genome-scale metabolic models: flux-balance analysis, FVA, and gene knockouts.\n",
+      "tags": [
+        "systems-biology",
+        "metabolic-modeling",
+        "flux-balance",
+        "cobrapy"
+      ]
+    },
+    {
       "name": "coconut",
       "type": "agent",
       "publisher_name": "Microsoft",
@@ -238,6 +353,25 @@
         "cheminformatics",
         "natural-products",
         "database"
+      ]
+    },
+    {
+      "name": "copasi-basico",
+      "type": "agent",
+      "publisher_name": "Microsoft",
+      "path": "agents/copasi-basico",
+      "version": "1.0.0",
+      "associated_tools": [
+        "agents/copasi-basico/tools/copasi-basico"
+      ],
+      "foundry_tools": [],
+      "supported_regions": [],
+      "description": "Simulation and analysis of biochemical reaction networks via COPASI through the basico Python interface: time- courses, steady states, and parameter scans.\n",
+      "tags": [
+        "systems-biology",
+        "biochemical-networks",
+        "copasi",
+        "basico"
       ]
     },
     {
@@ -295,6 +429,64 @@
       ]
     },
     {
+      "name": "dftbplus",
+      "type": "agent",
+      "publisher_name": "Microsoft",
+      "path": "agents/dftbplus",
+      "version": "1.0.0",
+      "associated_tools": [
+        "agents/dftbplus/tools/dftbplus"
+      ],
+      "foundry_tools": [],
+      "supported_regions": [],
+      "description": "Density-functional tight-binding: fast approximate quantum simulations of large molecular and periodic systems on CPU.\n",
+      "tags": [
+        "quantum-chemistry",
+        "tight-binding",
+        "semi-empirical",
+        "dftbplus"
+      ]
+    },
+    {
+      "name": "dssp",
+      "type": "agent",
+      "publisher_name": "Microsoft",
+      "path": "agents/dssp",
+      "version": "1.0.0",
+      "associated_tools": [
+        "agents/dssp/tools/dssp"
+      ],
+      "foundry_tools": [],
+      "supported_regions": [],
+      "description": "Assign protein secondary structure (helices, sheets, turns) from 3D coordinates using the classic Kabsch- Sander DSSP algorithm.\n",
+      "tags": [
+        "structural-biology",
+        "secondary-structure",
+        "dssp"
+      ]
+    },
+    {
+      "name": "ensembl",
+      "type": "agent",
+      "publisher_name": "Microsoft",
+      "path": "agents/ensembl",
+      "version": "1.0.0",
+      "associated_tools": [
+        "agents/ensembl/tools/ensembl"
+      ],
+      "foundry_tools": [],
+      "supported_regions": [],
+      "description": "Query Ensembl for genes, transcripts, variants, and cross-references across many species via the Ensembl REST API.\n",
+      "tags": [
+        "bioinformatics",
+        "genomics",
+        "genes",
+        "variants",
+        "ensembl",
+        "api"
+      ]
+    },
+    {
       "name": "esm-embed",
       "type": "agent",
       "publisher_name": "Microsoft",
@@ -318,6 +510,63 @@
         "gpu",
         "trained-model",
         "embedding-model"
+      ]
+    },
+    {
+      "name": "foldseek",
+      "type": "agent",
+      "publisher_name": "Microsoft",
+      "path": "agents/foldseek",
+      "version": "1.0.0",
+      "associated_tools": [
+        "agents/foldseek/tools/foldseek"
+      ],
+      "foundry_tools": [],
+      "supported_regions": [],
+      "description": "Ultra-fast protein structure search and structural alignment, scaling structural comparison to millions of entries on CPU.\n",
+      "tags": [
+        "structural-biology",
+        "structure-search",
+        "alignment",
+        "foldseek"
+      ]
+    },
+    {
+      "name": "fpocket",
+      "type": "agent",
+      "publisher_name": "Microsoft",
+      "path": "agents/fpocket",
+      "version": "1.0.0",
+      "associated_tools": [
+        "agents/fpocket/tools/fpocket"
+      ],
+      "foundry_tools": [],
+      "supported_regions": [],
+      "description": "Geometry-based detection of ligand-binding pockets and cavities on protein structures using Voronoi tessellation and alpha spheres.\n",
+      "tags": [
+        "structural-biology",
+        "binding-site",
+        "druggability",
+        "fpocket"
+      ]
+    },
+    {
+      "name": "freesasa",
+      "type": "agent",
+      "publisher_name": "Microsoft",
+      "path": "agents/freesasa",
+      "version": "1.0.0",
+      "associated_tools": [
+        "agents/freesasa/tools/freesasa"
+      ],
+      "foundry_tools": [],
+      "supported_regions": [],
+      "description": "Compute solvent-accessible surface area (SASA) of proteins with the Shrake-Rupley and Lee-Richards algorithms, per-atom and per-residue.\n",
+      "tags": [
+        "structural-biology",
+        "sasa",
+        "surface-area",
+        "freesasa"
       ]
     },
     {
@@ -361,6 +610,44 @@
       ]
     },
     {
+      "name": "hmmer",
+      "type": "agent",
+      "publisher_name": "Microsoft",
+      "path": "agents/hmmer",
+      "version": "1.0.0",
+      "associated_tools": [
+        "agents/hmmer/tools/hmmer"
+      ],
+      "foundry_tools": [],
+      "supported_regions": [],
+      "description": "Profile hidden Markov model search for sensitive detection of remote homologs and protein domains (Pfam- style).\n",
+      "tags": [
+        "bioinformatics",
+        "profile-hmm",
+        "domains",
+        "hmmer"
+      ]
+    },
+    {
+      "name": "iqtree",
+      "type": "agent",
+      "publisher_name": "Microsoft",
+      "path": "agents/iqtree",
+      "version": "1.0.0",
+      "associated_tools": [
+        "agents/iqtree/tools/iqtree"
+      ],
+      "foundry_tools": [],
+      "supported_regions": [],
+      "description": "Maximum-likelihood phylogenetic inference with automatic substitution model selection (ModelFinder) and ultrafast bootstrap support.\n",
+      "tags": [
+        "bioinformatics",
+        "phylogenetics",
+        "maximum-likelihood",
+        "iqtree"
+      ]
+    },
+    {
       "name": "janus",
       "type": "agent",
       "publisher_name": "Microsoft",
@@ -383,6 +670,26 @@
       ]
     },
     {
+      "name": "kegg",
+      "type": "agent",
+      "publisher_name": "Microsoft",
+      "path": "agents/kegg",
+      "version": "1.0.0",
+      "associated_tools": [
+        "agents/kegg/tools/kegg"
+      ],
+      "foundry_tools": [],
+      "supported_regions": [],
+      "description": "Query the KEGG database for pathways, reactions, compounds, and genes via the public KEGG REST API.\n",
+      "tags": [
+        "bioinformatics",
+        "pathways",
+        "reactions",
+        "kegg",
+        "api"
+      ]
+    },
+    {
       "name": "lammps",
       "type": "agent",
       "publisher_name": "Microsoft",
@@ -397,6 +704,64 @@
       "tags": [
         "molecular-dynamics",
         "materials-science"
+      ]
+    },
+    {
+      "name": "matchms",
+      "type": "agent",
+      "publisher_name": "Microsoft",
+      "path": "agents/matchms",
+      "version": "1.0.0",
+      "associated_tools": [
+        "agents/matchms/tools/matchms"
+      ],
+      "foundry_tools": [],
+      "supported_regions": [],
+      "description": "Import, process, and compute similarity between tandem mass spectra for metabolomics and small-molecule identification.\n",
+      "tags": [
+        "metabolomics",
+        "mass-spectrometry",
+        "spectral-similarity",
+        "matchms"
+      ]
+    },
+    {
+      "name": "materials-project",
+      "type": "agent",
+      "publisher_name": "Microsoft",
+      "path": "agents/materials-project",
+      "version": "1.0.0",
+      "associated_tools": [
+        "agents/materials-project/tools/materials-project"
+      ],
+      "foundry_tools": [],
+      "supported_regions": [],
+      "description": "Query the Materials Project database for computed properties of inorganic materials via the mp-api client.\n",
+      "tags": [
+        "materials-science",
+        "properties",
+        "database",
+        "materials-project",
+        "api"
+      ]
+    },
+    {
+      "name": "matminer",
+      "type": "agent",
+      "publisher_name": "Microsoft",
+      "path": "agents/matminer",
+      "version": "1.0.0",
+      "associated_tools": [
+        "agents/matminer/tools/matminer"
+      ],
+      "foundry_tools": [],
+      "supported_regions": [],
+      "description": "Data mining for materials science: featurize compositions and crystal structures into descriptors for machine learning.\n",
+      "tags": [
+        "materials-science",
+        "featurization",
+        "machine-learning",
+        "matminer"
       ]
     },
     {
@@ -418,6 +783,61 @@
         "diffusion-model",
         "computational-chemistry",
         "trained-model"
+      ]
+    },
+    {
+      "name": "mdanalysis",
+      "type": "agent",
+      "publisher_name": "Microsoft",
+      "path": "agents/mdanalysis",
+      "version": "1.0.0",
+      "associated_tools": [
+        "agents/mdanalysis/tools/mdanalysis"
+      ],
+      "foundry_tools": [],
+      "supported_regions": [],
+      "description": "Analyze molecular dynamics trajectories from GROMACS, AMBER, NAMD, LAMMPS and more. Computes RMSD, RMSF, radius of gyration, and structural properties over time.\n",
+      "tags": [
+        "molecular-dynamics",
+        "trajectory-analysis",
+        "mdanalysis"
+      ]
+    },
+    {
+      "name": "mmseqs2",
+      "type": "agent",
+      "publisher_name": "Microsoft",
+      "path": "agents/mmseqs2",
+      "version": "1.0.0",
+      "associated_tools": [
+        "agents/mmseqs2/tools/mmseqs2"
+      ],
+      "foundry_tools": [],
+      "supported_regions": [],
+      "description": "Ultra-fast and sensitive sequence search and clustering for huge protein and nucleotide datasets, running efficiently on CPU.\n",
+      "tags": [
+        "bioinformatics",
+        "sequence-search",
+        "clustering",
+        "mmseqs2"
+      ]
+    },
+    {
+      "name": "modeller",
+      "type": "agent",
+      "publisher_name": "Microsoft",
+      "path": "agents/modeller",
+      "version": "1.0.0",
+      "associated_tools": [
+        "agents/modeller/tools/modeller"
+      ],
+      "foundry_tools": [],
+      "supported_regions": [],
+      "description": "Comparative (homology) modeling of protein 3D structure from a sequence alignment to one or more template structures.\n",
+      "tags": [
+        "structural-biology",
+        "homology-modeling",
+        "modeller"
       ]
     },
     {
@@ -452,6 +872,65 @@
         "cheminformatics",
         "functional-groups",
         "safety-screening"
+      ]
+    },
+    {
+      "name": "mordred",
+      "type": "agent",
+      "publisher_name": "Microsoft",
+      "path": "agents/mordred",
+      "version": "1.0.0",
+      "associated_tools": [
+        "agents/mordred/tools/mordred"
+      ],
+      "foundry_tools": [],
+      "supported_regions": [],
+      "description": "Compute over 1800 2D and 3D molecular descriptors from SMILES for QSAR and machine-learning feature generation.\n",
+      "tags": [
+        "cheminformatics",
+        "descriptors",
+        "qsar",
+        "mordred"
+      ]
+    },
+    {
+      "name": "msa-align",
+      "type": "agent",
+      "publisher_name": "Microsoft",
+      "path": "agents/msa-align",
+      "version": "1.0.0",
+      "associated_tools": [
+        "agents/msa-align/tools/msa-align"
+      ],
+      "foundry_tools": [],
+      "supported_regions": [],
+      "description": "Multiple sequence alignment via MAFFT, MUSCLE, or Clustal Omega for protein and nucleotide sequences.\n",
+      "tags": [
+        "bioinformatics",
+        "msa",
+        "alignment",
+        "mafft",
+        "muscle",
+        "clustal"
+      ]
+    },
+    {
+      "name": "nmrglue",
+      "type": "agent",
+      "publisher_name": "Microsoft",
+      "path": "agents/nmrglue",
+      "version": "1.0.0",
+      "associated_tools": [
+        "agents/nmrglue/tools/nmrglue"
+      ],
+      "foundry_tools": [],
+      "supported_regions": [],
+      "description": "Read, process, and analyze NMR data from Bruker, Varian/Agilent, and NMRPipe formats. Extract spectra and basic processing metadata.\n",
+      "tags": [
+        "nmr",
+        "spectroscopy",
+        "signal-processing",
+        "nmrglue"
       ]
     },
     {
@@ -490,6 +969,25 @@
       "tags": [
         "literature-review",
         "research"
+      ]
+    },
+    {
+      "name": "openbabel",
+      "type": "agent",
+      "publisher_name": "Microsoft",
+      "path": "agents/openbabel",
+      "version": "1.0.0",
+      "associated_tools": [
+        "agents/openbabel/tools/openbabel"
+      ],
+      "foundry_tools": [],
+      "supported_regions": [],
+      "description": "Universal chemical toolbox for interconverting 100+ chemical file formats, generating 3D coordinates, and computing molecular descriptors and fingerprints.\n",
+      "tags": [
+        "cheminformatics",
+        "file-conversion",
+        "descriptors",
+        "openbabel"
       ]
     },
     {
@@ -554,6 +1052,44 @@
       ]
     },
     {
+      "name": "opsin",
+      "type": "agent",
+      "publisher_name": "Microsoft",
+      "path": "agents/opsin",
+      "version": "1.0.0",
+      "associated_tools": [
+        "agents/opsin/tools/opsin"
+      ],
+      "foundry_tools": [],
+      "supported_regions": [],
+      "description": "Open Parser for Systematic IUPAC Nomenclature: convert chemical names into structures (SMILES/InChI/CML).\n",
+      "tags": [
+        "cheminformatics",
+        "name-to-structure",
+        "iupac",
+        "opsin"
+      ]
+    },
+    {
+      "name": "p2rank",
+      "type": "agent",
+      "publisher_name": "Microsoft",
+      "path": "agents/p2rank",
+      "version": "1.0.0",
+      "associated_tools": [
+        "agents/p2rank/tools/p2rank"
+      ],
+      "foundry_tools": [],
+      "supported_regions": [],
+      "description": "Machine-learning prediction of ligand-binding sites from protein structure. Fast, template-free, and CPU-only (Java).\n",
+      "tags": [
+        "structural-biology",
+        "binding-site",
+        "machine-learning",
+        "p2rank"
+      ]
+    },
+    {
       "name": "patent-prior-art",
       "type": "agent",
       "publisher_name": "Microsoft",
@@ -601,6 +1137,63 @@
       "tags": [
         "protein-structure",
         "database"
+      ]
+    },
+    {
+      "name": "phonopy",
+      "type": "agent",
+      "publisher_name": "Microsoft",
+      "path": "agents/phonopy",
+      "version": "1.0.0",
+      "associated_tools": [
+        "agents/phonopy/tools/phonopy"
+      ],
+      "foundry_tools": [],
+      "supported_regions": [],
+      "description": "Phonon and lattice-dynamics analysis from force constants produced by DFT codes: band structures, DOS, and thermal properties.\n",
+      "tags": [
+        "materials-science",
+        "phonons",
+        "lattice-dynamics",
+        "phonopy"
+      ]
+    },
+    {
+      "name": "plip",
+      "type": "agent",
+      "publisher_name": "Microsoft",
+      "path": "agents/plip",
+      "version": "1.0.0",
+      "associated_tools": [
+        "agents/plip/tools/plip"
+      ],
+      "foundry_tools": [],
+      "supported_regions": [],
+      "description": "Detect and characterize non-covalent protein-ligand interactions (hydrogen bonds, hydrophobic contacts, pi- stacking, salt bridges) from complex structures.\n",
+      "tags": [
+        "structural-biology",
+        "protein-ligand",
+        "interactions",
+        "plip"
+      ]
+    },
+    {
+      "name": "prody",
+      "type": "agent",
+      "publisher_name": "Microsoft",
+      "path": "agents/prody",
+      "version": "1.0.0",
+      "associated_tools": [
+        "agents/prody/tools/prody"
+      ],
+      "foundry_tools": [],
+      "supported_regions": [],
+      "description": "Protein dynamics analysis: elastic network models and normal-mode analysis (ANM/GNM) to study collective motions without MD.\n",
+      "tags": [
+        "structural-biology",
+        "normal-mode-analysis",
+        "dynamics",
+        "prody"
       ]
     },
     {
@@ -656,6 +1249,63 @@
       ]
     },
     {
+      "name": "pymatgen",
+      "type": "agent",
+      "publisher_name": "Microsoft",
+      "path": "agents/pymatgen",
+      "version": "1.0.0",
+      "associated_tools": [
+        "agents/pymatgen/tools/pymatgen"
+      ],
+      "foundry_tools": [],
+      "supported_regions": [],
+      "description": "Materials analysis library (the engine behind the Materials Project). Analyzes crystal structures, symmetry, densities, and generates I/O for common DFT codes.\n",
+      "tags": [
+        "materials-science",
+        "crystallography",
+        "symmetry",
+        "pymatgen"
+      ]
+    },
+    {
+      "name": "pyopenms",
+      "type": "agent",
+      "publisher_name": "Microsoft",
+      "path": "agents/pyopenms",
+      "version": "1.0.0",
+      "associated_tools": [
+        "agents/pyopenms/tools/pyopenms"
+      ],
+      "foundry_tools": [],
+      "supported_regions": [],
+      "description": "Mass-spectrometry data processing for proteomics and metabolomics: read mzML, inspect spectra, and extract peak/feature information.\n",
+      "tags": [
+        "mass-spectrometry",
+        "proteomics",
+        "metabolomics",
+        "pyopenms"
+      ]
+    },
+    {
+      "name": "pyscf",
+      "type": "agent",
+      "publisher_name": "Microsoft",
+      "path": "agents/pyscf",
+      "version": "1.0.0",
+      "associated_tools": [
+        "agents/pyscf/tools/pyscf"
+      ],
+      "foundry_tools": [],
+      "supported_regions": [],
+      "description": "Python-based ab initio quantum chemistry. Runs Hartree-Fock and DFT single-point energies and geometry properties for small molecules on CPU.\n",
+      "tags": [
+        "quantum-chemistry",
+        "dft",
+        "hartree-fock",
+        "pyscf"
+      ]
+    },
+    {
       "name": "quantum-espresso",
       "type": "agent",
       "publisher_name": "Microsoft",
@@ -671,6 +1321,25 @@
         "quantum-chemistry",
         "materials-science",
         "dft"
+      ]
+    },
+    {
+      "name": "rdock",
+      "type": "agent",
+      "publisher_name": "Microsoft",
+      "path": "agents/rdock",
+      "version": "1.0.0",
+      "associated_tools": [
+        "agents/rdock/tools/rdock"
+      ],
+      "foundry_tools": [],
+      "supported_regions": [],
+      "description": "Open-source molecular docking for protein-ligand and protein-nucleic acid complexes, with fast CPU-based scoring and pose generation.\n",
+      "tags": [
+        "cheminformatics",
+        "docking",
+        "virtual-screening",
+        "rdock"
       ]
     },
     {
@@ -774,6 +1443,83 @@
       ]
     },
     {
+      "name": "rxnmapper",
+      "type": "agent",
+      "publisher_name": "Microsoft",
+      "path": "agents/rxnmapper",
+      "version": "1.0.0",
+      "associated_tools": [
+        "agents/rxnmapper/tools/rxnmapper"
+      ],
+      "foundry_tools": [],
+      "supported_regions": [],
+      "description": "Atom-atom mapping of chemical reactions using an attention-based transformer. Runs on CPU for reaction SMILES.\n",
+      "tags": [
+        "cheminformatics",
+        "reactions",
+        "atom-mapping",
+        "rxnmapper"
+      ]
+    },
+    {
+      "name": "samtools-suite",
+      "type": "agent",
+      "publisher_name": "Microsoft",
+      "path": "agents/samtools-suite",
+      "version": "1.0.0",
+      "associated_tools": [
+        "agents/samtools-suite/tools/samtools-suite"
+      ],
+      "foundry_tools": [],
+      "supported_regions": [],
+      "description": "Manipulate high-throughput sequencing alignments (SAM/BAM/CRAM) and variant calls (VCF/BCF): sorting, indexing, statistics, and filtering.\n",
+      "tags": [
+        "bioinformatics",
+        "genomics",
+        "alignments",
+        "variants",
+        "samtools"
+      ]
+    },
+    {
+      "name": "sirius",
+      "type": "agent",
+      "publisher_name": "Microsoft",
+      "path": "agents/sirius",
+      "version": "1.0.0",
+      "associated_tools": [
+        "agents/sirius/tools/sirius"
+      ],
+      "foundry_tools": [],
+      "supported_regions": [],
+      "description": "Metabolite structure elucidation from tandem mass spectra: molecular formula identification and structure ranking (CSI:FingerID).\n",
+      "tags": [
+        "metabolomics",
+        "mass-spectrometry",
+        "structure-elucidation",
+        "sirius"
+      ]
+    },
+    {
+      "name": "spglib",
+      "type": "agent",
+      "publisher_name": "Microsoft",
+      "path": "agents/spglib",
+      "version": "1.0.0",
+      "associated_tools": [
+        "agents/spglib/tools/spglib"
+      ],
+      "foundry_tools": [],
+      "supported_regions": [],
+      "description": "Crystal symmetry analysis: find space groups, symmetry operations, standardized cells, and Wyckoff positions.\n",
+      "tags": [
+        "materials-science",
+        "crystallography",
+        "symmetry",
+        "spglib"
+      ]
+    },
+    {
       "name": "stat-agent",
       "type": "agent",
       "publisher_name": "Microsoft",
@@ -789,6 +1535,27 @@
         "statistics",
         "data-analysis",
         "hypothesis-testing"
+      ]
+    },
+    {
+      "name": "synthesize-bio",
+      "type": "agent",
+      "publisher_name": "Synthesize Bio",
+      "path": "agents/synthesize-bio",
+      "version": "1.0.0",
+      "associated_tools": [],
+      "foundry_tools": [
+        "synthesize_bio"
+      ],
+      "supported_regions": [],
+      "description": "Generate gene expression from a virtual human. Describe any experiment \u2014 \"tumor vs normal lung tissue\" or \"KRAS knockout vs control\" \u2014 and Synthesize Bio generates realistic human expression profiles using its Gene Expression Model (GEM). Supports bulk and single-cell RNA-seq modalities.\n",
+      "tags": [
+        "life-sciences",
+        "bioinformatics",
+        "transcriptomics",
+        "gene-expression",
+        "rna-seq",
+        "single-cell"
       ]
     },
     {
@@ -812,6 +1579,44 @@
       ]
     },
     {
+      "name": "tellurium",
+      "type": "agent",
+      "publisher_name": "Microsoft",
+      "path": "agents/tellurium",
+      "version": "1.0.0",
+      "associated_tools": [
+        "agents/tellurium/tools/tellurium"
+      ],
+      "foundry_tools": [],
+      "supported_regions": [],
+      "description": "Simulate and analyze SBML/Antimony kinetic models of biochemical networks with the libRoadRunner ODE engine.\n",
+      "tags": [
+        "systems-biology",
+        "kinetic-modeling",
+        "sbml",
+        "tellurium"
+      ]
+    },
+    {
+      "name": "tmalign",
+      "type": "agent",
+      "publisher_name": "Microsoft",
+      "path": "agents/tmalign",
+      "version": "1.0.0",
+      "associated_tools": [
+        "agents/tmalign/tools/tmalign"
+      ],
+      "foundry_tools": [],
+      "supported_regions": [],
+      "description": "Sequence-order-independent protein structural superposition returning TM-score and RMSD for pairwise structure comparison.\n",
+      "tags": [
+        "structural-biology",
+        "structure-alignment",
+        "tm-score",
+        "tmalign"
+      ]
+    },
+    {
       "name": "toxpred",
       "type": "agent",
       "publisher_name": "Microsoft",
@@ -830,6 +1635,63 @@
         "trained-model",
         "d-mpnn",
         "property-prediction"
+      ]
+    },
+    {
+      "name": "uniprot",
+      "type": "agent",
+      "publisher_name": "Microsoft",
+      "path": "agents/uniprot",
+      "version": "1.0.0",
+      "associated_tools": [
+        "agents/uniprot/tools/uniprot"
+      ],
+      "foundry_tools": [],
+      "supported_regions": [],
+      "description": "Query the UniProt knowledgebase for protein sequences, functional annotations, and cross-references via its public REST API.\n",
+      "tags": [
+        "bioinformatics",
+        "proteins",
+        "annotations",
+        "uniprot",
+        "api"
+      ]
+    },
+    {
+      "name": "viennarna",
+      "type": "agent",
+      "publisher_name": "Microsoft",
+      "path": "agents/viennarna",
+      "version": "1.0.0",
+      "associated_tools": [
+        "agents/viennarna/tools/viennarna"
+      ],
+      "foundry_tools": [],
+      "supported_regions": [],
+      "description": "RNA secondary-structure prediction and thermodynamics: minimum free energy folding, partition functions, and base-pair probabilities.\n",
+      "tags": [
+        "bioinformatics",
+        "rna",
+        "secondary-structure",
+        "viennarna"
+      ]
+    },
+    {
+      "name": "wiley-nexus",
+      "type": "agent",
+      "publisher_name": "Wiley Applied Research Intelligence Team",
+      "path": "agents/wiley-nexus",
+      "version": "1.0.0",
+      "associated_tools": [],
+      "foundry_tools": [],
+      "supported_regions": [],
+      "description": "Answers scientific and technical questions from Wiley's peer-reviewed scholarly corpus via the Wiley Nexus MCP server. Surveys published evidence from multiple angles, reads key publications in full, and returns a citation-backed synthesis with IEEE references linked to Wiley Online Library, then handles follow-ups in the same conversation. Includes an optional three-agent Discovery Engine pipeline for per-paper full-text analysis. Requires a Wiley Nexus API key.\n",
+      "tags": [
+        "literature-review",
+        "research",
+        "full-text-analysis",
+        "scholarly-publishing",
+        "evidence-synthesis"
       ]
     },
     {
