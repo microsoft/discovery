@@ -75,6 +75,37 @@ def test_recognized_binary_is_left_to_pol_008(repo):
     assert result.findings == []
 
 
+def test_recognized_binary_format_is_skipped(repo, monkeypatch):
+    from content_sniffer import Classification
+
+    rel = write(repo, "agents/demo/payload.txt", b"binary\x00text\n")
+    monkeypatch.setattr(
+        "rules.pol_020.classify",
+        lambda _p: Classification("binary", "application/pdf", "recognized binary"),
+    )
+    result = run_rule(repo, RULE, [rel])
+
+    assert result.findings == []
+
+
+@pytest.mark.parametrize("fmt", ["generic-binary", "non-utf8-text"])
+def test_ambiguous_binary_is_still_scanned_for_unsafe_text(repo, monkeypatch, fmt):
+    from content_sniffer import Classification
+
+    # A control byte makes libmagic report octet-stream (generic-binary) or a
+    # non-UTF-8 charset; POL-020 must still flag the unsafe character rather than
+    # skip the file as "binary".
+    rel = write(repo, "agents/demo/README.md", b"# Heading\ntext\x00hidden\n")
+    monkeypatch.setattr(
+        "rules.pol_020.classify",
+        lambda _p: Classification("binary", fmt, "ambiguous content"),
+    )
+    result = run_rule(repo, RULE, [rel])
+
+    assert files(result) == [rel]
+    assert "U+0000" in result.findings[0].message
+
+
 def test_model_weight_is_left_to_pol_009(repo):
     rel = write(repo, "agents/demo/model.safetensors", b"not text\x00")
     result = run_rule(repo, RULE, [rel])

@@ -16,6 +16,11 @@ GUARDED_PREFIXES = ("agents/", "starter-kits/")
 READ_CHUNK_BYTES = 64 * 1024
 ALLOWED_CONTROLS = frozenset({"\t", "\n", "\r"})
 
+#: Binary classifications POL-020 still inspects as candidate text. Both are
+#: content libmagic could not tie to a specific binary format: non-UTF-8 text
+#: and generic octet-stream data (the latter is also blocked by POL-008).
+_TEXT_HYGIENE_FORMATS = frozenset({"non-utf8-text", "generic-binary"})
+
 
 @dataclass(frozen=True)
 class TextIssue:
@@ -115,7 +120,12 @@ def check(ctx: RuleContext) -> list[Finding]:
             continue
 
         classification = classify(ctx.abs(rel))
-        if classification.is_binary and classification.format != "non-utf8-text":
+        # POL-020 owns the text-hygiene lens for content that libmagic does not
+        # positively recognize as a specific binary format: non-UTF-8 text and
+        # generic ``application/octet-stream`` data (which POL-008 also blocks
+        # outright). Genuinely recognized binaries (PDF, PE, images) and
+        # classifier errors are left to POL-008.
+        if classification.is_binary and classification.format not in _TEXT_HYGIENE_FORMATS:
             continue
 
         issue = scan_text(ctx.abs(rel))
