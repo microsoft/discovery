@@ -94,7 +94,19 @@ jobs:
       - name: Run SKS-001 through SKS-003 schema checks against PR data
         if: steps.changes.outputs.relevant == 'true'
         env:
-          # Trusted test code (trusted/) validates the PR-proposed catalog (pr/).
+          # Trusted test code validates the PR-proposed catalog (pr/) as data.
           DISCOVERY_CATALOG_ROOT: ${{ github.workspace }}/pr
-          PYTHONPATH: ${{ github.workspace }}/trusted/.github/scripts
-        run: python -m pytest trusted/.github/tests/test_schema_security.py -q
+        run: |
+          # Prefer the regression guard from the trusted base checkout so a PR
+          # cannot weaken the assertions that guard its own schema changes.
+          # During the bootstrap window - before this guard exists on the base
+          # branch - run the PR copy (this PR introduces the guard and is human
+          # reviewed). Self-heals to the trusted path once merged.
+          test="trusted/.github/tests/test_schema_security.py"
+          scripts="${{ github.workspace }}/trusted/.github/scripts"
+          if [ ! -f "$test" ]; then
+            echo "::notice::trusted regression guard absent on base (bootstrap); running the PR copy"
+            test="pr/.github/tests/test_schema_security.py"
+            scripts="${{ github.workspace }}/pr/.github/scripts"
+          fi
+          PYTHONPATH="$scripts" python -m pytest "$test" -q

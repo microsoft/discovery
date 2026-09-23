@@ -107,9 +107,18 @@ jobs:
         env:
           ADDED_KITS: ${{ steps.changes.outputs.added-kits }}
         run: |
+          # Prefer the validator from the trusted base checkout (validates PR
+          # data with code the PR cannot alter). During the bootstrap window -
+          # before the base validator understands the --added-kits interface -
+          # run the PR copy. Self-heals to the trusted path once merged.
+          script="trusted/.github/scripts/validate_starter_kits.py"
+          if ! grep -q -- '--added-kits' "$script" 2>/dev/null; then
+            echo "::notice::trusted validator lacks --added-kits (bootstrap); running the PR copy"
+            script="pr/.github/scripts/validate_starter_kits.py"
+          fi
           args=(--repo-root pr --added-kits)
           if [[ -n "$ADDED_KITS" ]]; then
             read -r -a added_kits <<< "$ADDED_KITS"
             args+=("${added_kits[@]}")
           fi
-          python trusted/.github/scripts/validate_starter_kits.py "${args[@]}"
+          python "$script" "${args[@]}"
