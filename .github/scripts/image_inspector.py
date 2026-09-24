@@ -254,6 +254,10 @@ _SVG_ACTIVE_PATTERNS: tuple[tuple[re.Pattern[str], str], ...] = (
     (re.compile(r"<\s*object", re.IGNORECASE), "an <object> element"),
     (re.compile(r"<!ENTITY", re.IGNORECASE), "an XML entity declaration (XXE vector)"),
     (re.compile(r"<\s*!\s*DOCTYPE[^>]*\[", re.IGNORECASE), "an internal DTD subset"),
+    (
+        re.compile(r"<\s*!\s*DOCTYPE[^>]*\b(?:SYSTEM|PUBLIC)\b", re.IGNORECASE),
+        "an external DTD reference",
+    ),
     (re.compile(r"\son[a-z]+\s*=", re.IGNORECASE), "an inline event handler attribute"),
     (re.compile(r"(?:java|vb)script\s*:", re.IGNORECASE), "a script: URI"),
     (re.compile(r"data\s*:\s*text/html", re.IGNORECASE), "a data: URI containing HTML"),

@@ -28,6 +28,6 @@ def test_iter_dockerfiles_deduplicates_ambiguous_names(tmp_path: Path):
     # suffix) must be visited exactly once.
     _write(tmp_path, "agents/a/tools/t/Dockerfile.Dockerfile", "FROM ubuntu:24.04\n")
 
-    found = list_base_images._iter_dockerfiles(tmp_path / "agents")
+    found = list_base_images.iter_dockerfiles(tmp_path / "agents")
 
     assert len(found) == 1

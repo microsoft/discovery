@@ -35,7 +35,7 @@ jobs:
 
       - name: Detect relevant changes
         id: changes
-        uses: actions/github-script@v9
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
@@ -103,14 +103,55 @@ jobs:
         run: |
           # Prefer the regression guard from the trusted base checkout so a PR
           # cannot weaken the assertions that guard its own schema changes.
-          # During the bootstrap window - before this guard exists on the base
-          # branch - run the PR copy (this PR introduces the guard and is human
-          # reviewed). Self-heals to the trusted path once merged.
+          # During bootstrap, use an embedded data-only validator rather than
+          # executing any Python from the PR checkout.
           test="trusted/.github/tests/test_schema_security.py"
           scripts="${{ github.workspace }}/trusted/.github/scripts"
-          if [ ! -f "$test" ]; then
-            echo "::notice::trusted regression guard absent on base (bootstrap); running the PR copy"
-            test="pr/.github/tests/test_schema_security.py"
-            scripts="${{ github.workspace }}/pr/.github/scripts"
+          if [ -f "$test" ]; then
+            PYTHONPATH="$scripts" python -m pytest "$test" -q
+            exit
           fi
-          PYTHONPATH="$scripts" python -m pytest "$test" -q
+          echo "::notice::trusted regression guard absent on base; running embedded bootstrap checks"
+          python - "${{ github.workspace }}/pr" <<'PY'
+          import json, sys
+          from pathlib import Path
+          import yaml
+          from jsonschema import Draft7Validator, FormatChecker
+          from referencing import Registry, Resource
+
+          root = Path(sys.argv[1])
+          schema_dir = root / "docs" / "schemas"
+          schemas = {
+              path.name: json.loads(path.read_text(encoding="utf-8"))
+              for path in schema_dir.glob("*schema*.json")
+          }
+          if not schemas:
+              raise SystemExit("no catalog schemas found")
+          for name, schema in schemas.items():
+              Draft7Validator.check_schema(schema)
+              if not {"$ref", "allOf", "anyOf", "oneOf", "type"}.intersection(schema):
+                  raise SystemExit(f"{name}: root schema has no validation keyword")
+          registry = Registry().with_resources(
+              (name, Resource.from_contents(schema))
+              for name, schema in schemas.items()
+          )
+          groups = {
+              "metadata-schema.json": root.glob("agents/*/metadata.yaml"),
+              "agent-schema-v2.json": root.glob("agents/*/agent.yaml"),
+              "tool-definition-schema.json": root.glob("agents/*/tools/*/tool.yaml"),
+          }
+          errors = []
+          for schema_name, paths in groups.items():
+              validator = Draft7Validator(
+                  schemas[schema_name],
+                  registry=registry,
+                  format_checker=FormatChecker(),
+              )
+              for path in paths:
+                  document = yaml.safe_load(path.read_text(encoding="utf-8"))
+                  for error in validator.iter_errors(document):
+                      location = "/".join(map(str, error.absolute_path)) or "(root)"
+                      errors.append(f"{path.relative_to(root)} at {location}: {error.message}")
+          if errors:
+              raise SystemExit("\n".join(errors))
+          PY

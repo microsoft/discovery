@@ -29,6 +29,7 @@ from pathlib import Path
 import yaml
 
 from dockerfile_parser import external_images
+from list_base_images import iter_dockerfiles
 from rules.base import PolicyConfig
 
 OUTPUT_PATH = Path(".auto-registry") / "agent-tags.json"
@@ -99,7 +100,7 @@ def compute_for_agent(repo: Path, agent: Path, policy: PolicyConfig) -> dict:
 
     # ── Base image posture ───────────────────────────────────────────────
     images = []
-    for df in sorted(agent.rglob("Dockerfile*")):
+    for df in iter_dockerfiles(agent):
         try:
             text = df.read_text(encoding="utf-8", errors="replace")
         except OSError:

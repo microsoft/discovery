@@ -19,6 +19,17 @@ from rules.base import Finding, Rule, RuleContext, Scope, Severity
 GUARDED_PREFIXES = ("agents/", "starter-kits/")
 
 
+def _agent_party(ctx: RuleContext, rel: str) -> str | None:
+    parts = Path(rel.replace("\\", "/")).parts
+    if len(parts) < 2 or parts[0] != "agents":
+        return None
+    metadata, error = ctx.load_yaml(Path(parts[0]) / parts[1] / "metadata.yaml")
+    if error or not isinstance(metadata, dict):
+        return None
+    publisher = metadata.get("publisher")
+    return publisher.get("party") if isinstance(publisher, dict) else None
+
+
 def check(ctx: RuleContext) -> list[Finding]:
     findings: list[Finding] = []
 
@@ -28,6 +39,17 @@ def check(ctx: RuleContext) -> list[Finding]:
 
         suffix = Path(rel).suffix.lower()
         if suffix in ctx.policy.model_weight_extensions:
+            if _agent_party(ctx, rel) == "3p":
+                findings.append(Finding(
+                    rule_id="POL-015",
+                    file=rel,
+                    message=(
+                        f"'{Path(rel).name}' is a model-weight binary. Third-party "
+                        "catalog contributions may not include model weights; host "
+                        "the weights externally and download them at runtime from "
+                        "the tool's Dockerfile instead."
+                    ),
+                ))
             continue  # POL-009 owns these.
 
         if ctx.policy.is_allowed_source_file(rel):

@@ -66,6 +66,8 @@ def _is_public_contribution_path(path: str) -> bool:
             return False
         return True
     if len(parts) >= 3 and parts[:2] == ["includes", "media"]:
+        if _suffix(parts[-1]) in _EXECUTABLE_SUFFIXES:
+            return False
         return True
 
     # Documentation Markdown is public. At the repository root it is restricted

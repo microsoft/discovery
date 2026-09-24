@@ -140,6 +140,31 @@ def test_documentation_prose_and_data_under_docs_stay_public(path: str) -> None:
 
 
 @pytest.mark.parametrize(
+    "path",
+    [
+        "includes/media/payload.py",
+        "includes/media/setup.sh",
+        "includes/media/install.ps1",
+        "includes/media/tool.exe",
+    ],
+)
+def test_executable_files_under_shared_media_are_not_public(path: str) -> None:
+    failures = check_contributor_scope([path], "read", "octocat")
+
+    assert [(failure.rule_id, failure.file) for failure in failures] == [
+        ("POL-021", path),
+    ]
+
+
+@pytest.mark.parametrize(
+    "path",
+    ["includes/media/screenshot.png", "includes/media/demo.svg"],
+)
+def test_non_executable_shared_media_stays_public(path: str) -> None:
+    assert check_contributor_scope([path], "read", "octocat") == []
+
+
+@pytest.mark.parametrize(
     "author",
     ["github-actions[bot]", "discovery-registry-bot[bot]"],
 )

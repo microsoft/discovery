@@ -24,7 +24,7 @@ from pathlib import Path
 from dockerfile_parser import external_images
 
 
-def _iter_dockerfiles(root: Path) -> list[Path]:
+def iter_dockerfiles(root: Path) -> list[Path]:
     """Every Dockerfile under ``root``, covering both the ``Dockerfile`` /
     ``Dockerfile.foo`` and the ``foo.Dockerfile`` naming conventions, with
     duplicates removed and a stable order."""
@@ -38,7 +38,7 @@ def collect(repo: Path) -> dict[str, list[str]]:
     """Map each distinct base image to the Dockerfiles that use it."""
     usage: dict[str, list[str]] = defaultdict(list)
 
-    for df in _iter_dockerfiles(repo / "agents"):
+    for df in iter_dockerfiles(repo / "agents"):
         try:
             text = df.read_text(encoding="utf-8", errors="replace")
         except OSError:

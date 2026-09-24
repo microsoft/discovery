@@ -69,9 +69,26 @@ def test_exemption_does_not_extend_to_the_agent_root(repo):
 
 
 def test_model_weights_are_left_to_pol_009(repo):
+    write(
+        repo,
+        "agents/demo/metadata.yaml",
+        "publisher:\n  party: 1p\n",
+    )
     rel = write(repo, "agents/demo/tools/t/model.safetensors", "content\n")
     result = run_rule(repo, RULE, [rel])
     assert result.findings == []
+
+
+def test_third_party_model_weights_are_blocked(repo):
+    write(
+        repo,
+        "agents/demo/metadata.yaml",
+        "publisher:\n  party: 3p\n",
+    )
+    rel = write(repo, "agents/demo/tools/t/model.safetensors", "content\n")
+    result = run_rule(repo, RULE, [rel])
+    assert files(result) == [rel]
+    assert "Third-party" in result.findings[0].message
 
 
 def test_deleted_file_is_not_flagged(repo):

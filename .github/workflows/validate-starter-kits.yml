@@ -28,7 +28,7 @@ jobs:
     steps:
       - name: Detect relevant changes
         id: changes
-        uses: actions/github-script@v9
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
@@ -52,8 +52,13 @@ jobs:
               const match = /^starter-kits\/([^/]+)\/kit\.json$/.exec(filename);
               return status === 'added' && match ? [match[1]] : [];
             });
+            const changedKits = files.flatMap(({ filename }) => {
+              const match = /^starter-kits\/([^/]+)\//.exec(filename);
+              return match ? [match[1]] : [];
+            });
             core.setOutput('relevant', String(relevant));
             core.setOutput('added-kits', [...new Set(addedKits)].join(' '));
+            core.setOutput('changed-kits', [...new Set(changedKits)].join(' '));
             if (!relevant) {
               core.notice('No starter-kits/** or starter-kit-schema.json changes; reporting success without running validation.');
             }
@@ -106,19 +111,24 @@ jobs:
         if: steps.changes.outputs.relevant == 'true'
         env:
           ADDED_KITS: ${{ steps.changes.outputs.added-kits }}
+          CHANGED_KITS: ${{ steps.changes.outputs.changed-kits }}
         run: |
           # Prefer the validator from the trusted base checkout (validates PR
-          # data with code the PR cannot alter). During the bootstrap window -
-          # before the base validator understands the --added-kits interface -
-          # run the PR copy. Self-heals to the trusted path once merged.
+          # data with code the PR cannot alter). During bootstrap, fall back to
+          # the trusted validator's older --changed-kits interface.
           script="trusted/.github/scripts/validate_starter_kits.py"
-          if ! grep -q -- '--added-kits' "$script" 2>/dev/null; then
-            echo "::notice::trusted validator lacks --added-kits (bootstrap); running the PR copy"
-            script="pr/.github/scripts/validate_starter_kits.py"
-          fi
-          args=(--repo-root pr --added-kits)
-          if [[ -n "$ADDED_KITS" ]]; then
-            read -r -a added_kits <<< "$ADDED_KITS"
-            args+=("${added_kits[@]}")
+          if grep -q -- '--added-kits' "$script" 2>/dev/null; then
+            args=(--repo-root pr --added-kits)
+            if [[ -n "$ADDED_KITS" ]]; then
+              read -r -a added_kits <<< "$ADDED_KITS"
+              args+=("${added_kits[@]}")
+            fi
+          else
+            echo "::notice::trusted validator lacks --added-kits; using --changed-kits bootstrap interface"
+            args=(--repo-root pr)
+            if [[ -n "$CHANGED_KITS" ]]; then
+              read -r -a changed_kits <<< "$CHANGED_KITS"
+              args+=(--changed-kits "${changed_kits[@]}")
+            fi
           fi
           python "$script" "${args[@]}"

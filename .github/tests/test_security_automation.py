@@ -78,13 +78,13 @@ def test_codeql_matrix_keeps_scopes_separate_and_supported():
     assert codeql_job["strategy"]["fail-fast"] == "false"
 
     action_refs = {
-        step["uses"]
+        step["uses"].partition("@")[0]
         for step in codeql_job["steps"]
         if step.get("uses", "").startswith("github/codeql-action/")
     }
     assert action_refs == {
-        "github/codeql-action/init@v4",
-        "github/codeql-action/analyze@v4",
+        "github/codeql-action/init",
+        "github/codeql-action/analyze",
     }
     analyze_step = next(step for step in codeql_job["steps"] if step.get("name") == "Analyze")
     assert analyze_step["with"]["category"] == (
@@ -117,14 +117,18 @@ def test_codeql_configs_cover_expected_sources_and_queries():
 def test_all_codeql_actions_use_current_supported_major():
     references: list[tuple[str, str]] = []
     for workflow_path in (REPO_ROOT / ".github" / "workflows").glob("*.yml"):
-        for reference in re.findall(
-            r"github/codeql-action/[^@\s]+@v\d+",
+        for reference, version in re.findall(
+            r"(github/codeql-action/[^@\s]+@[0-9a-f]{40})\s+#\s+(v\d+)",
             workflow_path.read_text(encoding="utf-8"),
         ):
-            references.append((workflow_path.name, reference))
+            references.append((workflow_path.name, f"{reference} # {version}"))
 
     assert references, "Expected at least one CodeQL action reference"
-    stale = [(path, reference) for path, reference in references if not reference.endswith("@v4")]
+    stale = [
+        (path, reference)
+        for path, reference in references
+        if not reference.endswith("# v4")
+    ]
     assert not stale, f"CodeQL actions not using v4: {stale}"
 
 
@@ -162,9 +166,8 @@ def test_dependency_review_blocks_new_high_severity_vulnerabilities():
     review_step = next(
         step
         for step in job["steps"]
-        if step.get("uses", "").startswith("actions/dependency-review-action@")
+        if uses_action(step, "actions/dependency-review-action")
     )
-    assert review_step["uses"] == "actions/dependency-review-action@v5"
     assert review_step["with"] == {
         "fail-on-severity": "high",
         "fail-on-scopes": "runtime, development, unknown",
@@ -178,7 +181,7 @@ def test_weekly_msdo_checks_out_only_catalog_roots():
     )
     checkout = next(
         step for step in workflow["jobs"]["msdo"]["steps"]
-        if step.get("uses") == "actions/checkout@v6"
+        if uses_action(step, "actions/checkout")
     )
 
     assert checkout["with"]["sparse-checkout"].splitlines() == [
@@ -363,6 +366,60 @@ def test_validation_workflows_publish_actionable_diagnostics():
     assert "'markdown-only':             { color: '8250df'" in feedback
     assert "'contains-dockerfile':       { color: '2496ed'" in feedback
     assert "'contains-code':             { color: '1f883d'" in feedback
+
+
+def test_unit_tests_run_for_any_workflow_change():
+    source = (
+        REPO_ROOT / ".github" / "workflows" / "unit-tests.yml"
+    ).read_text(encoding="utf-8")
+
+    assert r"/^\.github\/workflows\/.*\.yml$/" in source
+
+
+def test_schema_bootstrap_never_executes_pr_python():
+    for workflow_name, step_name in {
+        "validate-agent-schemas.yml": "Run AS-001 through AS-005 schema checks against PR data",
+        "validate-starter-kit-schema.yml": "Run SKS-001 through SKS-003 schema checks against PR data",
+    }.items():
+        workflow = load_workflow(REPO_ROOT / ".github" / "workflows" / workflow_name)
+        command = next(
+            step["run"]
+            for job in workflow["jobs"].values()
+            for step in job["steps"]
+            if step.get("name") == step_name
+        )
+        assert "pr/.github/tests" not in command
+        assert "${{ github.workspace }}/pr/.github/scripts" not in command
+        assert "embedded bootstrap checks" in command
+
+    starter_workflow = load_workflow(
+        REPO_ROOT / ".github" / "workflows" / "validate-starter-kits.yml"
+    )
+    starter_command = next(
+        step["run"]
+        for step in starter_workflow["jobs"]["validate"]["steps"]
+        if step.get("name") == "Run validation"
+    )
+    assert 'script="trusted/.github/scripts/validate_starter_kits.py"' in starter_command
+    assert 'script="pr/' not in starter_command
+    assert "--changed-kits" in starter_command
+
+
+def test_registry_refresh_tracks_computed_tag_inputs():
+    workflow = load_workflow(
+        REPO_ROOT / ".github" / "workflows" / "update-registry.yml"
+    )
+    paths = set(workflow["on"]["push"]["paths"])
+
+    assert {
+        "agents/**",
+        "starter-kits/**",
+        ".github/policy/base-images.yaml",
+        ".github/scripts/compute_tags.py",
+        ".github/scripts/dockerfile_parser.py",
+        ".github/scripts/list_base_images.py",
+        ".github/scripts/rules/base.py",
+    } <= paths
 
 
 def test_dependabot_covers_all_requirements_files():
@@ -680,29 +737,19 @@ def test_workflow_executables_are_immutable_and_dependency_managed():
 
     assert not problems, "Unpinned workflow executables:\n- " + "\n- ".join(problems)
 
-PR_REVIEW_WORKFLOWS = (
-    "validate-everything.yml",
-    "pr-review.yml",
-    # pull_request_target job with pull-requests: write — same privileged trust
-    # boundary, so every action it runs must be SHA-pinned too.
-    "check-agent-removal-impact.yml",
-)
-
 # uses: owner/name@<40-hex-sha> # vX.Y.Z   (trailing version comment required)
 _PINNED_USES_RE = re.compile(
     r"^\s*(?:-\s+)?uses:\s+(?P<ref>[^\s#]+)\s+#\s*(?P<comment>\S+)\s*$"
 )
 
 
-def test_pr_review_workflow_actions_are_sha_pinned_with_version_comments():
-    """Every action in the privileged PR workflows must be pinned to a full
-    commit SHA and carry a human-readable version comment (M12)."""
+def test_workflow_actions_are_sha_pinned_with_version_comments():
+    """Every third-party action is immutable and carries a readable version."""
     problems: list[str] = []
 
-    for workflow_name in PR_REVIEW_WORKFLOWS:
-        source = (REPO_ROOT / ".github" / "workflows" / workflow_name).read_text(
-            encoding="utf-8"
-        )
+    for workflow_path in (REPO_ROOT / ".github" / "workflows").glob("*.yml"):
+        workflow_name = workflow_path.name
+        source = workflow_path.read_text(encoding="utf-8")
         for line in source.splitlines():
             stripped = line.strip()
             if not stripped.startswith(("uses:", "- uses:")):

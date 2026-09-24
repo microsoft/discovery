@@ -45,7 +45,7 @@ jobs:
       - name: Detect relevant changes
         id: changes
         if: github.event_name == 'pull_request'
-        uses: actions/github-script@v9
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
@@ -58,7 +58,7 @@ jobs:
             const patterns = [
               /^\.github\/(scripts|tests|policy|codeql)\//,
               /^\.github\/(dependabot\.yml|requirements-ci\.txt)$/,
-              /^\.github\/workflows\/(code-scan|dependency-review|unit-tests)\.yml$/,
+              /^\.github\/workflows\/.*\.yml$/,
               /^docs\/(schemas\/|validation-rules\.(csv|md)$)/,
             ];
             const relevant = files.some(({ filename }) =>
@@ -151,7 +151,7 @@ jobs:
 
       - name: Upload unit test diagnostics
         if: ${{ always() && (github.event_name != 'pull_request' || steps.changes.outputs.relevant == 'true') }}
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
           name: unit-test-diagnostics
           path: |

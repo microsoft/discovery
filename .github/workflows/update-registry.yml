@@ -6,6 +6,11 @@ on:
     paths:
       - "agents/**"
       - "starter-kits/**"
+      - ".github/policy/base-images.yaml"
+      - ".github/scripts/compute_tags.py"
+      - ".github/scripts/dockerfile_parser.py"
+      - ".github/scripts/list_base_images.py"
+      - ".github/scripts/rules/base.py"
 
   workflow_dispatch:
     inputs:

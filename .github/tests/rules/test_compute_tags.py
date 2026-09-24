@@ -119,6 +119,17 @@ def test_pinned_and_floating_bases_are_distinguished(repo):
     assert "auto:pinned-base-image" not in _compute(repo, _agent(repo, base="ubuntu:latest"))["computed_tags"]
 
 
+def test_suffix_dockerfile_is_included_in_base_image_tags(repo):
+    agent = _agent(repo)
+    (agent / "tools" / "t" / "Dockerfile").unlink()
+    write(repo, "agents/demo/tools/t/build.Dockerfile", "FROM ubuntu:24.04\n")
+
+    result = _compute(repo, agent)
+
+    assert "auto:official-base-image" in result["computed_tags"]
+    assert "auto:pinned-base-image" in result["computed_tags"]
+
+
 # ── Provenance ───────────────────────────────────────────────────────────────
 
 @pytest.mark.parametrize("party", ["1p", "3p"])
