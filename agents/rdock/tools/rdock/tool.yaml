@@ -1,0 +1,48 @@
+name: rdock
+description: "Open-source molecular docking for protein-ligand and protein-nucleic acid complexes, with fast CPU-based scoring and pose generation."
+version: 1.0.0
+category: Molecular Docking
+license: LGPL-3.0
+infra:
+  - name: worker
+    infra_type: container
+    image:
+      acr: "{name}.azurecr.io/rdock:latest"
+    compute:
+      min_resources:
+        cpu: 1
+        ram: 4Gi
+        storage: 32Gi
+        gpu: 0
+      max_resources:
+        cpu: 4
+        ram: 8Gi
+        storage: 64Gi
+        gpu: 0
+      recommended_sku:
+        - Standard_D4s_v6
+      pool_type: static
+      pool_size: 1
+actions:
+  - name: dock_ligands
+    description: "Dock ligands (SD file) into a receptor cavity defined by an rDock prm file."
+    infra_node: worker
+    input_schema:
+      type: object
+      properties:
+        input_directory:
+          type: string
+          description: "Directory containing input files."
+        output_directory:
+          type: string
+          description: "Directory where results are written."
+        receptor_prm:
+          type: string
+          description: "rDock system definition .prm file"
+        n_runs:
+          type: integer
+          description: "Docking runs per ligand (default 10)"
+      required:
+        - input_directory
+        - output_directory
+    command: "python3 /app/entrypoint.py --action dock_ligands --input {{input_directory}} --output {{output_directory}} {{#if receptor_prm}}--receptor_prm {{receptor_prm}}{{/if}} {{#if n_runs}}--n_runs {{n_runs}}{{/if}}"

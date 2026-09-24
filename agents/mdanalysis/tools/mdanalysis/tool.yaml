@@ -1,0 +1,51 @@
+name: mdanalysis
+description: "Analyze molecular dynamics trajectories from GROMACS, AMBER, NAMD, LAMMPS and more. Computes RMSD, RMSF, radius of gyration, and structural properties over time."
+version: 1.0.0
+category: MD Analysis
+license: GPL-2.0
+infra:
+  - name: worker
+    infra_type: container
+    image:
+      acr: "{name}.azurecr.io/mdanalysis:latest"
+    compute:
+      min_resources:
+        cpu: 1
+        ram: 4Gi
+        storage: 32Gi
+        gpu: 0
+      max_resources:
+        cpu: 4
+        ram: 8Gi
+        storage: 64Gi
+        gpu: 0
+      recommended_sku:
+        - Standard_D4s_v6
+      pool_type: static
+      pool_size: 1
+actions:
+  - name: analyze_trajectory
+    description: "Compute RMSD, radius of gyration, and RMSF for a trajectory given a topology and coordinate file."
+    infra_node: worker
+    input_schema:
+      type: object
+      properties:
+        input_directory:
+          type: string
+          description: "Directory containing input files."
+        output_directory:
+          type: string
+          description: "Directory where results are written."
+        topology:
+          type: string
+          description: "Topology filename (pdb/psf/gro/tpr) in the input dir"
+        trajectory:
+          type: string
+          description: "Trajectory filename (dcd/xtc/trr) in the input dir"
+        selection:
+          type: string
+          description: "Atom selection (default 'protein and name CA')"
+      required:
+        - input_directory
+        - output_directory
+    command: "python3 /app/entrypoint.py --action analyze_trajectory --input {{input_directory}} --output {{output_directory}} {{#if topology}}--topology {{topology}}{{/if}} {{#if trajectory}}--trajectory {{trajectory}}{{/if}} {{#if selection}}--selection {{selection}}{{/if}}"

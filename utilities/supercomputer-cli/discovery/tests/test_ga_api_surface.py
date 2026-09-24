@@ -4,6 +4,7 @@ Covers:
 * ``StorageMountProtocol`` enum + ``DataMount.mount_protocol`` wire serialization.
 * ``ApiVersion.supports_mount_protocol`` capability flag.
 * ``_parse_mount_protocol_or_exit`` flag-parse helper (validation + fast-fail).
+* GA-only ``infraOverrides.shm`` serialization and version gating.
 * ``cancel_operation(wait=True/False)`` semantics, including:
     - polls until the operation reaches a positive terminal state.
     - treats a 404 during the wait phase as terminal success.
@@ -28,7 +29,11 @@ from discovery.poll.dataplane_api import (
     cancel_operation,
 )
 from discovery.poll.models.api_version import ApiVersion
-from discovery.poll.models.tool_run import DataMount, StorageMountProtocol
+from discovery.poll.models.tool_run import (
+    DataMount,
+    InfraOverridesFlat,
+    StorageMountProtocol,
+)
 
 
 # ---------------------------------------------------------------------------
@@ -117,6 +122,79 @@ def test_supports_mount_protocol(version, expected):
 def test_supports_mount_protocol_unknown_falls_back_to_latest():
     """Unknown / future versions inherit support via the deny-list pattern."""
     assert ApiVersion.parse("2099-01-01").supports_mount_protocol is True
+
+
+# ---------------------------------------------------------------------------
+# Shared-memory infra override
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize(
+    ("version", "expected"),
+    [
+        ("2025-07-01-preview", False),
+        ("2025-12-01-preview", False),
+        ("2026-02-01-preview", False),
+        ("2026-06-01", True),
+    ],
+)
+def test_supports_shm_override(version, expected):
+    """Only GA and later accept infraOverrides.shm on the wire."""
+    assert ApiVersion.parse(version).supports_shm_override is expected
+
+
+def test_flat_infra_overrides_serializes_shm():
+    """The GA payload uses the exact lower-case ``shm`` wire property."""
+    overrides = InfraOverridesFlat(ram="4Gi", shm="1Gi")
+    payload = json.loads(overrides.model_dump_json(by_alias=True, exclude_none=True))
+    assert payload == {"ram": "4Gi", "shm": "1Gi"}
+
+
+def test_build_infra_overrides_includes_shm_for_ga():
+    """The shared builder carries ``--shm`` into the GA request payload."""
+    overrides = cli_submit.build_infra_overrides(
+        ApiVersion.V2026_06_01,
+        cpus=4,
+        gpus=1,
+        memory="8Gi",
+        image=None,
+        shm="2Gi",
+    )
+    assert isinstance(overrides, InfraOverridesFlat)
+    assert overrides.shm == "2Gi"
+
+
+def test_build_infra_overrides_rejects_shm_for_pre_ga():
+    """The builder must never silently drop a field rejected by older schemas."""
+    with pytest.raises(ValueError, match="2026-06-01 or later"):
+        cli_submit.build_infra_overrides(
+            ApiVersion.V2026_02_01_PREVIEW,
+            cpus=None,
+            gpus=None,
+            memory="8Gi",
+            image=None,
+            shm="2Gi",
+        )
+
+
+@pytest.mark.parametrize(
+    "av",
+    [
+        ApiVersion.V2025_07_01_PREVIEW,
+        ApiVersion.V2025_12_01_PREVIEW,
+        ApiVersion.V2026_02_01_PREVIEW,
+    ],
+)
+def test_validate_shm_override_rejects_on_pre_ga(av):
+    """Passing ``--shm`` to a strict pre-GA contract fails before submission."""
+    with pytest.raises(typer.Exit) as exc_info:
+        cli_submit._validate_shm_override_or_exit("1Gi", av)
+    assert exc_info.value.exit_code == 2
+
+
+def test_validate_shm_override_accepts_ga():
+    """GA accepts the shared-memory override."""
+    cli_submit._validate_shm_override_or_exit("1Gi", ApiVersion.V2026_06_01)
 
 
 # ---------------------------------------------------------------------------
@@ -219,7 +297,10 @@ def test_cancel_operation_default_is_fire_and_forget(monkeypatch):
     monkeypatch.setattr(dataplane_api, "get_access_token", lambda *a, **kw: "tok")
 
     result = cancel_operation(
-        "proj", "op-xyz", "https://workspace", api_version="2026-06-01",
+        "proj",
+        "op-xyz",
+        "https://workspace",
+        api_version="2026-06-01",
     )
 
     assert result is None
@@ -244,8 +325,11 @@ def test_cancel_operation_wait_polls_until_terminal(monkeypatch):
     monkeypatch.setattr(dataplane_api, "get_operation_status", fake_status)
 
     result = cancel_operation(
-        "proj", "op-xyz", "https://workspace",
-        api_version="2026-06-01", wait=True,
+        "proj",
+        "op-xyz",
+        "https://workspace",
+        api_version="2026-06-01",
+        wait=True,
     )
 
     assert result == "Canceled"
@@ -265,7 +349,9 @@ def test_cancel_operation_wait_treats_404_as_terminal(monkeypatch):
         content=b"{}",
     )
     err = httpx.HTTPStatusError(
-        message="not found", request=fake_response.request, response=fake_response,
+        message="not found",
+        request=fake_response.request,
+        response=fake_response,
     )
 
     def fake_status(*args, **kwargs):
@@ -274,8 +360,11 @@ def test_cancel_operation_wait_treats_404_as_terminal(monkeypatch):
     monkeypatch.setattr(dataplane_api, "get_operation_status", fake_status)
 
     result = cancel_operation(
-        "proj", "op-xyz", "https://workspace",
-        api_version="2026-06-01", wait=True,
+        "proj",
+        "op-xyz",
+        "https://workspace",
+        api_version="2026-06-01",
+        wait=True,
     )
     # Synthetic terminal status: cancel goal satisfied.
     assert result == "Canceled"
@@ -293,7 +382,9 @@ def test_cancel_operation_wait_reraises_non_404_http_errors(monkeypatch):
         content=b"{}",
     )
     err = httpx.HTTPStatusError(
-        message="boom", request=fake_response.request, response=fake_response,
+        message="boom",
+        request=fake_response.request,
+        response=fake_response,
     )
 
     monkeypatch.setattr(
@@ -304,8 +395,11 @@ def test_cancel_operation_wait_reraises_non_404_http_errors(monkeypatch):
 
     with pytest.raises(httpx.HTTPStatusError):
         cancel_operation(
-            "proj", "op-xyz", "https://workspace",
-            api_version="2026-06-01", wait=True,
+            "proj",
+            "op-xyz",
+            "https://workspace",
+            api_version="2026-06-01",
+            wait=True,
         )
 
 
@@ -322,8 +416,12 @@ def test_cancel_operation_wait_raises_timeout(monkeypatch):
 
     with pytest.raises(CancelWaitTimeoutError) as exc_info:
         cancel_operation(
-            "proj", "op-xyz", "https://workspace",
-            api_version="2026-06-01", wait=True, wait_timeout_seconds=5,
+            "proj",
+            "op-xyz",
+            "https://workspace",
+            api_version="2026-06-01",
+            wait=True,
+            wait_timeout_seconds=5,
         )
     assert "op-xyz" in str(exc_info.value)
     assert "5s" in str(exc_info.value)

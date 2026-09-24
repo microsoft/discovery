@@ -1,0 +1,42 @@
+name: rxnmapper
+description: "Atom-atom mapping of chemical reactions using an attention-based transformer. Runs on CPU for reaction SMILES."
+version: 1.0.0
+category: Cheminformatics
+license: MIT
+infra:
+  - name: worker
+    infra_type: container
+    image:
+      acr: "{name}.azurecr.io/rxnmapper:latest"
+    compute:
+      min_resources:
+        cpu: 1
+        ram: 8Gi
+        storage: 32Gi
+        gpu: 0
+      max_resources:
+        cpu: 4
+        ram: 16Gi
+        storage: 64Gi
+        gpu: 0
+      recommended_sku:
+        - Standard_D4s_v6
+      pool_type: static
+      pool_size: 1
+actions:
+  - name: map_reactions
+    description: "Compute atom-atom mappings and confidence for reaction SMILES (one per line)."
+    infra_node: worker
+    input_schema:
+      type: object
+      properties:
+        input_directory:
+          type: string
+          description: "Directory containing input files."
+        output_directory:
+          type: string
+          description: "Directory where results are written."
+      required:
+        - input_directory
+        - output_directory
+    command: "python3 /app/entrypoint.py --action map_reactions --input {{input_directory}} --output {{output_directory}}"
