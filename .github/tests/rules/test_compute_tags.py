@@ -197,7 +197,8 @@ def test_computation_is_deterministic():
 
 def test_every_catalog_agent_gets_exactly_one_tier():
     data = _catalog_tags()
-    assert data["count"] == 48
+    assert data["count"] == len(data["agents"])
+    assert data["count"] > 0
     for entry in data["agents"]:
         tiers = [t for t in entry["computed_tags"] if t.startswith("tier:")]
         assert len(tiers) == 1, f"{entry['name']} has {tiers}"

@@ -20,32 +20,66 @@
 domains:
 
   life-sciences:
+    - alignment
+    - alignments
     - alphafold
+    - annotations
     - bioactivity
     - bioinformatics
     - biomedical
+    - biochemical-networks
     - biomolecular-simulation
     - clinical-trials
     - dna-analysis
+    - domains
     - esm2
+    - fasta
+    - flux-balance
     - gene-expression
+    - genbank
+    - genes
     - genomics
+    - homology-modeling
+    - interactions
+    - kinetic-modeling
     - life-sciences
+    - metabolic-modeling
+    - msa
+    - pathways
+    - phylogenetics
+    - profile-hmm
     - protein
     - protein-design
     - protein-folding
+    - protein-ligand
     - protein-structure
+    - proteins
+    - proteomics
+    - rna
     - rna-seq
+    - sbml
+    - secondary-structure
+    - sequence-search
+    - sequences
     - single-cell
     - structural-biology
+    - structure-alignment
     - structure-prediction
+    - structure-search
+    - systems-biology
+    - tm-score
+    - trajectory-analysis
     - transcriptomics
+    - variants
 
   drug-discovery:
     - binding-affinity
+    - binding-site
     - compound-search
     - de-novo
+    - docking
     - drug-discovery
+    - druggability
     - molecule-docking
     - safety-assessment
     - safety-screening
@@ -54,39 +88,69 @@ domains:
 
   chemistry:
     - ab-initio
+    - atom-mapping
     - cheminformatics
+    - chemical-kinetics
     - chemistry
     - chemprop
+    - combustion
     - computational-chemistry
     - conformational-search
+    - descriptors
     - dft
     - functional-groups
+    - hartree-fock
+    - iupac
+    - mass-spectrometry
+    - metabolomics
     - molecular-design
     - molecular-dynamics
     - molecular-generation
     - molecular-properties
     - molecular-property-prediction
     - molecular-science
+    - name-to-structure
     - natural-products
+    - nmr
     - quantum-chemistry
+    - qsar
     - rdkit
     - reaction-prediction
+    - reactions
     - retrosynthesis
+    - sasa
+    - semi-empirical
     - selfies
     - semiempirical
+    - signal-processing
+    - spectral-similarity
+    - spectroscopy
+    - structure-elucidation
+    - surface-area
+    - thermodynamics
+    - tight-binding
 
   materials:
+    - atomistic
     - crystal-structure
+    - crystallography
     - inverse-design
+    - lattice-dynamics
     - materials-discovery
     - materials-science
+    - phonons
+    - properties
+    - symmetry
 
   physics-and-engineering:
     - cfd
     - computational-fluid-dynamics
+    - dynamics
     - engineering
     - heat-transfer-fluid
+    - normal-mode-analysis
     - openfoam
+    - optimization
     - simulation
     - transient
 
@@ -113,25 +177,31 @@ domains:
     - xyce
 
   machine-learning:
+    - clustering
     - d-mpnn
     - diffusion-model
     - embedding-model
     - embeddings
+    - featurization
     - generative
     - generative-model
     - genetic-algorithm
     - gnn
     - language-model
+    - machine-learning
+    - maximum-likelihood
     - property-prediction
     - representation-learning
     - trained-model
     - transformer
 
   data-and-research:
+    - api
     - climate
     - data-analysis
     - database
     - evidence-synthesis
+    - file-conversion
     - full-text-analysis
     - hypothesis-testing
     - knowledge-base
@@ -151,6 +221,53 @@ domains:
   platform:
     - gpu
     - python
+
+  scientific-tools:
+    - ase
+    - basico
+    - biopython
+    - blast
+    - cantera
+    - clustal
+    - cobrapy
+    - copasi
+    - dftbplus
+    - dssp
+    - ensembl
+    - foldseek
+    - fpocket
+    - freesasa
+    - hmmer
+    - iqtree
+    - kegg
+    - mafft
+    - matchms
+    - materials-project
+    - matminer
+    - mdanalysis
+    - mmseqs2
+    - modeller
+    - mordred
+    - muscle
+    - nmrglue
+    - openbabel
+    - opsin
+    - p2rank
+    - phonopy
+    - plip
+    - prody
+    - pymatgen
+    - pyopenms
+    - pyscf
+    - rdock
+    - rxnmapper
+    - samtools
+    - sirius
+    - spglib
+    - tellurium
+    - tmalign
+    - uniprot
+    - viennarna
 
 # ── Computed namespace ──────────────────────────────────────────────────────
 #
