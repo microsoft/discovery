@@ -2,10 +2,10 @@
 """
 list_base_images.py — enumerate the container base images the catalog depends on.
 
-Feeds the weekly deep scan: the set of distinct external base images across
-every Dockerfile under ``agents/``, which the workflow then runs through Docker
-Scout for CVE data. Deployer placeholders (``{acr}.azurecr.io/...``) and
-multi-stage internal references are excluded — neither is an upstream image.
+Produces the set of distinct external base images across catalog Dockerfiles.
+The staged Docker Scout job consumes this output when that integration is
+enabled. Deployer placeholders (``{acr}.azurecr.io/...``) and multi-stage
+internal references are excluded — neither is an upstream image.
 
 Usage:
     python .github/scripts/list_base_images.py                # human table

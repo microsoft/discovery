@@ -1,21 +1,18 @@
-name: Weekly Deep Scan
+name: Weekly Catalog Audit
 
 # The PR gate is deliberately fast: it validates only what a pull request
 # changed. That leaves two blind spots this workflow covers.
 #
-#   1. The catalog rots in place. A base image that was clean when its agent
-#      merged accumulates CVEs; nothing in a PR-triggered run would ever look
-#      at it again.
+#   1. The catalog can drift as rules and policy evolve; PR-triggered checks
+#      intentionally focus on changed content.
 #   2. Rule and policy changes are only applied to touched files. A newly
 #      tightened rule can sit unexercised against 45 untouched agents.
-#   3. Catalog webpages can acquire a malware or phishing reputation after
-#      merge. Restricted URLhaus and PhishTank lookups can catch that drift.
 #
-# The URL reputation and Docker Scout jobs are temporarily disabled until their
-# authentication and service-access requirements are resolved. Their workflow
-# definitions remain below so the capability can be restored without being
-# rebuilt. Active scans report warnings, upload evidence, and open or update a
-# tracking issue; security findings do not fail or gate the workflow.
+# Active today: the full-catalog rule audit and Microsoft Security DevOps
+# (Bandit, Checkov, and Trivy filesystem analysis). The URL reputation and
+# Docker Scout image-CVE jobs are staged but disabled until credentials,
+# provider access, and representative runs are validated. Do not describe
+# those staged jobs as active security coverage.
 
 on:
   schedule:
@@ -28,7 +25,7 @@ on:
         type: boolean
         default: true
       skip_image_scan:
-        description: "Skip the Docker Scout image scan (faster; rules only)"
+        description: "Reserved for the staged Docker Scout rollout (currently disabled)"
         type: boolean
         default: false
 
@@ -106,6 +103,18 @@ jobs:
           # Reports only. The registry bot owns the committed file, so a diff
           # here means main moved without the bot running, not a PR problem.
           python .github/scripts/compute_tags.py --report >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Report staged scan capabilities
+        run: |
+          {
+            echo "## Staged capabilities (not executed)"
+            echo
+            echo "- URLhaus and PhishTank reputation lookup"
+            echo "- Docker Scout base-image CVE scan"
+            echo
+            echo "These jobs remain disabled until credentials, provider access,"
+            echo "and representative runs are validated."
+          } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Upload audit report
         if: always()
@@ -419,14 +428,14 @@ jobs:
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
-            const title = 'Weekly deep scan: findings require attention';
+            const title = 'Weekly catalog audit: findings require attention';
             const runUrl = `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
             const drifted = '${{ needs.full-catalog-audit.outputs.drifted }}' === 'true';
             const generatedArtifactsStale = '${{ needs.full-catalog-audit.outputs.generated_artifacts_stale }}' === 'true';
             const msdoActionable = '${{ needs.msdo.outputs.actionable }}' === 'true';
             const msdoFindingCount = '${{ needs.msdo.outputs.finding_count }}' || '0';
             const msdoStatus = '${{ needs.msdo.outputs.scan_status }}' || 'error';
-            const body = ['The weekly deep scan found something that needs review.', ''];
+            const body = ['The weekly catalog audit found something that needs review.', ''];
 
             if (drifted) {
               body.push(
@@ -488,7 +497,7 @@ jobs:
                 repo: context.repo.repo,
                 name: 'weekly-deep-scan',
                 color: 'd4a72c',
-                description: 'Advisory findings from the scheduled catalog security scan',
+                description: 'Advisory findings from the scheduled catalog audit',
               });
             }
 

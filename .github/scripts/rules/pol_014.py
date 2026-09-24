@@ -9,8 +9,8 @@ in the catalog traces back to a maintained, scannable upstream.
 
 This rule intentionally does NOT require digest pinning, a non-root ``USER``,
 or forbid piping installers into a shell. Those obstruct scientific images that
-compile from source, and the allowlist plus weekly Docker Scout scanning
-addresses supply-chain risk more directly than build-time nitpicking would.
+compile from source. The reviewed source allowlist provides the active
+supply-chain boundary; Docker Scout image scanning is staged but not active.
 """
 
 from __future__ import annotations

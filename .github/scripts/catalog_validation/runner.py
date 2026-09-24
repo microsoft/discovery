@@ -51,6 +51,21 @@ from .schemas import CatalogSchemas
 from .structural import check_structural
 
 
+LEGACY_RULE_IDS = frozenset({
+    "CFG-001", "CFG-002", "CFG-003", "CFG-004",
+    "STR-001", "STR-002", "STR-003", "STR-005", "STR-006",
+    "STR-009", "STR-010", "STR-011",
+    "SCH-001", "SCH-002", "SCH-004", "SCH-005", "SCH-006",
+    "SCH-008", "SCH-009", "SCH-010", "SCH-011", "SCH-012",
+    "SCH-013", "SCH-014", "SCH-015", "SCH-017", "SCH-028",
+    "SCH-029", "SCH-030", "SCH-031", "SCH-034", "SCH-035",
+    "SCH-036", "SCH-037",
+    "POL-004", "POL-005", "POL-009", "POL-010", "POL-011", "POL-012",
+    "DOC-001", "DOC-002", "DOC-003", "DOC-004", "DOC-005", "DOC-006",
+    "DOC-101", "DOC-102", "DOC-103", "DOC-104", "DOC-105",
+})
+
+
 @dataclass(frozen=True)
 class ValidationRun:
     blocking: list[Failure]
@@ -91,6 +106,24 @@ def _config_error_path(message: str) -> str:
     if leading in {"waivers.yaml", "baseline.json"}:
         return f".github/policy/{leading}"
     return ".github/policy/waivers.yaml"
+
+
+def _rule_ownership_failures(rules: list[object]) -> list[Failure]:
+    modular_ids = {
+        rule_id
+        for rule in rules
+        if isinstance((rule_id := getattr(rule, "id", None)), str)
+    }
+    overlap = sorted(LEGACY_RULE_IDS & modular_ids)
+    if not overlap:
+        return []
+    return [Failure(
+        "CFG-004",
+        ".github/scripts/catalog_validation/runner.py",
+        "Rule IDs have multiple authoritative owners in the legacy and modular "
+        f"engines: {', '.join(overlap)}. Assign each rule ID to exactly one "
+        "engine before validation can run.",
+    )]
 
 
 def run_validation(
@@ -167,6 +200,7 @@ def run_validation(
     )
 
     rules = discover_rules()
+    failures.extend(_rule_ownership_failures(rules))
     guidance = {rule.id: rule for rule in rules}
     engine = run_rules(context, rules)
     failures.extend(

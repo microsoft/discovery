@@ -6,14 +6,14 @@
 # provenance and gets scanned.
 #
 # Policy: prefer Docker Official Images on docker.io. Those are the "mainline"
-# builds — maintained by the Docker Library team, rebuilt on CVE disclosure, and
-# covered by Docker Scout vulnerability data. Everything else needs an explicit
-# entry here, added through a CODEOWNERS-reviewed PR.
+# builds — maintained by the Docker Library team and rebuilt on CVE disclosure.
+# Everything else needs an explicit entry here, added through a
+# CODEOWNERS-reviewed PR.
 #
 # Deliberately NOT required: digest pinning, non-root USER, or a ban on piping
 # installers into a shell. Those add friction to scientific images that build
-# from source, and the registry allowlist plus weekly Docker Scout scanning
-# addresses the supply-chain risk more directly.
+# from source. The registry and namespace allowlist is the active boundary;
+# Docker Scout image scanning is staged but currently disabled.
 
 # docker.io/library/* — Docker Official Images. Always allowed.
 allow_docker_official_images: true

@@ -63,11 +63,11 @@ The PR review also spellchecks changed agent and starter-kit prose. `SPELL-001`
 annotations are advisory warnings: they never block merge, and code, identifiers,
 URLs, and fenced Markdown examples are excluded from the check.
 
-After merge, the weekly security scan submits declared catalog webpage URLs as
-exact strings to the [URLhaus](https://urlhaus.abuse.ch/) malware-reputation API
-and the [PhishTank](https://www.phishtank.com/) phishing-reputation API. The
-audit queries those databases only; it does not visit listed catalog webpages
-or download remote content.
+After merge, the weekly catalog audit reruns the modular rules across the full
+catalog and runs Microsoft Security DevOps over `agents/` and `starter-kits/`.
+URLhaus/PhishTank reputation lookups and Docker Scout base-image CVE scans are
+staged but currently disabled until their credentials, provider access, and
+representative runs are validated.
 
 ### Required files
 

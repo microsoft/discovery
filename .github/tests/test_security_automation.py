@@ -221,6 +221,56 @@ def test_weekly_manual_dry_run_suppresses_repository_writes():
     assert "!inputs.dry_run" in report["if"]
 
 
+def test_weekly_disabled_scans_are_explicitly_staged():
+    path = REPO_ROOT / ".github" / "workflows" / "weekly-deep-scan.yml"
+    workflow = load_workflow(path)
+    source = path.read_text(encoding="utf-8")
+
+    assert workflow["name"] == "Weekly Catalog Audit"
+    assert workflow["jobs"]["url-reputation-audit"]["if"] == "${{ false }}"
+    assert workflow["jobs"]["discover-images"]["if"] == (
+        "${{ false && !inputs.skip_image_scan }}"
+    )
+    assert "Staged capabilities (not executed)" in source
+    assert "Do not describe" in source
+
+    contributing = (REPO_ROOT / "CONTRIBUTING.md").read_text(encoding="utf-8")
+    security = (REPO_ROOT / "SECURITY.md").read_text(encoding="utf-8")
+    assert "staged but currently disabled" in contributing
+    assert "staged but disabled" in security
+
+
+def test_trusted_code_workflows_do_not_cache_from_pr_data():
+    jobs = {
+        "pr-review.yml": "validate",
+        "validate-agent-schemas.yml": "validate-schemas",
+        "validate-starter-kit-schema.yml": "validate-schema",
+        "validate-starter-kits.yml": "validate",
+    }
+    for workflow_name, job_name in jobs.items():
+        workflow = load_workflow(
+            REPO_ROOT / ".github" / "workflows" / workflow_name
+        )
+        steps = workflow["jobs"][job_name]["steps"]
+        setup_python = next(
+            step for step in steps if uses_action(step, "actions/setup-python")
+        )
+        assert "cache" not in setup_python.get("with", {})
+        assert "cache-dependency-path" not in setup_python.get("with", {})
+
+        checkouts = [
+            step for step in steps if uses_action(step, "actions/checkout")
+        ]
+        assert checkouts
+        assert all(
+            step.get("with", {}).get("persist-credentials") == "false"
+            for step in checkouts
+        )
+
+        commands = "\n".join(step.get("run", "") for step in steps)
+        assert not re.search(r"(?m)^\s*python\s+(?:pr/|\$GITHUB_WORKSPACE/pr/)", commands)
+
+
 def test_weekly_url_reputation_provider_errors_are_report_only():
     workflow = load_workflow(
         REPO_ROOT / ".github" / "workflows" / "weekly-deep-scan.yml"

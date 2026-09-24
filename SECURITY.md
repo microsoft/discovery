@@ -55,7 +55,7 @@ detailed rule definitions and remediation guidance are in
 | Classification | `TAG-001` and `TAG-002` enforce the reviewed tag vocabulary and reserve CI-computed tag namespaces. |
 | Security scanning | Verified-secret findings block PRs. Unverified secret candidates, CodeQL, DevSkim, and Microsoft Application Inspector results are report-only inputs for reviewers. |
 | Review and merge | CODEOWNERS and branch protection require successful checks and human approval. Agent-removal checks protect active starter-kit references; generated registries are rebuilt and schema-validated by automation. |
-| After merge | The weekly deep scan reruns all rules across the full catalog, scans container base images for vulnerabilities, checks webpage strings against URLhaus and PhishTank without visiting them, and opens an issue for regressions or provider failures. |
+| After merge | The weekly catalog audit reruns all modular rules and Microsoft Security DevOps across the catalog. URLhaus/PhishTank reputation lookups and Docker Scout image-CVE scans are staged but disabled pending validated credentials, provider access, and representative runs. |
 
 Policy configuration is review-controlled under [`.github/policy/`](.github/policy/):
 approved base images, source-file allowlists, network validation limits, and tag

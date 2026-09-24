@@ -6,13 +6,17 @@ must have a matching test module, so a new rule cannot ship untested.
 
 from __future__ import annotations
 
+import ast
 import datetime as _dt
+from dataclasses import replace
 import json
 from pathlib import Path
+import re
 
 import pytest
 from conftest import ELF_BYTES, run_rule, write, write_policy
 
+from catalog_validation.runner import LEGACY_RULE_IDS, _rule_ownership_failures
 from rules.base import Finding, Rule, Scope, Severity
 from rules.pol_008 import RULE as POL_008
 from rules.registry import (
@@ -25,6 +29,8 @@ from rules.registry import (
 
 RULES_DIR = Path(__file__).resolve().parents[2] / "scripts" / "rules"
 TESTS_DIR = Path(__file__).resolve().parent
+CATALOG_VALIDATION_DIR = RULES_DIR.parent / "catalog_validation"
+RULE_ID_RE = re.compile(r"^(?:CFG|STR|SCH|POL|DOC|TAG)-\d{3}$")
 
 
 def _iso(days_from_now: int) -> str:
@@ -55,6 +61,49 @@ def test_every_rule_is_well_formed():
 def test_rule_ids_are_unique():
     ids = [r.id for r in discover_rules()]
     assert len(ids) == len(set(ids))
+
+
+def _implemented_legacy_rule_ids() -> set[str]:
+    implemented: set[str] = set()
+    for path in CATALOG_VALIDATION_DIR.glob("*.py"):
+        tree = ast.parse(path.read_text(encoding="utf-8"))
+        for node in ast.walk(tree):
+            values: list[object] = []
+            if (
+                isinstance(node, ast.Call)
+                and isinstance(node.func, ast.Name)
+                and node.func.id in {"Failure", "_schema_findings"}
+                and node.args
+            ):
+                values.append(node.args[0])
+            elif isinstance(node, ast.Return) and node.value is not None:
+                values.append(node.value)
+            for value in values:
+                for candidate in ast.walk(value):
+                    if (
+                        isinstance(candidate, ast.Constant)
+                        and isinstance(candidate.value, str)
+                        and RULE_ID_RE.fullmatch(candidate.value)
+                    ):
+                        implemented.add(candidate.value)
+    return implemented
+
+
+def test_legacy_and_modular_rule_ownership_is_complete_and_disjoint():
+    modular_ids = {rule.id for rule in discover_rules()}
+
+    assert _implemented_legacy_rule_ids() == LEGACY_RULE_IDS
+    assert LEGACY_RULE_IDS.isdisjoint(modular_ids)
+    assert _rule_ownership_failures(discover_rules()) == []
+
+
+def test_rule_ownership_conflict_fails_closed():
+    conflicting_rule = replace(POL_008, id="POL-009")
+
+    failures = _rule_ownership_failures([conflicting_rule])
+
+    assert [failure.rule_id for failure in failures] == ["CFG-004"]
+    assert "POL-009" in failures[0].message
 
 
 def test_every_rule_module_has_a_test_module():
