@@ -114,8 +114,9 @@ jobs:
           CHANGED_KITS: ${{ steps.changes.outputs.changed-kits }}
         run: |
           # Prefer the validator from the trusted base checkout (validates PR
-          # data with code the PR cannot alter). During bootstrap, fall back to
-          # the trusted validator's older --changed-kits interface.
+          # data with code the PR cannot alter). During bootstrap, use embedded
+          # data-only checks when the trusted validator predates cross-schema
+          # reference support.
           script="trusted/.github/scripts/validate_starter_kits.py"
           if grep -q -- '--added-kits' "$script" 2>/dev/null; then
             args=(--repo-root pr --added-kits)
@@ -123,12 +124,68 @@ jobs:
               read -r -a added_kits <<< "$ADDED_KITS"
               args+=("${added_kits[@]}")
             fi
+            python "$script" "${args[@]}"
           else
-            echo "::notice::trusted validator lacks --added-kits; using --changed-kits bootstrap interface"
-            args=(--repo-root pr)
-            if [[ -n "$CHANGED_KITS" ]]; then
-              read -r -a changed_kits <<< "$CHANGED_KITS"
-              args+=(--changed-kits "${changed_kits[@]}")
-            fi
+            echo "::notice::trusted validator lacks cross-schema support; running embedded bootstrap checks"
+            python - "$GITHUB_WORKSPACE/pr" "$CHANGED_KITS" "$ADDED_KITS" <<'PY'
+          import json, sys
+          from pathlib import Path
+          from jsonschema import Draft7Validator, FormatChecker
+          from referencing import Registry, Resource
+
+          root = Path(sys.argv[1])
+          changed = set(sys.argv[2].split())
+          added = set(sys.argv[3].split())
+          schema_dir = root / "docs" / "schemas"
+          schemas = {
+              path.name: json.loads(path.read_text(encoding="utf-8"))
+              for path in schema_dir.glob("*schema*.json")
+          }
+          registry = Registry().with_resources(
+              (name, Resource.from_contents(schema))
+              for name, schema in schemas.items()
+          )
+          validator = Draft7Validator(
+              schemas["starter-kit-schema.json"],
+              registry=registry,
+              format_checker=FormatChecker(),
+          )
+          agent_paths = {
+              f"agents/{path.parent.name}"
+              for path in (root / "agents").glob("*/metadata.yaml")
+          }
+          kit_dirs = sorted(
+              path for path in (root / "starter-kits").iterdir()
+              if path.is_dir() and (path / "kit.json").is_file()
+          )
+          if changed:
+              kit_dirs = [path for path in kit_dirs if path.name in changed]
+          errors = []
+          for kit_dir in kit_dirs:
+              manifest = json.loads((kit_dir / "kit.json").read_text(encoding="utf-8"))
+              for error in validator.iter_errors(manifest):
+                  location = "/".join(map(str, error.absolute_path)) or "(root)"
+                  errors.append(f"{kit_dir.name}: schema at {location}: {error.message}")
+              if manifest.get("name") != kit_dir.name:
+                  errors.append(f"{kit_dir.name}: name must match its directory")
+              refs = manifest.get("agentRefs") or []
+              primary = [
+                  ref for ref in refs
+                  if ref.get("role") == "primary" and ref.get("required") is True
+              ]
+              if len(primary) != 1:
+                  errors.append(f"{kit_dir.name}: expected exactly one required primary agent")
+              ref_values = [ref.get("ref") for ref in refs if ref.get("ref")]
+              if len(ref_values) != len(set(ref_values)):
+                  errors.append(f"{kit_dir.name}: duplicate agentRef values")
+              if manifest.get("lifecycle") == "active":
+                  for ref in ref_values:
+                      if ref not in agent_paths:
+                          errors.append(f"{kit_dir.name}: agentRef {ref!r} does not exist")
+              if kit_dir.name in added and manifest.get("lifecycle") != "active":
+                  errors.append(f"{kit_dir.name}: newly added kits must be active")
+          if errors:
+              raise SystemExit("\n".join(errors))
+          print(f"Validated {len(kit_dirs)} starter kit(s) with bootstrap checks.")
+          PY
           fi
-          python "$script" "${args[@]}"

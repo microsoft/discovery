@@ -302,16 +302,6 @@ jobs:
       - name: Install trusted validator dependencies
         run: python -m pip install -r trusted/.github/requirements-ci.txt
 
-      - name: Checkout PR head (untrusted data)
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          repository: ${{ steps.target.outputs.head-repository }}
-          ref: ${{ steps.target.outputs.head-sha }}
-          fetch-depth: 0
-          lfs: true
-          persist-credentials: false
-          path: pr
-
       - name: Checkout selected ref as integration base
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -326,12 +316,13 @@ jobs:
         continue-on-error: true
         env:
           HEAD_SHA: ${{ steps.target.outputs.head-sha }}
+          HEAD_REPOSITORY: ${{ steps.target.outputs.head-repository }}
         run: |
           set -o pipefail
           git -C "$GITHUB_WORKSPACE/evaluation" config user.name "discovery-shadow-validator"
           git -C "$GITHUB_WORKSPACE/evaluation" config user.email "discovery-shadow-validator@users.noreply.github.com"
           git -C "$GITHUB_WORKSPACE/evaluation" fetch --no-tags \
-            "$GITHUB_WORKSPACE/pr" "$HEAD_SHA"
+            "https://github.com/${HEAD_REPOSITORY}.git" "$HEAD_SHA"
           git -C "$GITHUB_WORKSPACE/evaluation" merge --no-commit --no-ff "$HEAD_SHA" \
             2>&1 | tee "$RUNNER_TEMP/shadow-validation/integration.txt"
 

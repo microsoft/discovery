@@ -402,7 +402,7 @@ def test_schema_bootstrap_never_executes_pr_python():
     )
     assert 'script="trusted/.github/scripts/validate_starter_kits.py"' in starter_command
     assert 'script="pr/' not in starter_command
-    assert "--changed-kits" in starter_command
+    assert "embedded bootstrap checks" in starter_command
 
 
 def test_registry_refresh_tracks_computed_tag_inputs():
@@ -595,21 +595,25 @@ def test_manual_shadow_validation_is_report_only_and_fork_aware():
     trusted_checkout = next(
         step for step in steps if step.get("with", {}).get("path") == "trusted"
     )
-    pr_checkout = next(
-        step for step in steps if step.get("with", {}).get("path") == "pr"
-    )
     assert trusted_checkout["with"]["ref"] == "${{ github.sha }}"
     assert trusted_checkout["if"] == "always()"
     assert trusted_checkout["with"]["persist-credentials"] == "false"
-    assert pr_checkout["with"]["repository"] == (
-        "${{ steps.target.outputs.head-repository }}"
+    assert not any(
+        step.get("with", {}).get("path") == "pr"
+        for step in steps
+        if uses_action(step, "actions/checkout")
     )
-    assert pr_checkout["with"]["ref"] == "${{ steps.target.outputs.head-sha }}"
-    assert pr_checkout["with"]["persist-credentials"] == "false"
     setup_python = next(
         step for step in steps if uses_action(step, "actions/setup-python")
     )
     assert "cache" not in setup_python.get("with", {})
+    integration_step = next(
+        step for step in steps
+        if step.get("name") == "Build ephemeral integration tree"
+    )
+    assert "https://github.com/${HEAD_REPOSITORY}.git" in integration_step["run"]
+    assert '"$HEAD_SHA"' in integration_step["run"]
+    assert steps.index(setup_python) < steps.index(integration_step)
 
     report_only_steps = {
         "Build ephemeral integration tree",
