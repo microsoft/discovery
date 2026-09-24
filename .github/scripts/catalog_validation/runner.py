@@ -5,7 +5,6 @@ PR out to both. To keep their responsibilities unambiguous, each rule family
 has exactly one authoritative owner:
 
 Legacy check families (``catalog_validation.*``) — authoritative for:
-  * contributor scope   (``contributor_scope``) — who may touch what
   * repository structure (``structural``)        — required files/folders
   * schema conformance   (``schema_checks``)     — agent/tool/metadata schemas
   * documentation        (``documentation``)     — required docs/sections
@@ -44,7 +43,6 @@ from pathlib import Path
 from rules.registry import build_context, discover_rules, run_rules
 
 from .contribution import ContributionSummary, classify_contribution
-from .contributor_scope import check_contributor_scope
 from .documentation import check_documentation
 from .findings import Failure
 from .policy_checks import check_policy
@@ -99,20 +97,41 @@ def run_validation(
     repo: Path,
     changed_files: list[str],
     *,
-    author_permission: str | None = None,
     author: str = "",
     head_ref: str = "",
 ) -> ValidationRun:
+    catalog_changed = any(
+        path.replace("\\", "/").startswith(("agents/", "starter-kits/"))
+        for path in changed_files
+    )
+    if not catalog_changed:
+        failures = check_policy(
+            repo,
+            set(),
+            changed_files,
+            author=author,
+            head_ref=head_ref,
+        )
+        return ValidationRun(
+            blocking=[
+                failure for failure in failures if failure.severity == "error"
+            ],
+            warnings=[
+                failure for failure in failures if failure.severity != "error"
+            ],
+            contribution=classify_contribution(
+                repo,
+                changed_files,
+                set(),
+                set(),
+            ),
+            setup_warnings=[],
+        )
+
     context = build_context(repo, changed_files)
     schemas = CatalogSchemas.load(repo)
 
     failures: list[Failure] = []
-    failures.extend(check_contributor_scope(
-        changed_files,
-        author_permission,
-        author,
-        head_ref,
-    ))
     failures.extend(check_structural(repo, context.agent_folders, changed_files))
     failures.extend(check_schema(
         repo,

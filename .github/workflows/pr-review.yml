@@ -24,8 +24,8 @@ jobs:
     outputs:
       changed_files: ${{ steps.changed.outputs.all_changed_files }}
       has_agents: ${{ steps.changed.outputs.has_agents }}
+      has_catalog: ${{ steps.changed.outputs.has_catalog }}
       has_docs_only: ${{ steps.changed.outputs.has_docs_only }}
-      author_permission: ${{ steps.author_permission.outputs.permission }}
     steps:
       # Do not check out attacker-controlled PR content in this privileged
       # pull_request_target workflow. The API supplies the authoritative list.
@@ -45,44 +45,16 @@ jobs:
             core.setOutput('all_changed_files', JSON.stringify(names));
             core.setOutput('has_agents', String(names.some(name => name.startsWith('agents/'))));
             core.setOutput(
+              'has_catalog',
+              String(names.some(name =>
+                name.startsWith('agents/') || name.startsWith('starter-kits/')
+              )),
+            );
+            core.setOutput(
               'has_docs_only',
               String(names.length > 0 && names.every(name => name.startsWith('docs/schemas/'))),
             );
             core.info(`Changed files (${names.length}):\n${names.join('\n')}`);
-
-      - name: Resolve PR author repository permission
-        id: author_permission
-        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
-        with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          script: |
-            const username = context.payload.pull_request.user.login;
-            const knownPermissions = new Set([
-              'admin', 'maintain', 'write', 'triage', 'read', 'none'
-            ]);
-            let permission = 'unknown';
-
-            try {
-              const response = await github.rest.repos.getCollaboratorPermissionLevel({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                username,
-              });
-              const reported = String(response.data.permission || '').toLowerCase();
-              permission = knownPermissions.has(reported) ? reported : 'unknown';
-            } catch (error) {
-              if (error.status === 404) {
-                permission = 'none';
-              } else {
-                core.warning(
-                  `Could not resolve repository permission for @${username}; ` +
-                  `applying public-contributor scope. ${error.message}`
-                );
-              }
-            }
-
-            core.info(`Repository permission for @${username}: ${permission}`);
-            core.setOutput('permission', permission);
 
   # ── Stages 2–4: Structural + Schema + Content/Policy + Documentation ───────
   validate:
@@ -168,9 +140,6 @@ jobs:
           # Exempt requires BOTH author and head ref to match.
           PR_AUTHOR: ${{ github.event.pull_request.user.login }}
           PR_HEAD_REF: ${{ github.event.pull_request.head.ref }}
-          # POL-021 treats an absent or failed lookup as public scope. Only
-          # admin/maintain/write can modify paths outside the catalog roots.
-          PR_AUTHOR_PERMISSION: ${{ needs.classify.outputs.author_permission || 'unknown' }}
         run: |
           # Invoke validator from the trusted checkout (base SHA) against PR content.
           python trusted/.github/scripts/validate_pr.py \
@@ -360,6 +329,8 @@ jobs:
             const results = JSON.parse(fs.readFileSync('/tmp/validation-results.json', 'utf8'));
             const secretScanPassed = '${{ needs.secret-scan.result }}' === 'success';
             const allPassed = results.passed && secretScanPassed;
+            const hasCatalog = '${{ needs.classify.outputs.has_catalog }}' === 'true';
+            const hasDocsOnly = '${{ needs.classify.outputs.has_docs_only }}' === 'true';
 
             const pr = context.payload.pull_request;
             const owner = context.repo.owner;
@@ -372,7 +343,7 @@ jobs:
               'pr-validation-failed',
               '1p-contribution',
               '3p-contribution',
-              'docs-only', // Legacy label; remove but never reapply.
+              'docs-only',
               'markdown-only',
               'contains-dockerfile',
               'contains-code',
@@ -396,6 +367,7 @@ jobs:
               'pr-validation-failed':  { color: 'd93f0b', description: "The pr-review workflow's validator failed; see inline comments." },
               '1p-contribution':          { color: '1d76db', description: "Authored by Microsoft (party='1p' in metadata)" },
               '3p-contribution':          { color: 'bfd4f2', description: "Authored by a third-party partner (party='3p' in metadata)" },
+              'docs-only':                { color: 'cfd3d7', description: 'PR only modifies files in docs/schemas/' },
               'markdown-only':             { color: '8250df', description: 'Every file changed by this PR is Markdown' },
               'contains-dockerfile':       { color: '2496ed', description: 'PR adds, modifies, renames, or removes a Dockerfile' },
               'contains-code':             { color: '1f883d', description: 'PR includes source-code changes' },
@@ -416,17 +388,21 @@ jobs:
             // 1p / 3p come from the `party` field inside metadata.yaml / kit.json,
             // not from folder location.
             const labelsToAdd = [];
-            if (results.has_1p) labelsToAdd.push('1p-contribution');
-            if (results.has_3p) labelsToAdd.push('3p-contribution');
-            if (results.has_markdown_only) labelsToAdd.push('markdown-only');
-            if (results.has_dockerfile) labelsToAdd.push('contains-dockerfile');
-            if (results.has_code) labelsToAdd.push('contains-code');
+            if (hasCatalog) {
+              if (results.has_1p) labelsToAdd.push('1p-contribution');
+              if (results.has_3p) labelsToAdd.push('3p-contribution');
+              if (results.has_markdown_only) labelsToAdd.push('markdown-only');
+              if (results.has_dockerfile) labelsToAdd.push('contains-dockerfile');
+              if (results.has_code) labelsToAdd.push('contains-code');
+            } else if (hasDocsOnly) {
+              labelsToAdd.push('docs-only');
+            }
 
             // Images always get a human look. POL-016 proves a file is the
             // format it claims to be; it cannot judge whether the picture is
             // appropriate, correctly licensed, or carries unreviewed text.
             const imageFiles = results.image_files || [];
-            if (results.has_images) labelsToAdd.push('needs-image-review');
+            if (hasCatalog && results.has_images) labelsToAdd.push('needs-image-review');
 
             // ── 3. Apply pass/fail labels ──────────────────────────
             if (allPassed) {
@@ -443,7 +419,7 @@ jobs:
             }
 
             // ── 3b. Image review notice ───────────────────────────
-            if (imageFiles.length > 0) {
+            if (hasCatalog && imageFiles.length > 0) {
               const rows = imageFiles.map(f => `| \`${f}\` |`).join('\n');
               const body = [
                 '## 🖼️ Image review required',

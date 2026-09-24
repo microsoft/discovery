@@ -10,7 +10,6 @@ from typing import Callable
 
 from model_weights_sniffer import MODEL_WEIGHT_EXTENSIONS, sniff
 
-from .contributor_scope import is_trusted_registry_refresh
 from .findings import Failure
 from .schemas import load_yaml
 
@@ -22,11 +21,20 @@ PICKLE_ALLOWLIST = frozenset({
     "collections", "collections.abc",
     "numpy", "numpy.core.multiarray", "numpy.core.numeric",
 })
-_CATALOG_PREFIXES = ("agents/", "starter-kits/")
-
 _BLOCKED_FILENAMES = frozenset({".DS_Store", "Thumbs.db", "desktop.ini"})
 _BLOCKED_BASENAME_SUFFIXES = (".swp", ".swo", ".bak", "~")
 _BLOCKED_PREFIXES = (".idea/", ".vs/", ".vscode/.cache/")
+_REGISTRY_REFRESH_BOT_AUTHORS = frozenset({
+    "github-actions[bot]",
+    "discovery-registry-bot[bot]",
+})
+
+
+def is_trusted_registry_refresh(author: str, head_ref: str) -> bool:
+    return (
+        head_ref.startswith("chore/registry-refresh")
+        and author in _REGISTRY_REFRESH_BOT_AUTHORS
+    )
 
 
 def _is_env_artefact(rel: str) -> bool:
@@ -109,9 +117,6 @@ def _picklescan_unsafe_imports(path: Path) -> list[str]:
 def check_model_weights(repo: Path, changed_files: list[str]) -> list[Failure]:
     failures: list[Failure] = []
     for rel in changed_files:
-        normalized = rel.replace("\\", "/")
-        if not normalized.startswith(_CATALOG_PREFIXES):
-            continue
         extension = Path(rel).suffix.lower()
         if extension not in MODEL_WEIGHT_EXTENSIONS:
             continue

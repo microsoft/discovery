@@ -97,7 +97,7 @@ def test_shadow_summary_expands_catalog_and_failed_subcheck_logs(tmp_path: Path)
     catalog.write_text(json.dumps({
         "passed": False,
         "failures": [{
-            "rule_id": "POL-021",
+            "rule_id": "POL-020",
             "file": ".github/workflows/example.yml",
             "line": 1,
             "message": "Public contributors may only change catalog paths.",
@@ -124,7 +124,7 @@ def test_shadow_summary_expands_catalog_and_failed_subcheck_logs(tmp_path: Path)
         revision="abc123",
     )
 
-    assert "POL-021" in summary
+    assert "POL-020" in summary
     assert ".github/workflows/example.yml:1" in summary
     assert "FAILED test_schema.py::test_agent - invalid region" in summary
     assert "Starter-kit validator\n\n**Result:** Passed" not in summary

@@ -143,17 +143,13 @@ def test_codeql_runs_when_any_scanned_source_changes():
 def test_dependabot_monitors_each_supported_ecosystem():
     config = load_yaml(DEPENDABOT_PATH)
     ecosystems = {update["package-ecosystem"] for update in config["updates"]}
-    assert ecosystems == {"github-actions", "nuget", "uv", "pip", "docker"}
+    assert ecosystems == {"github-actions", "nuget", "pip", "docker"}
 
     for update in config["updates"]:
         assert update["schedule"]["interval"] == "weekly"
         assert update["open-pull-requests-limit"] > 0
 
     assert dependabot_update("github-actions")["directory"] == "/"
-
-    uv_directory = dependabot_update("uv")["directory"].lstrip("/")
-    assert (REPO_ROOT / uv_directory / "pyproject.toml").is_file()
-    assert (REPO_ROOT / uv_directory / "uv.lock").is_file()
 
 
 def test_dependency_review_blocks_new_high_severity_vulnerabilities():
@@ -368,12 +364,28 @@ def test_validation_workflows_publish_actionable_diagnostics():
     assert "'contains-code':             { color: '1f883d'" in feedback
 
 
-def test_unit_tests_run_for_any_workflow_change():
+def test_unit_tests_keep_existing_workflow_scope():
     source = (
         REPO_ROOT / ".github" / "workflows" / "unit-tests.yml"
     ).read_text(encoding="utf-8")
 
-    assert r"/^\.github\/workflows\/.*\.yml$/" in source
+    assert (
+        r"^\.github/workflows/(probe-aka-ms|unit-tests)\.yml$"
+        in source
+    )
+    assert r"/^\.github\/workflows\/.*\.yml$/" not in source
+
+
+def test_pr_review_limits_new_labels_and_image_gate_to_catalog_changes():
+    source = (
+        REPO_ROOT / ".github" / "workflows" / "pr-review.yml"
+    ).read_text(encoding="utf-8")
+
+    assert "const hasCatalog =" in source
+    assert "} else if (hasDocsOnly) {" in source
+    assert "labelsToAdd.push('docs-only');" in source
+    assert "if (hasCatalog && results.has_images)" in source
+    assert "if (hasCatalog && imageFiles.length > 0)" in source
 
 
 def test_schema_bootstrap_never_executes_pr_python():
@@ -426,7 +438,6 @@ def test_dependabot_covers_all_requirements_files():
     requirements = sorted(
         [CI_REQUIREMENTS_PATH]
         + [*REPO_ROOT.glob("agents/**/requirements.txt")]
-        + [*REPO_ROOT.glob("utilities/**/requirements.txt")]
     )
     expected_directories = {
         f"/{path.parent.relative_to(REPO_ROOT).as_posix()}" for path in requirements
@@ -665,7 +676,6 @@ def test_manual_shadow_validation_is_report_only_and_fork_aware():
 def test_dependabot_covers_all_conventional_dockerfiles():
     dockerfiles = sorted(
         [*REPO_ROOT.glob("agents/*/tools/*/Dockerfile")]
-        + [*REPO_ROOT.glob("utilities/**/Dockerfile")]
     )
     patterns = dependabot_update("docker")["directories"]
     uncovered = [

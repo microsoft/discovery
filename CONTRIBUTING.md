@@ -59,11 +59,6 @@ Code contributions to the Microsoft Discovery app itself — its plugin, MCP too
 4. Automated checks will run on your PR. If anything fails, the bot adds an inline comment with the rule ID and how to fix it — address every finding before requesting human review.
 5. When the pr-review validator passes, the `pr-validation-passed` label is applied and the [CODEOWNERS](.github/CODEOWNERS) maintainers are auto-requested for review. Other status checks (unit tests, schema regression, etc.) report independently — see the PR status rollup for the full picture. **One CODEOWNERS approval** is required to merge.
 
-`POL-021` checks the PR author's repository permission. Authors without
-`write`, `maintain`, or `admin` permission may modify catalog content and
-documentation. Mixed PRs that also touch trusted automation, repository
-configuration, schemas, generated output, or executable utilities are blocked.
-
 The PR review also spellchecks changed agent and starter-kit prose. `SPELL-001`
 annotations are advisory warnings: they never block merge, and code, identifiers,
 URLs, and fenced Markdown examples are excluded from the check.

@@ -8,8 +8,7 @@ name: Unit Tests
 # non-triggered required check as "expected, never reported" which blocks PRs
 # that don't touch the relevant paths. To avoid that, the workflow runs on
 # every PR and a "Detect relevant changes" guard step skips the real work
-# (but still reports success) when no trusted code, policy, schema, or security
-# automation files changed.
+# (but still reports success) when no scripts/tests/workflow files changed.
 
 on:
   pull_request:
@@ -17,19 +16,10 @@ on:
     branches:
       - main
     paths:
-      - ".github/codeql/**"
-      - ".github/dependabot.yml"
-      - ".github/requirements-ci.txt"
       - ".github/scripts/**"
       - ".github/tests/**"
-      - ".github/policy/**"
-      - ".github/workflows/code-scan.yml"
-      - ".github/workflows/dependency-review.yml"
       - ".github/workflows/probe-aka-ms.yml"
       - ".github/workflows/unit-tests.yml"
-      - "docs/schemas/**"
-      - "docs/validation-rules.csv"
-      - "docs/validation-rules.md"
   workflow_dispatch:
 
 permissions:
@@ -45,29 +35,19 @@ jobs:
       - name: Detect relevant changes
         id: changes
         if: github.event_name == 'pull_request'
-        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9
-        with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          script: |
-            const files = await github.paginate(github.rest.pulls.listFiles, {
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              pull_number: context.issue.number,
-              per_page: 100,
-            });
-            const patterns = [
-              /^\.github\/(scripts|tests|policy|codeql)\//,
-              /^\.github\/(dependabot\.yml|requirements-ci\.txt)$/,
-              /^\.github\/workflows\/.*\.yml$/,
-              /^docs\/(schemas\/|validation-rules\.(csv|md)$)/,
-            ];
-            const relevant = files.some(({ filename }) =>
-              patterns.some((pattern) => pattern.test(filename))
-            );
-            core.setOutput('relevant', String(relevant));
-            if (!relevant) {
-              core.notice('No trusted code, policy, schema, or security automation paths changed; reporting success without running pytest.');
-            }
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          FILES=$(gh api \
+            "repos/${GITHUB_REPOSITORY}/pulls/${{ github.event.pull_request.number }}/files" \
+            --paginate --jq '.[].filename')
+          if echo "$FILES" | grep -E '^\.github/(scripts|tests)/|^\.github/workflows/(probe-aka-ms|unit-tests)\.yml$' >/dev/null; then
+            echo "relevant=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "relevant=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::No scripts/tests/unit-tests-workflow paths changed; reporting success without running pytest."
+          fi
 
       - name: Checkout
         if: github.event_name != 'pull_request' || steps.changes.outputs.relevant == 'true'

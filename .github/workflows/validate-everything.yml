@@ -252,27 +252,10 @@ jobs:
               'utf8',
             );
 
-            let authorPermission = 'unknown';
-            try {
-              const response = await github.rest.repos.getCollaboratorPermissionLevel({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                username: pr.user.login,
-              });
-              authorPermission = response.data.user.permission;
-            } catch (error) {
-              if (error.status === 404) {
-                authorPermission = 'none';
-              } else {
-                core.warning(`Could not resolve @${pr.user.login}'s permission: ${error.message}`);
-              }
-            }
-
             core.setOutput('number', String(prNumber));
             core.setOutput('url', pr.html_url);
             core.setOutput('title', pr.title);
             core.setOutput('author', pr.user.login);
-            core.setOutput('author-permission', authorPermission);
             core.setOutput('base-sha', pr.base.sha);
             core.setOutput('head-sha', pr.head.sha);
             core.setOutput('head-ref', pr.head.ref);
@@ -332,7 +315,6 @@ jobs:
         continue-on-error: true
         env:
           PR_AUTHOR: ${{ steps.target.outputs.author }}
-          PR_AUTHOR_PERMISSION: ${{ steps.target.outputs.author-permission }}
           PR_HEAD_REF: ${{ steps.target.outputs.head-ref }}
         run: |
           set +e

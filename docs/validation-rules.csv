@@ -46,7 +46,6 @@ POL-017,Pinned Docker base image tags,Warns when Dockerfile base images use floa
 POL-018,Public webpage reachability,"Requires governed catalog webpage URLs to use HTTPS, resolve only to public addresses, follow bounded redirects, and return HTML.",.github/scripts/rules/pol_018.py; .github/scripts/contact_network_validator.py; .github/policy/contact-network.json
 POL-019,Contact email domain DNS,Requires catalog contact domains to publish usable public mail or fallback DNS records.,.github/scripts/rules/pol_019.py; .github/scripts/contact_network_validator.py; .github/policy/contact-network.json
 POL-020,Safe UTF-8 source text,Rejects malformed UTF-8 and unsafe invisible control private-use or noncharacter code points.,.github/scripts/rules/pol_020.py; .github/scripts/content_sniffer.py
-POL-021,Contributor path scope,Restricts public contributors to catalog content and documentation while protecting trusted automation schemas configuration and utilities.,.github/scripts/catalog_validation/contributor_scope.py; .github/workflows/pr-review.yml
 DOC-001,README minimum content,Requires a non-empty README with at least 50 non-whitespace characters.,.github/scripts/catalog_validation/documentation.py
 DOC-002,README top-level heading,Requires an agent README to contain a top-level heading.,.github/scripts/catalog_validation/documentation.py
 DOC-003,README overview section,Requires an Overview or Description section.,.github/scripts/catalog_validation/documentation.py
