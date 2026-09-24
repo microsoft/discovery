@@ -22,6 +22,7 @@ PICKLE_ALLOWLIST = frozenset({
     "collections", "collections.abc",
     "numpy", "numpy.core.multiarray", "numpy.core.numeric",
 })
+_CATALOG_PREFIXES = ("agents/", "starter-kits/")
 
 _BLOCKED_FILENAMES = frozenset({".DS_Store", "Thumbs.db", "desktop.ini"})
 _BLOCKED_BASENAME_SUFFIXES = (".swp", ".swo", ".bak", "~")
@@ -108,6 +109,9 @@ def _picklescan_unsafe_imports(path: Path) -> list[str]:
 def check_model_weights(repo: Path, changed_files: list[str]) -> list[Failure]:
     failures: list[Failure] = []
     for rel in changed_files:
+        normalized = rel.replace("\\", "/")
+        if not normalized.startswith(_CATALOG_PREFIXES):
+            continue
         extension = Path(rel).suffix.lower()
         if extension not in MODEL_WEIGHT_EXTENSIONS:
             continue

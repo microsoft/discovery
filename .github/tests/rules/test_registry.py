@@ -15,7 +15,13 @@ from conftest import ELF_BYTES, run_rule, write, write_policy
 
 from rules.base import Finding, Rule, Scope, Severity
 from rules.pol_008 import RULE as POL_008
-from rules.registry import MAX_WAIVER_DAYS, discover_rules, load_waivers
+from rules.registry import (
+    MAX_WAIVER_DAYS,
+    build_context,
+    discover_rules,
+    load_waivers,
+    run_rules,
+)
 
 RULES_DIR = Path(__file__).resolve().parents[2] / "scripts" / "rules"
 TESTS_DIR = Path(__file__).resolve().parent
@@ -71,6 +77,18 @@ def test_generated_rule_docs_are_current():
     assert committed == render(discover_rules()), (
         "Regenerate with: python .github/scripts/generate_rule_docs.py"
     )
+
+
+def test_catalog_rules_ignore_files_outside_catalog_trees(repo):
+    changed = [
+        write(repo, "utilities/toolbox/Dockerfile", "FROM ubuntu:latest\n"),
+        write(repo, "docs/examples/payload.py", "print('example')\n"),
+        write(repo, "includes/media/diagram.svg", "<svg><script/></svg>\n"),
+    ]
+
+    result = run_rules(build_context(repo, changed), discover_rules())
+
+    assert result.findings == []
 
 
 # ── Waiver validation ────────────────────────────────────────────────────────

@@ -14,7 +14,11 @@ from pathlib import Path
 
 import pytest
 
-from validate_pr import _is_lfs_tracked_strict, _picklescan_unsafe_imports
+from validate_pr import (
+    _is_lfs_tracked_strict,
+    _picklescan_unsafe_imports,
+    check_model_weights,
+)
 
 
 def _make_torch_zip(path: Path, archive_name: str = "archive",
@@ -115,6 +119,24 @@ def test_lfs_check_definitive_result_passes_through(
     monkeypatch.delenv("GITHUB_ACTIONS", raising=False)
     monkeypatch.delenv("CI", raising=False)
     assert _is_lfs_tracked_strict(tmp_path, "x.pt", ".pt") is False
+
+
+@pytest.mark.parametrize(
+    "rel",
+    [
+        "utilities/model-tools/sample.pt",
+        "docs/examples/sample.onnx",
+        "includes/media/sample.safetensors",
+    ],
+)
+def test_model_weights_outside_catalog_trees_are_ignored(
+    tmp_path: Path, rel: str
+) -> None:
+    path = tmp_path / rel
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_bytes(b"not a model")
+
+    assert check_model_weights(tmp_path, [rel]) == []
 
 
 if __name__ == "__main__":
