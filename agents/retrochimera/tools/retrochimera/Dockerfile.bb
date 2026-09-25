@@ -8,7 +8,7 @@
 # Override the URL at build time if eMolecules rotates the date slug:
 #   --build-arg BUILDING_BLOCKS_URL=https://downloads.emolecules.com/orderbb/<date>/parent.smi.gz
 
-FROM condaforge/mambaforge:24.3.0-0
+FROM condaforge/mambaforge:24.9.2-0
 
 # Minimal conda env with just RDKit for SMILES canonicalization.
 # Pin to the same RDKit version that the runtime deps image ends up with
