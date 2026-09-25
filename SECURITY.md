@@ -39,3 +39,61 @@ We prefer all communications to be in English.
 Microsoft follows the principle of [Coordinated Vulnerability Disclosure](https://aka.ms/security.md/cvd).
 
 <!-- END MICROSOFT SECURITY.MD BLOCK -->
+
+## Repository security process
+
+Catalog changes pass through layered automated checks and maintainer review. The
+detailed rule definitions and remediation guidance are in
+[`docs/validation-rules.md`](docs/validation-rules.md) and
+[`CONTRIBUTING.md`](CONTRIBUTING.md).
+
+| Layer | Policy inventory |
+| --- | --- |
+| Trust boundary | PR validation runs trusted base-branch code against the proposed content; PR-supplied code is not executed with a write token. Workflow permissions are minimized, and untrusted values are passed through environment variables. |
+| Structure and schemas | `STR-*`, `SCH-*`, `AS-*`, and `SKT-*` validate required files, JSON/YAML schemas, names, references, and starter-kit composition. Concrete schema nodes require a type or reference plus size, count, or range bounds; semantic strings use patterns or formats, and objects are closed or use bounded extension maps. `MET-*`, `DOC-*`, and `DEP-*` validate metadata, documentation, and dependency declarations. |
+| Catalog content | `POL-004` and `POL-005` enforce description and README minimums; `POL-008`, `POL-009`, `POL-010`, `POL-011`, and `POL-012` restrict binaries, validate model weights, and block hidden artifacts, generated-registry edits, and deployer scratch data; `POL-014`, `POL-015`, `POL-016`, `POL-017`, `POL-018`, and `POL-019` govern base-image provenance and pinning, file types, small Markdown-referenced image safety, reachable public webpages, and mail-capable contact domains. `SKT-POL-001` requires new starter kits to be active. |
+| Classification | `TAG-001` and `TAG-002` enforce the reviewed tag vocabulary and reserve CI-computed tag namespaces. |
+| Security scanning | Verified-secret findings block PRs. Unverified secret candidates, CodeQL, DevSkim, and Microsoft Application Inspector results are report-only inputs for reviewers. |
+| Review and merge | CODEOWNERS and branch protection require successful checks and human approval. Agent-removal checks protect active starter-kit references; generated registries are rebuilt and schema-validated by automation. |
+| After merge | The weekly catalog audit reruns all modular rules and Microsoft Security DevOps across the catalog. URLhaus/PhishTank reputation lookups and Docker Scout image-CVE scans are staged but disabled pending validated credentials, provider access, and representative runs. |
+
+Policy configuration is review-controlled under [`.github/policy/`](.github/policy/):
+approved base images, source-file allowlists, network validation limits, and tag
+taxonomy. Exceptions require an expiring CODEOWNER-approved waiver; the ratchet
+baseline records legacy findings but does not permit new violations.
+
+### Security automation promotion and response
+
+The Discovery catalog CODEOWNERS own scanner triage and promotion. The required
+dependency review and verified-secret scan are blocking today. CodeQL, DevSkim,
+and Microsoft Security DevOps remain report-only while their existing findings
+are triaged; they will block new **high** and **critical** findings no later than
+**December 31, 2026**, after two consecutive representative runs complete
+without unowned high-severity debt. Application Inspector is a capability
+inventory rather than a severity-bearing vulnerability scanner, so it remains
+mandatory reviewer evidence rather than an automated merge gate.
+
+Scanner findings use these response targets:
+
+| Severity or condition | Owner response target |
+| --- | --- |
+| Critical finding or verified credential | Triage within 1 business day; remediate, disable the affected catalog item, or obtain an expiring CODEOWNER-approved waiver within 24 hours of triage. |
+| High severity | Triage within 2 business days; remediate or obtain an expiring CODEOWNER-approved waiver within 7 calendar days. |
+| Medium severity | Triage within 5 business days; remediate or record a disposition within 30 calendar days. |
+| Scanner failure / missing SARIF | Triage within 2 business days and restore the scan before promotion criteria can advance. |
+
+The scheduled catalog audit fails when rule drift, stale generated controls,
+security findings, or scanner errors require triage. A red scheduled run remains
+the system of record until a clean rerun succeeds; GitHub Issues are disabled in
+this repository.
+
+### Ratchet baseline governance
+
+The ratchet baseline is controlled migration debt, not a permanent allowlist.
+Every entry requires a CODEOWNER, a repository-tracked removal reference, and a
+future removal date. CI compares the proposed baseline with the PR base and
+rejects additions; only removals or CODEOWNER-reviewed metadata updates are
+allowed.
+Current entries and their remediation checklist are tracked in
+[`docs/validation-baseline-debt.md`](docs/validation-baseline-debt.md) and are
+targeted for removal before scanner enforcement promotion.

@@ -8,6 +8,13 @@ name: Validate Starter Kits
 
 on:
   pull_request:
+  workflow_dispatch:
+    inputs:
+      reason:
+        description: "Reason for manual starter-kit validation"
+        required: false
+        default: "Manual starter-kit validation"
+        type: string
 
 permissions:
   contents: read
@@ -16,57 +23,167 @@ permissions:
 jobs:
   validate:
     name: Validate starter kit manifests
-    runs-on: ubuntu-latest
-    timeout-minutes: 20
+    runs-on: ubuntu-slim
+    timeout-minutes: 15
     steps:
       - name: Detect relevant changes
         id: changes
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          set -euo pipefail
-          FILES=$(gh api \
-            "repos/${GITHUB_REPOSITORY}/pulls/${{ github.event.pull_request.number }}/files" \
-            --paginate --jq '.[].filename')
-          if echo "$FILES" | grep -E '^starter-kits/|^docs/schemas/starter-kit-schema\.json$' >/dev/null; then
-            echo "relevant=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "relevant=false" >> "$GITHUB_OUTPUT"
-            echo "::notice::No starter-kits/** or starter-kit-schema.json changes; reporting success without running validation."
-          fi
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            if (context.eventName === 'workflow_dispatch') {
+              core.setOutput('relevant', 'true');
+              core.setOutput('added-kits', '');
+              core.notice('Manual dispatch: validating every starter-kit manifest against the selected ref.');
+              return;
+            }
+            const files = await github.paginate(github.rest.pulls.listFiles, {
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: context.issue.number,
+              per_page: 100,
+            });
+            const schemaPattern = /^docs\/schemas\/(common-schema|starter-kit-schema)\.json$/;
+            const relevant = files.some(({ filename }) =>
+              filename.startsWith('starter-kits/') || schemaPattern.test(filename)
+            );
+            const addedKits = files.flatMap(({ filename, status }) => {
+              const match = /^starter-kits\/([^/]+)\/kit\.json$/.exec(filename);
+              return status === 'added' && match ? [match[1]] : [];
+            });
+            const changedKits = files.flatMap(({ filename }) => {
+              const match = /^starter-kits\/([^/]+)\//.exec(filename);
+              return match ? [match[1]] : [];
+            });
+            core.setOutput('relevant', String(relevant));
+            core.setOutput('added-kits', [...new Set(addedKits)].join(' '));
+            core.setOutput('changed-kits', [...new Set(changedKits)].join(' '));
+            if (!relevant) {
+              core.notice('No starter-kits/** or starter-kit-schema.json changes; reporting success without running validation.');
+            }
 
-      - name: Checkout PR branch
+      # Security boundary: the validator is *trusted* code checked out from the
+      # PR base and run against the PR's starter-kit manifests as data. The
+      # preceding checkouts disable persisted credentials so a PR cannot read
+      # the token from .git/config while its content is scanned.
+      - name: Checkout trusted base (validator code)
+        if: steps.changes.outputs.relevant == 'true'
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event.pull_request.base.sha }}
+          fetch-depth: 1
+          persist-credentials: false
+          path: trusted
+
+      - name: Checkout PR content as data
         if: steps.changes.outputs.relevant == 'true'
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
+          persist-credentials: false
+          path: pr
 
       - name: Set up Python
         if: steps.changes.outputs.relevant == 'true'
         uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
-          python-version: "3.11"
+          python-version: "3.12"
 
       - name: Install dependencies
         if: steps.changes.outputs.relevant == 'true'
-        run: pip install jsonschema pyyaml
-
-      - name: Determine changed starter kits
-        if: steps.changes.outputs.relevant == 'true'
-        id: changed
         run: |
-          CHANGED=$(git diff --name-only origin/${{ github.base_ref }}...HEAD \
-            | grep '^starter-kits/' \
-            | awk -F/ 'NF >= 2 { print $2 }' \
-            | sort -u | tr '\n' ' ')
-          echo "kits=$CHANGED" >> "$GITHUB_OUTPUT"
+          # Pin CI dependency versions from the trusted base checkout. During
+          # the bootstrap window - before this constraints file exists on the
+          # base branch - install unpinned rather than reading the untrusted PR
+          # copy. This self-heals to the pinned path once the PR merges.
+          constraint="trusted/.github/requirements-ci.txt"
+          if [ -f "$constraint" ]; then
+            python -m pip install -c "$constraint" jsonschema pyyaml referencing
+          else
+            echo "::notice::trusted constraints file absent on base (bootstrap); installing unpinned"
+            python -m pip install jsonschema pyyaml referencing
+          fi
 
       - name: Run validation
         if: steps.changes.outputs.relevant == 'true'
+        env:
+          ADDED_KITS: ${{ steps.changes.outputs.added-kits }}
+          CHANGED_KITS: ${{ steps.changes.outputs.changed-kits }}
         run: |
-          KITS="${{ steps.changed.outputs.kits }}"
-          ARGS=""
-          if [ -n "$KITS" ]; then
-            ARGS="--changed-kits $KITS"
+          # Prefer the validator from the trusted base checkout (validates PR
+          # data with code the PR cannot alter). During bootstrap, use embedded
+          # data-only checks when the trusted validator predates cross-schema
+          # reference support.
+          script="trusted/.github/scripts/validate_starter_kits.py"
+          if grep -q -- '--added-kits' "$script" 2>/dev/null; then
+            args=(--repo-root pr --added-kits)
+            if [[ -n "$ADDED_KITS" ]]; then
+              read -r -a added_kits <<< "$ADDED_KITS"
+              args+=("${added_kits[@]}")
+            fi
+            python "$script" "${args[@]}"
+          else
+            echo "::notice::trusted validator lacks cross-schema support; running embedded bootstrap checks"
+            python - "$GITHUB_WORKSPACE/pr" "$CHANGED_KITS" "$ADDED_KITS" <<'PY'
+          import json, sys
+          from pathlib import Path
+          from jsonschema import Draft7Validator, FormatChecker
+          from referencing import Registry, Resource
+
+          root = Path(sys.argv[1])
+          changed = set(sys.argv[2].split())
+          added = set(sys.argv[3].split())
+          schema_dir = root / "docs" / "schemas"
+          schemas = {
+              path.name: json.loads(path.read_text(encoding="utf-8"))
+              for path in schema_dir.glob("*schema*.json")
+          }
+          registry = Registry().with_resources(
+              (name, Resource.from_contents(schema))
+              for name, schema in schemas.items()
+          )
+          validator = Draft7Validator(
+              schemas["starter-kit-schema.json"],
+              registry=registry,
+              format_checker=FormatChecker(),
+          )
+          agent_paths = {
+              f"agents/{path.parent.name}"
+              for path in (root / "agents").glob("*/metadata.yaml")
+          }
+          kit_dirs = sorted(
+              path for path in (root / "starter-kits").iterdir()
+              if path.is_dir() and (path / "kit.json").is_file()
+          )
+          if changed:
+              kit_dirs = [path for path in kit_dirs if path.name in changed]
+          errors = []
+          for kit_dir in kit_dirs:
+              manifest = json.loads((kit_dir / "kit.json").read_text(encoding="utf-8"))
+              for error in validator.iter_errors(manifest):
+                  location = "/".join(map(str, error.absolute_path)) or "(root)"
+                  errors.append(f"{kit_dir.name}: schema at {location}: {error.message}")
+              if manifest.get("name") != kit_dir.name:
+                  errors.append(f"{kit_dir.name}: name must match its directory")
+              refs = manifest.get("agentRefs") or []
+              primary = [
+                  ref for ref in refs
+                  if ref.get("role") == "primary" and ref.get("required") is True
+              ]
+              if len(primary) != 1:
+                  errors.append(f"{kit_dir.name}: expected exactly one required primary agent")
+              ref_values = [ref.get("ref") for ref in refs if ref.get("ref")]
+              if len(ref_values) != len(set(ref_values)):
+                  errors.append(f"{kit_dir.name}: duplicate agentRef values")
+              if manifest.get("lifecycle") == "active":
+                  for ref in ref_values:
+                      if ref not in agent_paths:
+                          errors.append(f"{kit_dir.name}: agentRef {ref!r} does not exist")
+              if kit_dir.name in added and manifest.get("lifecycle") != "active":
+                  errors.append(f"{kit_dir.name}: newly added kits must be active")
+          if errors:
+              raise SystemExit("\n".join(errors))
+          print(f"Validated {len(kit_dirs)} starter kit(s) with bootstrap checks.")
+          PY
           fi
-          python .github/scripts/validate_starter_kits.py --repo-root . $ARGS

@@ -25,29 +25,18 @@ Usage (called from check-agent-removal-impact.yml):
 
 import argparse
 import json
-import os
 import subprocess
 import sys
-import tempfile
 import urllib.request
 import urllib.error
 from pathlib import Path
 
-try:
-    import yaml
-except ImportError:
-    print("ERROR: pyyaml not installed. Run: pip install pyyaml", file=sys.stderr)
-    sys.exit(1)
+import update_registry
 
 
 def load_json(path: Path) -> dict:
     with path.open() as f:
         return json.load(f)
-
-
-def load_yaml_safe(path: Path) -> dict:
-    with path.open() as f:
-        return yaml.safe_load(f) or {}
 
 
 def github_get(url: str, token: str) -> dict:
@@ -88,49 +77,97 @@ def github_get_paged(url: str, token: str) -> list:
     return results
 
 
-def get_base_registry_paths(repo_root: Path, base_sha: str) -> set[str]:
-    """Read .auto-registry/agent-registry.json at base_sha via git show and extract agent paths."""
-    try:
-        result = subprocess.run(
-            ["git", "show", f"{base_sha}:.auto-registry/agent-registry.json"],
-            capture_output=True, text=True, cwd=str(repo_root),
+def _parse_registry_agent_paths(raw: str) -> set[str]:
+    registry = json.loads(raw)
+    return {
+        e["path"]
+        for e in registry.get("entries", [])
+        if e.get("type") == "agent"
+    }
+
+
+def get_base_registry_paths(
+    repo_root: Path,
+    base_sha: str,
+    base_registry_root: Path | None = None,
+) -> set[str]:
+    """Return agent paths recorded in the base (pre-PR) registry.
+
+    When ``base_registry_root`` is provided — the trusted base checkout — the
+    committed ``agent-registry.json`` is read directly from disk. That is the
+    reliable source for fork PRs, whose checkout usually does not contain the
+    upstream base commit, so ``git show <base_sha>`` would silently yield
+    nothing and hide every removal. Otherwise the file is read from ``base_sha``
+    via ``git show`` inside ``repo_root``.
+
+    A base registry that exists but cannot be read or parsed is a hard error:
+    returning an empty set would make removals invisible and let the gate pass a
+    PR that breaks starter-kit references.
+    """
+    if base_registry_root is not None:
+        registry_path = base_registry_root / ".auto-registry" / "agent-registry.json"
+        if not registry_path.is_file():
+            raise RuntimeError(
+                f"Base registry not found at {registry_path}. The trusted base "
+                f"checkout must contain .auto-registry/agent-registry.json so "
+                f"agent removals can be detected."
+            )
+        try:
+            return _parse_registry_agent_paths(registry_path.read_text(encoding="utf-8"))
+        except (OSError, ValueError, KeyError) as e:
+            raise RuntimeError(
+                f"Base registry at {registry_path} could not be parsed: {e}"
+            ) from e
+
+    result = subprocess.run(
+        ["git", "show", f"{base_sha}:.auto-registry/agent-registry.json"],
+        capture_output=True, text=True, cwd=str(repo_root),
+    )
+    if result.returncode != 0:
+        raise RuntimeError(
+            f"Could not read base registry at {base_sha}: {result.stderr.strip()}. "
+            f"Refusing to continue, since an unreadable base registry would hide "
+            f"agent removals. Supply --base-registry-root pointing at a base "
+            f"checkout for fork PRs."
         )
-        if result.returncode != 0:
-            print(f"WARNING: Could not read base registry at {base_sha}: {result.stderr.strip()}")
-            return set()
-        registry = json.loads(result.stdout)
-        return {
-            e["path"]
-            for e in registry.get("entries", [])
-            if e.get("type") == "agent"
-        }
-    except Exception as e:
-        print(f"WARNING: Error reading base registry: {e}")
-        return set()
+    try:
+        return _parse_registry_agent_paths(result.stdout)
+    except (ValueError, KeyError) as e:
+        raise RuntimeError(
+            f"Base registry at {base_sha} could not be parsed: {e}"
+        ) from e
 
 
 def get_head_registry_paths(repo_root: Path) -> set[str]:
-    """Run update_registry.py on current checkout; return set of agent path strings."""
-    script = repo_root / ".github" / "scripts" / "update_registry.py"
-    if not script.exists():
-        raise FileNotFoundError(f"update_registry.py not found: {script}")
-    with tempfile.NamedTemporaryFile(suffix=".json", delete=False) as tmp:
-        tmp_path = tmp.name
-    try:
-        result = subprocess.run(
-            [sys.executable, str(script), "--repo-root", str(repo_root), "--output", tmp_path],
-            capture_output=True, text=True,
-        )
-        if result.returncode != 0:
-            raise RuntimeError(f"update_registry.py failed:\n{result.stderr}")
-        registry = load_json(Path(tmp_path))
-        return {
-            e["path"]
-            for e in registry.get("entries", [])
-            if e.get("type") == "agent"
-        }
-    finally:
-        os.unlink(tmp_path)
+    """Return agent paths from the PR checkout that survive registry generation.
+
+    The base set comes from the committed ``agent-registry.json``, which is
+    produced by ``update_registry``. To compare like-for-like, the head set is
+    derived through the *same* validated generation path: a directory counts as
+    present only if ``update_registry.build_entry`` yields a valid entry (valid
+    metadata with a name). A folder that merely contains a ``metadata.yaml`` but
+    would be rejected by registry generation is therefore treated as absent, so
+    a malformed or incomplete agent cannot mask a genuine removal.
+    """
+    paths: set[str] = set()
+    agents_dir = repo_root / "agents"
+    if not agents_dir.is_dir():
+        return paths
+    for agent_dir in sorted(agents_dir.iterdir()):
+        if not agent_dir.is_dir():
+            continue
+        rel_path = f"agents/{agent_dir.name}"
+        try:
+            entry = update_registry.build_entry(str(agent_dir), rel_path, "agent")
+        except Exception as exc:
+            print(
+                f"WARNING: {rel_path} does not produce a valid registry entry "
+                f"and is treated as absent: {exc}"
+            )
+            continue
+        if entry is not None:
+            paths.add(entry["path"])
+    return paths
 
 
 def get_active_kits(repo_root: Path) -> list[tuple[str, dict]]:
@@ -325,6 +362,13 @@ def post_pr_comment(token: str, repo: str, pr_number: int, body: str) -> None:
 def main() -> None:
     parser = argparse.ArgumentParser(description="Check agent removal impact on starter kits.")
     parser.add_argument("--repo-root", required=True)
+    parser.add_argument(
+        "--base-registry-root",
+        help="Path to a trusted base checkout; its committed "
+             ".auto-registry/agent-registry.json is used as the base registry. "
+             "Preferred over --base-sha for fork PRs, whose checkout may not "
+             "contain the base commit.",
+    )
     parser.add_argument("--base-sha", required=True, help="Base commit SHA (PR base branch tip)")
     parser.add_argument("--pr-number", type=int, help="PR number (for Option B and comment posting)")
     parser.add_argument("--github-token", help="GitHub token (for API calls)")
@@ -333,10 +377,19 @@ def main() -> None:
     args = parser.parse_args()
 
     repo_root = Path(args.repo_root).resolve()
+    base_registry_root = (
+        Path(args.base_registry_root).resolve() if args.base_registry_root else None
+    )
 
     print(f"Base SHA: {args.base_sha}")
     print("Loading base registry...")
-    base_paths = get_base_registry_paths(repo_root, args.base_sha)
+    try:
+        base_paths = get_base_registry_paths(
+            repo_root, args.base_sha, base_registry_root
+        )
+    except RuntimeError as e:
+        print(f"ERROR: {e}", file=sys.stderr)
+        sys.exit(1)
     print(f"  Base registry: {len(base_paths)} agent(s)")
 
     print("Building head registry from current checkout...")

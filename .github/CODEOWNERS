@@ -14,18 +14,19 @@
 /.github/scripts/                       @mukesh-dua @charwen @leijgao @karthikananth @anzaman @surajmb @umamaheshmsft @yousefi-msft @ryansok
 /.github/CODEOWNERS                     @mukesh-dua @charwen @leijgao @karthikananth @anzaman @surajmb @umamaheshmsft @yousefi-msft @ryansok
 
+# Validation policy — the approved base images, source allowlist, tag taxonomy,
+# rule waivers, and ratchet baseline. Editing these changes what the catalog
+# will accept, so the gate must be explicit rather than inherited from `*`.
+/.github/policy/                        @mukesh-dua @charwen @leijgao @karthikananth @anzaman @surajmb @prashney @umamaheshmsft @cjtozer @yousefi-msft @ryansok
+/.github/policy/baseline.json           @mukesh-dua @charwen @leijgao @karthikananth @anzaman @surajmb @prashney @umamaheshmsft @cjtozer @yousefi-msft @ryansok
+/docs/validation-baseline-debt.md       @mukesh-dua @charwen @leijgao @karthikananth @anzaman @surajmb @prashney @umamaheshmsft @cjtozer @yousefi-msft @ryansok
+
 # Schema files — changes here can break every agent/kit in the catalog.
 /docs/schemas/                          @mukesh-dua @charwen @leijgao @karthikananth @anzaman @surajmb @umamaheshmsft  @yousefi-msft @ryansok
 
-# Auto-generated registries — should normally never be hand-edited (see POL-011).
-# `discovery-registry-bot` is the GitHub App that authors the chore/registry-refresh*
-# PRs. Listing it as a codeowner here means a *second* identity (a future second
-# App or service account) configured as AUTO_APPROVE_TOKEN can satisfy the
-# CODEOWNERS gate by approving the bot-authored PR. The App itself cannot
-# approve its own PRs (GitHub forbids self-approval), so this line is structural
-# prep for fully-automated registry merges; until a second identity is wired up,
-# a human codeowner from the list below still needs to approve.
-/.auto-registry/                        @mukesh-dua @charwen @leijgao @karthikananth @anzaman @surajmb @umamaheshmsft @discovery-registry-bot @yousefi-msft @ryansok
+# Auto-generated registries — should normally never be hand-edited (see
+# POL-011). Bot-authored refresh PRs still require a human CODEOWNER approval.
+/.auto-registry/                        @mukesh-dua @charwen @leijgao @karthikananth @anzaman @surajmb @umamaheshmsft @yousefi-msft @ryansok
 
 # Per-content area
 /agents/                                @mukesh-dua @charwen @leijgao @karthikananth @anzaman @surajmb @umamaheshmsft @yousefi-msft @ryansok

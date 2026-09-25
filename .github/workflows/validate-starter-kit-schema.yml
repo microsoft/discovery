@@ -8,6 +8,13 @@ name: Validate Starter Kit Schema
 
 on:
   pull_request:
+  workflow_dispatch:
+    inputs:
+      reason:
+        description: "Reason for manual schema validation"
+        required: false
+        default: "Manual schema validation"
+        type: string
 
 permissions:
   contents: read
@@ -16,103 +23,131 @@ permissions:
 jobs:
   validate-schema:
     name: Schema regression guard (SKS-001 – SKS-003)
-    runs-on: ubuntu-latest
-    timeout-minutes: 20
+    runs-on: ubuntu-slim
+    timeout-minutes: 15
     steps:
       # NOTE: All PRs in this repo come from forks (including those by maintainers).
-      # CODEOWNERS + branch protection are the merge gate; the schema-regression
-      # checks below just verify that any proposed schema change doesn't break
-      # the existing catalog. The workflow is data-only — it reads JSON files
-      # as data and never executes PR-supplied code.
+      # CODEOWNERS + branch protection are the merge gate. The schema-regression
+      # guard below is *trusted* code checked out from the PR base and run against
+      # the PR's proposed schemas as data, so a PR can change the schemas under
+      # review but cannot alter or skip the assertions that guard them.
 
       - name: Detect relevant changes
         id: changes
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          set -euo pipefail
-          FILES=$(gh api \
-            "repos/${GITHUB_REPOSITORY}/pulls/${{ github.event.pull_request.number }}/files" \
-            --paginate --jq '.[].filename')
-          if echo "$FILES" | grep -E '^docs/schemas/(starter-kit-schema|starter-kit-registry-schema)\.json$' >/dev/null; then
-            echo "relevant=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "relevant=false" >> "$GITHUB_OUTPUT"
-            echo "::notice::No starter-kit schema files changed; reporting success without running regression guard."
-          fi
-
-      - name: Checkout PR branch
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            if (context.eventName === 'workflow_dispatch') {
+              core.setOutput('relevant', 'true');
+              core.notice('Manual dispatch: running the schema regression guard against the selected ref.');
+              return;
+            }
+            const files = await github.paginate(github.rest.pulls.listFiles, {
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: context.issue.number,
+              per_page: 100,
+            });
+            const pattern = /^docs\/schemas\/(common-schema|starter-kit-schema|starter-kit-registry-schema)\.json$/;
+            const relevant = files.some(({ filename }) => pattern.test(filename));
+            core.setOutput('relevant', String(relevant));
+            if (!relevant) {
+              core.notice('No starter-kit schema files changed; reporting success without running regression guard.');
+            }
+      - name: Checkout trusted base (regression guard code)
         if: steps.changes.outputs.relevant == 'true'
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event.pull_request.base.sha }}
+          fetch-depth: 1
+          persist-credentials: false
+          path: trusted
+      - name: Checkout PR content as data
+        if: steps.changes.outputs.relevant == 'true'
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          path: pr
 
       - name: Set up Python
         if: steps.changes.outputs.relevant == 'true'
         uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
-          python-version: "3.11"
-
+          python-version: '3.12'
       - name: Install dependencies
         if: steps.changes.outputs.relevant == 'true'
-        run: pip install jsonschema pyyaml
-
-      - name: SKS-001 — Schema files are valid JSON
-        if: steps.changes.outputs.relevant == 'true'
         run: |
-          python -c "
+          # Pin CI dependency versions from the trusted base checkout. During
+          # the bootstrap window - before this constraints file exists on the
+          # base branch - install unpinned rather than reading the untrusted PR
+          # copy. This self-heals to the pinned path once the PR merges.
+          constraint="trusted/.github/requirements-ci.txt"
+          if [ -f "$constraint" ]; then
+            python -m pip install -c "$constraint" pytest jsonschema pyyaml referencing
+          else
+            echo "::notice::trusted constraints file absent on base (bootstrap); installing unpinned"
+            python -m pip install pytest jsonschema pyyaml referencing
+          fi
+      - name: Run SKS-001 through SKS-003 schema checks against PR data
+        if: steps.changes.outputs.relevant == 'true'
+        env:
+          # Trusted test code validates the PR-proposed catalog (pr/) as data.
+          DISCOVERY_CATALOG_ROOT: ${{ github.workspace }}/pr
+        run: |
+          # Prefer the regression guard from the trusted base checkout so a PR
+          # cannot weaken the assertions that guard its own schema changes.
+          # During bootstrap, use an embedded data-only validator rather than
+          # executing any Python from the PR checkout.
+          test="trusted/.github/tests/test_schema_security.py"
+          scripts="${{ github.workspace }}/trusted/.github/scripts"
+          if [ -f "$test" ]; then
+            PYTHONPATH="$scripts" python -m pytest "$test" -q
+            exit
+          fi
+          echo "::notice::trusted regression guard absent on base; running embedded bootstrap checks"
+          python - "${{ github.workspace }}/pr" <<'PY'
           import json, sys
-          for f in [
-              'docs/schemas/starter-kit-schema.json',
-              'docs/schemas/starter-kit-registry-schema.json',
-          ]:
-              try:
-                  with open(f) as fh:
-                      json.load(fh)
-                  print(f'  OK: {f}')
-              except Exception as e:
-                  print(f'  FAIL: {f}: {e}', file=sys.stderr)
-                  sys.exit(1)
-          "
+          from pathlib import Path
+          from jsonschema import Draft7Validator, FormatChecker
+          from referencing import Registry, Resource
 
-      - name: SKS-002 — Schemas are valid JSON Schema Draft 7
-        if: steps.changes.outputs.relevant == 'true'
-        run: |
-          python -c "
-          import json, sys, jsonschema
-          for f in [
-              'docs/schemas/starter-kit-schema.json',
-              'docs/schemas/starter-kit-registry-schema.json',
-          ]:
-              with open(f) as fh:
-                  schema = json.load(fh)
-              try:
-                  jsonschema.Draft7Validator.check_schema(schema)
-                  print(f'  OK: {f}')
-              except jsonschema.exceptions.SchemaError as e:
-                  print(f'  FAIL: {f}: {e.message}', file=sys.stderr)
-                  sys.exit(1)
-          "
-
-      - name: SKS-003 — All existing kits validate against updated starter-kit-schema.json
-        if: steps.changes.outputs.relevant == 'true'
-        run: |
-          python -c "
-          import json, sys, glob, jsonschema
-          with open('docs/schemas/starter-kit-schema.json') as f:
-              schema = json.load(f)
-          validator = jsonschema.Draft7Validator(schema)
-          failed = False
-          paths = sorted(glob.glob('starter-kits/*/kit.json'))
-          for plugin_path in paths:
-              with open(plugin_path) as f:
-                  manifest = json.load(f)
-              errors = list(validator.iter_errors(manifest))
-              if errors:
-                  for e in errors:
-                      path_str = ' -> '.join(str(p) for p in e.absolute_path) or '(root)'
-                      print(f'  FAIL: {plugin_path} at {path_str}: {e.message}', file=sys.stderr)
-                  failed = True
-              else:
-                  print(f'  OK: {plugin_path}')
-          if failed:
-              sys.exit(1)
-          "
+          root = Path(sys.argv[1])
+          schema_dir = root / "docs" / "schemas"
+          schemas = {
+              path.name: json.loads(path.read_text(encoding="utf-8"))
+              for path in schema_dir.glob("*schema*.json")
+          }
+          if not schemas:
+              raise SystemExit("no catalog schemas found")
+          for name, schema in schemas.items():
+              Draft7Validator.check_schema(schema)
+              if not {"$ref", "allOf", "anyOf", "oneOf", "type"}.intersection(schema):
+                  raise SystemExit(f"{name}: root schema has no validation keyword")
+          registry = Registry().with_resources(
+              (name, Resource.from_contents(schema))
+              for name, schema in schemas.items()
+          )
+          groups = {
+              "starter-kit-schema.json": root.glob("starter-kits/*/kit.json"),
+              "starter-kit-registry-schema.json": [
+                  root / ".auto-registry" / "starter-kit-registry.json"
+              ],
+          }
+          errors = []
+          for schema_name, paths in groups.items():
+              validator = Draft7Validator(
+                  schemas[schema_name],
+                  registry=registry,
+                  format_checker=FormatChecker(),
+              )
+              for path in paths:
+                  if not path.is_file():
+                      raise SystemExit(f"missing generated document: {path.relative_to(root)}")
+                  document = json.loads(path.read_text(encoding="utf-8"))
+                  for error in validator.iter_errors(document):
+                      location = "/".join(map(str, error.absolute_path)) or "(root)"
+                      errors.append(f"{path.relative_to(root)} at {location}: {error.message}")
+          if errors:
+              raise SystemExit("\n".join(errors))
+          PY
