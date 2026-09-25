@@ -109,3 +109,96 @@ def test_trusted_registry_refresh_bot_can_update_generated_files() -> None:
     )
 
     assert failures == []
+
+
+@pytest.mark.parametrize(
+    ("path", "head_ref"),
+    [
+        (
+            ".github/workflows/code-scan.yml",
+            "dependabot/github_actions/actions/checkout-7.0.1",
+        ),
+        (
+            ".github/workflows/weekly-deep-scan.yaml",
+            "dependabot/github_actions/actions/setup-python-7.0.0",
+        ),
+        (
+            ".github/requirements-ci.txt",
+            "dependabot/pip/dot-github/pip-minor-patch-123",
+        ),
+        (
+            ".config/dotnet-tools.json",
+            "dependabot/nuget/dot-config/nuget-minor-patch-123",
+        ),
+    ],
+)
+def test_dependabot_can_update_configured_protected_manifests(
+    path: str,
+    head_ref: str,
+) -> None:
+    failures = check_contributor_scope(
+        [path],
+        "none",
+        "dependabot[bot]",
+        head_ref,
+    )
+
+    assert failures == []
+
+
+@pytest.mark.parametrize(
+    ("path", "author", "head_ref"),
+    [
+        (
+            ".github/workflows/code-scan.yml",
+            "octocat",
+            "dependabot/github_actions/actions/checkout-7.0.1",
+        ),
+        (
+            ".github/workflows/code-scan.yml",
+            "dependabot[bot]",
+            "feature/update-checkout",
+        ),
+        (
+            ".github/dependabot.yml",
+            "dependabot[bot]",
+            "dependabot/github_actions/actions/checkout-7.0.1",
+        ),
+        (
+            ".github/workflows/nested/code-scan.yml",
+            "dependabot[bot]",
+            "dependabot/github_actions/actions/checkout-7.0.1",
+        ),
+        (
+            ".github/requirements-ci.txt",
+            "dependabot[bot]",
+            "dependabot/nuget/dot-config/nuget-minor-patch-123",
+        ),
+    ],
+)
+def test_dependabot_exception_rejects_spoofed_or_unconfigured_changes(
+    path: str,
+    author: str,
+    head_ref: str,
+) -> None:
+    failures = check_contributor_scope([path], "none", author, head_ref)
+
+    assert [(failure.rule_id, failure.file) for failure in failures] == [
+        ("POL-021", path),
+    ]
+
+
+def test_dependabot_exception_remains_scoped_per_changed_file() -> None:
+    failures = check_contributor_scope(
+        [
+            ".github/workflows/code-scan.yml",
+            ".github/dependabot.yml",
+        ],
+        "none",
+        "dependabot[bot]",
+        "dependabot/github_actions/actions/checkout-7.0.1",
+    )
+
+    assert [(failure.rule_id, failure.file) for failure in failures] == [
+        ("POL-021", ".github/dependabot.yml"),
+    ]
