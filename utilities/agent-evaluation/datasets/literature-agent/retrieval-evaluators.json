@@ -1,0 +1,44 @@
+{
+  "name": "retrieval-evaluators",
+  "_comment": "Retrieval quality for agents that cite documents from a bookshelf / knowledge base. Each row supplies a 'query' and a 'retrieval_ground_truth' list of the documents that SHOULD be retrieved (document_id + query_relevance_label, higher = more relevant). 'retrieved_documents' is left empty; the pipeline fills it from file_citation annotations in the captured response. The document ids below are fictional placeholders -- replace them with the real document names indexed in your bookshelf.",
+  "evaluators": [
+    "builtin.document_retrieval"
+  ],
+  "data_mapping": {
+    "retrieved_documents": "{{item.retrieved_documents}}",
+    "retrieval_ground_truth": "{{item.retrieval_ground_truth}}"
+  },
+  "data": [
+    {
+      "query": "What papers describe dendrite suppression in lithium metal anodes?",
+      "retrieved_documents": [],
+      "retrieval_ground_truth": [
+        {"document_id": "chen-2022-lithium-dendrite-review.pdf", "query_relevance_label": 2},
+        {"document_id": "patel-2021-anode-interphase.pdf", "query_relevance_label": 1}
+      ]
+    },
+    {
+      "query": "Find review articles on carbon capture sorbent materials.",
+      "retrieved_documents": [],
+      "retrieval_ground_truth": [
+        {"document_id": "garcia-2020-carbon-capture-sorbents.pdf", "query_relevance_label": 2},
+        {"document_id": "okafor-2019-amine-sorbents.pdf", "query_relevance_label": 1}
+      ]
+    },
+    {
+      "query": "Which studies report thermal conductivity measurements of hexagonal boron nitride?",
+      "retrieved_documents": [],
+      "retrieval_ground_truth": [
+        {"document_id": "nakamura-2018-hbn-thermal.pdf", "query_relevance_label": 1}
+      ]
+    },
+    {
+      "query": "Locate papers comparing perovskite and silicon solar cell efficiency.",
+      "retrieved_documents": [],
+      "retrieval_ground_truth": [
+        {"document_id": "santos-2021-perovskite-silicon-tandem.pdf", "query_relevance_label": 2},
+        {"document_id": "muller-2020-pv-efficiency-survey.pdf", "query_relevance_label": 1}
+      ]
+    }
+  ]
+}
