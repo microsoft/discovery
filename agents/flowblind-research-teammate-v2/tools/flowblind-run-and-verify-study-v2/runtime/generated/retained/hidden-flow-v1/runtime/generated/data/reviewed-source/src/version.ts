@@ -1,0 +1,2 @@
+export const FLOWBLIND_VERSION = '0.11.0'
+export const FLOWBLIND_DELIVERY_VERSION = '0.12.0'

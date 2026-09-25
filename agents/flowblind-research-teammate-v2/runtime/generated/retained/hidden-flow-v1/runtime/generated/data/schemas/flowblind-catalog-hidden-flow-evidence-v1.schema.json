@@ -1,0 +1,793 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://flowblind.local/schemas/flowblind-catalog-hidden-flow-evidence-v1.schema.json",
+  "title": "FlowBlind catalog hidden-flow evidence v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "reportId",
+    "software",
+    "problemSource",
+    "problem",
+    "basisSha256",
+    "basis",
+    "result",
+    "limitations"
+  ],
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "reportId": {
+      "type": "string",
+      "pattern": "^catalog-hidden-flow-[a-f0-9]{32}$"
+    },
+    "software": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "version"],
+      "properties": {
+        "name": { "const": "FlowBlind" },
+        "version": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 64
+        }
+      }
+    },
+    "problemSource": { "$ref": "#/$defs/sourceIdentity" },
+    "problem": {
+      "$ref": "flowblind-catalog-hidden-flow-problem-acceptance-v1.schema.json"
+    },
+    "basisSha256": { "$ref": "#/$defs/sha256" },
+    "basis": { "$ref": "#/$defs/basisDiagnostics" },
+    "result": { "$ref": "#/$defs/searchResult" },
+    "limitations": {
+      "type": "array",
+      "maxItems": 32,
+      "items": { "$ref": "#/$defs/text" }
+    }
+  },
+  "$defs": {
+    "sha256": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "identifier": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$"
+    },
+    "finite": {
+      "type": "number",
+      "minimum": -1e100,
+      "maximum": 1e100
+    },
+    "nonnegative": {
+      "allOf": [
+        { "$ref": "#/$defs/finite" },
+        { "minimum": 0 }
+      ]
+    },
+    "positive": {
+      "allOf": [
+        { "$ref": "#/$defs/finite" },
+        { "exclusiveMinimum": 0 }
+      ]
+    },
+    "finiteOrNull": {
+      "oneOf": [
+        { "$ref": "#/$defs/finite" },
+        { "type": "null" }
+      ]
+    },
+    "text": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 2048
+    },
+    "sourceIdentity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["reference", "byteLength", "sha256"],
+      "properties": {
+        "reference": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 512
+        },
+        "byteLength": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 16777216
+        },
+        "sha256": { "$ref": "#/$defs/sha256" }
+      }
+    },
+    "finiteArray": {
+      "type": "array",
+      "maxItems": 70000,
+      "items": { "$ref": "#/$defs/finite" }
+    },
+    "matrix": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["rows", "columns", "values"],
+      "properties": {
+        "rows": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 1024
+        },
+        "columns": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 96
+        },
+        "values": { "$ref": "#/$defs/finiteArray" }
+      }
+    },
+    "matrixDiagnostics": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "rank",
+        "conditionEstimate",
+        "minimumEigenvalue",
+        "maximumEigenvalue",
+        "threshold"
+      ],
+      "properties": {
+        "rank": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 96
+        },
+        "conditionEstimate": { "$ref": "#/$defs/nonnegative" },
+        "minimumEigenvalue": { "$ref": "#/$defs/finite" },
+        "maximumEigenvalue": { "$ref": "#/$defs/finite" },
+        "threshold": { "$ref": "#/$defs/nonnegative" }
+      }
+    },
+    "basisDiagnostics": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "retainedCount",
+        "rejectedSupportCount",
+        "domainArea",
+        "maximumVerificationDivergence",
+        "mass",
+        "roughness"
+      ],
+      "properties": {
+        "retainedCount": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 96
+        },
+        "rejectedSupportCount": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 96
+        },
+        "domainArea": { "$ref": "#/$defs/positive" },
+        "maximumVerificationDivergence": {
+          "$ref": "#/$defs/nonnegative"
+        },
+        "mass": { "$ref": "#/$defs/matrixDiagnostics" },
+        "roughness": { "$ref": "#/$defs/matrixDiagnostics" }
+      }
+    },
+    "basisFunction": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "center",
+        "spacingX",
+        "spacingY",
+        "streamfunctionLengthScale",
+        "velocityNormalization",
+        "support"
+      ],
+      "properties": {
+        "id": { "$ref": "#/$defs/identifier" },
+        "center": {
+          "$ref": "flowblind-catalog-hidden-flow-problem-acceptance-v1.schema.json#/$defs/point"
+        },
+        "spacingX": { "$ref": "#/$defs/positive" },
+        "spacingY": { "$ref": "#/$defs/positive" },
+        "streamfunctionLengthScale": { "$ref": "#/$defs/positive" },
+        "velocityNormalization": { "$ref": "#/$defs/positive" },
+        "support": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "xMinimum",
+            "xMaximum",
+            "yMinimum",
+            "yMaximum"
+          ],
+          "properties": {
+            "xMinimum": { "$ref": "#/$defs/finite" },
+            "xMaximum": { "$ref": "#/$defs/finite" },
+            "yMinimum": { "$ref": "#/$defs/finite" },
+            "yMaximum": { "$ref": "#/$defs/finite" }
+          }
+        }
+      }
+    },
+    "compiledBasis": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "spec",
+        "functions",
+        "massMatrix",
+        "roughnessMatrix",
+        "diagnostics"
+      ],
+      "properties": {
+        "spec": {
+          "$ref": "flowblind-catalog-hidden-flow-problem-acceptance-v1.schema.json#/$defs/basis"
+        },
+        "functions": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 96,
+          "items": { "$ref": "#/$defs/basisFunction" }
+        },
+        "massMatrix": { "$ref": "#/$defs/matrix" },
+        "roughnessMatrix": { "$ref": "#/$defs/matrix" },
+        "diagnostics": { "$ref": "#/$defs/basisDiagnostics" }
+      }
+    },
+    "solverSettings": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "maximumIterations",
+        "absoluteGapTolerance",
+        "relativeGapTolerance",
+        "feasibilityTolerance",
+        "infeasibilityTolerance",
+        "presolveEnabled",
+        "equilibrationEnabled",
+        "iterativeRefinementEnabled",
+        "maximumThreads"
+      ],
+      "properties": {
+        "maximumIterations": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 100000
+        },
+        "absoluteGapTolerance": {
+          "allOf": [
+            { "$ref": "#/$defs/positive" },
+            { "maximum": 1 }
+          ]
+        },
+        "relativeGapTolerance": {
+          "allOf": [
+            { "$ref": "#/$defs/positive" },
+            { "maximum": 1 }
+          ]
+        },
+        "feasibilityTolerance": {
+          "allOf": [
+            { "$ref": "#/$defs/positive" },
+            { "maximum": 1 }
+          ]
+        },
+        "infeasibilityTolerance": {
+          "allOf": [
+            { "$ref": "#/$defs/positive" },
+            { "maximum": 1 }
+          ]
+        },
+        "presolveEnabled": { "type": "boolean" },
+        "equilibrationEnabled": { "type": "boolean" },
+        "iterativeRefinementEnabled": { "type": "boolean" },
+        "maximumThreads": { "const": 1 }
+      }
+    },
+    "supportRequest": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schemaVersion",
+        "requestId",
+        "problemId",
+        "coefficientCount",
+        "observationMatrix",
+        "lowerBounds",
+        "upperBounds",
+        "energyMatrix",
+        "energyBudget",
+        "roughnessMatrix",
+        "roughnessBudget",
+        "objective",
+        "rankRelativeTolerance",
+        "solverSettings"
+      ],
+      "properties": {
+        "schemaVersion": { "const": 1 },
+        "requestId": { "$ref": "#/$defs/identifier" },
+        "problemId": { "$ref": "#/$defs/identifier" },
+        "coefficientCount": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 96
+        },
+        "observationMatrix": { "$ref": "#/$defs/matrix" },
+        "lowerBounds": {
+          "type": "array",
+          "maxItems": 256,
+          "items": { "$ref": "#/$defs/finite" }
+        },
+        "upperBounds": {
+          "type": "array",
+          "maxItems": 256,
+          "items": { "$ref": "#/$defs/finite" }
+        },
+        "energyMatrix": { "$ref": "#/$defs/matrix" },
+        "energyBudget": { "$ref": "#/$defs/finiteOrNull" },
+        "roughnessMatrix": { "$ref": "#/$defs/matrix" },
+        "roughnessBudget": { "$ref": "#/$defs/finiteOrNull" },
+        "objective": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 96,
+          "items": { "$ref": "#/$defs/finite" }
+        },
+        "rankRelativeTolerance": { "$ref": "#/$defs/positive" },
+        "solverSettings": { "$ref": "#/$defs/solverSettings" }
+      }
+    },
+    "solverIdentity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "adapter",
+        "adapterVersion",
+        "pythonVersion",
+        "clarabelVersion",
+        "scipyVersion",
+        "numpyVersion",
+        "image",
+        "architecture",
+        "linearSolver"
+      ],
+      "properties": {
+        "adapter": { "$ref": "#/$defs/text" },
+        "adapterVersion": { "$ref": "#/$defs/text" },
+        "pythonVersion": { "$ref": "#/$defs/text" },
+        "clarabelVersion": { "$ref": "#/$defs/text" },
+        "scipyVersion": { "$ref": "#/$defs/text" },
+        "numpyVersion": { "$ref": "#/$defs/text" },
+        "image": {
+          "oneOf": [
+            { "$ref": "#/$defs/text" },
+            { "type": "null" }
+          ]
+        },
+        "architecture": { "$ref": "#/$defs/text" },
+        "linearSolver": {
+          "oneOf": [
+            { "$ref": "#/$defs/text" },
+            { "type": "null" }
+          ]
+        }
+      }
+    },
+    "svd": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "singularValues",
+        "rank",
+        "nullity",
+        "threshold",
+        "conditionEstimate",
+        "nullSpaceBasis"
+      ],
+      "properties": {
+        "singularValues": {
+          "type": "array",
+          "maxItems": 96,
+          "items": { "$ref": "#/$defs/finite" }
+        },
+        "rank": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 96
+        },
+        "nullity": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 96
+        },
+        "threshold": { "$ref": "#/$defs/nonnegative" },
+        "conditionEstimate": { "$ref": "#/$defs/finiteOrNull" },
+        "nullSpaceBasis": { "$ref": "#/$defs/matrix" }
+      }
+    },
+    "cone": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "dimension", "label"],
+      "properties": {
+        "type": {
+          "enum": ["zero", "nonnegative", "second-order"]
+        },
+        "dimension": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 1024
+        },
+        "label": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        }
+      }
+    },
+    "canonicalization": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "q",
+        "a",
+        "b",
+        "cones",
+        "energyFactor",
+        "roughnessFactor"
+      ],
+      "properties": {
+        "q": { "$ref": "#/$defs/finiteArray" },
+        "a": { "$ref": "#/$defs/matrix" },
+        "b": { "$ref": "#/$defs/finiteArray" },
+        "cones": {
+          "type": "array",
+          "maxItems": 260,
+          "items": { "$ref": "#/$defs/cone" }
+        },
+        "energyFactor": {
+          "oneOf": [
+            { "type": "null" },
+            { "$ref": "#/$defs/matrix" }
+          ]
+        },
+        "roughnessFactor": {
+          "oneOf": [
+            { "type": "null" },
+            { "$ref": "#/$defs/matrix" }
+          ]
+        }
+      }
+    },
+    "rawSolution": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "status",
+        "coefficients",
+        "slacks",
+        "dual",
+        "primalObjective",
+        "dualObjective",
+        "iterations",
+        "reportedPrimalResidual",
+        "reportedDualResidual",
+        "reportedAbsoluteGap",
+        "reportedRelativeGap"
+      ],
+      "properties": {
+        "status": {
+          "enum": [
+            "Unsolved",
+            "Solved",
+            "PrimalInfeasible",
+            "DualInfeasible",
+            "AlmostSolved",
+            "AlmostPrimalInfeasible",
+            "AlmostDualInfeasible",
+            "MaxIterations",
+            "MaxTime",
+            "NumericalError",
+            "InsufficientProgress",
+            "CallbackTerminated",
+            "Unknown"
+          ]
+        },
+        "coefficients": { "$ref": "#/$defs/finiteArray" },
+        "slacks": { "$ref": "#/$defs/finiteArray" },
+        "dual": { "$ref": "#/$defs/finiteArray" },
+        "primalObjective": { "$ref": "#/$defs/finiteOrNull" },
+        "dualObjective": { "$ref": "#/$defs/finiteOrNull" },
+        "iterations": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 100000
+        },
+        "reportedPrimalResidual": { "$ref": "#/$defs/finiteOrNull" },
+        "reportedDualResidual": { "$ref": "#/$defs/finiteOrNull" },
+        "reportedAbsoluteGap": { "$ref": "#/$defs/finiteOrNull" },
+        "reportedRelativeGap": { "$ref": "#/$defs/finiteOrNull" }
+      }
+    },
+    "solverResult": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schemaVersion",
+        "requestId",
+        "requestSha256",
+        "canonicalSha256",
+        "solver",
+        "settings",
+        "svd",
+        "canonicalization",
+        "solution",
+        "warnings"
+      ],
+      "properties": {
+        "schemaVersion": { "const": 1 },
+        "requestId": { "$ref": "#/$defs/identifier" },
+        "requestSha256": { "$ref": "#/$defs/sha256" },
+        "canonicalSha256": { "$ref": "#/$defs/sha256" },
+        "solver": { "$ref": "#/$defs/solverIdentity" },
+        "settings": { "$ref": "#/$defs/solverSettings" },
+        "svd": { "$ref": "#/$defs/svd" },
+        "canonicalization": { "$ref": "#/$defs/canonicalization" },
+        "solution": { "$ref": "#/$defs/rawSolution" },
+        "warnings": {
+          "type": "array",
+          "maxItems": 64,
+          "items": { "$ref": "#/$defs/text" }
+        }
+      }
+    },
+    "evidenceState": {
+      "enum": [
+        "verified-optimal-within-tolerance",
+        "verified-directional-lower-bound-within-tolerance",
+        "approximate-candidate",
+        "verified-infeasible-within-tolerance",
+        "verified-unbounded-within-tolerance",
+        "full-observation-zero-nullity",
+        "degenerate-objective",
+        "unsupported",
+        "failed"
+      ]
+    },
+    "verification": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "accepted",
+        "state",
+        "detail",
+        "objectiveValue",
+        "rigorousObjectiveUpperBound",
+        "approximateDualUpperDiagnostic",
+        "upperBoundQualification",
+        "observationMaximumViolation",
+        "activeObservationConstraints",
+        "velocityRms",
+        "velocityGradientRms",
+        "maximumVerificationDivergence",
+        "primalResidual",
+        "dualResidual",
+        "absoluteGap",
+        "relativeGap",
+        "coneViolation",
+        "numericalEvidenceQualification"
+      ],
+      "properties": {
+        "accepted": { "type": "boolean" },
+        "state": { "$ref": "#/$defs/evidenceState" },
+        "detail": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 4096
+        },
+        "objectiveValue": { "$ref": "#/$defs/finiteOrNull" },
+        "rigorousObjectiveUpperBound": {
+          "$ref": "#/$defs/finiteOrNull"
+        },
+        "approximateDualUpperDiagnostic": {
+          "$ref": "#/$defs/finiteOrNull"
+        },
+        "upperBoundQualification": {
+          "enum": [
+            "unavailable-no-rigorous-dual-certificate",
+            "not-applicable"
+          ]
+        },
+        "observationMaximumViolation": {
+          "$ref": "#/$defs/finiteOrNull"
+        },
+        "activeObservationConstraints": {
+          "type": "array",
+          "maxItems": 256,
+          "items": { "$ref": "#/$defs/text" }
+        },
+        "velocityRms": { "$ref": "#/$defs/finiteOrNull" },
+        "velocityGradientRms": { "$ref": "#/$defs/finiteOrNull" },
+        "maximumVerificationDivergence": {
+          "$ref": "#/$defs/finiteOrNull"
+        },
+        "primalResidual": { "$ref": "#/$defs/finiteOrNull" },
+        "dualResidual": { "$ref": "#/$defs/finiteOrNull" },
+        "absoluteGap": { "$ref": "#/$defs/finiteOrNull" },
+        "relativeGap": { "$ref": "#/$defs/finiteOrNull" },
+        "coneViolation": { "$ref": "#/$defs/finiteOrNull" },
+        "numericalEvidenceQualification": {
+          "enum": [
+            "verified-to-declared-tolerances",
+            "candidate-only",
+            "not-applicable"
+          ]
+        }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "accepted": { "const": true } } },
+          "then": {
+            "properties": {
+              "state": {
+                "enum": [
+                  "verified-optimal-within-tolerance",
+                  "verified-directional-lower-bound-within-tolerance",
+                  "approximate-candidate",
+                  "verified-infeasible-within-tolerance",
+                  "verified-unbounded-within-tolerance",
+                  "full-observation-zero-nullity",
+                  "degenerate-objective"
+                ]
+              }
+            }
+          }
+        },
+        {
+          "if": { "properties": { "accepted": { "const": false } } },
+          "then": {
+            "properties": {
+              "state": { "enum": ["unsupported", "failed"] }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "state": {
+                "enum": [
+                  "verified-infeasible-within-tolerance",
+                  "verified-unbounded-within-tolerance"
+                ]
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "accepted": { "const": true },
+              "objectiveValue": { "type": "null" }
+            }
+          }
+        }
+      ]
+    },
+    "supportResult": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["request", "solverResult", "verification"],
+      "properties": {
+        "request": { "$ref": "#/$defs/supportRequest" },
+        "solverResult": { "$ref": "#/$defs/solverResult" },
+        "verification": { "$ref": "#/$defs/verification" }
+      }
+    },
+    "publishedSupportResult": {
+      "allOf": [
+        { "$ref": "#/$defs/supportResult" },
+        {
+          "properties": {
+            "verification": {
+              "properties": {
+                "accepted": { "const": true }
+              }
+            }
+          }
+        }
+      ]
+    },
+    "speedEnvelope": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "state",
+        "directionCount",
+        "geometricFactor",
+        "lowerBound",
+        "upperBound",
+        "unit",
+        "bestDirection",
+        "bestCandidate",
+        "directionalResults"
+      ],
+      "properties": {
+        "state": {
+          "enum": [
+            "verified-directional-lower-bound-within-tolerance",
+            "approximate-candidate",
+            "full-observation-zero-nullity",
+            "degenerate-objective"
+          ]
+        },
+        "directionCount": {
+          "type": "integer",
+          "minimum": 3,
+          "maximum": 64
+        },
+        "geometricFactor": { "$ref": "#/$defs/positive" },
+        "lowerBound": { "$ref": "#/$defs/finite" },
+        "upperBound": { "type": "null" },
+        "unit": { "const": "mm/s" },
+        "bestDirection": {
+          "type": "array",
+          "minItems": 2,
+          "maxItems": 2,
+          "items": { "$ref": "#/$defs/finite" }
+        },
+        "bestCandidate": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 96,
+          "items": { "$ref": "#/$defs/finite" }
+        },
+        "directionalResults": {
+          "type": "array",
+          "minItems": 3,
+          "maxItems": 64,
+          "items": { "$ref": "#/$defs/publishedSupportResult" }
+        }
+      }
+    },
+    "searchResult": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "basis",
+        "observationRank",
+        "observationNullity",
+        "observationSingularValues",
+        "support"
+      ],
+      "properties": {
+        "basis": { "$ref": "#/$defs/compiledBasis" },
+        "observationRank": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 96
+        },
+        "observationNullity": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 96
+        },
+        "observationSingularValues": {
+          "type": "array",
+          "maxItems": 96,
+          "items": { "$ref": "#/$defs/finite" }
+        },
+        "support": {
+          "oneOf": [
+            { "$ref": "#/$defs/publishedSupportResult" },
+            { "$ref": "#/$defs/speedEnvelope" }
+          ]
+        }
+      }
+    }
+  }
+}

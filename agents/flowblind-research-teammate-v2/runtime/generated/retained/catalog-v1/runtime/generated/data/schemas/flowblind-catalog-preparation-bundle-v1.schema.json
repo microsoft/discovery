@@ -1,0 +1,524 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://flowblind.local/schemas/flowblind-catalog-preparation-bundle-v1.schema.json",
+  "title": "FlowBlind catalog preparation bundle v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "$schema",
+    "schemaVersion",
+    "recordType",
+    "id",
+    "status",
+    "containsResults",
+    "association",
+    "humanContext",
+    "source",
+    "declarations",
+    "canonicalSource",
+    "capability",
+    "protocol",
+    "resourceLimits",
+    "dataHandling",
+    "software"
+  ],
+  "properties": {
+    "$schema": {
+      "const": "https://flowblind.local/schemas/flowblind-catalog-preparation-bundle-v1.schema.json"
+    },
+    "schemaVersion": { "const": 1 },
+    "recordType": { "const": "flowblind-catalog-preparation-v1" },
+    "id": {
+      "type": "string",
+      "pattern": "^flowblind-preparation-[a-f0-9]{32}$"
+    },
+    "status": { "const": "prepared-awaiting-confirmation" },
+    "containsResults": { "const": false },
+    "association": { "$ref": "#/$defs/digest" },
+    "humanContext": {
+      "$ref": "flowblind-catalog-research-input-v1.schema.json"
+    },
+    "source": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["candidate", "trustedSidecar", "candidateBinding"],
+      "properties": {
+        "candidate": { "$ref": "#/$defs/identity" },
+        "trustedSidecar": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "reference",
+            "byteLength",
+            "sha256",
+            "schemaId"
+          ],
+          "properties": {
+            "reference": { "$ref": "#/$defs/text" },
+            "byteLength": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 16777216
+            },
+            "sha256": { "$ref": "#/$defs/sha256" },
+            "schemaId": {
+              "const": "https://flowblind.local/schemas/flowblind-trusted-source-sidecar-v2.schema.json"
+            }
+          }
+        },
+        "candidateBinding": { "$ref": "#/$defs/identity" }
+      }
+    },
+    "declarations": { "$ref": "#/$defs/declarations" },
+    "canonicalSource": { "$ref": "#/$defs/canonicalSource" },
+    "capability": { "$ref": "#/$defs/capability" },
+    "protocol": { "$ref": "#/$defs/protocol" },
+    "resourceLimits": { "$ref": "#/$defs/resourceLimits" },
+    "dataHandling": { "$ref": "#/$defs/dataHandling" },
+    "software": { "$ref": "#/$defs/software" }
+  },
+  "$defs": {
+    "text": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 4096
+    },
+    "sha256": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "identity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["reference", "byteLength", "sha256"],
+      "properties": {
+        "reference": { "$ref": "#/$defs/text" },
+        "byteLength": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 16777216
+        },
+        "sha256": { "$ref": "#/$defs/sha256" }
+      }
+    },
+    "softwareIdentity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["reference", "byteLength", "sha256"],
+      "properties": {
+        "reference": { "$ref": "#/$defs/text" },
+        "byteLength": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 1073741824
+        },
+        "sha256": { "$ref": "#/$defs/sha256" },
+        "mediaType": { "$ref": "#/$defs/text" }
+      }
+    },
+    "digest": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["canonicalization", "sha256"],
+      "properties": {
+        "canonicalization": { "const": "stable-json-v1" },
+        "sha256": { "$ref": "#/$defs/sha256" }
+      }
+    },
+    "declarations": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "quantity",
+        "sourceMeaning",
+        "referenceRole",
+        "referenceMeaning",
+        "candidateRole",
+        "candidateMeaning",
+        "coordinateUnit",
+        "valueUnit",
+        "provenance",
+        "license",
+        "coordinateDimensionality",
+        "singleFrame"
+      ],
+      "properties": {
+        "quantity": { "$ref": "#/$defs/text" },
+        "sourceMeaning": { "$ref": "#/$defs/text" },
+        "referenceRole": { "const": "reference" },
+        "referenceMeaning": { "$ref": "#/$defs/text" },
+        "candidateRole": { "const": "candidate" },
+        "candidateMeaning": { "$ref": "#/$defs/text" },
+        "coordinateUnit": { "$ref": "#/$defs/text" },
+        "valueUnit": { "$ref": "#/$defs/text" },
+        "provenance": { "$ref": "#/$defs/text" },
+        "license": { "$ref": "#/$defs/text" },
+        "coordinateDimensionality": { "const": 2 },
+        "singleFrame": { "const": true }
+      }
+    },
+    "canonicalSource": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "contractId",
+        "parser",
+        "structure",
+        "geometry",
+        "temporalSampling",
+        "windowSupport"
+      ],
+      "properties": {
+        "contractId": { "const": "paired-planar-csv-v1" },
+        "parser": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["version", "encoding", "header"],
+          "properties": {
+            "version": {
+              "const": "flowblind-paired-planar-csv-v1"
+            },
+            "encoding": { "const": "utf-8" },
+            "header": {
+              "const": [
+                "x",
+                "y",
+                "reference_value",
+                "candidate_value"
+              ]
+            }
+          }
+        },
+        "structure": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "rows",
+            "width",
+            "height",
+            "coordinateDimensions",
+            "singleFrame",
+            "pairedValues",
+            "duplicateCoordinates",
+            "completeCartesianGrid",
+            "uniformSpacing"
+          ],
+          "properties": {
+            "rows": {
+              "type": "integer",
+              "minimum": 270,
+              "maximum": 250000
+            },
+            "width": {
+              "type": "integer",
+              "minimum": 3,
+              "maximum": 4096
+            },
+            "height": {
+              "type": "integer",
+              "minimum": 3,
+              "maximum": 4096
+            },
+            "coordinateDimensions": { "const": 2 },
+            "singleFrame": { "const": true },
+            "pairedValues": { "const": true },
+            "duplicateCoordinates": { "const": false },
+            "completeCartesianGrid": { "const": true },
+            "uniformSpacing": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["x", "y"],
+              "properties": {
+                "x": { "const": true },
+                "y": { "const": true }
+              }
+            }
+          }
+        },
+        "geometry": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "topology",
+            "coordinateDimensions",
+            "coordinateUnit",
+            "areaSemantics"
+          ],
+          "properties": {
+            "topology": {
+              "const": "complete-uniform-cartesian-index-grid"
+            },
+            "coordinateDimensions": { "const": 2 },
+            "coordinateUnit": { "$ref": "#/$defs/text" },
+            "areaSemantics": {
+              "const": "index-grid-non-equal-area"
+            }
+          }
+        },
+        "temporalSampling": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["frameCount", "sampling", "exposure"],
+          "properties": {
+            "frameCount": { "const": 1 },
+            "sampling": { "const": "single-frame" },
+            "exposure": { "const": "unspecified" }
+          }
+        },
+        "windowSupport": {
+          "type": "array",
+          "minItems": 9,
+          "maxItems": 9,
+          "items": {
+            "type": "integer",
+            "minimum": 30,
+            "maximum": 1000000
+          }
+        }
+      }
+    },
+    "capability": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "capabilityId",
+        "familyId",
+        "methodFamily",
+        "protocolPresetId"
+      ],
+      "properties": {
+        "capabilityId": { "const": "regional-agreement-v1" },
+        "familyId": { "const": "regional-agreement" },
+        "methodFamily": {
+          "const": "regional-agreement-selection-sensitivity-v1"
+        },
+        "protocolPresetId": {
+          "const": "paired-planar-regional-agreement-3x3-minimum-30-v1"
+        }
+      }
+    },
+    "protocol": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "canonicalization",
+        "manifest",
+        "byteLength",
+        "sha256",
+        "freezeReceipt"
+      ],
+      "properties": {
+        "canonicalization": { "const": "stable-json-v1" },
+        "manifest": {
+          "$ref": "regional-agreement-study-manifest.schema.json"
+        },
+        "byteLength": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 1048576
+        },
+        "sha256": { "$ref": "#/$defs/sha256" },
+        "freezeReceipt": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "schemaVersion",
+            "id",
+            "studyId",
+            "studyFamily",
+            "methodVersion",
+            "manifest",
+            "sourceArtifact",
+            "sourceAdapterId",
+            "protocol",
+            "resourceBounds"
+          ],
+          "properties": {
+            "schemaVersion": { "const": 1 },
+            "id": { "$ref": "#/$defs/text" },
+            "studyId": { "$ref": "#/$defs/text" },
+            "studyFamily": {
+              "const": "regional-agreement-selection-sensitivity-v1"
+            },
+            "methodVersion": { "const": "1.0.0" },
+            "manifest": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "canonicalization",
+                "byteLength",
+                "sha256"
+              ],
+              "properties": {
+                "canonicalization": { "const": "stable-json-v1" },
+                "byteLength": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 1048576
+                },
+                "sha256": { "$ref": "#/$defs/sha256" }
+              }
+            },
+            "sourceArtifact": { "$ref": "#/$defs/identity" },
+            "sourceAdapterId": { "$ref": "#/$defs/text" },
+            "protocol": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "rows",
+                "columns",
+                "minimumPairedPoints",
+                "primaryEndpoints",
+                "secondaryEndpoints"
+              ],
+              "properties": {
+                "rows": { "const": 3 },
+                "columns": { "const": 3 },
+                "minimumPairedPoints": { "const": 30 },
+                "primaryEndpoints": {
+                  "const": [
+                    "pearsonCorrelation",
+                    "rangeNormalizedRmse"
+                  ]
+                },
+                "secondaryEndpoints": {
+                  "const": [
+                    "meanAbsoluteError",
+                    "hotspotRecall",
+                    "hotspotJaccard"
+                  ]
+                }
+              }
+            },
+            "resourceBounds": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "maximumGridPoints",
+                "maximumWindows",
+                "maximumPointWindowEvaluations"
+              ],
+              "properties": {
+                "maximumGridPoints": {
+                  "type": "integer",
+                  "minimum": 270,
+                  "maximum": 1000000
+                },
+                "maximumWindows": { "const": 9 },
+                "maximumPointWindowEvaluations": {
+                  "type": "integer",
+                  "minimum": 2430,
+                  "maximum": 50000000
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "resourceLimits": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "maximumAttachmentFiles",
+        "maximumAttachmentBytesEach",
+        "maximumAttachmentBytesTotal",
+        "maximumDataRows",
+        "maximumDataFields",
+        "maximumGridPoints",
+        "maximumVectorFrames",
+        "maximumVectorPointSamples",
+        "maximumVectorValues",
+        "maximumWindows",
+        "maximumPointWindowEvaluations",
+        "maximumOutputArtifactBytes",
+        "maximumPublishedBytes",
+        "parserContainerMemoryBytes",
+        "childProcesses",
+        "networkRequests"
+      ],
+      "properties": {
+        "maximumAttachmentFiles": { "const": 3 },
+        "maximumAttachmentBytesEach": { "const": 16777216 },
+        "maximumAttachmentBytesTotal": { "const": 33554432 },
+        "maximumDataRows": { "const": 250000 },
+        "maximumDataFields": { "const": 1000000 },
+        "maximumGridPoints": { "const": 1000000 },
+        "maximumVectorFrames": { "const": 10000 },
+        "maximumVectorPointSamples": { "const": 250000 },
+        "maximumVectorValues": { "const": 500000 },
+        "maximumWindows": { "const": 256 },
+        "maximumPointWindowEvaluations": { "const": 50000000 },
+        "maximumOutputArtifactBytes": { "const": 16777216 },
+        "maximumPublishedBytes": { "const": 50331648 },
+        "parserContainerMemoryBytes": { "const": 536870912 },
+        "childProcesses": { "const": 0 },
+        "networkRequests": { "const": 0 }
+      }
+    },
+    "dataHandling": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["inputs", "processing", "retention", "output"],
+      "properties": {
+        "inputs": {
+          "const": "exact-host-mounted-candidate-plus-scientist-metadata"
+        },
+        "processing": {
+          "const": "local-confined-read-only-no-network-no-arbitrary-code"
+        },
+        "retention": {
+          "const": "no-source-copy-no-saved-dataset-no-process-local-association"
+        },
+        "output": {
+          "const": "portable-result-free-content-addressed-preparation-bundle"
+        }
+      }
+    },
+    "software": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "policy",
+        "packageVersion",
+        "runtimeNetworkRequired",
+        "runtime",
+        "bundleLock",
+        "schemas",
+        "catalogPolicy"
+      ],
+      "properties": {
+        "policy": {
+          "const": "attested-catalog-facades-runtime-schemas-report-and-policy"
+        },
+        "packageVersion": { "const": "1.0.0" },
+        "runtimeNetworkRequired": { "const": false },
+        "runtime": { "$ref": "#/$defs/softwareIdentity" },
+        "bundleLock": { "$ref": "#/$defs/softwareIdentity" },
+        "schemas": {
+          "type": "array",
+          "minItems": 13,
+          "maxItems": 13,
+          "uniqueItems": true,
+          "items": { "$ref": "#/$defs/softwareIdentity" }
+        },
+        "catalogPolicy": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "humanInTheLoop",
+            "disableDataHandlingTools",
+            "prepareConfirmation",
+            "runConfirmation"
+          ],
+          "properties": {
+            "humanInTheLoop": { "const": "Enabled" },
+            "disableDataHandlingTools": { "const": false },
+            "prepareConfirmation": { "const": "Disabled" },
+            "runConfirmation": { "const": "Enabled" }
+          }
+        }
+      }
+    }
+  }
+}

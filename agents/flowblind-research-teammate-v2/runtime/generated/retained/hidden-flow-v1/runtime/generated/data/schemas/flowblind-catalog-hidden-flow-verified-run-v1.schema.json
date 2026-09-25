@@ -1,0 +1,325 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://flowblind.local/schemas/flowblind-catalog-hidden-flow-verified-run-v1.schema.json",
+  "title": "FlowBlind catalog hidden-flow verified run v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "$schema",
+    "schemaVersion",
+    "recordType",
+    "id",
+    "capabilityVersion",
+    "humanContext",
+    "preparation",
+    "problem",
+    "review",
+    "software",
+    "deterministicReplay",
+    "outcome",
+    "evidence"
+  ],
+  "properties": {
+    "$schema": {
+      "const": "https://flowblind.local/schemas/flowblind-catalog-hidden-flow-verified-run-v1.schema.json"
+    },
+    "schemaVersion": { "const": 1 },
+    "recordType": {
+      "const": "flowblind-catalog-hidden-flow-verified-run-v1"
+    },
+    "id": {
+      "type": "string",
+      "pattern": "^flowblind-hidden-flow-run-[a-f0-9]{32}$"
+    },
+    "capabilityVersion": { "const": "1.1.0" },
+    "humanContext": {
+      "$ref": "flowblind-catalog-hidden-flow-input-v1.schema.json"
+    },
+    "preparation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "artifact", "associationSha256"],
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^flowblind-hidden-flow-preparation-[a-f0-9]{32}$"
+        },
+        "artifact": { "$ref": "#/$defs/artifact" },
+        "associationSha256": { "$ref": "#/$defs/sha256" }
+      }
+    },
+    "problem": { "$ref": "#/$defs/problemSummary" },
+    "review": {
+      "$ref": "flowblind-catalog-hidden-flow-review-attestation-v1.schema.json"
+    },
+    "software": {
+      "$ref": "flowblind-catalog-hidden-flow-package-evidence-v1.schema.json"
+    },
+    "deterministicReplay": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "canonicalization",
+        "matched",
+        "firstExecutionSha256",
+        "replayExecutionSha256"
+      ],
+      "properties": {
+        "canonicalization": { "const": "stable-json-v1" },
+        "matched": { "const": true },
+        "firstExecutionSha256": { "$ref": "#/$defs/sha256" },
+        "replayExecutionSha256": { "$ref": "#/$defs/sha256" }
+      }
+    },
+    "outcome": { "$ref": "#/$defs/outcome" },
+    "evidence": {
+      "$ref": "flowblind-catalog-hidden-flow-evidence-v1.schema.json"
+    }
+  },
+  "$defs": {
+    "sha256": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "artifact": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["reference", "byteLength", "sha256", "mediaType"],
+      "properties": {
+        "reference": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 512
+        },
+        "byteLength": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 17825792
+        },
+        "sha256": { "$ref": "#/$defs/sha256" },
+        "mediaType": {
+          "enum": ["application/json", "text/markdown"]
+        }
+      }
+    },
+    "sourceIdentity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["reference", "byteLength", "sha256"],
+      "properties": {
+        "reference": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 512
+        },
+        "byteLength": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 16777216
+        },
+        "sha256": { "$ref": "#/$defs/sha256" }
+      }
+    },
+    "problemSummary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "identity",
+        "id",
+        "title",
+        "targetId",
+        "targetType"
+      ],
+      "properties": {
+        "identity": { "$ref": "#/$defs/artifact" },
+        "id": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$"
+        },
+        "title": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
+        },
+        "targetId": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$"
+        },
+        "targetType": {
+          "enum": [
+            "point-component",
+            "point-direction",
+            "point-speed-envelope",
+            "region-component",
+            "point-strain-component"
+          ]
+        }
+      }
+    },
+    "outcome": {
+      "oneOf": [
+        { "$ref": "#/$defs/numericalOutcome" },
+        { "$ref": "#/$defs/infeasibleOutcome" },
+        { "$ref": "#/$defs/acceptedUnboundedOutcome" }
+      ]
+    },
+    "targetFields": {
+      "type": "object",
+      "required": [
+        "targetId",
+        "targetType",
+        "targetTitle"
+      ],
+      "properties": {
+        "targetId": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$"
+        },
+        "targetType": {
+          "enum": [
+            "point-component",
+            "point-direction",
+            "point-speed-envelope",
+            "region-component",
+            "point-strain-component"
+          ]
+        },
+        "targetTitle": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
+        }
+      }
+    },
+    "numericalOutcome": {
+      "allOf": [
+        { "$ref": "#/$defs/targetFields" },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "kind",
+            "evidenceState",
+            "targetId",
+            "targetType",
+            "targetTitle",
+            "value",
+            "unit",
+            "rigorousUpperBound",
+            "qualification",
+            "detail"
+          ],
+          "properties": {
+            "kind": { "const": "numerical" },
+            "evidenceState": {
+              "enum": [
+                "verified-optimal-within-tolerance",
+                "verified-directional-lower-bound-within-tolerance",
+                "approximate-candidate",
+                "full-observation-zero-nullity",
+                "degenerate-objective"
+              ]
+            },
+            "targetId": true,
+            "targetType": true,
+            "targetTitle": true,
+            "value": { "type": "number" },
+            "unit": { "enum": ["mm/s", "1/s"] },
+            "rigorousUpperBound": {
+              "type": ["number", "null"]
+            },
+            "qualification": {
+              "enum": [
+                "verified-to-declared-tolerances",
+                "candidate-only"
+              ]
+            },
+            "detail": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 4096
+            }
+          }
+        }
+      ]
+    },
+    "infeasibleOutcome": {
+      "allOf": [
+        { "$ref": "#/$defs/targetFields" },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "kind",
+            "evidenceState",
+            "targetId",
+            "targetType",
+            "targetTitle",
+            "qualification",
+            "detail"
+          ],
+          "properties": {
+            "kind": { "const": "infeasible" },
+            "evidenceState": {
+              "const": "verified-infeasible-within-tolerance"
+            },
+            "targetId": true,
+            "targetType": true,
+            "targetTitle": true,
+            "qualification": {
+              "const": "verified-to-declared-tolerances"
+            },
+            "detail": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 4096
+            }
+          }
+        }
+      ]
+    },
+    "acceptedUnboundedOutcome": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "evidenceState", "reason", "detail"],
+      "properties": {
+        "kind": { "const": "unavailable" },
+        "evidenceState": {
+          "const": "verified-unbounded-within-tolerance"
+        },
+        "reason": { "const": "no-finite-bound" },
+        "detail": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 4096
+        }
+      }
+    },
+    "failureUnavailableOutcome": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "evidenceState", "reason", "detail"],
+      "properties": {
+        "kind": { "const": "unavailable" },
+        "evidenceState": {
+          "enum": ["unsupported", "failed", null]
+        },
+        "reason": {
+          "enum": [
+            "verification-not-accepted",
+            "deterministic-replay-mismatch",
+            "runtime-unavailable",
+            "runtime-identity-mismatch",
+            "output-resource-limit",
+            "operation-cancelled"
+          ]
+        },
+        "detail": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 4096
+        }
+      }
+    }
+  }
+}

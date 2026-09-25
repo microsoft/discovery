@@ -1,0 +1,295 @@
+{
+  "$schema": "https://flowblind.local/schemas/flowblind-catalog-research-v2-scenario-coverage.schema.json",
+  "coveragePolicy": {
+    "contractOnly": "The package validates the declared non-claim boundary and does not claim deployment or orchestration behavior.",
+    "externalDriverRequired": "The package exports a deterministic driver, but a pinned Python runtime and an exact outcome-producing scientific fixture are required.",
+    "manualLive": "The scenario remains a post-PR manual gate and is never reported as local executable coverage.",
+    "packageLocalExecutable": "The package-local node suite executes the retained or package-static behavior and names the matrix ID.",
+    "partial": "Package-local evidence covers only the listed checks; every named gap remains explicit."
+  },
+  "id": "flowblind-catalog-research-v2-scenario-coverage-v1",
+  "packageVersion": "2.0.0",
+  "scenarios": [
+    {
+      "coverageStatus": "package-local-executable",
+      "evidence": [
+        "portable-runtime.node-test.mjs: V2-REG-002/V2-REG-003/V2-REG-006"
+      ],
+      "gaps": [],
+      "id": "V2-REG-002"
+    },
+    {
+      "coverageStatus": "package-local-executable",
+      "evidence": [
+        "portable-runtime.node-test.mjs: V2-REG-002/V2-REG-003/V2-REG-006"
+      ],
+      "gaps": [],
+      "id": "V2-REG-003"
+    },
+    {
+      "coverageStatus": "package-local-executable",
+      "evidence": [
+        "portable-runtime.node-test.mjs: V2-REG-002/V2-REG-003/V2-REG-006"
+      ],
+      "gaps": [],
+      "id": "V2-REG-006"
+    },
+    {
+      "coverageStatus": "package-local-executable",
+      "evidence": [
+        "portable-runtime.node-test.mjs: V2-VEC-002/V2-VEC-003/V2-VEC-008"
+      ],
+      "gaps": [],
+      "id": "V2-VEC-002"
+    },
+    {
+      "coverageStatus": "package-local-executable",
+      "evidence": [
+        "portable-runtime.node-test.mjs: V2-VEC-002/V2-VEC-003/V2-VEC-008"
+      ],
+      "gaps": [],
+      "id": "V2-VEC-003"
+    },
+    {
+      "coverageStatus": "package-local-executable",
+      "evidence": [
+        "scenario-coverage.node-test.mjs: V2-VEC-005"
+      ],
+      "gaps": [],
+      "id": "V2-VEC-005"
+    },
+    {
+      "coverageStatus": "package-local-executable",
+      "evidence": [
+        "scenario-coverage.node-test.mjs: V2-VEC-006"
+      ],
+      "gaps": [],
+      "id": "V2-VEC-006"
+    },
+    {
+      "coverageStatus": "package-local-executable",
+      "evidence": [
+        "portable-runtime.node-test.mjs: V2-VEC-002/V2-VEC-003/V2-VEC-008"
+      ],
+      "gaps": [],
+      "id": "V2-VEC-008"
+    },
+    {
+      "coverageStatus": "package-local-executable",
+      "evidence": [
+        "portable-runtime.node-test.mjs: V2-HID-001",
+        "portable-runtime.node-test.mjs: retained verification remains lazy until exact activation"
+      ],
+      "gaps": [],
+      "id": "V2-HID-001"
+    },
+    {
+      "coverageStatus": "package-local-executable",
+      "evidence": [
+        "portable-runtime.node-test.mjs: V2-HID-004/V2-HID-005"
+      ],
+      "gaps": [],
+      "id": "V2-HID-004"
+    },
+    {
+      "coverageStatus": "package-local-executable",
+      "evidence": [
+        "portable-runtime.node-test.mjs: V2-HID-004/V2-HID-005",
+        "scenario-coverage.node-test.mjs: retained exact-null and tolerance-speed direct preparation"
+      ],
+      "gaps": [],
+      "id": "V2-HID-005"
+    },
+    {
+      "coverageStatus": "external-driver-required",
+      "evidence": [
+        "flowblind-scenario-harness-v2.mjs run-hidden"
+      ],
+      "gaps": [
+        "Package-local node tests do not provide a pinned Clarabel Python environment.",
+        "The driver requires an exact canonical problem fixture whose retained outcome is numerical.",
+        "The bundled activation is conformance-only; independently host-allowlisted final OCI digests remain a live gate."
+      ],
+      "id": "V2-HID-007"
+    },
+    {
+      "coverageStatus": "external-driver-required",
+      "evidence": [
+        "flowblind-scenario-harness-v2.mjs run-hidden"
+      ],
+      "gaps": [
+        "The contradictory observation variant is generated only in the driver workspace from an exact point-component base problem.",
+        "The node-only suite does not execute the pinned Clarabel Python runtime.",
+        "Independently host-allowlisted final OCI digests remain a live gate."
+      ],
+      "id": "V2-HID-008"
+    },
+    {
+      "coverageStatus": "external-driver-required",
+      "evidence": [
+        "flowblind-scenario-harness-v2.mjs run-hidden"
+      ],
+      "gaps": [
+        "The null-budget variant is generated only in the driver workspace from an exact base problem.",
+        "The node-only suite does not execute the pinned Clarabel Python runtime.",
+        "Independently host-allowlisted final OCI digests remain a live gate."
+      ],
+      "id": "V2-HID-009"
+    },
+    {
+      "coverageStatus": "external-driver-required",
+      "evidence": [
+        "flowblind-scenario-harness-v2.mjs run-hidden"
+      ],
+      "gaps": [
+        "Cold receipt-bound reads require a completed pinned-runtime hidden-flow run; the node-only suite validates the harness and URI contract but does not install scientific Python dependencies.",
+        "Independently host-allowlisted final OCI digests and durable host indexing remain live gates."
+      ],
+      "id": "V2-HID-014"
+    },
+    {
+      "coverageStatus": "contract-only",
+      "evidence": [
+        "scenario-coverage.node-test.mjs: V2-OPS-006"
+      ],
+      "gaps": [
+        "The package does not claim a deployment kill-switch or rollback controller.",
+        "Live disablement and rollback remain outside package-local execution."
+      ],
+      "id": "V2-OPS-006"
+    },
+    {
+      "coverageStatus": "contract-only",
+      "evidence": [
+        "scenario-coverage.node-test.mjs: V2-OPS-007"
+      ],
+      "gaps": [
+        "Retained version identities are exposed, but durable restart reconciliation requires a host journal and cannot be inferred from process-local state."
+      ],
+      "id": "V2-OPS-007"
+    },
+    {
+      "coverageStatus": "contract-only",
+      "evidence": [
+        "scenario-coverage.node-test.mjs: V2-OPS-008"
+      ],
+      "gaps": [
+        "Deployment journals, fencing, and bounded retry orchestration are host responsibilities and are not implemented by this package."
+      ],
+      "id": "V2-OPS-008"
+    },
+    {
+      "coverageStatus": "package-local-executable",
+      "evidence": [
+        "portable-runtime.node-test.mjs: V2-PKG-001"
+      ],
+      "gaps": [],
+      "id": "V2-PKG-001"
+    },
+    {
+      "coverageStatus": "package-local-executable",
+      "evidence": [
+        "scenario-coverage.node-test.mjs: V2-PKG-002"
+      ],
+      "gaps": [],
+      "id": "V2-PKG-002"
+    },
+    {
+      "coverageStatus": "package-local-executable",
+      "evidence": [
+        "portable-runtime.node-test.mjs: V2-PKG-003"
+      ],
+      "gaps": [],
+      "id": "V2-PKG-003"
+    },
+    {
+      "coverageStatus": "package-local-executable",
+      "evidence": [
+        "portable-runtime.node-test.mjs: V2-PKG-004"
+      ],
+      "gaps": [],
+      "id": "V2-PKG-004"
+    },
+    {
+      "coverageStatus": "partial",
+      "evidence": [
+        "portable-runtime.node-test.mjs: extra-file and hardlink rejection",
+        "scenario-coverage.node-test.mjs: manifest and mirror checks"
+      ],
+      "gaps": [
+        "Case-alias creation is not portable on case-insensitive Windows filesystems.",
+        "Symlink creation may require platform privileges; verifier rejection is implemented but not exercised by every package-local run."
+      ],
+      "id": "V2-PKG-005"
+    },
+    {
+      "coverageStatus": "partial",
+      "evidence": [
+        "portable-runtime.node-test.mjs: static Docker confinement",
+        "parent-driver: docker build and --network none --read-only execution"
+      ],
+      "gaps": [
+        "The node-only suite does not require a Docker daemon.",
+        "Image manifest digests are produced by the parent-driven Docker build rather than embedded as live acceptance."
+      ],
+      "id": "V2-PKG-006"
+    },
+    {
+      "coverageStatus": "partial",
+      "evidence": [
+        "scenario-coverage.node-test.mjs: LF, unsafe path, secret-pattern, and retained-byte scans",
+        "parent-driver: core.autocrlf=true exported-subtree test"
+      ],
+      "gaps": [
+        "The core.autocrlf checkout is parent-driven because package-local tests do not create or mutate an enclosing Git repository."
+      ],
+      "id": "V2-PKG-007"
+    },
+    {
+      "coverageStatus": "partial",
+      "evidence": [
+        "portable-runtime.node-test.mjs: tamper and schema-envelope checks",
+        "portable-runtime.node-test.mjs: retained HTML viewport, print, and main-landmark assertions",
+        "parent-driver: v2 browser accessibility, mobile, print, overflow, and external-load validation"
+      ],
+      "gaps": [
+        "Microsoft Discovery pull-request conventions require repository and service metadata outside the exported package.",
+        "No package-local test claims post-PR catalog acceptance."
+      ],
+      "id": "V2-PKG-008"
+    },
+    {
+      "coverageStatus": "manual-live",
+      "evidence": [],
+      "gaps": [
+        "Post-PR agent and tool deployment/read-back remains manual."
+      ],
+      "id": "V2-LIVE-001"
+    },
+    {
+      "coverageStatus": "manual-live",
+      "evidence": [],
+      "gaps": [
+        "Real confirmation UX, promotion/remount, restart, rollback, and cleanup remain manual."
+      ],
+      "id": "V2-LIVE-002"
+    },
+    {
+      "coverageStatus": "manual-live",
+      "evidence": [],
+      "gaps": [
+        "Deployment journal recovery, fencing, and uncertain-outcome retry remain manual."
+      ],
+      "id": "V2-LIVE-003"
+    },
+    {
+      "coverageStatus": "manual-live",
+      "evidence": [],
+      "gaps": [
+        "Separately approved private hidden-flow live activation remains manual."
+      ],
+      "id": "V2-LIVE-004"
+    }
+  ],
+  "schemaVersion": 1
+}

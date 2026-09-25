@@ -1,0 +1,91 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://flowblind.local/schemas/flowblind-retained-package-manifest-v1.schema.json",
+  "title": "FlowBlind retained package manifest v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "id",
+    "retainedId",
+    "sourceCommit",
+    "root",
+    "fileCount",
+    "treeCanonicalization",
+    "treeSha256",
+    "packageEvidence",
+    "provenance",
+    "files"
+  ],
+  "properties": {
+    "schemaVersion": {
+      "const": 1
+    },
+    "id": {
+      "type": "string",
+      "pattern": "^flowblind-retained-(catalog-v1|hidden-flow-v1)-manifest-v1$"
+    },
+    "retainedId": {
+      "enum": [
+        "catalog-v1",
+        "hidden-flow-v1"
+      ]
+    },
+    "sourceCommit": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{40}$"
+    },
+    "root": {
+      "type": "string",
+      "pattern": "^generated/retained/(catalog-v1|hidden-flow-v1)/runtime$"
+    },
+    "fileCount": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "treeCanonicalization": {
+      "const": "path-nul-byteLength-nul-sha256-lf-v1"
+    },
+    "treeSha256": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "packageEvidence": {
+      "type": "object"
+    },
+    "provenance": {
+      "type": "object"
+    },
+    "files": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "reference",
+          "byteLength",
+          "sha256",
+          "role"
+        ],
+        "properties": {
+          "reference": {
+            "type": "string",
+            "minLength": 1
+          },
+          "byteLength": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "sha256": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{64}$"
+          },
+          "role": {
+            "const": "retained-package-file"
+          }
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,209 @@
+name: flowblind-prepare-study
+description: >-
+  Selects and validates one reviewed catalog capability from an exact
+  host-mounted CSV plus scientist-level declarations, generates its
+  candidate-bound evidence, then writes one deterministic result-free
+  preparation asset without retaining the source.
+version: 1.0.0
+category: scientific-validation
+infra:
+  - name: flowblind-prepare-study-container
+    infra_type: container
+    image:
+      acr: "{name}.azurecr.io/flowblind-prepare-study:1.0.0"
+    compute:
+      min_resources:
+        cpu: 1
+        ram: 1Gi
+        storage: 1Gi
+        gpu: 0
+      max_resources:
+        cpu: 1
+        ram: 2Gi
+        storage: 2Gi
+        gpu: 0
+      infiniband: false
+      recommended_sku:
+        - Standard_D2s_v6
+      pool_type: static
+      pool_size: 1
+actions:
+  - name: prepare-study
+    description: >-
+      Match and prepare one reviewed regional-agreement or vector/time-readiness
+      study from one selected CSV. Common fields are required for both.
+      Regional agreement additionally requires referenceMeaning and
+      candidateMeaning; vector/time readiness instead requires vectorMeaning,
+      vectorSourceKind, timeUnit, and samplingKind. Other temporal fields are
+      optional and used only when applicable.
+    infra_node: flowblind-prepare-study-container
+    input_schema:
+      type: object
+      properties:
+        researchGoal:
+          type: string
+          minLength: 1
+          maxLength: 4096
+          description: Scientist-authored goal used to match exactly one reviewed FlowBlind method.
+        decisionQuestion:
+          type: string
+          minLength: 1
+          maxLength: 4096
+          description: Optional scientist-authored decision question.
+        nextEvidenceIntent:
+          type: string
+          minLength: 1
+          maxLength: 4096
+          description: Optional scientist-authored next-evidence intent.
+        quantity:
+          type: string
+          minLength: 1
+          maxLength: 4096
+          description: Physical or scientific quantity represented by the selected scalar or vector values.
+        referenceMeaning:
+          type: string
+          minLength: 1
+          maxLength: 4096
+          description: Regional agreement only — meaning of the reference_value column.
+        candidateMeaning:
+          type: string
+          minLength: 1
+          maxLength: 4096
+          description: Regional agreement only — meaning of the candidate_value column.
+        vectorMeaning:
+          type: string
+          minLength: 1
+          maxLength: 4096
+          description: Vector/time readiness only — meaning of the u and v vector components.
+        vectorSourceKind:
+          type: string
+          enum:
+            - generated
+            - measured
+            - simulation
+          description: Vector/time readiness only — whether the vector field is generated, measured, or simulated.
+        timeUnit:
+          type: string
+          enum:
+            - s
+            - ms
+          description: Vector/time readiness only — unit used by the optional time column.
+        samplingKind:
+          type: string
+          enum:
+            - instantaneous
+            - steady-state
+            - frame-average
+          description: Vector/time readiness only — temporal sampling represented by the vector CSV.
+        selectedTime:
+          type: number
+          description: Optional exact or interpolated time to audit; defaults to the first frame.
+        exposureDuration:
+          type: number
+          exclusiveMinimum: 0
+          description: Required duration for frame-average sampling.
+        exposureOperator:
+          type: string
+          enum:
+            - uniform-window-average
+            - unspecified
+          description: Optional frame-average exposure operator; supply together with timestampAnchor.
+        timestampAnchor:
+          type: string
+          enum:
+            - start
+            - midpoint
+            - end
+            - unspecified
+          description: Optional frame-average timestamp anchor; supply together with exposureOperator.
+        cycleStartTime:
+          type: number
+          description: Optional closed-cycle start time; supply all four cycle fields together.
+        cycleEndTime:
+          type: number
+          description: Optional closed-cycle end time; supply all four cycle fields together.
+        cyclePeriod:
+          type: number
+          exclusiveMinimum: 0
+          description: Optional cycle period; supply all four cycle fields together.
+        cyclePhaseOrigin:
+          type: number
+          description: Optional cycle phase origin; supply all four cycle fields together.
+        coordinateUnit:
+          type: string
+          minLength: 1
+          maxLength: 4096
+          description: Shared x/y coordinate unit and geometry limitation.
+        valueUnit:
+          type: string
+          minLength: 1
+          maxLength: 4096
+          description: Shared scalar or velocity unit required by the matched capability.
+        provenance:
+          type: string
+          minLength: 1
+          maxLength: 4096
+          description: Source citation or provenance statement.
+        license:
+          type: string
+          minLength: 1
+          maxLength: 4096
+          description: Licence or permission governing the selected data.
+      required:
+        - researchGoal
+        - quantity
+        - coordinateUnit
+        - valueUnit
+        - provenance
+        - license
+    command: node /app/runtime/flowblind-prepare-study.mjs
+    environment_variables:
+      - name: FLOWBLIND_RESEARCH_GOAL
+        value: "{{researchGoal}}"
+      - name: FLOWBLIND_DECISION_QUESTION
+        value: "{{decisionQuestion}}"
+      - name: FLOWBLIND_NEXT_EVIDENCE_INTENT
+        value: "{{nextEvidenceIntent}}"
+      - name: FLOWBLIND_QUANTITY
+        value: "{{quantity}}"
+      - name: FLOWBLIND_REFERENCE_MEANING
+        value: "{{referenceMeaning}}"
+      - name: FLOWBLIND_CANDIDATE_MEANING
+        value: "{{candidateMeaning}}"
+      - name: FLOWBLIND_VECTOR_MEANING
+        value: "{{vectorMeaning}}"
+      - name: FLOWBLIND_VECTOR_SOURCE_KIND
+        value: "{{vectorSourceKind}}"
+      - name: FLOWBLIND_TIME_UNIT
+        value: "{{timeUnit}}"
+      - name: FLOWBLIND_SAMPLING_KIND
+        value: "{{samplingKind}}"
+      - name: FLOWBLIND_SELECTED_TIME
+        value: "{{selectedTime}}"
+      - name: FLOWBLIND_EXPOSURE_DURATION
+        value: "{{exposureDuration}}"
+      - name: FLOWBLIND_EXPOSURE_OPERATOR
+        value: "{{exposureOperator}}"
+      - name: FLOWBLIND_TIMESTAMP_ANCHOR
+        value: "{{timestampAnchor}}"
+      - name: FLOWBLIND_CYCLE_START_TIME
+        value: "{{cycleStartTime}}"
+      - name: FLOWBLIND_CYCLE_END_TIME
+        value: "{{cycleEndTime}}"
+      - name: FLOWBLIND_CYCLE_PERIOD
+        value: "{{cyclePeriod}}"
+      - name: FLOWBLIND_CYCLE_PHASE_ORIGIN
+        value: "{{cyclePhaseOrigin}}"
+      - name: FLOWBLIND_COORDINATE_UNIT
+        value: "{{coordinateUnit}}"
+      - name: FLOWBLIND_VALUE_UNIT
+        value: "{{valueUnit}}"
+      - name: FLOWBLIND_PROVENANCE
+        value: "{{provenance}}"
+      - name: FLOWBLIND_LICENSE
+        value: "{{license}}"
+    output_mount_configurations:
+      - mount_path: /output
+        auto_promote: true
+        output_name: flowblind-study-preparation
+        output_description: Content-addressed result-free FlowBlind preparation asset containing the generated sidecar and bundle.

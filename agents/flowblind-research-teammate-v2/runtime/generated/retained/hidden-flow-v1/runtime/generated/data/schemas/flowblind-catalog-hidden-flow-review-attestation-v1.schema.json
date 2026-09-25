@@ -1,0 +1,209 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://flowblind.local/schemas/flowblind-catalog-hidden-flow-review-attestation-v1.schema.json",
+  "title": "FlowBlind generic hidden-flow problem review attestation v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "$schema",
+    "schemaVersion",
+    "authorityVersion",
+    "policyVersion",
+    "reviewScope",
+    "policy",
+    "problemSchema",
+    "problemAcceptanceSchema",
+    "parser",
+    "reviewedProblemSha256",
+    "allowedObservationTypes",
+    "allowedTargetTypes",
+    "resourceLimits",
+    "runtime",
+    "claimBoundary",
+    "assertions"
+  ],
+  "properties": {
+    "$schema": {
+      "const": "https://flowblind.local/schemas/flowblind-catalog-hidden-flow-review-attestation-v1.schema.json"
+    },
+    "schemaVersion": { "const": 1 },
+    "authorityVersion": {
+      "const": "attested-generic-hidden-flow-problem-authority-v1"
+    },
+    "policyVersion": { "const": "1.0.0" },
+    "reviewScope": {
+      "const": "generic-problem-contract-parser-and-executable-preflight-only"
+    },
+    "policy": {
+      "$ref": "flowblind-catalog-hidden-flow-package-evidence-v1.schema.json#/$defs/artifact"
+    },
+    "problemSchema": {
+      "$ref": "flowblind-catalog-hidden-flow-package-evidence-v1.schema.json#/$defs/artifact"
+    },
+    "problemAcceptanceSchema": {
+      "$ref": "flowblind-catalog-hidden-flow-package-evidence-v1.schema.json#/$defs/artifact"
+    },
+    "parser": {
+      "$ref": "flowblind-catalog-hidden-flow-package-evidence-v1.schema.json#/$defs/artifact"
+    },
+    "reviewedProblemSha256": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "allowedObservationTypes": {
+      "const": ["point-component", "point-direction"]
+    },
+    "allowedTargetTypes": {
+      "const": [
+        "point-component",
+        "point-direction",
+        "point-speed-envelope",
+        "region-component",
+        "point-strain-component"
+      ]
+    },
+    "resourceLimits": { "$ref": "#/$defs/resourceLimits" },
+    "runtime": { "$ref": "#/$defs/runtime" },
+    "claimBoundary": {
+      "const": "finite-basis-declared-model-only-no-physical-truth-source-validity-or-clinical-inference"
+    },
+    "assertions": { "$ref": "#/$defs/assertions" }
+  },
+  "$defs": {
+    "resourceLimits": {
+      "const": {
+        "maximumDocumentBytes": 16777216,
+        "maximumSolverResultBytes": 16777216,
+        "maximumSolverBatchRequests": 64,
+        "maximumSolverBatchInputBytes": 33554432,
+        "maximumSolverBatchResultBytes": 67108864,
+        "maximumBasisFunctions": 96,
+        "maximumObservationRows": 256,
+        "maximumObservationMatrixEntries": 24576,
+        "maximumTargetGridPoints": 256,
+        "maximumDirections": 64,
+        "maximumScenarios": 24,
+        "maximumTextLength": 2048,
+        "maximumIdentifierLength": 64,
+        "maximumMatrixEntries": 9216,
+        "maximumCanonicalMatrixEntries": 70000,
+        "maximumNumericMagnitude": 1e100
+      }
+    },
+    "runtime": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "platform",
+        "nodeImage",
+        "pythonImage",
+        "pythonRequirementsSha256",
+        "pythonPackages",
+        "solverModule",
+        "solverAdapter",
+        "solverIdentity",
+        "maximumThreads",
+        "networkRequiredAtRuntime",
+        "confinement",
+        "requiredEnvironment"
+      ],
+      "properties": {
+        "platform": { "const": "linux/amd64" },
+        "nodeImage": {
+          "const": "node:22.22.0-bookworm-slim@sha256:dd9d21971ec4395903fa6143c2b9267d048ae01ca6d3ea96f16cb30df6187d94"
+        },
+        "pythonImage": {
+          "const": "python:3.12.14-slim@sha256:2fe5997d249a808b8eeea52c58a1dbffbba28754dc11699ef5c029f2d818ce79"
+        },
+        "pythonRequirementsSha256": {
+          "const": "1ffda1962375e2d2d77b794b7a930d55902869a2923e695ad333a3f8e0d7a4ed"
+        },
+        "pythonPackages": {
+          "const": [
+            {
+              "requirement": "clarabel==0.11.1",
+              "sha256": "c8c41aaa6f3f8c0f3bd9d86c3e568dcaee079562c075bd2ec9fb3a80287380ef"
+            },
+            {
+              "requirement": "cffi==2.1.1",
+              "sha256": "c1453022f490d2459a11819d83ad1d586e9ff65a12ac3e705ffebd46d3685dcf"
+            },
+            {
+              "requirement": "numpy==2.2.6",
+              "sha256": "fd83c01228a688733f1ded5201c678f0c53ecc1006ffbc404db9f7a899ac6249"
+            },
+            {
+              "requirement": "pycparser==3.0",
+              "sha256": "b727414169a36b7d524c1c3e31839a521725078d7b2ff038656844266160a992"
+            },
+            {
+              "requirement": "scipy==1.15.3",
+              "sha256": "271e3713e645149ea5ea3e97b57fdab61ce61333f97cfae392c28ba786f9bb49"
+            }
+          ]
+        },
+        "solverModule": { "const": "tools.hidden_flow_solver" },
+        "solverAdapter": {
+          "const": "PinnedPythonProcessHiddenFlowSolverAdapter"
+        },
+        "solverIdentity": {
+          "const": {
+            "adapter": "flowblind-hidden-flow-direct-clarabel",
+            "adapterVersion": "1.0.0",
+            "pythonVersion": "3.12.14",
+            "clarabelVersion": "0.11.1",
+            "scipyVersion": "1.15.3",
+            "numpyVersion": "2.2.6",
+            "image": "python:3.12.14-slim@sha256:2fe5997d249a808b8eeea52c58a1dbffbba28754dc11699ef5c029f2d818ce79",
+            "architecture": "x86_64",
+            "linearSolverPrefix": "qdldl;direct=true;threads=1;"
+          }
+        },
+        "maximumThreads": { "const": 1 },
+        "networkRequiredAtRuntime": { "const": false },
+        "confinement": {
+          "const": {
+            "user": "10001:10001",
+            "rootFilesystem": "read-only",
+            "temporaryFilesystem": "/tmp:rw,noexec,nosuid,nodev,size=128m,mode=1777",
+            "network": "none",
+            "noNewPrivileges": true,
+            "childProcessTimeoutMilliseconds": 60000,
+            "maximumStdoutStderrBytes": 1048576
+          }
+        },
+        "requiredEnvironment": {
+          "const": {
+            "PYTHONDONTWRITEBYTECODE": "1",
+            "PYTHONUNBUFFERED": "1",
+            "PYTHONHASHSEED": "0",
+            "OMP_NUM_THREADS": "1",
+            "OPENBLAS_NUM_THREADS": "1",
+            "OPENBLAS_CORETYPE": "NEHALEM",
+            "MKL_NUM_THREADS": "1",
+            "NUMEXPR_NUM_THREADS": "1",
+            "VECLIB_MAXIMUM_THREADS": "1",
+            "BLIS_NUM_THREADS": "1"
+          }
+        }
+      }
+    },
+    "assertions": {
+      "const": {
+        "genericProblemContract": "attested",
+        "canonicalProblemBytes": "attested",
+        "parserAcceptance": "attested",
+        "allowedObservationAndTargetTypes": "attested",
+        "resourceLimits": "attested",
+        "executablePreflight": "attested",
+        "solverRuntime": "attested",
+        "neutralFiniteBasisClaims": "attested",
+        "physicalTruth": "not-attested",
+        "sourceAccuracy": "not-attested",
+        "measurementValidity": "not-attested",
+        "clinicalUse": "not-attested",
+        "modelOrUserApproval": "not-accepted-as-authority"
+      }
+    }
+  }
+}

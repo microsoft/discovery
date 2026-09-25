@@ -1,0 +1,208 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://flowblind.local/schemas/flowblind-catalog-research-v2-prepared-study.schema.json",
+  "title": "FlowBlind catalog-native research v2 prepared study",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "capability",
+    "package",
+    "preparationSchema",
+    "humanContext",
+    "preparationMarker",
+    "preparationArtifact",
+    "resources"
+  ],
+  "properties": {
+    "capability": {
+      "$ref": "#/$defs/capability"
+    },
+    "package": {
+      "$ref": "#/$defs/package"
+    },
+    "preparationSchema": {
+      "$ref": "#/$defs/schemaBinding"
+    },
+    "humanContext": {
+      "$ref": "#/$defs/humanContext"
+    },
+    "preparationMarker": {
+      "$ref": "#/$defs/artifact"
+    },
+    "preparationArtifact": {
+      "$ref": "#/$defs/artifact"
+    },
+    "resources": {
+      "type": "array",
+      "minItems": 2,
+      "maxItems": 2,
+      "items": {
+        "$ref": "#/$defs/resource"
+      }
+    }
+  },
+  "$defs": {
+    "text": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 4096
+    },
+    "sha256": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "capability": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "familyId",
+        "methodId",
+        "methodVersion"
+      ],
+      "properties": {
+        "familyId": {
+          "$ref": "#/$defs/text"
+        },
+        "methodId": {
+          "$ref": "#/$defs/text"
+        },
+        "methodVersion": {
+          "$ref": "#/$defs/text"
+        }
+      }
+    },
+    "package": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "packageId",
+        "packageVersion",
+        "compatibilityKey"
+      ],
+      "properties": {
+        "packageId": {
+          "$ref": "#/$defs/text"
+        },
+        "packageVersion": {
+          "$ref": "#/$defs/text"
+        },
+        "compatibilityKey": {
+          "$ref": "#/$defs/text"
+        }
+      }
+    },
+    "schemaBinding": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "recordKind",
+        "schemaId",
+        "schemaVersion"
+      ],
+      "properties": {
+        "recordKind": {
+          "$ref": "#/$defs/text"
+        },
+        "schemaId": {
+          "$ref": "#/$defs/text"
+        },
+        "schemaVersion": {
+          "$ref": "#/$defs/text"
+        }
+      }
+    },
+    "humanContext": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "researchGoal",
+        "decisionQuestion",
+        "nextEvidenceIntent"
+      ],
+      "properties": {
+        "researchGoal": {
+          "$ref": "#/$defs/text"
+        },
+        "decisionQuestion": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "nextEvidenceIntent": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      }
+    },
+    "artifact": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "reference",
+        "byteLength",
+        "sha256",
+        "mediaType"
+      ],
+      "properties": {
+        "reference": {
+          "$ref": "#/$defs/text"
+        },
+        "byteLength": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 67108864
+        },
+        "sha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "mediaType": {
+          "$ref": "#/$defs/text"
+        }
+      }
+    },
+    "resource": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "role",
+        "selectionHandle",
+        "immutableVersionId",
+        "members"
+      ],
+      "properties": {
+        "role": {
+          "$ref": "#/$defs/text"
+        },
+        "selectionHandle": {
+          "$ref": "#/$defs/text"
+        },
+        "immutableVersionId": {
+          "$ref": "#/$defs/text"
+        },
+        "members": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "role",
+              "identity"
+            ],
+            "properties": {
+              "role": {
+                "$ref": "#/$defs/text"
+              },
+              "identity": {
+                "$ref": "#/$defs/artifact"
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,112 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://flowblind.local/schemas/flowblind-catalog-hidden-flow-package-lock-v1.schema.json",
+  "title": "FlowBlind catalog hidden-flow package lock v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "$schema",
+    "schemaVersion",
+    "id",
+    "packageVersion",
+    "actions",
+    "runtimeNetworkRequired",
+    "publicRuntime",
+    "facades",
+    "artifacts"
+  ],
+  "properties": {
+    "$schema": {
+      "const": "https://flowblind.local/schemas/flowblind-catalog-hidden-flow-package-lock-v1.schema.json"
+    },
+    "schemaVersion": { "const": 1 },
+    "id": {
+      "const": "flowblind-catalog-hidden-flow-package-lock-v1"
+    },
+    "packageVersion": { "const": "1.0.0" },
+    "actions": {
+      "const": ["prepare-study", "run-and-verify-study"]
+    },
+    "runtimeNetworkRequired": { "const": false },
+    "publicRuntime": { "$ref": "#/$defs/runtimeArtifact" },
+    "facades": {
+      "type": "array",
+      "minItems": 3,
+      "maxItems": 3,
+      "items": { "$ref": "#/$defs/sourceArtifact" }
+    },
+    "artifacts": {
+      "type": "array",
+      "minItems": 48,
+      "maxItems": 48,
+      "items": { "$ref": "#/$defs/sourceArtifact" }
+    }
+  },
+  "$defs": {
+    "sha256": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "runtimeArtifact": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["bundledPath", "byteLength", "sha256"],
+      "properties": {
+        "bundledPath": {
+          "const": "generated/flowblind-catalog-hidden-flow-runtime-v1.mjs"
+        },
+        "byteLength": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 134217728
+        },
+        "sha256": { "$ref": "#/$defs/sha256" }
+      }
+    },
+    "sourceArtifact": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "role",
+        "sourceReference",
+        "bundledPath",
+        "byteLength",
+        "sha256",
+        "mediaType"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[a-z0-9][a-z0-9-]{0,127}$"
+        },
+        "role": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "sourceReference": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 512
+        },
+        "bundledPath": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 512
+        },
+        "byteLength": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 134217728
+        },
+        "sha256": { "$ref": "#/$defs/sha256" },
+        "mediaType": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        }
+      }
+    }
+  }
+}

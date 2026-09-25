@@ -1,0 +1,70 @@
+name: flowblind-run-and-verify-study-v2
+description: >-
+  After host confirmation, revalidates exact selected attachments, executes
+  only the routed reviewed method, verifies deterministic replay, and
+  publishes marker-last evidence.
+version: 2.0.0
+category: scientific-validation
+infra:
+  - name: flowblind-run-and-verify-study-v2-container
+    infra_type: container
+    image:
+      acr: "{name}.azurecr.io/flowblind-run-and-verify-study-v2:2.0.0"
+    compute:
+      min_resources:
+        cpu: 1
+        ram: 1Gi
+        storage: 1Gi
+        gpu: 0
+      max_resources:
+        cpu: 1
+        ram: 2Gi
+        storage: 2Gi
+        gpu: 0
+      infiniband: false
+      recommended_sku:
+        - Standard_D2s_v6
+      pool_type: static
+      pool_size: 1
+actions:
+  - name: run-and-verify-study
+    description: >-
+      Run the exact prepared study after the catalog-owned confirmation
+      callback from candidate.csv and its unchanged content-addressed
+      preparation directory. Scientist input contains no technical controls
+      or approvals.
+    infra_node: flowblind-run-and-verify-study-v2-container
+    input_schema:
+      type: object
+      properties:
+        researchGoal:
+          type: string
+          minLength: 1
+          maxLength: 4096
+          description: Exact scientist-authored goal recovered from preparation.
+        decisionQuestion:
+          type:
+            - string
+            - "null"
+          minLength: 1
+          maxLength: 4096
+          description: Exact optional decision question recovered from preparation.
+        nextEvidenceIntent:
+          type:
+            - string
+            - "null"
+          minLength: 1
+          maxLength: 4096
+          description: Exact optional next-evidence intent recovered from preparation.
+      required:
+        - researchGoal
+    command: node /app/runtime/flowblind-run-and-verify-study-v2.mjs
+    environment_variables:
+      - { name: FLOWBLIND_RESEARCH_GOAL, value: "{{researchGoal}}" }
+      - { name: FLOWBLIND_DECISION_QUESTION, value: "{{decisionQuestion}}" }
+      - { name: FLOWBLIND_NEXT_EVIDENCE_INTENT, value: "{{nextEvidenceIntent}}" }
+    output_mount_configurations:
+      - mount_path: /output
+        auto_promote: true
+        output_name: flowblind-verified-study-v2
+        output_description: Deterministic verified JSON, Markdown, HTML, and marker evidence.
