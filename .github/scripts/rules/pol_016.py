@@ -24,6 +24,7 @@ from image_inspector import (
     MARKDOWN_IMAGE_EXTENSIONS,
     MAX_MARKDOWN_IMAGE_BYTES,
     inspect,
+    is_image_path,
     is_referenced_by_markdown,
 )
 from rules.base import Finding, Rule, RuleContext, Scope, Severity
@@ -38,12 +39,39 @@ def _owner_dir(ctx: RuleContext, rel: str) -> Path:
 
 def check(ctx: RuleContext) -> list[Finding]:
     findings: list[Finding] = []
+    candidates = set(ctx.existing_changed_files())
+    touched_owners: set[Path] = set()
 
-    for rel in ctx.existing_changed_files():
+    for rel in ctx.changed_files:
+        normalized = rel.replace("\\", "/")
+        if not normalized.startswith(GUARDED_PREFIXES):
+            continue
+        path = Path(normalized)
+        if len(path.parts) < 2:
+            continue
+        if path.suffix.lower() in {".md", ".markdown"} or path.name == "kit.json":
+            touched_owners.add(Path(*path.parts[:2]))
+
+    # A Markdown or kit.json edit can remove the last reference to an existing
+    # image without changing the image itself. Revalidate every image in that
+    # catalog item so reference removal cannot leave an orphan.
+    for owner in touched_owners:
+        owner_dir = ctx.abs(owner)
+        if not owner_dir.is_dir():
+            continue
+        candidates.update(
+            ctx.rel(path)
+            for path in owner_dir.rglob("*")
+            if path.is_file() and is_image_path(path)
+        )
+
+    for rel in sorted(candidates):
         if not rel.startswith(GUARDED_PREFIXES):
             continue
 
         image_path = ctx.abs(rel)
+        if not image_path.is_file():
+            continue
         verdict = inspect(image_path)
         if verdict is None:
             continue

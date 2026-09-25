@@ -427,6 +427,24 @@ def inspect(path: Path, suffix: str | None = None) -> ImageVerdict | None:
             ),
         )
 
+    if detected == "webp":
+        declared_size = int.from_bytes(head[4:8], "little") + 8
+        try:
+            actual_size = path.stat().st_size
+        except OSError as error:
+            return ImageVerdict(False, detected, f"Could not stat file: {error}")
+        if actual_size != declared_size:
+            return ImageVerdict(
+                ok=False,
+                detected=detected,
+                reason=(
+                    f"WEBP RIFF header declares {declared_size} bytes but the "
+                    f"file contains {actual_size} bytes, so it is truncated or "
+                    "has data appended after the image. Both indicate "
+                    "corruption or a polyglot file."
+                ),
+            )
+
     return ImageVerdict(ok=True, detected=detected, reason=f"Valid {detected.upper()} image.")
 
 

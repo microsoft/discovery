@@ -23,6 +23,10 @@ _FROM_RE = re.compile(
 )
 _ARG_RE = re.compile(r"^\s*ARG\s+(?P<name>[A-Za-z_][A-Za-z0-9_]*)(?:=(?P<default>\S*))?", re.IGNORECASE)
 _VAR_RE = re.compile(r"\$\{?([A-Za-z_][A-Za-z0-9_]*)\}?")
+_DIGEST_RE = re.compile(
+    r"^[A-Za-z][A-Za-z0-9]*(?:[+._-][A-Za-z][A-Za-z0-9]*)*:"
+    r"[A-Fa-f0-9]{32,}$"
+)
 
 #: Discovery deployer placeholder: ``{acr}.azurecr.io`` (any single ``{name}``
 #: label, no slashes or nested braces) rewritten to the target registry.
@@ -67,8 +71,19 @@ class ImageRef:
         was never substituted, leaving the image identity indeterminate."""
         return any(
             component is not None and bool(_VAR_RE.search(component))
-            for component in (self.registry, self.namespace, self.repository, self.tag)
+            for component in (
+                self.registry,
+                self.namespace,
+                self.repository,
+                self.tag,
+                self.digest,
+            )
         )
+
+    @property
+    def has_valid_digest(self) -> bool:
+        """True only for a complete immutable content digest."""
+        return bool(self.digest and _DIGEST_RE.fullmatch(self.digest))
 
     @property
     def namespace_ref(self) -> str:

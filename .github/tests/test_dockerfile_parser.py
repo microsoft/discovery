@@ -93,6 +93,18 @@ def test_tag_and_digest_reference_keeps_both():
     assert image.digest == DIGEST
 
 
+def test_digest_validation_rejects_variables_and_malformed_values():
+    valid = parse_image_ref(f"ubuntu:latest@{DIGEST}")
+    variable = parse_image_ref("ubuntu:latest@${DIGEST}")
+    malformed = parse_image_ref("ubuntu:latest@sha256:not-hex")
+
+    assert valid.has_valid_digest
+    assert not valid.has_unresolved_variable
+    assert variable.has_unresolved_variable
+    assert not variable.has_valid_digest
+    assert not malformed.has_valid_digest
+
+
 def test_stage_alias_reference_is_not_external():
     text = "FROM ubuntu:24.04 AS builder\nFROM builder\n"
     images = external_images(text)

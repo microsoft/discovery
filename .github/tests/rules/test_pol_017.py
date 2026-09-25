@@ -59,6 +59,24 @@ def test_digest_pin_passes_even_with_a_floating_tag(repo):
     assert result.findings == []
 
 
+@pytest.mark.parametrize("digest", [
+    "${DIGEST}",
+    "sha256:not-hex",
+    "sha256:1234",
+])
+def test_invalid_or_unresolved_digest_is_reported(repo, digest):
+    rel = write(
+        repo,
+        "agents/demo/tools/t/Dockerfile",
+        f"FROM ubuntu:24.04@{digest}\n",
+    )
+
+    result = run_rule(repo, RULE, [rel])
+
+    assert files(result) == [rel]
+    assert "invalid or unresolved digest" in result.findings[0].message
+
+
 def test_arg_default_resolves_the_tag(repo):
     body = "ARG UBUNTU_TAG=24.04\nFROM ubuntu:${UBUNTU_TAG}\n"
     rel = write(repo, "agents/demo/tools/t/Dockerfile", body)

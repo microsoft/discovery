@@ -18,7 +18,8 @@ on:
     paths:
       - ".github/scripts/**"
       - ".github/tests/**"
-      - ".github/policy/baseline.json"
+      - ".github/policy/**"
+      - ".github/requirements-ci.txt"
       - ".github/workflows/probe-aka-ms.yml"
       - ".github/workflows/unit-tests.yml"
   workflow_dispatch:
@@ -43,11 +44,11 @@ jobs:
           FILES=$(gh api \
             "repos/${GITHUB_REPOSITORY}/pulls/${{ github.event.pull_request.number }}/files" \
             --paginate --jq '.[].filename')
-          if echo "$FILES" | grep -E '^\.github/(scripts|tests)/|^\.github/policy/baseline\.json$|^\.github/workflows/(probe-aka-ms|unit-tests)\.yml$' >/dev/null; then
+          if echo "$FILES" | grep -E '^\.github/(scripts|tests|policy)/|^\.github/requirements-ci\.txt$|^\.github/workflows/(probe-aka-ms|unit-tests)\.yml$' >/dev/null; then
             echo "relevant=true" >> "$GITHUB_OUTPUT"
           else
             echo "relevant=false" >> "$GITHUB_OUTPUT"
-            echo "::notice::No scripts/tests/unit-tests-workflow paths changed; reporting success without running pytest."
+            echo "::notice::No validator, policy, test-dependency, or unit-tests-workflow paths changed; reporting success without running pytest."
           fi
 
       - name: Checkout

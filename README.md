@@ -93,9 +93,10 @@ The Microsoft Discovery app is a **self-contained desktop application** — no S
 All contributions — from Microsoft engineers and external partners — arrive via **pull request from a fork**. Direct pushes to `main` are not permitted.
 
 Public contributors may submit catalog content and documentation directly by
-pull request. Trusted automation, repository configuration, schemas, generated
-output, and executable utilities must be authored by a maintainer; propose
-those changes through the matching Discussions category.
+pull request. Changes to trusted automation, repository configuration, schemas,
+generated output, and executable utilities are security-sensitive and require
+maintainer/CODEOWNER review; discuss substantial proposals through the matching
+Discussions category before opening a pull request.
 
 | Type | Goes to | First read |
 | --- | --- | --- |

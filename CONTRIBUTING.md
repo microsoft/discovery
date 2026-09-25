@@ -122,9 +122,9 @@ workflows do not execute submitted test code. Tool tests may invoke subprocesses
 download models, require GPUs, or otherwise cross the untrusted-code boundary;
 authors must run them in their own isolated environment or CI before submission.
 
-Starter-kit folders cannot contain test files because they may contain only
-`kit.json`. Starter-kit behavior is covered by the trusted schema-security and
-starter-kit validator suites instead.
+Starter-kit folders cannot contain test files. They may contain `kit.json`,
+Markdown documentation, and compliant Markdown images; behavior is covered by
+the trusted schema-security and starter-kit validator suites instead.
 
 ---
 
@@ -135,7 +135,10 @@ For the full repository layout — `agents/`, `starter-kits/`, `.auto-registry/`
 Two things to remember as a contributor:
 
 - Both `agents/` and `starter-kits/` use a **flat layout**: one folder per agent or kit directly under the parent directory — no `microsoft/` or `partners/` levels.
-- A starter-kit folder may contain **only** `kit.json`. Logos, screenshots, READMEs, and other assets must be hosted externally and referenced by HTTPS URL (enforced by `SKT-STR-008` / `SKT-AST-001`).
+- A starter-kit folder may contain `kit.json`, Markdown documentation, and
+  compliant local PNG, JPEG, GIF, WebP, or inert SVG images. Local images must
+  be at most 1 MiB and referenced by Markdown in the same kit; catalog-card
+  `logo` and `screenshots` fields remain HTTPS URLs.
 
 ---
 

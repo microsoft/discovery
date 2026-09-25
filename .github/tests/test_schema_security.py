@@ -196,6 +196,22 @@ def test_metadata_rejects_oversized_and_malformed_publisher_input():
     assert not validator.is_valid(insecure_url)
 
 
+def test_metadata_accepts_single_character_tool_names_without_trailing_separators():
+    validator = build_validator("metadata-schema.json")
+    valid = load_document(next(REPO_ROOT.glob("agents/*/metadata.yaml")))
+
+    single_character = deepcopy(valid)
+    single_character["associated_tools"] = ["agents/demo/tools/t"]
+    assert validator.is_valid(single_character)
+
+    for invalid_name in ("tool-", "tool_"):
+        trailing_separator = deepcopy(valid)
+        trailing_separator["associated_tools"] = [
+            f"agents/demo/tools/{invalid_name}"
+        ]
+        assert not validator.is_valid(trailing_separator)
+
+
 def test_agent_rejects_oversized_prompt_and_deep_extension_input():
     validator = build_validator("agent-schema-v2.json")
     valid = load_document(next(REPO_ROOT.glob("agents/*/agent.yaml")))

@@ -433,7 +433,7 @@ def test_validation_workflows_publish_actionable_diagnostics():
     assert "'contains-code':             { color: '1f883d'" in feedback
 
 
-def test_unit_tests_keep_existing_workflow_scope():
+def test_unit_tests_run_for_every_validator_and_policy_input():
     source = (
         REPO_ROOT / ".github" / "workflows" / "unit-tests.yml"
     ).read_text(encoding="utf-8")
@@ -442,7 +442,10 @@ def test_unit_tests_keep_existing_workflow_scope():
         r"^\.github/workflows/(probe-aka-ms|unit-tests)\.yml$"
         in source
     )
-    assert r"^\.github/policy/baseline\.json$" in source
+    assert '- ".github/policy/**"' in source
+    assert '- ".github/requirements-ci.txt"' in source
+    assert r"^\.github/(scripts|tests|policy)/" in source
+    assert r"^\.github/requirements-ci\.txt$" in source
     assert "--check-no-growth" in source
     assert 'fetch-depth: 0' in source
     assert r"/^\.github\/workflows\/.*\.yml$/" not in source

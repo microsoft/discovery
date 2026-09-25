@@ -29,7 +29,7 @@
       "items": {
         "type": "string",
         "maxLength": 256,
-        "pattern": "^agents/[a-z0-9][a-z0-9-]*/tools/[a-zA-Z0-9][a-zA-Z0-9_-]*[a-zA-Z0-9]/?$"
+        "pattern": "^agents/[a-z0-9][a-z0-9-]*/tools/[a-zA-Z0-9](?:[a-zA-Z0-9_-]*[a-zA-Z0-9])?/?$"
       },
       "default": []
     },

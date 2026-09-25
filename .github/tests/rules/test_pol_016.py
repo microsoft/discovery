@@ -20,7 +20,7 @@ VALID_PNG = (
 )
 VALID_JPEG = b"\xff\xd8\xff\xe0\x00\x10JFIF\x00" + b"\x00" * 20 + b"\xff\xd9"
 VALID_GIF = b"GIF89a" + b"\x00" * 20 + b"\x3b"
-VALID_WEBP = b"RIFF\x24\x00\x00\x00WEBPVP8 " + b"\x00" * 20
+VALID_WEBP = b"RIFF\x1c\x00\x00\x00WEBPVP8 " + b"\x00" * 20
 VALID_BMP = b"BM" + b"\x00" * 12 + (40).to_bytes(4, "little") + b"\x00" * 20
 VALID_ICO = b"\x00\x00\x01\x00\x01\x00" + b"\x00" * 20
 VALID_TIFF = b"II\x2a\x00" + b"\x00" * 30
@@ -68,6 +68,20 @@ def test_orphaned_image_is_blocked(repo):
     rel = write(repo, "agents/demo/img.png", VALID_PNG)
     result = run_rule(repo, RULE, [rel])
     assert files(result) == [rel]
+    assert "not embedded by Markdown" in result.findings[0].message
+
+
+def test_removing_last_markdown_reference_revalidates_existing_image(repo):
+    image = write(repo, "agents/demo/media/diagram.png", VALID_PNG)
+    markdown = write(
+        repo,
+        "agents/demo/README.md",
+        "# Updated documentation without the image\n",
+    )
+
+    result = run_rule(repo, RULE, [markdown])
+
+    assert files(result) == [image]
     assert "not embedded by Markdown" in result.findings[0].message
 
 
@@ -181,6 +195,20 @@ def test_truncated_png_is_blocked(repo):
     result = run_rule(repo, RULE, [rel])
     assert files(result) == [rel]
     assert "end-of-file marker" in result.findings[0].message
+
+
+def test_webp_with_appended_payload_is_blocked(repo):
+    rel = write(
+        repo,
+        "agents/demo/img.webp",
+        VALID_WEBP + b"PK\x03\x04appended archive",
+    )
+    reference_image(repo, rel)
+
+    result = run_rule(repo, RULE, [rel])
+
+    assert files(result) == [rel]
+    assert "data appended" in result.findings[0].message
 
 
 def test_data_appended_after_image_end_is_blocked(repo):

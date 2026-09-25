@@ -39,7 +39,21 @@ def check(ctx: RuleContext) -> list[Finding]:
             image = directive.image
             assert image is not None
 
-            if image.digest or image.is_deployer_placeholder:
+            if image.is_deployer_placeholder:
+                continue
+            if image.digest is not None:
+                if image.has_valid_digest:
+                    continue
+                findings.append(Finding(
+                    rule_id="POL-017",
+                    file=rel,
+                    line=directive.line,
+                    message=(
+                        f"Base image '{image.raw}' has an invalid or unresolved "
+                        "digest. Pin a complete immutable digest such as "
+                        "'sha256:<64 hexadecimal characters>'."
+                    ),
+                ))
                 continue
             # A tag that is still a variable after ARG-default substitution has
             # no pinned default: the version can be changed at build time, so
