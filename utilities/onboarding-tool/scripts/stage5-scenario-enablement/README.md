@@ -1,4 +1,4 @@
-# Stage 5 — Certification (`stage5_certify.ps1`)
+# Stage 5 — Scenario enablement (`stage5_enable.ps1`)
 
 End-to-end certification with the hero use case (FR5.1). Verifies platform private-endpoint DNS
 and 443 reachability, creates a tool, binds it to an agent, opens an investigation + conversation,
@@ -40,7 +40,7 @@ not just an HTTP 200.
 ## Usage
 
 ```powershell
-./stage5_certify.ps1 -ConfigPath ./config.json -JsonPath ./out/stage5.json
+./stage5_enable.ps1 -ConfigPath ./config.json -JsonPath ./out/stage5.json
 ```
 
 ## Output & exit codes
@@ -50,4 +50,4 @@ not just an HTTP 200.
 
 ## Spec
 
-`../../script-specs/stage5-certification/stage5_certify.md`
+`../../script-specs/stage5-scenario-enablement/stage5_enable.md`

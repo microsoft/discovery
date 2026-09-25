@@ -1,7 +1,7 @@
-# stage5_certify — Stage 5 certification (consolidated)
+# stage5_enable — Stage 5 scenario enablement (consolidated)
 
 Stage 5 · single consolidated PowerShell 7 + Az CLI script · FR mapping: FR5.1–FR5.7
-Script: `../../scripts/stage5-certification/stage5_certify.ps1`
+Script: `../../scripts/stage5-scenario-enablement/stage5_enable.ps1`
 
 ## Purpose
 Prove the platform works: connectivity, then a real agent run that genuinely invokes a tool on the supercomputer. A completed run alone does not certify anything.
@@ -22,7 +22,7 @@ Prove the platform works: connectivity, then a real agent run that genuinely inv
 - Non-zero = at least one failure (see report).
 
 ## Folded steps
-Each step ran as a separate sub-script before consolidation; the logic now lives in `stage5_certify.ps1`.
+Each step ran as a separate sub-script before consolidation; the logic now lives in `stage5_enable.ps1`.
 
 ### connectivity_check — FR5.1
 Resolve each platform privatelink FQDN to a private IP from inside the VNet and confirm reachability (reuse the Stage 3 harness).

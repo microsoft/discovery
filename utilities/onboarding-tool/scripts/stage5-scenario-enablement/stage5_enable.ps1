@@ -1,7 +1,7 @@
 #Requires -Version 7.0
 <#
 .SYNOPSIS  Stage 5 / FR5.1-FR5.7 — run hero use-case certification end to end.
-.DESCRIPTION Orchestrates connectivity, tool creation, agent binding, investigation/conversation, prompt polling, tool-call assertion, and summary. Spec: ../../script-specs/stage5-certification/stage5_certify.md
+.DESCRIPTION Orchestrates connectivity, tool creation, agent binding, investigation/conversation, prompt polling, tool-call assertion, and summary. Spec: ../../script-specs/stage5-scenario-enablement/stage5_enable.md
 #>
 [CmdletBinding()]
 param(
@@ -34,7 +34,7 @@ function Write-State {
 
 <#
 .SYNOPSIS  Stage 5 / FR5.1 — validate platform private endpoint DNS and 443 reachability.
-.DESCRIPTION Creates an ephemeral Linux VM in the onboarding VNet, probes platform privatelink FQDNs, then removes the VM. Spec: ../../script-specs/stage5-certification/stage5_certify.md
+.DESCRIPTION Creates an ephemeral Linux VM in the onboarding VNet, probes platform privatelink FQDNs, then removes the VM. Spec: ../../script-specs/stage5-scenario-enablement/stage5_enable.md
 #>
 function Invoke-Stage5ConnectivityCheck {
     [CmdletBinding()]
@@ -197,7 +197,7 @@ function Invoke-Stage5ConnectivityCheck {
 
 <#
 .SYNOPSIS  Stage 5 / FR5.2 — create and verify the Discovery tool resource.
-.DESCRIPTION Creates a Discovery tool with ARM PUT and validates Succeeded plus definitionContent. Spec: ../../script-specs/stage5-certification/stage5_certify.md
+.DESCRIPTION Creates a Discovery tool with ARM PUT and validates Succeeded plus definitionContent. Spec: ../../script-specs/stage5-scenario-enablement/stage5_enable.md
 #>
 function Invoke-Stage5CreateTool {
     [CmdletBinding()]
@@ -248,7 +248,7 @@ function Invoke-Stage5CreateTool {
         $infraName = 'corepython-container'
         $toolBody = [ordered]@{
             location   = $cfg.workloadRegion
-            tags       = @{ category = 'Scientific Computing'; stage = 'stage5-certification' }
+            tags       = @{ category = 'Scientific Computing'; stage = 'stage5-scenario-enablement' }
             properties = [ordered]@{
                 version           = '1.0.0'
                 definitionContent = [ordered]@{
@@ -313,7 +313,7 @@ function Invoke-Stage5CreateTool {
 
 <#
 .SYNOPSIS  Stage 5 / FR5.3 — create a Discovery agent and bind the tool.
-.DESCRIPTION Upserts the data-plane agent with top-level tools[] and instructions that require GetNodePoolContext first. Spec: ../../script-specs/stage5-certification/stage5_certify.md
+.DESCRIPTION Upserts the data-plane agent with top-level tools[] and instructions that require GetNodePoolContext first. Spec: ../../script-specs/stage5-scenario-enablement/stage5_enable.md
 #>
 function Invoke-Stage5CreateAgentBindTool {
     [CmdletBinding()]
@@ -413,7 +413,7 @@ function Invoke-Stage5CreateAgentBindTool {
 
 <#
 .SYNOPSIS  Stage 5 / FR5.4 — create investigation and conversation.
-.DESCRIPTION Creates the investigation first, then creates a conversation with the full investigationName path. Spec: ../../script-specs/stage5-certification/stage5_certify.md
+.DESCRIPTION Creates the investigation first, then creates a conversation with the full investigationName path. Spec: ../../script-specs/stage5-scenario-enablement/stage5_enable.md
 #>
 function Invoke-Stage5CreateInvestigationConversation {
     [CmdletBinding()]
@@ -467,7 +467,7 @@ function Invoke-Stage5CreateInvestigationConversation {
 
 <#
 .SYNOPSIS  Stage 5 / FR5.5 — send the hero prompt and poll the response.
-.DESCRIPTION Calls the Discovery responses route with array message content and no api-version on the responses URL. Spec: ../../script-specs/stage5-certification/stage5_certify.md
+.DESCRIPTION Calls the Discovery responses route with array message content and no api-version on the responses URL. Spec: ../../script-specs/stage5-scenario-enablement/stage5_enable.md
 #>
 function Invoke-Stage5SendPromptPoll {
     [CmdletBinding()]
@@ -548,7 +548,7 @@ function Invoke-Stage5SendPromptPoll {
 
 <#
 .SYNOPSIS  Stage 5 / FR5.6 — assert the response contains a real tool invocation.
-.DESCRIPTION Fails completed responses that lack function_call/function_call_output evidence and Foundry tracing evidence. Spec: ../../script-specs/stage5-certification/stage5_certify.md
+.DESCRIPTION Fails completed responses that lack function_call/function_call_output evidence and Foundry tracing evidence. Spec: ../../script-specs/stage5-scenario-enablement/stage5_enable.md
 #>
 function Invoke-Stage5AssertToolInvocation {
     [CmdletBinding()]
@@ -609,7 +609,7 @@ function Invoke-Stage5AssertToolInvocation {
 
 <#
 .SYNOPSIS  Stage 5 / FR5.7 — summarize per-service certification evidence.
-.DESCRIPTION Combines Stage 5 state with ARM reads for service provisioning states. Spec: ../../script-specs/stage5-certification/stage5_certify.md
+.DESCRIPTION Combines Stage 5 state with ARM reads for service provisioning states. Spec: ../../script-specs/stage5-scenario-enablement/stage5_enable.md
 #>
 function Invoke-Stage5VerificationSummary {
     [CmdletBinding()]

@@ -46,7 +46,7 @@ dependencies.
 | 2 Landing zone | [`stage2-landing-zone/stage2_prepare.ps1`](stage2-landing-zone/README.md) | rp_register, rbac_assign, nsp_perimeter_joiner_role, network_provision, nsg_rules, route_tables, private_dns, byo_storage, firewall_request_artifact, quota_exemption_requests |
 | 3 Validation | [`stage3-validation/stage3_validate.ps1`](stage3-validation/README.md) | check_subnet_delegation, check_nsg_effective, check_effective_routes, check_dns_and_pe, testvm_lifecycle, probe_dns, probe_tcp443, probe_https, probe_artifacts, probe_pe_resolution, probe_eastwest, dependency_spec |
 | 4 Deployment | [`stage4-deployment/stage4_deploy.ps1`](stage4-deployment/README.md) | deploy_order, true_state_detection, error_remediation_engine, recovery_reput |
-| 5 Certification | [`stage5-certification/stage5_certify.ps1`](stage5-certification/README.md) | connectivity_check, create_tool, create_agent_bind_tool, create_investigation_conversation, send_prompt_poll, assert_tool_invocation, verification_summary |
+| 5 Scenario enablement | [`stage5-scenario-enablement/stage5_enable.ps1`](stage5-scenario-enablement/README.md) | connectivity_check, create_tool, create_agent_bind_tool, create_investigation_conversation, send_prompt_poll, assert_tool_invocation, verification_summary |
 
 Supporting files: `lib/OnboardingCommon.psm1` (shared module),
 `stage1-planning/network-planning-form-template.xlsx` (blank planning form for the customer),
@@ -68,8 +68,8 @@ Supporting files: `lib/OnboardingCommon.psm1` (shared module),
 # Stage 4 — deploy the platform in dependency order with error-to-remediation.
 ./stage4-deployment/stage4_deploy.ps1 -ConfigPath ./config.json -JsonPath ./out/stage4.json
 
-# Stage 5 — certify with the hero use case (fails unless a tool is really invoked).
-./stage5-certification/stage5_certify.ps1 -ConfigPath ./config.json -JsonPath ./out/stage5.json
+# Stage 5 — scenario enablement with the hero use case (fails unless a tool is really invoked).
+./stage5-scenario-enablement/stage5_enable.ps1 -ConfigPath ./config.json -JsonPath ./out/stage5.json
 ```
 
 Each command exits `0` only when every check passed (or was waived); non-zero otherwise, so the
