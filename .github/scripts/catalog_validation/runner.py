@@ -154,7 +154,7 @@ def run_validation(
             ],
             contribution=classify_contribution(
                 repo,
-                changed_files,
+                [],
                 set(),
                 set(),
             ),

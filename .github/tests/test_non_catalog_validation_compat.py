@@ -7,11 +7,44 @@ from catalog_validation.runner import run_validation
 
 
 def test_non_catalog_change_skips_new_catalog_configuration(tmp_path):
-    result = run_validation(tmp_path, ["utilities/example/README.md"])
+    policy = tmp_path / ".github" / "policy"
+    policy.mkdir(parents=True)
+    (policy / "source-allowlist.yaml").write_text(
+        "not: [valid: yaml\n",
+        encoding="utf-8",
+    )
+    (policy / "base-images.yaml").write_text(
+        "not: [valid: yaml\n",
+        encoding="utf-8",
+    )
+    (policy / "tag-taxonomy.yaml").write_text(
+        "not: [valid: yaml\n",
+        encoding="utf-8",
+    )
+
+    files = {
+        "utilities/example/Dockerfile": "FROM unapproved.example/image:latest\n",
+        "utilities/example/tool.py": "print('utility')\n",
+        "docs/examples/payload.py": "print('documentation example')\n",
+        "includes/media/active.svg": "<svg><script>alert(1)</script></svg>\n",
+    }
+    for relative, content in files.items():
+        path = tmp_path / relative
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(content, encoding="utf-8")
+
+    result = run_validation(tmp_path, list(files))
 
     assert result.passed
     assert result.blocking == []
     assert result.setup_warnings == []
+    assert result.contribution.has_agents is False
+    assert result.contribution.has_markdown_only is False
+    assert result.contribution.has_dockerfile is False
+    assert result.contribution.has_code is False
+    assert result.contribution.has_1p is False
+    assert result.contribution.has_3p is False
+    assert result.contribution.image_files == []
 
 
 def test_non_catalog_change_keeps_legacy_hidden_artifact_check(tmp_path):
