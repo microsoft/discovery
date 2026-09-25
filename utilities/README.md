@@ -13,6 +13,7 @@ This directory contains standalone helper scripts for operators standing up or m
 | [`dataasset-migration/`](dataasset-migration/) | Migrates a Discovery v1 `DataContainer` + child `DataAssets` to the v2 `StorageContainer` + `StorageAssets` shape (API `2025-07-01-preview` → `2026-02-01-preview`). Control-plane metadata only — does **not** move blobs. | One-time migration for tenants that onboarded before the v2 storage model. |
 | [`Supercomputer CLI/`](supercomputer-cli/) | Toolkit provides basic access to the Discovery Supercomputer API for submitting and running jobs directly on Supercomputer | Submit jobs directly to the supercomputer |
 | [`delete-discovery-deployment/`](delete-discovery-deployment/) | Deletes all `Microsoft.Discovery` and supporting Azure resources in a resource group using the `2026-06-01` GA API, in strict dependency order, then removes the empty resource group. Bash script (`az` CLI / `jq` / `curl`), not PowerShell. | Tearing down a Discovery services deployment. **Destructive — deletes resources.** |
+| [`terraform/`](terraform/) | End-to-end Terraform module for a Microsoft Discovery services environment (VNet, UAMI, storage, role assignments, supercomputer, workspace, chat model, project). Uses `hashicorp/azurerm` for platform primitives and `Azure/azapi` (pinned to `Microsoft.Discovery/*@2026-02-01-preview`) for Discovery resources. | Provision a Discovery environment as Infrastructure-as-Code with Terraform instead of the Bicep sample. |
 
 ## Common prerequisites
 
