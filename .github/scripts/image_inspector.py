@@ -178,7 +178,7 @@ def is_referenced_by_markdown(image_path: Path, owner_dir: Path) -> bool:
     owner_dir = owner_dir.resolve()
     markdown_sources: list[tuple[Path, str]] = []
     for markdown_path in owner_dir.rglob("*"):
-        if not markdown_path.is_file() or markdown_path.suffix.lower() != ".md":
+        if not markdown_path.is_file() or markdown_path.suffix.lower() not in {".md", ".markdown"}:
             continue
         try:
             markdown_sources.append(
