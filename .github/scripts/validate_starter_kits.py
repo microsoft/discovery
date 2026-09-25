@@ -174,7 +174,7 @@ def validate_kit(
         for p in kit_dir.rglob("*")
         if p.is_file()
         and p != kit_dir / "kit.json"
-        and p.suffix.lower() != ".md"
+        and p.suffix.lower() not in {".md", ".markdown"}
         and p.suffix.lower() not in MARKDOWN_IMAGE_EXTENSIONS
     )
     if extra_entries:
