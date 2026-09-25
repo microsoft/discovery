@@ -257,7 +257,18 @@ def test_malformed_waiver_file_fails_closed(repo):
 def _write_baseline(repo: Path, entries: list[dict]) -> None:
     path = repo / ".github" / "policy" / "baseline.json"
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps({"violations": entries}), encoding="utf-8")
+    governed = [
+        {
+            **entry,
+            "owner": "Discovery catalog CODEOWNERS",
+            "tracking_ref": (
+                "docs/validation-baseline-debt.md#test-baseline-entry"
+            ),
+            "remove_by": "2099-12-31",
+        }
+        for entry in entries
+    ]
+    path.write_text(json.dumps({"violations": governed}), encoding="utf-8")
 
 
 def _folder_rule(targets: list[str], rule_id: str = "ZZZ-001") -> Rule:

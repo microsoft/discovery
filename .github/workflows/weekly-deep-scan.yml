@@ -392,9 +392,9 @@ jobs:
               stream.write(f"finding_count={finding_count}\n")
               stream.write(f"scan_status={scan_status}\n")
           if finding_count:
-              print(f"::warning title=Security findings detected::{finding_count} Microsoft Security DevOps finding(s) require review. A tracking issue will be filed or updated.")
+              print(f"::warning title=Security findings detected::{finding_count} Microsoft Security DevOps finding(s) require review. The scheduled triage gate will remain red until a clean rerun.")
           elif scan_status != "clean":
-              print("::warning title=Security scan incomplete::Microsoft Security DevOps did not complete successfully. A tracking issue will be filed or updated.")
+              print("::warning title=Security scan incomplete::Microsoft Security DevOps did not complete successfully. The scheduled triage gate will remain red until a clean rerun.")
           with open(os.environ["GITHUB_STEP_SUMMARY"], "a", encoding="utf-8") as stream:
               stream.write("\n".join(summary) + "\n")
           PY
@@ -407,13 +407,13 @@ jobs:
           path: ${{ steps.msdo.outputs.sarifFile }}
           if-no-files-found: ignore
 
-  # ── Raise an advisory issue for every active scan concern ─────────────────
+  # ── Keep the scheduled run red until every active concern is resolved ─────
   report:
-    name: Report
+    name: Require security triage
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:
-      issues: write
+      contents: read
     needs: [full-catalog-audit, msdo]
     if: >-
       ${{
@@ -423,104 +423,24 @@ jobs:
          needs.msdo.outputs.actionable == 'true')
       }}
     steps:
-      - name: Open or update the drift issue
-        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9
-        with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          script: |
-            const title = 'Weekly catalog audit: findings require attention';
-            const runUrl = `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
-            const drifted = '${{ needs.full-catalog-audit.outputs.drifted }}' === 'true';
-            const generatedArtifactsStale = '${{ needs.full-catalog-audit.outputs.generated_artifacts_stale }}' === 'true';
-            const msdoActionable = '${{ needs.msdo.outputs.actionable }}' === 'true';
-            const msdoFindingCount = '${{ needs.msdo.outputs.finding_count }}' || '0';
-            const msdoStatus = '${{ needs.msdo.outputs.scan_status }}' || 'error';
-            const body = ['The weekly catalog audit found something that needs review.', ''];
-
-            if (drifted) {
-              body.push(
-                '## Catalog rule drift',
-                '',
-                'The full-catalog audit found rule violations not recorded in',
-                '`.github/policy/baseline.json`. Fix the violations, or regenerate the',
-                'baseline if this is a deliberate rollout:',
-                '',
-                '```',
-                'python .github/scripts/generate_baseline.py --report',
-                'python .github/scripts/generate_baseline.py',
-                '```',
-                '',
-              );
-            }
-
-            if (generatedArtifactsStale) {
-              body.push(
-                '## Generated artifacts are stale',
-                '',
-                'Generated rule documentation is not current. Inspect the full-catalog-audit',
-                'job summary and regenerate the checked-in artifacts.',
-                '',
-              );
-            }
-
-            if (msdoActionable && msdoStatus === 'clean') {
-              body.push(
-                '## Microsoft Security DevOps findings',
-                '',
-                `The catalog scan reported ${msdoFindingCount} finding(s). Review the`,
-                '`msdo-sarif` artifact and the job summary. Findings are advisory and did',
-                'not fail the workflow.',
-                '',
-              );
-            } else if (msdoActionable) {
-              body.push(
-                '## Microsoft Security DevOps scan error',
-                '',
-                'The catalog security scan did not complete or did not produce SARIF.',
-                'Inspect the Microsoft Security DevOps job logs and rerun the workflow.',
-                '',
-              );
-            }
-
-            body.push(`**Run:** ${runUrl}`);
-
-            try {
-              await github.rest.issues.getLabel({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                name: 'weekly-deep-scan',
-              });
-            } catch (error) {
-              if (error.status !== 404) throw error;
-              await github.rest.issues.createLabel({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                name: 'weekly-deep-scan',
-                color: 'd4a72c',
-                description: 'Advisory findings from the scheduled catalog audit',
-              });
-            }
-
-            const existing = await github.rest.issues.listForRepo({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              state: 'open',
-              labels: 'weekly-deep-scan',
-            });
-
-            if (existing.data.length > 0) {
-              await github.rest.issues.createComment({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                issue_number: existing.data[0].number,
-                body: body.join('\n'),
-              });
-            } else {
-              await github.rest.issues.create({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                title,
-                body: body.join('\n'),
-                labels: ['weekly-deep-scan'],
-              });
-            }
+      - name: Fail until findings are resolved
+        env:
+          DRIFTED: ${{ needs.full-catalog-audit.outputs.drifted }}
+          GENERATED_ARTIFACTS_STALE: ${{ needs.full-catalog-audit.outputs.generated_artifacts_stale }}
+          MSDO_ACTIONABLE: ${{ needs.msdo.outputs.actionable }}
+          MSDO_FINDING_COUNT: ${{ needs.msdo.outputs.finding_count }}
+          MSDO_STATUS: ${{ needs.msdo.outputs.scan_status }}
+        run: |
+          {
+            echo "## Weekly catalog audit requires triage"
+            echo
+            echo "- Catalog rule drift: ${DRIFTED:-unknown}"
+            echo "- Generated artifacts stale: ${GENERATED_ARTIFACTS_STALE:-unknown}"
+            echo "- MSDO actionable: ${MSDO_ACTIONABLE:-unknown}"
+            echo "- MSDO findings: ${MSDO_FINDING_COUNT:-unknown}"
+            echo "- MSDO status: ${MSDO_STATUS:-unknown}"
+            echo
+            echo "Review the job summaries and uploaded SARIF, resolve or disposition every finding under SECURITY.md, then rerun this workflow."
+          } >> "$GITHUB_STEP_SUMMARY"
+          echo "::error::Weekly catalog audit findings require owner triage. This scheduled run is the tracking record until a clean rerun succeeds."
+          exit 1

@@ -189,12 +189,35 @@ def parse_baseline_document(data: object) -> tuple[list[tuple[str, str]], list[s
 
         rule_id = entry.get("rule_id")
         file = entry.get("file")
+        owner = entry.get("owner")
+        tracking_ref = entry.get("tracking_ref")
+        remove_by = entry.get("remove_by")
         if not isinstance(rule_id, str) or not rule_id.strip():
             errors.append(f"{where}: 'rule_id' must be a non-empty string.")
             continue
         if not isinstance(file, str) or not file.strip():
             errors.append(f"{where}: 'file' must be a non-empty string.")
             continue
+        if not isinstance(owner, str) or not owner.strip():
+            errors.append(f"{where}: 'owner' must be a non-empty string.")
+        if (
+            not isinstance(tracking_ref, str)
+            or not tracking_ref.startswith("docs/validation-baseline-debt.md#")
+        ):
+            errors.append(
+                f"{where}: 'tracking_ref' must target a section in "
+                "docs/validation-baseline-debt.md."
+            )
+        try:
+            removal_date = _dt.date.fromisoformat(remove_by)
+        except (TypeError, ValueError):
+            errors.append(f"{where}: 'remove_by' must be an ISO date.")
+        else:
+            if removal_date < _dt.date.today():
+                errors.append(
+                    f"{where}: removal date {remove_by} has expired; fix the "
+                    "violation and remove the baseline entry."
+                )
 
         normalized = file.replace("\\", "/")
         if not _is_repo_relative(normalized):

@@ -104,11 +104,13 @@ jobs:
           set -euo pipefail
 
           PR_JSON=$(gh pr view "$PR_NUMBER" --repo "$REPO" --json \
-            number,isDraft,state,mergeStateStatus,mergeable,reviewDecision,reviews,statusCheckRollup,labels,author)
+            number,isDraft,state,baseRefName,headRefName,mergeStateStatus,mergeable,reviewDecision,reviews,statusCheckRollup,labels,author)
 
           STATE=$(echo "$PR_JSON"        | jq -r '.state')
           IS_DRAFT=$(echo "$PR_JSON"     | jq -r '.isDraft')
           AUTHOR=$(echo "$PR_JSON"       | jq -r '.author.login')
+          BASE_REF=$(echo "$PR_JSON"     | jq -r '.baseRefName')
+          HEAD_REF=$(echo "$PR_JSON"     | jq -r '.headRefName')
           MERGE_STATE=$(echo "$PR_JSON"  | jq -r '.mergeStateStatus')
           MERGEABLE=$(echo "$PR_JSON"    | jq -r '.mergeable')
           REVIEW_DECISION=$(echo "$PR_JSON" | jq -r '.reviewDecision')
@@ -165,10 +167,26 @@ jobs:
              | select(.state == "APPROVED")
              | select((.author.login // "") | endswith("[bot]") | not)
             ] | length')
-          if [ "$REVIEW_DECISION" = "APPROVED" ]; then
+          if [ "$REVIEW_DECISION" = "APPROVED" ] && [ "$HUMAN_APPROVALS" -gt 0 ]; then
             HUMAN_APPROVED=true
           else
             HUMAN_APPROVED=false
+          fi
+
+          # Generated registry PRs have elevated write provenance. Fail closed
+          # unless the target branch currently requires CODEOWNER review;
+          # reviewDecision=APPROVED then proves GitHub applied that protection.
+          REGISTRY_PROTECTION_OK=true
+          if [[ "$HEAD_REF" == chore/registry-refresh-* ]]; then
+            PROTECTION=$(gh api \
+              "/repos/$REPO/branches/$BASE_REF/protection/required_pull_request_reviews" \
+              2>/dev/null || true)
+            if [ -z "$PROTECTION" ] || \
+               [ "$(echo "$PROTECTION" | jq -r '.require_code_owner_reviews // false')" != "true" ]; then
+              REGISTRY_PROTECTION_OK=false
+              HUMAN_APPROVED=false
+              echo "::warning::Generated registry PR cannot auto-merge because CODEOWNER review protection could not be verified on $BASE_REF."
+            fi
           fi
 
           # ── Gate 4: images_reviewed ────────────────────────────────
@@ -182,7 +200,7 @@ jobs:
             IMAGES_REVIEWED=true
           fi
 
-          echo "Gates: checks_passed=$CHECKS_PASSED up_to_date=$UP_TO_DATE human_approved=$HUMAN_APPROVED images_reviewed=$IMAGES_REVIEWED"
+          echo "Gates: checks_passed=$CHECKS_PASSED up_to_date=$UP_TO_DATE human_approved=$HUMAN_APPROVED images_reviewed=$IMAGES_REVIEWED registry_protection=$REGISTRY_PROTECTION_OK"
           echo "       (checks_failed=$CHECKS_FAILED pending=$CHECKS_PENDING human_approvals=$HUMAN_APPROVALS reviewDecision=$REVIEW_DECISION)"
 
           # ── Label management ───────────────────────────────────────
@@ -199,7 +217,7 @@ jobs:
           # Cleared as soon as every check has reported (pass or fail).
           if [ "$CHECKS_PENDING" -gt 0 ]; then add_label "checks-in-progress"; else remove_label "checks-in-progress"; fi
 
-          if [ "$CHECKS_PASSED" = "true" ] && [ "$UP_TO_DATE" = "true" ] && [ "$HUMAN_APPROVED" = "true" ] && [ "$IMAGES_REVIEWED" = "true" ]; then
+          if [ "$CHECKS_PASSED" = "true" ] && [ "$UP_TO_DATE" = "true" ] && [ "$HUMAN_APPROVED" = "true" ] && [ "$IMAGES_REVIEWED" = "true" ] && [ "$REGISTRY_PROTECTION_OK" = "true" ]; then
             add_label "ready-for-auto-merge"
 
             # Also ensure the PR isn't blocked by merge conflicts.

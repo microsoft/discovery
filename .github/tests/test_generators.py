@@ -12,7 +12,12 @@ import pytest
 from jsonschema import Draft7Validator, FormatChecker
 from referencing import Registry, Resource
 
-from generate_baseline import BASELINE_PATH, load_existing, write_baseline
+from generate_baseline import (
+    BASELINE_PATH,
+    check_no_growth,
+    load_existing,
+    write_baseline,
+)
 from update_registry import build_entry, scan_repo
 from update_starter_kits_registry import (
     build_kit_registry_entry,
@@ -27,6 +32,24 @@ from update_starter_kits_registry import (
 REPO_ROOT = Path(__file__).resolve().parents[2]
 SCRIPTS_DIR = REPO_ROOT / ".github" / "scripts"
 SCHEMA_DIR = REPO_ROOT / "docs" / "schemas"
+
+
+def baseline_entry(rule_id: str, file: str) -> dict[str, str]:
+    return {
+        "rule_id": rule_id,
+        "file": file,
+        "owner": "Discovery catalog CODEOWNERS",
+        "tracking_ref": "docs/validation-baseline-debt.md#test-entry",
+        "remove_by": "2099-12-31",
+    }
+
+
+def write_baseline_payload(repo: Path, entries: list[dict[str, str]]) -> None:
+    write(
+        repo,
+        BASELINE_PATH.as_posix(),
+        json.dumps({"count": len(entries), "violations": entries}),
+    )
 
 AGENT_METADATA = """\
 name: {name}
@@ -102,6 +125,13 @@ def schema_validator(schema_name: str) -> Draft7Validator:
 
 
 def test_baseline_writer_deduplicates_and_sorts_entries(tmp_path: Path):
+    write_baseline_payload(
+        tmp_path,
+        [
+            baseline_entry("POL-015", "agents/zeta/Dockerfile"),
+            baseline_entry("POL-008", "agents/alpha/blob.bin"),
+        ],
+    )
     write_baseline(
         tmp_path,
         [
@@ -114,9 +144,17 @@ def test_baseline_writer_deduplicates_and_sorts_entries(tmp_path: Path):
     payload = json.loads((tmp_path / BASELINE_PATH).read_text(encoding="utf-8"))
     assert payload["count"] == 2
     assert payload["violations"] == [
-        {"rule_id": "POL-008", "file": "agents/alpha/blob.bin"},
-        {"rule_id": "POL-015", "file": "agents/zeta/Dockerfile"},
+        baseline_entry("POL-008", "agents/alpha/blob.bin"),
+        baseline_entry("POL-015", "agents/zeta/Dockerfile"),
     ]
+
+
+def test_baseline_writer_rejects_new_entries_without_governance(tmp_path: Path):
+    with pytest.raises(ValueError, match="baseline growth is prohibited"):
+        write_baseline(
+            tmp_path,
+            [{"rule_id": "POL-008", "file": "agents/new/blob.bin"}],
+        )
 
 
 @pytest.mark.parametrize(
@@ -167,6 +205,16 @@ def test_baseline_cli_detects_added_and_removed_violations_and_reports(
         "agents/demo/tools/example/original.txt",
         b"\x7fELF\x02\x01\x01\x00" + b"\x00" * 56,
     )
+    write_baseline_payload(
+        tmp_path,
+        [
+            baseline_entry("POL-008", "agents/demo/agent.yaml"),
+            baseline_entry("POL-008", "agents/demo/metadata.yaml"),
+            baseline_entry(
+                "POL-008", "agents/demo/tools/example/original.txt"
+            ),
+        ],
+    )
 
     generated = run_script("generate_baseline.py", tmp_path)
     current = run_script("generate_baseline.py", tmp_path, "--check")
@@ -189,6 +237,69 @@ def test_baseline_cli_detects_added_and_removed_violations_and_reports(
     removed = run_script("generate_baseline.py", tmp_path, "--check")
     assert removed.returncode == 0
     assert "baselined violation(s) have been fixed" in removed.stdout
+
+
+def test_baseline_no_growth_compares_with_git_base(tmp_path: Path):
+    subprocess.run(["git", "init", "-q"], cwd=tmp_path, check=True)
+    subprocess.run(
+        ["git", "config", "user.email", "test@example.com"],
+        cwd=tmp_path,
+        check=True,
+    )
+    subprocess.run(
+        ["git", "config", "user.name", "Test"],
+        cwd=tmp_path,
+        check=True,
+    )
+    original = baseline_entry("POL-015", "agents/demo/original.html")
+    write_baseline_payload(tmp_path, [original])
+    subprocess.run(["git", "add", "."], cwd=tmp_path, check=True)
+    subprocess.run(["git", "commit", "-qm", "base"], cwd=tmp_path, check=True)
+    base_ref = subprocess.run(
+        ["git", "rev-parse", "HEAD"],
+        cwd=tmp_path,
+        capture_output=True,
+        text=True,
+        check=True,
+    ).stdout.strip()
+
+    assert check_no_growth(tmp_path, base_ref) == []
+
+    added = baseline_entry("POL-016", "agents/demo/new.png")
+    write_baseline_payload(tmp_path, [original, added])
+    assert check_no_growth(tmp_path, base_ref) == [
+        ("POL-016", "agents/demo/new.png")
+    ]
+
+
+def test_baseline_no_growth_allows_one_time_governed_bootstrap(tmp_path: Path):
+    subprocess.run(["git", "init", "-q"], cwd=tmp_path, check=True)
+    subprocess.run(
+        ["git", "config", "user.email", "test@example.com"],
+        cwd=tmp_path,
+        check=True,
+    )
+    subprocess.run(
+        ["git", "config", "user.name", "Test"],
+        cwd=tmp_path,
+        check=True,
+    )
+    write(tmp_path, "README.md", "base\n")
+    subprocess.run(["git", "add", "."], cwd=tmp_path, check=True)
+    subprocess.run(["git", "commit", "-qm", "base"], cwd=tmp_path, check=True)
+    base_ref = subprocess.run(
+        ["git", "rev-parse", "HEAD"],
+        cwd=tmp_path,
+        capture_output=True,
+        text=True,
+        check=True,
+    ).stdout.strip()
+    write_baseline_payload(
+        tmp_path,
+        [baseline_entry("POL-015", "agents/demo/original.html")],
+    )
+
+    assert check_no_growth(tmp_path, base_ref) == []
 
 
 def test_rule_docs_cli_is_deterministic_and_detects_missing_or_stale_output(

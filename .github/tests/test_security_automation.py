@@ -30,6 +30,12 @@ CODEQL_TRIGGER_PATHS = {
     "starter-kits/**",
 }
 CATALOG_TRIGGER_PATHS = CODEQL_TRIGGER_PATHS
+DEPENDENCY_REVIEW_TRIGGER_PATHS = CATALOG_TRIGGER_PATHS | {
+    ".github/requirements-ci.txt",
+    ".github/dependabot.yml",
+    ".github/workflows/**",
+    ".config/dotnet-tools.json",
+}
 
 
 def load_yaml(path: Path) -> dict[str, Any]:
@@ -155,7 +161,9 @@ def test_dependabot_monitors_each_supported_ecosystem():
 def test_dependency_review_blocks_new_high_severity_vulnerabilities():
     workflow = load_workflow(DEPENDENCY_REVIEW_PATH)
     assert "pull_request" in workflow["on"]
-    assert set(workflow["on"]["pull_request"]["paths"]) == CATALOG_TRIGGER_PATHS
+    assert set(workflow["on"]["pull_request"]["paths"]) == (
+        DEPENDENCY_REVIEW_TRIGGER_PATHS
+    )
     assert workflow["permissions"] == {"contents": "read"}
 
     job = workflow["jobs"]["dependency-review"]
@@ -198,7 +206,7 @@ def test_weekly_msdo_checks_out_only_catalog_roots():
     ]
 
 
-def test_weekly_manual_dry_run_suppresses_repository_writes():
+def test_weekly_manual_dry_run_suppresses_security_publication_and_failure():
     workflow = load_workflow(
         REPO_ROOT / ".github" / "workflows" / "weekly-deep-scan.yml"
     )
@@ -217,7 +225,7 @@ def test_weekly_manual_dry_run_suppresses_repository_writes():
     )
 
     report = workflow["jobs"]["report"]
-    assert report["permissions"] == {"issues": "write"}
+    assert report["permissions"] == {"contents": "read"}
     assert "!inputs.dry_run" in report["if"]
 
 
@@ -233,6 +241,17 @@ def test_weekly_disabled_scans_are_explicitly_staged():
     )
     assert "Staged capabilities (not executed)" in source
     assert "Do not describe" in source
+
+
+def test_security_rollout_has_owners_deadline_and_response_slas():
+    security = (REPO_ROOT / "SECURITY.md").read_text(encoding="utf-8")
+
+    assert "Discovery catalog CODEOWNERS own scanner triage and promotion" in security
+    assert "December 31, 2026" in security
+    assert "Critical finding or verified credential" in security
+    assert "High severity" in security
+    assert "Medium severity" in security
+    assert "GitHub Issues are disabled" in security
 
     contributing = (REPO_ROOT / "CONTRIBUTING.md").read_text(encoding="utf-8")
     security = (REPO_ROOT / "SECURITY.md").read_text(encoding="utf-8")
@@ -296,10 +315,9 @@ def test_unavailable_external_scanners_remain_disabled():
     )
 
 
-def test_weekly_security_findings_warn_and_open_an_issue_instead_of_failing():
-    workflow = load_workflow(
-        REPO_ROOT / ".github" / "workflows" / "weekly-deep-scan.yml"
-    )
+def test_weekly_security_findings_warn_then_fail_the_scheduled_triage_gate():
+    path = REPO_ROOT / ".github" / "workflows" / "weekly-deep-scan.yml"
+    workflow = load_workflow(path)
     full_audit = workflow["jobs"]["full-catalog-audit"]
     audit_command = next(
         step["run"] for step in full_audit["steps"] if step.get("id") == "audit"
@@ -321,11 +339,12 @@ def test_weekly_security_findings_warn_and_open_an_issue_instead_of_failing():
         "${{ steps.summarize.outputs.actionable }}"
     )
     assert report["needs"] == ["full-catalog-audit", "msdo"]
-    assert report["permissions"] == {"issues": "write"}
+    assert report["permissions"] == {"contents": "read"}
     assert "needs.msdo.outputs.actionable == 'true'" in report["if"]
-    report_script = report["steps"][0]["with"]["script"]
-    assert "github.rest.issues.createLabel" in report_script
-    assert "github.rest.issues.create" in report_script
+    report_command = report["steps"][0]["run"]
+    assert "exit 1" in report_command
+    assert "GITHUB_STEP_SUMMARY" in report_command
+    assert "issues.create" not in path.read_text(encoding="utf-8")
 
 
 def test_validation_workflows_publish_actionable_diagnostics():
@@ -423,6 +442,9 @@ def test_unit_tests_keep_existing_workflow_scope():
         r"^\.github/workflows/(probe-aka-ms|unit-tests)\.yml$"
         in source
     )
+    assert r"^\.github/policy/baseline\.json$" in source
+    assert "--check-no-growth" in source
+    assert 'fetch-depth: 0' in source
     assert r"/^\.github\/workflows\/.*\.yml$/" not in source
 
 
@@ -482,6 +504,61 @@ def test_registry_refresh_tracks_computed_tag_inputs():
         ".github/scripts/list_base_images.py",
         ".github/scripts/rules/base.py",
     } <= paths
+
+
+def test_registry_refresh_cannot_rewrite_or_self_approve_generated_prs():
+    path = REPO_ROOT / ".github" / "workflows" / "update-registry.yml"
+    workflow = load_workflow(path)
+    source = path.read_text(encoding="utf-8")
+
+    assert workflow["permissions"] == {
+        "contents": "read",
+        "pull-requests": "read",
+    }
+    assert "git push --force" not in source
+    assert "gh pr merge" not in source
+    assert "x-access-token" not in source
+    assert "persist-credentials: false" in source
+    assert "gh auth setup-git" in source
+    assert "chore/registry-refresh-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}" in source
+    assert "git push --set-upstream" in source
+    assert "A human CODEOWNER must approve this PR" in source
+    assert not (
+        REPO_ROOT / ".github" / "workflows" / "auto-approve-registry-prs.yml"
+    ).exists()
+
+    auto_merge_source = (
+        REPO_ROOT / ".github" / "workflows" / "auto-merge-on-approval.yml"
+    ).read_text(encoding="utf-8")
+    assert "chore/registry-refresh-*" in auto_merge_source
+    assert "require_code_owner_reviews" in auto_merge_source
+    assert '"$HUMAN_APPROVALS" -gt 0' in auto_merge_source
+
+
+def test_baseline_debt_is_codeowned_tracked_and_shrink_only():
+    codeowners = (REPO_ROOT / ".github" / "CODEOWNERS").read_text(
+        encoding="utf-8"
+    )
+    debt = (REPO_ROOT / "docs" / "validation-baseline-debt.md").read_text(
+        encoding="utf-8"
+    )
+    baseline = json.loads(
+        (REPO_ROOT / ".github" / "policy" / "baseline.json").read_text(
+            encoding="utf-8"
+        )
+    )
+
+    assert "/.github/policy/baseline.json" in codeowners
+    assert "/docs/validation-baseline-debt.md" in codeowners
+    assert "New entries are prohibited" in debt
+    assert "December 31, 2026" in debt
+    assert baseline["count"] == len(baseline["violations"]) == 3
+    for entry in baseline["violations"]:
+        assert entry["owner"] == "Discovery catalog CODEOWNERS"
+        assert entry["tracking_ref"].startswith(
+            "docs/validation-baseline-debt.md#"
+        )
+        assert entry["remove_by"] == "2026-12-31"
 
 
 def test_dependabot_covers_all_requirements_files():

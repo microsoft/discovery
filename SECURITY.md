@@ -61,3 +61,39 @@ Policy configuration is review-controlled under [`.github/policy/`](.github/poli
 approved base images, source-file allowlists, network validation limits, and tag
 taxonomy. Exceptions require an expiring CODEOWNER-approved waiver; the ratchet
 baseline records legacy findings but does not permit new violations.
+
+### Security automation promotion and response
+
+The Discovery catalog CODEOWNERS own scanner triage and promotion. The required
+dependency review and verified-secret scan are blocking today. CodeQL, DevSkim,
+and Microsoft Security DevOps remain report-only while their existing findings
+are triaged; they will block new **high** and **critical** findings no later than
+**December 31, 2026**, after two consecutive representative runs complete
+without unowned high-severity debt. Application Inspector is a capability
+inventory rather than a severity-bearing vulnerability scanner, so it remains
+mandatory reviewer evidence rather than an automated merge gate.
+
+Scanner findings use these response targets:
+
+| Severity or condition | Owner response target |
+| --- | --- |
+| Critical finding or verified credential | Triage within 1 business day; remediate, disable the affected catalog item, or obtain an expiring CODEOWNER-approved waiver within 24 hours of triage. |
+| High severity | Triage within 2 business days; remediate or obtain an expiring CODEOWNER-approved waiver within 7 calendar days. |
+| Medium severity | Triage within 5 business days; remediate or record a disposition within 30 calendar days. |
+| Scanner failure / missing SARIF | Triage within 2 business days and restore the scan before promotion criteria can advance. |
+
+The scheduled catalog audit fails when rule drift, stale generated controls,
+security findings, or scanner errors require triage. A red scheduled run remains
+the system of record until a clean rerun succeeds; GitHub Issues are disabled in
+this repository.
+
+### Ratchet baseline governance
+
+The ratchet baseline is controlled migration debt, not a permanent allowlist.
+Every entry requires a CODEOWNER, a repository-tracked removal reference, and a
+future removal date. CI compares the proposed baseline with the PR base and
+rejects additions; only removals or CODEOWNER-reviewed metadata updates are
+allowed.
+Current entries and their remediation checklist are tracked in
+[`docs/validation-baseline-debt.md`](docs/validation-baseline-debt.md) and are
+targeted for removal before scanner enforcement promotion.

@@ -18,6 +18,7 @@ on:
     paths:
       - ".github/scripts/**"
       - ".github/tests/**"
+      - ".github/policy/baseline.json"
       - ".github/workflows/probe-aka-ms.yml"
       - ".github/workflows/unit-tests.yml"
   workflow_dispatch:
@@ -42,7 +43,7 @@ jobs:
           FILES=$(gh api \
             "repos/${GITHUB_REPOSITORY}/pulls/${{ github.event.pull_request.number }}/files" \
             --paginate --jq '.[].filename')
-          if echo "$FILES" | grep -E '^\.github/(scripts|tests)/|^\.github/workflows/(probe-aka-ms|unit-tests)\.yml$' >/dev/null; then
+          if echo "$FILES" | grep -E '^\.github/(scripts|tests)/|^\.github/policy/baseline\.json$|^\.github/workflows/(probe-aka-ms|unit-tests)\.yml$' >/dev/null; then
             echo "relevant=true" >> "$GITHUB_OUTPUT"
           else
             echo "relevant=false" >> "$GITHUB_OUTPUT"
@@ -52,6 +53,8 @@ jobs:
       - name: Checkout
         if: github.event_name != 'pull_request' || steps.changes.outputs.relevant == 'true'
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
 
       - name: Set up Python
         if: github.event_name != 'pull_request' || steps.changes.outputs.relevant == 'true'
@@ -98,6 +101,13 @@ jobs:
           set -o pipefail
           python .github/scripts/generate_baseline.py --check \
             2>&1 | tee "$RUNNER_TEMP/baseline-drift.log"
+
+      - name: Prevent ratchet baseline growth
+        if: github.event_name == 'pull_request' && steps.changes.outputs.relevant == 'true'
+        run: >-
+          python .github/scripts/generate_baseline.py
+          --check-no-growth
+          --base-ref "${{ github.event.pull_request.base.sha }}"
 
       - name: Summarize ratchet baseline failure
         if: ${{ always() && steps.baseline.outcome == 'failure' }}

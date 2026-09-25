@@ -14,6 +14,8 @@ shrink, and `--check` fails when the baseline has grown.
 Usage:
     python .github/scripts/generate_baseline.py            # write baseline
     python .github/scripts/generate_baseline.py --check    # CI drift gate
+    python .github/scripts/generate_baseline.py --check-no-growth \
+        --base-ref <sha>                                   # PR debt gate
     python .github/scripts/generate_baseline.py --report   # human summary
 """
 
@@ -114,10 +116,90 @@ def load_existing(repo: Path) -> list[dict]:
     return [{"rule_id": rule_id, "file": file} for rule_id, file in pairs]
 
 
+def load_existing_records(repo: Path) -> list[dict]:
+    path = repo / BASELINE_PATH
+    if not path.exists():
+        return []
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except (json.JSONDecodeError, OSError) as exc:
+        raise ValueError(f"could not read {BASELINE_PATH}: {exc}") from exc
+    _, errors = parse_baseline_document(payload)
+    if errors:
+        raise ValueError(f"{BASELINE_PATH}: " + "; ".join(errors))
+    return payload.get("violations", [])
+
+
+def load_at_ref(repo: Path, ref: str) -> list[dict] | None:
+    result = subprocess.run(
+        ["git", "show", f"{ref}:{BASELINE_PATH.as_posix()}"],
+        cwd=str(repo),
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    if result.returncode != 0:
+        if (
+            "does not exist in" in result.stderr
+            or "exists on disk, but not in" in result.stderr
+        ):
+            return None
+        raise ValueError(
+            f"could not read {BASELINE_PATH} at {ref}: {result.stderr.strip()}"
+        )
+    try:
+        payload = json.loads(result.stdout)
+    except json.JSONDecodeError as exc:
+        raise ValueError(
+            f"{BASELINE_PATH} at {ref} is not valid JSON: {exc}"
+        ) from exc
+    pairs, errors = parse_baseline_document(payload)
+    if errors:
+        raise ValueError(
+            f"{BASELINE_PATH} at {ref}: " + "; ".join(errors)
+        )
+    return [{"rule_id": rule_id, "file": file} for rule_id, file in pairs]
+
+
+def check_no_growth(repo: Path, base_ref: str) -> list[tuple[str, str]]:
+    current = {
+        (entry["rule_id"], entry["file"])
+        for entry in load_existing(repo)
+    }
+    base_entries = load_at_ref(repo, base_ref)
+    # Bootstrap only: this PR introduces the governed baseline. Once the file
+    # exists on the base branch, every later PR is held to strict no-growth.
+    if base_entries is None:
+        return []
+    base = {(entry["rule_id"], entry["file"]) for entry in base_entries}
+    return sorted(current - base)
+
+
 def write_baseline(repo: Path, violations: list[dict]) -> None:
     path = repo / BASELINE_PATH
     path.parent.mkdir(parents=True, exist_ok=True)
     pairs = sorted({(v["rule_id"], v["file"]) for v in violations})
+    existing = {
+        (entry["rule_id"], entry["file"]): entry
+        for entry in load_existing_records(repo)
+    }
+    supplied = {
+        (entry["rule_id"], entry["file"]): entry
+        for entry in violations
+        if all(
+            isinstance(entry.get(field), str) and entry[field]
+            for field in ("owner", "tracking_ref", "remove_by")
+        )
+    }
+    missing_metadata = [
+        pair for pair in pairs if pair not in existing and pair not in supplied
+    ]
+    if missing_metadata:
+        detail = ", ".join(f"{rule_id}/{file}" for rule_id, file in missing_metadata)
+        raise ValueError(
+            "baseline growth is prohibited. Fix the violation or use an "
+            f"expiring CODEOWNER-approved waiver instead: {detail}"
+        )
     payload = {
         "_comment": (
             "Pre-existing rule violations recorded at ruleset rollout. Entries "
@@ -128,7 +210,17 @@ def write_baseline(repo: Path, violations: list[dict]) -> None:
         ),
         "count": len(pairs),
         "violations": [
-            {"rule_id": rule_id, "file": file} for rule_id, file in pairs
+            {
+                "rule_id": rule_id,
+                "file": file,
+                "owner": (existing.get((rule_id, file))
+                          or supplied[(rule_id, file)])["owner"],
+                "tracking_ref": (existing.get((rule_id, file))
+                                 or supplied[(rule_id, file)])["tracking_ref"],
+                "remove_by": (existing.get((rule_id, file))
+                              or supplied[(rule_id, file)])["remove_by"],
+            }
+            for rule_id, file in pairs
         ],
     }
     path.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
@@ -151,9 +243,40 @@ def main() -> int:
                         help="Fail if the catalog has violations not already baselined.")
     parser.add_argument("--report", action="store_true",
                         help="Print a per-rule summary and per-file detail.")
+    parser.add_argument(
+        "--check-no-growth",
+        action="store_true",
+        help="Fail if baseline entries were added relative to --base-ref.",
+    )
+    parser.add_argument(
+        "--base-ref",
+        help="Git revision containing the baseline to compare for --check-no-growth.",
+    )
     args = parser.parse_args()
 
     repo = Path(args.repo_root).resolve()
+
+    if args.check_no_growth:
+        if not args.base_ref:
+            print("--check-no-growth requires --base-ref.", file=sys.stderr)
+            return 2
+        try:
+            added = check_no_growth(repo, args.base_ref)
+        except ValueError as exc:
+            print(f"BASELINE ERROR: {exc}", file=sys.stderr)
+            return 1
+        if added:
+            print("Ratchet baseline growth is prohibited:\n", file=sys.stderr)
+            for rule_id, file in added:
+                print(f"  [{rule_id}] {file}", file=sys.stderr)
+            print(
+                "\nFix the violation or use an expiring CODEOWNER-approved waiver.",
+                file=sys.stderr,
+            )
+            return 1
+        print("Ratchet baseline did not grow.")
+        return 0
+
     violations, warnings, config_errors = audit(repo)
 
     # A malformed policy makes the whole ruleset untrustworthy. Refuse to
@@ -202,7 +325,11 @@ def main() -> int:
         print(summarize(violations))
         return 0
 
-    write_baseline(repo, violations)
+    try:
+        write_baseline(repo, violations)
+    except ValueError as exc:
+        print(f"BASELINE ERROR: {exc}", file=sys.stderr)
+        return 1
     print(f"Wrote {BASELINE_PATH} — {len(violations)} violation(s).")
     print(summarize(violations))
     return 0

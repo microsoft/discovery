@@ -8,6 +8,10 @@ on:
     paths:
       - "agents/**"
       - "starter-kits/**"
+      - ".github/requirements-ci.txt"
+      - ".github/dependabot.yml"
+      - ".github/workflows/**"
+      - ".config/dotnet-tools.json"
 
 permissions:
   contents: read
