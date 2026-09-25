@@ -1,0 +1,265 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "metadata": {
+    "_generator": {
+      "name": "bicep",
+      "version": "0.39.26.7824",
+      "templateHash": "6215430507893665292"
+    }
+  },
+  "parameters": {
+    "location": {
+      "type": "string",
+      "metadata": {
+        "description": "Region for all Discovery resources. Must equal the BYO VNet/subnet region."
+      }
+    },
+    "workloadRegion": {
+      "type": "string",
+      "defaultValue": "[parameters('location')]",
+      "metadata": {
+        "description": "workloadRegion tag (discovery.overridemrgregion) for the managed RGs."
+      }
+    },
+    "supercomputerName": {
+      "type": "string"
+    },
+    "workspaceName": {
+      "type": "string"
+    },
+    "projectName": {
+      "type": "string"
+    },
+    "nodePoolName": {
+      "type": "string"
+    },
+    "storageContainerName": {
+      "type": "string"
+    },
+    "chatModelDeploymentName": {
+      "type": "string",
+      "defaultValue": "gpt-5-4"
+    },
+    "chatModelName": {
+      "type": "string",
+      "defaultValue": "gpt-5.4"
+    },
+    "managedIdentityId": {
+      "type": "string",
+      "metadata": {
+        "description": "User-assigned managed identity resource id used by all platform resources."
+      }
+    },
+    "managedClusterSubnetId": {
+      "type": "string",
+      "metadata": {
+        "description": "managedcluster-role subnet id (AKS control plane / management)."
+      }
+    },
+    "nodePoolSubnetId": {
+      "type": "string",
+      "metadata": {
+        "description": "nodepool-role subnet id."
+      }
+    },
+    "agentSubnetId": {
+      "type": "string",
+      "metadata": {
+        "description": "agent-containerapp-role subnet id."
+      }
+    },
+    "workspaceSubnetId": {
+      "type": "string",
+      "metadata": {
+        "description": "workspace-containerapp-role subnet id."
+      }
+    },
+    "privateEndpointSubnetId": {
+      "type": "string",
+      "metadata": {
+        "description": "private-endpoints-role subnet id."
+      }
+    },
+    "storageAccountId": {
+      "type": "string",
+      "defaultValue": "",
+      "metadata": {
+        "description": "Storage account id backing the bookshelf container."
+      }
+    },
+    "bookshelfInScope": {
+      "type": "bool",
+      "defaultValue": true,
+      "metadata": {
+        "description": "Whether the bookshelf storage container is in scope."
+      }
+    },
+    "outboundType": {
+      "type": "string",
+      "defaultValue": "UserDefinedRouting",
+      "allowedValues": [
+        "UserDefinedRouting",
+        "LoadBalancer"
+      ],
+      "metadata": {
+        "description": "AKS egress model, decided at planning (Stage 1). UserDefinedRouting = forced tunneling via the customer firewall/NVA; LoadBalancer = Azure-managed egress."
+      }
+    },
+    "systemSku": {
+      "type": "string",
+      "defaultValue": ""
+    },
+    "nodePoolVmSize": {
+      "type": "string",
+      "defaultValue": "Standard_D4ds_v6"
+    },
+    "nodePoolMinNodeCount": {
+      "type": "int",
+      "defaultValue": 0
+    },
+    "nodePoolMaxNodeCount": {
+      "type": "int",
+      "defaultValue": 3
+    },
+    "nodePoolScaleSetPriority": {
+      "type": "string",
+      "defaultValue": "Regular"
+    },
+    "publicNetworkAccess": {
+      "type": "string",
+      "defaultValue": "Disabled"
+    }
+  },
+  "resources": [
+    {
+      "type": "Microsoft.Discovery/supercomputers",
+      "apiVersion": "2026-06-01",
+      "name": "[parameters('supercomputerName')]",
+      "location": "[parameters('location')]",
+      "tags": {
+        "version": "v2",
+        "discovery.overridemrgregion": "[parameters('workloadRegion')]"
+      },
+      "properties": {
+        "subnetId": "[parameters('managedClusterSubnetId')]",
+        "managementSubnetId": "[parameters('managedClusterSubnetId')]",
+        "outboundType": "[parameters('outboundType')]",
+        "systemSku": "[if(empty(parameters('systemSku')), null(), parameters('systemSku'))]",
+        "identities": {
+          "clusterIdentity": {
+            "id": "[parameters('managedIdentityId')]"
+          },
+          "kubeletIdentity": {
+            "id": "[parameters('managedIdentityId')]"
+          },
+          "workloadIdentities": {
+            "[format('{0}', parameters('managedIdentityId'))]": {}
+          }
+        }
+      }
+    },
+    {
+      "type": "Microsoft.Discovery/supercomputers/nodePools",
+      "apiVersion": "2026-06-01",
+      "name": "[format('{0}/{1}', parameters('supercomputerName'), parameters('nodePoolName'))]",
+      "location": "[parameters('location')]",
+      "properties": {
+        "subnetId": "[parameters('nodePoolSubnetId')]",
+        "vmSize": "[parameters('nodePoolVmSize')]",
+        "minNodeCount": "[parameters('nodePoolMinNodeCount')]",
+        "maxNodeCount": "[parameters('nodePoolMaxNodeCount')]",
+        "scaleSetPriority": "[parameters('nodePoolScaleSetPriority')]"
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Discovery/supercomputers', parameters('supercomputerName'))]"
+      ]
+    },
+    {
+      "condition": "[and(parameters('bookshelfInScope'), not(empty(parameters('storageAccountId'))))]",
+      "type": "Microsoft.Discovery/storageContainers",
+      "apiVersion": "2026-06-01",
+      "name": "[parameters('storageContainerName')]",
+      "location": "[parameters('location')]",
+      "properties": {
+        "storageStore": {
+          "kind": "AzureStorageBlob",
+          "storageAccountId": "[parameters('storageAccountId')]"
+        }
+      }
+    },
+    {
+      "type": "Microsoft.Discovery/workspaces",
+      "apiVersion": "2026-06-01",
+      "name": "[parameters('workspaceName')]",
+      "location": "[parameters('location')]",
+      "tags": {
+        "version": "v2",
+        "discovery.workbench.enableGhcpAiFeatures": "true",
+        "discovery.workbench.enableExtensions": "true",
+        "discovery.overridemrgregion": "[parameters('workloadRegion')]",
+        "NetworkIsolation": "true",
+        "SkipAssociateKeyVaultToNsp": "true",
+        "SkipAssociateCosmosDBToNsp": "true",
+        "SkipAssociateStorageAccountsToNsp": "true"
+      },
+      "properties": {
+        "workspaceIdentity": {
+          "id": "[parameters('managedIdentityId')]"
+        },
+        "supercomputerIds": [
+          "[resourceId('Microsoft.Discovery/supercomputers', parameters('supercomputerName'))]"
+        ],
+        "agentSubnetId": "[parameters('agentSubnetId')]",
+        "workspaceSubnetId": "[parameters('workspaceSubnetId')]",
+        "privateEndpointSubnetId": "[parameters('privateEndpointSubnetId')]",
+        "publicNetworkAccess": "[parameters('publicNetworkAccess')]"
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Discovery/supercomputers/nodePools', parameters('supercomputerName'), parameters('nodePoolName'))]",
+        "[resourceId('Microsoft.Discovery/supercomputers', parameters('supercomputerName'))]"
+      ]
+    },
+    {
+      "type": "Microsoft.Discovery/workspaces/chatModelDeployments",
+      "apiVersion": "2026-06-01",
+      "name": "[format('{0}/{1}', parameters('workspaceName'), parameters('chatModelDeploymentName'))]",
+      "location": "[parameters('location')]",
+      "properties": {
+        "modelFormat": "OpenAI",
+        "modelName": "[parameters('chatModelName')]"
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Discovery/workspaces', parameters('workspaceName'))]"
+      ]
+    },
+    {
+      "type": "Microsoft.Discovery/workspaces/projects",
+      "apiVersion": "2026-06-01",
+      "name": "[format('{0}/{1}', parameters('workspaceName'), parameters('projectName'))]",
+      "location": "[parameters('location')]",
+      "properties": {
+        "storageContainerIds": "[if(and(parameters('bookshelfInScope'), not(empty(parameters('storageAccountId')))), createArray(resourceId('Microsoft.Discovery/storageContainers', parameters('storageContainerName'))), createArray())]"
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Discovery/workspaces/chatModelDeployments', parameters('workspaceName'), parameters('chatModelDeploymentName'))]",
+        "[resourceId('Microsoft.Discovery/storageContainers', parameters('storageContainerName'))]",
+        "[resourceId('Microsoft.Discovery/workspaces', parameters('workspaceName'))]"
+      ]
+    }
+  ],
+  "outputs": {
+    "supercomputerId": {
+      "type": "string",
+      "value": "[resourceId('Microsoft.Discovery/supercomputers', parameters('supercomputerName'))]"
+    },
+    "workspaceId": {
+      "type": "string",
+      "value": "[resourceId('Microsoft.Discovery/workspaces', parameters('workspaceName'))]"
+    },
+    "projectId": {
+      "type": "string",
+      "value": "[resourceId('Microsoft.Discovery/workspaces/projects', parameters('workspaceName'), parameters('projectName'))]"
+    }
+  }
+}

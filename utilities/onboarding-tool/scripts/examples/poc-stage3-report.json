@@ -1,0 +1,614 @@
+{
+  "title": "Stage 3 · infra validation (supercomputer)",
+  "generated": "2026-09-24T23:20:38.4090262Z",
+  "total": 35,
+  "pass": 19,
+  "fail": 0,
+  "warn": 15,
+  "skip": 1,
+  "waived": 0,
+  "verdict": "GO",
+  "results": [
+    {
+      "id": "dependency-spec",
+      "name": "dependency spec supercomputer",
+      "status": "Pass",
+      "detail": "specVersion=1.0 updated=2026-09-24 ageDays=0 checks=4",
+      "remediation": "",
+      "fr": "FR3.8",
+      "data": {
+        "path": "C:\\code\\misc-doc\\discovery-doc\\onboarding\\scripts\\stage3-validation\\dependency-spec.json",
+        "schemaVersion": "1.0",
+        "updated": "2026-09-24",
+        "profile": "supercomputer",
+        "dependencySet": {
+          "checks": [
+            "check_subnet_delegation",
+            "check_nsg_effective",
+            "check_effective_routes",
+            "check_dns_and_pe"
+          ],
+          "probeChecks": [
+            "probe_dns",
+            "probe_tcp443",
+            "probe_https",
+            "probe_artifacts",
+            "probe_pe_resolution",
+            "probe_eastwest"
+          ],
+          "subnetRoles": [
+            "agent-containerapp",
+            "workspace-containerapp",
+            "search-containerapp",
+            "managedcluster",
+            "nodepool",
+            "private-endpoints"
+          ],
+          "privateDnsZones": [
+            "privatelink.blob.core.windows.net",
+            "privatelink.queue.core.windows.net",
+            "privatelink.file.core.windows.net",
+            "privatelink.table.core.windows.net",
+            "privatelink.dfs.core.windows.net",
+            "privatelink.vaultcore.azure.net",
+            "privatelink.search.windows.net",
+            "privatelink.cognitiveservices.azure.com",
+            "privatelink.openai.azure.com",
+            "privatelink.services.ai.azure.com",
+            "privatelink.documents.azure.com"
+          ],
+          "expectedPrivateEndpoints": 0,
+          "foundryEndpointZoneCount": 2
+        }
+      },
+      "timestamp": "2026-09-24T23:17:11.7986445Z"
+    },
+    {
+      "id": "subnet-delegation-agent-containerapp",
+      "name": "subnet delegation agent-containerapp",
+      "status": "Pass",
+      "detail": "expected=Microsoft.App/environments actual=Microsoft.App/environments subnet=snet-agent-containerapp",
+      "remediation": "",
+      "fr": "FR3.6a",
+      "data": {
+        "role": "agent-containerapp",
+        "expected": "Microsoft.App/environments",
+        "actual": "Microsoft.App/environments",
+        "ok": true,
+        "subnetId": "/subscriptions/546ec9a3-31a2-4360-a459-7e628a08dcbb/resourceGroups/gsk-sim-rg1/providers/Microsoft.Network/virtualNetworks/vnet-gsksim-poc-ws/subnets/snet-agent-containerapp"
+      },
+      "timestamp": "2026-09-24T23:17:14.8620599Z"
+    },
+    {
+      "id": "subnet-delegation-workspace-containerapp",
+      "name": "subnet delegation workspace-containerapp",
+      "status": "Pass",
+      "detail": "expected=Microsoft.App/environments actual=Microsoft.App/environments subnet=snet-workspace-containerapp",
+      "remediation": "",
+      "fr": "FR3.6a",
+      "data": {
+        "role": "workspace-containerapp",
+        "expected": "Microsoft.App/environments",
+        "actual": "Microsoft.App/environments",
+        "ok": true,
+        "subnetId": "/subscriptions/546ec9a3-31a2-4360-a459-7e628a08dcbb/resourceGroups/gsk-sim-rg1/providers/Microsoft.Network/virtualNetworks/vnet-gsksim-poc-ws/subnets/snet-workspace-containerapp"
+      },
+      "timestamp": "2026-09-24T23:17:17.7241536Z"
+    },
+    {
+      "id": "subnet-delegation-search-containerapp",
+      "name": "subnet delegation search-containerapp",
+      "status": "Pass",
+      "detail": "expected=Microsoft.App/environments actual=Microsoft.App/environments subnet=snet-search-containerapp",
+      "remediation": "",
+      "fr": "FR3.6a",
+      "data": {
+        "role": "search-containerapp",
+        "expected": "Microsoft.App/environments",
+        "actual": "Microsoft.App/environments",
+        "ok": true,
+        "subnetId": "/subscriptions/546ec9a3-31a2-4360-a459-7e628a08dcbb/resourceGroups/gsk-sim-rg1/providers/Microsoft.Network/virtualNetworks/vnet-gsksim-poc-ws/subnets/snet-search-containerapp"
+      },
+      "timestamp": "2026-09-24T23:17:20.5179541Z"
+    },
+    {
+      "id": "subnet-delegation-managedcluster",
+      "name": "subnet delegation managedcluster",
+      "status": "Pass",
+      "detail": "expected=Microsoft.ContainerService/managedClusters actual=Microsoft.ContainerService/managedClusters subnet=snet-managedcluster",
+      "remediation": "",
+      "fr": "FR3.6a",
+      "data": {
+        "role": "managedcluster",
+        "expected": "Microsoft.ContainerService/managedClusters",
+        "actual": "Microsoft.ContainerService/managedClusters",
+        "ok": true,
+        "subnetId": "/subscriptions/546ec9a3-31a2-4360-a459-7e628a08dcbb/resourceGroups/gsk-sim-rg1/providers/Microsoft.Network/virtualNetworks/vnet-gsksim-poc-ws/subnets/snet-managedcluster"
+      },
+      "timestamp": "2026-09-24T23:17:23.3520842Z"
+    },
+    {
+      "id": "subnet-delegation-nodepool",
+      "name": "subnet delegation nodepool",
+      "status": "Pass",
+      "detail": "expected=none actual=none subnet=snet-nodepool",
+      "remediation": "",
+      "fr": "FR3.6a",
+      "data": {
+        "role": "nodepool",
+        "expected": "none",
+        "actual": "none",
+        "ok": true,
+        "subnetId": "/subscriptions/546ec9a3-31a2-4360-a459-7e628a08dcbb/resourceGroups/gsk-sim-rg1/providers/Microsoft.Network/virtualNetworks/vnet-gsksim-poc-ws/subnets/snet-nodepool"
+      },
+      "timestamp": "2026-09-24T23:17:26.2471111Z"
+    },
+    {
+      "id": "subnet-delegation-private-endpoints",
+      "name": "subnet delegation private-endpoints",
+      "status": "Pass",
+      "detail": "expected=none actual=none subnet=snet-private-endpoints",
+      "remediation": "",
+      "fr": "FR3.6a",
+      "data": {
+        "role": "private-endpoints",
+        "expected": "none",
+        "actual": "none",
+        "ok": true,
+        "subnetId": "/subscriptions/546ec9a3-31a2-4360-a459-7e628a08dcbb/resourceGroups/gsk-sim-rg1/providers/Microsoft.Network/virtualNetworks/vnet-gsksim-poc-ws/subnets/snet-private-endpoints"
+      },
+      "timestamp": "2026-09-24T23:17:29.0534551Z"
+    },
+    {
+      "id": "subnet-delegation-spare",
+      "name": "subnet delegation spare",
+      "status": "Pass",
+      "detail": "expected=none actual=none subnet=snet-spare",
+      "remediation": "",
+      "fr": "FR3.6a",
+      "data": {
+        "role": "spare",
+        "expected": "none",
+        "actual": "none",
+        "ok": true,
+        "subnetId": "/subscriptions/546ec9a3-31a2-4360-a459-7e628a08dcbb/resourceGroups/gsk-sim-rg1/providers/Microsoft.Network/virtualNetworks/vnet-gsksim-poc-ws/subnets/snet-spare"
+      },
+      "timestamp": "2026-09-24T23:17:31.8782327Z"
+    },
+    {
+      "id": "nsg-effective-agent-containerapp",
+      "name": "effective NSG agent-containerapp",
+      "status": "Warn",
+      "detail": "required allow paths present source=subnet-nsg-fallback",
+      "remediation": "",
+      "fr": "FR3.6b",
+      "data": {
+        "role": "agent-containerapp",
+        "subnetId": "/subscriptions/546ec9a3-31a2-4360-a459-7e628a08dcbb/resourceGroups/gsk-sim-rg1/providers/Microsoft.Network/virtualNetworks/vnet-gsksim-poc-ws/subnets/snet-agent-containerapp",
+        "nicId": null,
+        "missingRules": [],
+        "source": "subnet-nsg-fallback"
+      },
+      "timestamp": "2026-09-24T23:17:42.2016719Z"
+    },
+    {
+      "id": "nsg-effective-workspace-containerapp",
+      "name": "effective NSG workspace-containerapp",
+      "status": "Warn",
+      "detail": "required allow paths present source=subnet-nsg-fallback",
+      "remediation": "",
+      "fr": "FR3.6b",
+      "data": {
+        "role": "workspace-containerapp",
+        "subnetId": "/subscriptions/546ec9a3-31a2-4360-a459-7e628a08dcbb/resourceGroups/gsk-sim-rg1/providers/Microsoft.Network/virtualNetworks/vnet-gsksim-poc-ws/subnets/snet-workspace-containerapp",
+        "nicId": null,
+        "missingRules": [],
+        "source": "subnet-nsg-fallback"
+      },
+      "timestamp": "2026-09-24T23:17:50.2562916Z"
+    },
+    {
+      "id": "nsg-effective-search-containerapp",
+      "name": "effective NSG search-containerapp",
+      "status": "Warn",
+      "detail": "required allow paths present source=subnet-nsg-fallback",
+      "remediation": "",
+      "fr": "FR3.6b",
+      "data": {
+        "role": "search-containerapp",
+        "subnetId": "/subscriptions/546ec9a3-31a2-4360-a459-7e628a08dcbb/resourceGroups/gsk-sim-rg1/providers/Microsoft.Network/virtualNetworks/vnet-gsksim-poc-ws/subnets/snet-search-containerapp",
+        "nicId": null,
+        "missingRules": [],
+        "source": "subnet-nsg-fallback"
+      },
+      "timestamp": "2026-09-24T23:17:58.4192173Z"
+    },
+    {
+      "id": "nsg-effective-managedcluster",
+      "name": "effective NSG managedcluster",
+      "status": "Warn",
+      "detail": "required allow paths present source=subnet-nsg-fallback",
+      "remediation": "",
+      "fr": "FR3.6b",
+      "data": {
+        "role": "managedcluster",
+        "subnetId": "/subscriptions/546ec9a3-31a2-4360-a459-7e628a08dcbb/resourceGroups/gsk-sim-rg1/providers/Microsoft.Network/virtualNetworks/vnet-gsksim-poc-ws/subnets/snet-managedcluster",
+        "nicId": null,
+        "missingRules": [],
+        "source": "subnet-nsg-fallback"
+      },
+      "timestamp": "2026-09-24T23:18:06.9596676Z"
+    },
+    {
+      "id": "nsg-effective-nodepool",
+      "name": "effective NSG nodepool",
+      "status": "Warn",
+      "detail": "required allow paths present source=subnet-nsg-fallback",
+      "remediation": "",
+      "fr": "FR3.6b",
+      "data": {
+        "role": "nodepool",
+        "subnetId": "/subscriptions/546ec9a3-31a2-4360-a459-7e628a08dcbb/resourceGroups/gsk-sim-rg1/providers/Microsoft.Network/virtualNetworks/vnet-gsksim-poc-ws/subnets/snet-nodepool",
+        "nicId": null,
+        "missingRules": [],
+        "source": "subnet-nsg-fallback"
+      },
+      "timestamp": "2026-09-24T23:18:15.0433357Z"
+    },
+    {
+      "id": "nsg-effective-private-endpoints",
+      "name": "effective NSG private-endpoints",
+      "status": "Warn",
+      "detail": "required allow paths present source=subnet-nsg-fallback",
+      "remediation": "",
+      "fr": "FR3.6b",
+      "data": {
+        "role": "private-endpoints",
+        "subnetId": "/subscriptions/546ec9a3-31a2-4360-a459-7e628a08dcbb/resourceGroups/gsk-sim-rg1/providers/Microsoft.Network/virtualNetworks/vnet-gsksim-poc-ws/subnets/snet-private-endpoints",
+        "nicId": null,
+        "missingRules": [],
+        "source": "subnet-nsg-fallback"
+      },
+      "timestamp": "2026-09-24T23:18:23.2529565Z"
+    },
+    {
+      "id": "nsg-effective-spare",
+      "name": "effective NSG spare",
+      "status": "Warn",
+      "detail": "required allow paths present source=subnet-nsg-fallback",
+      "remediation": "",
+      "fr": "FR3.6b",
+      "data": {
+        "role": "spare",
+        "subnetId": "/subscriptions/546ec9a3-31a2-4360-a459-7e628a08dcbb/resourceGroups/gsk-sim-rg1/providers/Microsoft.Network/virtualNetworks/vnet-gsksim-poc-ws/subnets/snet-spare",
+        "nicId": null,
+        "missingRules": [],
+        "source": "subnet-nsg-fallback"
+      },
+      "timestamp": "2026-09-24T23:18:31.6490720Z"
+    },
+    {
+      "id": "effective-routes-agent-containerapp",
+      "name": "effective routes agent-containerapp",
+      "status": "Warn",
+      "detail": "nextHopType=VirtualAppliance nextHopIp=10.100.0.4 source=route-table-fallback",
+      "remediation": "",
+      "fr": "FR3.6c",
+      "data": {
+        "role": "agent-containerapp",
+        "subnetId": "/subscriptions/546ec9a3-31a2-4360-a459-7e628a08dcbb/resourceGroups/gsk-sim-rg1/providers/Microsoft.Network/virtualNetworks/vnet-gsksim-poc-ws/subnets/snet-agent-containerapp",
+        "nicId": null,
+        "nextHop": "VirtualAppliance",
+        "nextHopIp": "10.100.0.4",
+        "networkWatcher": null,
+        "source": "route-table-fallback",
+        "managedCidr": "10.46.253.128/26"
+      },
+      "timestamp": "2026-09-24T23:18:40.2342284Z"
+    },
+    {
+      "id": "effective-routes-workspace-containerapp",
+      "name": "effective routes workspace-containerapp",
+      "status": "Warn",
+      "detail": "nextHopType=VirtualAppliance nextHopIp=10.100.0.4 source=route-table-fallback",
+      "remediation": "",
+      "fr": "FR3.6c",
+      "data": {
+        "role": "workspace-containerapp",
+        "subnetId": "/subscriptions/546ec9a3-31a2-4360-a459-7e628a08dcbb/resourceGroups/gsk-sim-rg1/providers/Microsoft.Network/virtualNetworks/vnet-gsksim-poc-ws/subnets/snet-workspace-containerapp",
+        "nicId": null,
+        "nextHop": "VirtualAppliance",
+        "nextHopIp": "10.100.0.4",
+        "networkWatcher": null,
+        "source": "route-table-fallback",
+        "managedCidr": "10.46.253.128/26"
+      },
+      "timestamp": "2026-09-24T23:18:48.4180330Z"
+    },
+    {
+      "id": "effective-routes-search-containerapp",
+      "name": "effective routes search-containerapp",
+      "status": "Warn",
+      "detail": "nextHopType=VirtualAppliance nextHopIp=10.100.0.4 source=route-table-fallback",
+      "remediation": "",
+      "fr": "FR3.6c",
+      "data": {
+        "role": "search-containerapp",
+        "subnetId": "/subscriptions/546ec9a3-31a2-4360-a459-7e628a08dcbb/resourceGroups/gsk-sim-rg1/providers/Microsoft.Network/virtualNetworks/vnet-gsksim-poc-ws/subnets/snet-search-containerapp",
+        "nicId": null,
+        "nextHop": "VirtualAppliance",
+        "nextHopIp": "10.100.0.4",
+        "networkWatcher": null,
+        "source": "route-table-fallback",
+        "managedCidr": "10.46.253.128/26"
+      },
+      "timestamp": "2026-09-24T23:18:56.7195450Z"
+    },
+    {
+      "id": "effective-routes-managedcluster",
+      "name": "effective routes managedcluster",
+      "status": "Warn",
+      "detail": "nextHopType=VnetLocal nextHopIp= source=route-table-fallback",
+      "remediation": "",
+      "fr": "FR3.6c",
+      "data": {
+        "role": "managedcluster",
+        "subnetId": "/subscriptions/546ec9a3-31a2-4360-a459-7e628a08dcbb/resourceGroups/gsk-sim-rg1/providers/Microsoft.Network/virtualNetworks/vnet-gsksim-poc-ws/subnets/snet-managedcluster",
+        "nicId": null,
+        "nextHop": "VnetLocal",
+        "nextHopIp": "",
+        "networkWatcher": null,
+        "source": "route-table-fallback",
+        "managedCidr": "10.46.253.128/26"
+      },
+      "timestamp": "2026-09-24T23:19:05.1208261Z"
+    },
+    {
+      "id": "effective-routes-nodepool",
+      "name": "effective routes nodepool",
+      "status": "Warn",
+      "detail": "nextHopType=VirtualAppliance nextHopIp=10.100.0.4 source=route-table-fallback",
+      "remediation": "",
+      "fr": "FR3.6c",
+      "data": {
+        "role": "nodepool",
+        "subnetId": "/subscriptions/546ec9a3-31a2-4360-a459-7e628a08dcbb/resourceGroups/gsk-sim-rg1/providers/Microsoft.Network/virtualNetworks/vnet-gsksim-poc-ws/subnets/snet-nodepool",
+        "nicId": null,
+        "nextHop": "VirtualAppliance",
+        "nextHopIp": "10.100.0.4",
+        "networkWatcher": null,
+        "source": "route-table-fallback",
+        "managedCidr": "10.46.253.128/26"
+      },
+      "timestamp": "2026-09-24T23:19:13.0417738Z"
+    },
+    {
+      "id": "effective-routes-private-endpoints",
+      "name": "effective routes private-endpoints",
+      "status": "Warn",
+      "detail": "nextHopType=VirtualAppliance nextHopIp=10.100.0.4 source=route-table-fallback",
+      "remediation": "",
+      "fr": "FR3.6c",
+      "data": {
+        "role": "private-endpoints",
+        "subnetId": "/subscriptions/546ec9a3-31a2-4360-a459-7e628a08dcbb/resourceGroups/gsk-sim-rg1/providers/Microsoft.Network/virtualNetworks/vnet-gsksim-poc-ws/subnets/snet-private-endpoints",
+        "nicId": null,
+        "nextHop": "VirtualAppliance",
+        "nextHopIp": "10.100.0.4",
+        "networkWatcher": null,
+        "source": "route-table-fallback",
+        "managedCidr": "10.46.253.128/26"
+      },
+      "timestamp": "2026-09-24T23:19:21.0911606Z"
+    },
+    {
+      "id": "effective-routes-spare",
+      "name": "effective routes spare",
+      "status": "Warn",
+      "detail": "nextHopType=VirtualAppliance nextHopIp=10.100.0.4 source=route-table-fallback",
+      "remediation": "",
+      "fr": "FR3.6c",
+      "data": {
+        "role": "spare",
+        "subnetId": "/subscriptions/546ec9a3-31a2-4360-a459-7e628a08dcbb/resourceGroups/gsk-sim-rg1/providers/Microsoft.Network/virtualNetworks/vnet-gsksim-poc-ws/subnets/snet-spare",
+        "nicId": null,
+        "nextHop": "VirtualAppliance",
+        "nextHopIp": "10.100.0.4",
+        "networkWatcher": null,
+        "source": "route-table-fallback",
+        "managedCidr": "10.46.253.128/26"
+      },
+      "timestamp": "2026-09-24T23:19:29.6939707Z"
+    },
+    {
+      "id": "private-dns-zone-privatelink.blob.core.windows.net",
+      "name": "private DNS privatelink.blob.core.windows.net",
+      "status": "Pass",
+      "detail": "linked to VNet",
+      "remediation": "",
+      "fr": "FR3.6d",
+      "data": {
+        "zone": "privatelink.blob.core.windows.net",
+        "linked": true,
+        "exists": true,
+        "linkCount": 1
+      },
+      "timestamp": "2026-09-24T23:19:37.7097119Z"
+    },
+    {
+      "id": "private-dns-zone-privatelink.queue.core.windows.net",
+      "name": "private DNS privatelink.queue.core.windows.net",
+      "status": "Pass",
+      "detail": "linked to VNet",
+      "remediation": "",
+      "fr": "FR3.6d",
+      "data": {
+        "zone": "privatelink.queue.core.windows.net",
+        "linked": true,
+        "exists": true,
+        "linkCount": 1
+      },
+      "timestamp": "2026-09-24T23:19:44.3192850Z"
+    },
+    {
+      "id": "private-dns-zone-privatelink.file.core.windows.net",
+      "name": "private DNS privatelink.file.core.windows.net",
+      "status": "Pass",
+      "detail": "linked to VNet",
+      "remediation": "",
+      "fr": "FR3.6d",
+      "data": {
+        "zone": "privatelink.file.core.windows.net",
+        "linked": true,
+        "exists": true,
+        "linkCount": 1
+      },
+      "timestamp": "2026-09-24T23:19:50.8814174Z"
+    },
+    {
+      "id": "private-dns-zone-privatelink.table.core.windows.net",
+      "name": "private DNS privatelink.table.core.windows.net",
+      "status": "Pass",
+      "detail": "linked to VNet",
+      "remediation": "",
+      "fr": "FR3.6d",
+      "data": {
+        "zone": "privatelink.table.core.windows.net",
+        "linked": true,
+        "exists": true,
+        "linkCount": 1
+      },
+      "timestamp": "2026-09-24T23:19:56.5733848Z"
+    },
+    {
+      "id": "private-dns-zone-privatelink.dfs.core.windows.net",
+      "name": "private DNS privatelink.dfs.core.windows.net",
+      "status": "Pass",
+      "detail": "linked to VNet",
+      "remediation": "",
+      "fr": "FR3.6d",
+      "data": {
+        "zone": "privatelink.dfs.core.windows.net",
+        "linked": true,
+        "exists": true,
+        "linkCount": 1
+      },
+      "timestamp": "2026-09-24T23:20:02.2518672Z"
+    },
+    {
+      "id": "private-dns-zone-privatelink.vaultcore.azure.net",
+      "name": "private DNS privatelink.vaultcore.azure.net",
+      "status": "Pass",
+      "detail": "linked to VNet",
+      "remediation": "",
+      "fr": "FR3.6d",
+      "data": {
+        "zone": "privatelink.vaultcore.azure.net",
+        "linked": true,
+        "exists": true,
+        "linkCount": 1
+      },
+      "timestamp": "2026-09-24T23:20:08.0388572Z"
+    },
+    {
+      "id": "private-dns-zone-privatelink.search.windows.net",
+      "name": "private DNS privatelink.search.windows.net",
+      "status": "Pass",
+      "detail": "linked to VNet",
+      "remediation": "",
+      "fr": "FR3.6d",
+      "data": {
+        "zone": "privatelink.search.windows.net",
+        "linked": true,
+        "exists": true,
+        "linkCount": 1
+      },
+      "timestamp": "2026-09-24T23:20:13.5755100Z"
+    },
+    {
+      "id": "private-dns-zone-privatelink.cognitiveservices.azure.com",
+      "name": "private DNS privatelink.cognitiveservices.azure.com",
+      "status": "Pass",
+      "detail": "linked to VNet",
+      "remediation": "",
+      "fr": "FR3.6d",
+      "data": {
+        "zone": "privatelink.cognitiveservices.azure.com",
+        "linked": true,
+        "exists": true,
+        "linkCount": 1
+      },
+      "timestamp": "2026-09-24T23:20:19.0416966Z"
+    },
+    {
+      "id": "private-dns-zone-privatelink.openai.azure.com",
+      "name": "private DNS privatelink.openai.azure.com",
+      "status": "Pass",
+      "detail": "linked to VNet",
+      "remediation": "",
+      "fr": "FR3.6d",
+      "data": {
+        "zone": "privatelink.openai.azure.com",
+        "linked": true,
+        "exists": true,
+        "linkCount": 1
+      },
+      "timestamp": "2026-09-24T23:20:24.7055989Z"
+    },
+    {
+      "id": "private-dns-zone-privatelink.services.ai.azure.com",
+      "name": "private DNS privatelink.services.ai.azure.com",
+      "status": "Pass",
+      "detail": "linked to VNet",
+      "remediation": "",
+      "fr": "FR3.6d",
+      "data": {
+        "zone": "privatelink.services.ai.azure.com",
+        "linked": true,
+        "exists": true,
+        "linkCount": 1
+      },
+      "timestamp": "2026-09-24T23:20:30.2115422Z"
+    },
+    {
+      "id": "private-dns-zone-privatelink.documents.azure.com",
+      "name": "private DNS privatelink.documents.azure.com",
+      "status": "Pass",
+      "detail": "linked to VNet",
+      "remediation": "",
+      "fr": "FR3.6d",
+      "data": {
+        "zone": "privatelink.documents.azure.com",
+        "linked": true,
+        "exists": true,
+        "linkCount": 1
+      },
+      "timestamp": "2026-09-24T23:20:35.7514984Z"
+    },
+    {
+      "id": "private-endpoints-present",
+      "name": "private endpoints discovered",
+      "status": "Warn",
+      "detail": "No private endpoints found in: gsk-sim-rg1.",
+      "remediation": "Fix private DNS zone links / VNet DNS.",
+      "fr": "FR3.6d",
+      "data": null,
+      "timestamp": "2026-09-24T23:20:38.4006219Z"
+    },
+    {
+      "id": "testvm-opt-in",
+      "name": "test VM connectivity harness",
+      "status": "Skip",
+      "detail": "Use -WithVm to create the ephemeral probe VM and run connectivity probes.",
+      "remediation": "",
+      "fr": "FR3.7",
+      "data": null,
+      "timestamp": "2026-09-24T23:20:38.4029892Z"
+    }
+  ],
+  "extra": {
+    "profile": "supercomputer",
+    "withVm": false,
+    "dependencySpec": "C:\\code\\misc-doc\\discovery-doc\\onboarding\\scripts\\stage3-validation\\dependency-spec.json"
+  }
+}

@@ -1,0 +1,61 @@
+{
+  "schemaVersion": "1.0",
+  "updated": "2026-09-24",
+  "maxAgeDays": 180,
+  "profiles": {
+    "supercomputer": {
+      "checks": ["check_subnet_delegation", "check_nsg_effective", "check_effective_routes", "check_dns_and_pe"],
+      "probeChecks": ["probe_dns", "probe_tcp443", "probe_https", "probe_artifacts", "probe_pe_resolution", "probe_eastwest"],
+      "subnetRoles": ["agent-containerapp", "workspace-containerapp", "search-containerapp", "managedcluster", "nodepool", "private-endpoints"],
+      "privateDnsZones": [
+        "privatelink.blob.core.windows.net",
+        "privatelink.queue.core.windows.net",
+        "privatelink.file.core.windows.net",
+        "privatelink.table.core.windows.net",
+        "privatelink.dfs.core.windows.net",
+        "privatelink.vaultcore.azure.net",
+        "privatelink.search.windows.net",
+        "privatelink.cognitiveservices.azure.com",
+        "privatelink.openai.azure.com",
+        "privatelink.services.ai.azure.com",
+        "privatelink.documents.azure.com"
+      ],
+      "expectedPrivateEndpoints": 0,
+      "foundryEndpointZoneCount": 2
+    },
+    "workspace": {
+      "checks": ["check_subnet_delegation", "check_nsg_effective", "check_effective_routes", "check_dns_and_pe"],
+      "probeChecks": ["probe_dns", "probe_tcp443", "probe_https", "probe_artifacts", "probe_pe_resolution"],
+      "subnetRoles": ["agent-containerapp", "workspace-containerapp", "search-containerapp", "private-endpoints"],
+      "privateDnsZones": [
+        "privatelink.blob.core.windows.net",
+        "privatelink.queue.core.windows.net",
+        "privatelink.file.core.windows.net",
+        "privatelink.table.core.windows.net",
+        "privatelink.dfs.core.windows.net",
+        "privatelink.vaultcore.azure.net",
+        "privatelink.search.windows.net",
+        "privatelink.cognitiveservices.azure.com",
+        "privatelink.openai.azure.com",
+        "privatelink.services.ai.azure.com",
+        "privatelink.documents.azure.com"
+      ],
+      "expectedPrivateEndpoints": 0,
+      "foundryEndpointZoneCount": 2
+    },
+    "bookshelf": {
+      "checks": ["check_subnet_delegation", "check_nsg_effective", "check_effective_routes", "check_dns_and_pe"],
+      "probeChecks": ["probe_dns", "probe_tcp443", "probe_https", "probe_artifacts", "probe_pe_resolution"],
+      "subnetRoles": ["private-endpoints"],
+      "privateDnsZones": [
+        "privatelink.blob.core.windows.net",
+        "privatelink.queue.core.windows.net",
+        "privatelink.file.core.windows.net",
+        "privatelink.table.core.windows.net",
+        "privatelink.dfs.core.windows.net"
+      ],
+      "expectedPrivateEndpoints": 3,
+      "foundryEndpointZoneCount": 0
+    }
+  }
+}

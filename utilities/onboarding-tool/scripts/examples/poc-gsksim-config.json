@@ -1,0 +1,106 @@
+{
+  "schemaVersion": "1.0",
+  "contentHash": "bb6b3b748fc733f570385d3bbdd1bfc48b2116fa0d2841e043d7801284199a90",
+  "subscriptionId": "546ec9a3-31a2-4360-a459-7e628a08dcbb",
+  "environment": "devtest",
+  "resourceGroup": "gsk-sim-disc-rg1",
+  "managedIdentity": {
+    "id": "/subscriptions/546ec9a3-31a2-4360-a459-7e628a08dcbb/resourceGroups/gsk-sim-disc-rg1/providers/Microsoft.ManagedIdentity/userAssignedIdentities/id-gsksim-disc"
+  },
+  "controlPlaneRegion": "eastus2",
+  "workloadRegion": "eastus2",
+  "deployingIdentity": {
+    "objectId": "35644e08-c894-4013-9b03-e7fa82689870",
+    "type": "user",
+    "canRegisterProviders": true
+  },
+  "network": {
+    "model": "byo",
+    "networkResourceGroup": "gsk-sim-rg1",
+    "vnetName": "vnet-gsksim-poc-ws",
+    "vnetCidr": "10.46.252.0/23",
+    "corpDns": [],
+    "nvaNextHop": "10.100.0.4",
+    "outboundType": "UserDefinedRouting",
+    "spokeCidr": "10.46.252.0/23",
+    "existingSubnets": [
+      "10.46.252.192/26"
+    ],
+    "subnets": [
+      {
+        "role": "agent-containerapp",
+        "name": "snet-agent-containerapp",
+        "cidr": "10.46.252.0/26",
+        "requiredPrefix": "/26",
+        "delegation": "Microsoft.App/environments"
+      },
+      {
+        "role": "workspace-containerapp",
+        "name": "snet-workspace-containerapp",
+        "cidr": "10.46.252.64/26",
+        "requiredPrefix": "/26",
+        "delegation": "Microsoft.App/environments"
+      },
+      {
+        "role": "search-containerapp",
+        "name": "snet-search-containerapp",
+        "cidr": "10.46.253.32/27",
+        "requiredPrefix": "/27",
+        "delegation": "Microsoft.App/environments"
+      },
+      {
+        "role": "managedcluster",
+        "name": "snet-managedcluster",
+        "cidr": "10.46.253.128/26",
+        "requiredPrefix": "/26",
+        "delegation": "Microsoft.ContainerService/managedClusters"
+      },
+      {
+        "role": "nodepool",
+        "name": "snet-nodepool",
+        "cidr": "10.46.252.128/26",
+        "requiredPrefix": "/26",
+        "delegation": "none"
+      },
+      {
+        "role": "private-endpoints",
+        "name": "snet-private-endpoints",
+        "cidr": "10.46.253.0/27",
+        "requiredPrefix": "/27",
+        "delegation": "none"
+      },
+      {
+        "role": "spare",
+        "name": "snet-spare",
+        "cidr": "10.46.253.64/27",
+        "requiredPrefix": "/27",
+        "delegation": "none"
+      }
+    ]
+  },
+  "storage": {
+    "model": "managed",
+    "access": "privateEndpoint",
+    "accountId": "/subscriptions/546ec9a3-31a2-4360-a459-7e628a08dcbb/resourceGroups/gsk-sim-disc-rg1/providers/Microsoft.Storage/storageAccounts/stgsksimdiscpoc1"
+  },
+  "sizingTier": "Small",
+  "bookshelf": {
+    "inScope": true,
+    "instances": 1
+  },
+  "projects": 2,
+  "deployMode": "GlobalStandard",
+  "names": {
+    "workspace": "gsksim-poc-ws",
+    "project": "gsksim-p1",
+    "supercomputer": "gsksim-sc",
+    "nodePool": "pool1",
+    "tool": "hero-tool",
+    "agent": "hero-agent",
+    "storageContainer": "kb-container",
+    "storageAsset": "kb-asset",
+    "investigation": "hero-inv"
+  },
+  "policySet": [],
+  "waivers": []
+}

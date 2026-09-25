@@ -1,0 +1,1204 @@
+{
+  "title": "Stage 2 · landing-zone preparation (FR2.1-FR2.9)",
+  "generated": "2026-09-24T23:01:34.6228763Z",
+  "total": 70,
+  "pass": 62,
+  "fail": 0,
+  "warn": 7,
+  "skip": 1,
+  "waived": 0,
+  "verdict": "GO",
+  "results": [
+    {
+      "id": "rp-microsoft-discovery",
+      "name": "resource provider Microsoft.Discovery",
+      "status": "Pass",
+      "detail": "registrationState=Registered",
+      "remediation": "Confirm the deploying identity has Microsoft.Resources/subscriptions/providers/register/action, then retry. If Microsoft.Discovery remains Registering beyond 900 seconds, escalate to Azure support.",
+      "fr": "FR2.1",
+      "data": {
+        "registrationState": "Registered",
+        "namespace": "Microsoft.Discovery"
+      },
+      "timestamp": "2026-09-24T22:23:55.5730638Z"
+    },
+    {
+      "id": "rp-microsoft-network",
+      "name": "resource provider Microsoft.Network",
+      "status": "Pass",
+      "detail": "registrationState=Registered",
+      "remediation": "Confirm the deploying identity has Microsoft.Resources/subscriptions/providers/register/action, then retry. If Microsoft.Network remains Registering beyond 900 seconds, escalate to Azure support.",
+      "fr": "FR2.1",
+      "data": {
+        "registrationState": "Registered",
+        "namespace": "Microsoft.Network"
+      },
+      "timestamp": "2026-09-24T22:24:04.2650434Z"
+    },
+    {
+      "id": "rp-microsoft-compute",
+      "name": "resource provider Microsoft.Compute",
+      "status": "Pass",
+      "detail": "registrationState=Registered",
+      "remediation": "Confirm the deploying identity has Microsoft.Resources/subscriptions/providers/register/action, then retry. If Microsoft.Compute remains Registering beyond 900 seconds, escalate to Azure support.",
+      "fr": "FR2.1",
+      "data": {
+        "registrationState": "Registered",
+        "namespace": "Microsoft.Compute"
+      },
+      "timestamp": "2026-09-24T22:24:10.1101518Z"
+    },
+    {
+      "id": "rp-microsoft-storage",
+      "name": "resource provider Microsoft.Storage",
+      "status": "Pass",
+      "detail": "registrationState=Registered",
+      "remediation": "Confirm the deploying identity has Microsoft.Resources/subscriptions/providers/register/action, then retry. If Microsoft.Storage remains Registering beyond 900 seconds, escalate to Azure support.",
+      "fr": "FR2.1",
+      "data": {
+        "registrationState": "Registered",
+        "namespace": "Microsoft.Storage"
+      },
+      "timestamp": "2026-09-24T22:24:15.4588111Z"
+    },
+    {
+      "id": "rp-microsoft-managedidentity",
+      "name": "resource provider Microsoft.ManagedIdentity",
+      "status": "Pass",
+      "detail": "registrationState=Registered",
+      "remediation": "Confirm the deploying identity has Microsoft.Resources/subscriptions/providers/register/action, then retry. If Microsoft.ManagedIdentity remains Registering beyond 900 seconds, escalate to Azure support.",
+      "fr": "FR2.1",
+      "data": {
+        "registrationState": "Registered",
+        "namespace": "Microsoft.ManagedIdentity"
+      },
+      "timestamp": "2026-09-24T22:24:20.8169306Z"
+    },
+    {
+      "id": "rp-microsoft-authorization",
+      "name": "resource provider Microsoft.Authorization",
+      "status": "Pass",
+      "detail": "registrationState=Registered",
+      "remediation": "Confirm the deploying identity has Microsoft.Resources/subscriptions/providers/register/action, then retry. If Microsoft.Authorization remains Registering beyond 900 seconds, escalate to Azure support.",
+      "fr": "FR2.1",
+      "data": {
+        "registrationState": "Registered",
+        "namespace": "Microsoft.Authorization"
+      },
+      "timestamp": "2026-09-24T22:24:25.9501868Z"
+    },
+    {
+      "id": "rp-microsoft-cognitiveservices",
+      "name": "resource provider Microsoft.CognitiveServices",
+      "status": "Pass",
+      "detail": "registrationState=Registered",
+      "remediation": "Confirm the deploying identity has Microsoft.Resources/subscriptions/providers/register/action, then retry. If Microsoft.CognitiveServices remains Registering beyond 900 seconds, escalate to Azure support.",
+      "fr": "FR2.1",
+      "data": {
+        "registrationState": "Registered",
+        "namespace": "Microsoft.CognitiveServices"
+      },
+      "timestamp": "2026-09-24T22:24:31.2441554Z"
+    },
+    {
+      "id": "rp-microsoft-containerservice",
+      "name": "resource provider Microsoft.ContainerService",
+      "status": "Pass",
+      "detail": "registrationState=Registered",
+      "remediation": "Confirm the deploying identity has Microsoft.Resources/subscriptions/providers/register/action, then retry. If Microsoft.ContainerService remains Registering beyond 900 seconds, escalate to Azure support.",
+      "fr": "FR2.1",
+      "data": {
+        "registrationState": "Registered",
+        "namespace": "Microsoft.ContainerService"
+      },
+      "timestamp": "2026-09-24T22:24:36.5885462Z"
+    },
+    {
+      "id": "rp-microsoft-containerregistry",
+      "name": "resource provider Microsoft.ContainerRegistry",
+      "status": "Pass",
+      "detail": "registrationState=Registered",
+      "remediation": "Confirm the deploying identity has Microsoft.Resources/subscriptions/providers/register/action, then retry. If Microsoft.ContainerRegistry remains Registering beyond 900 seconds, escalate to Azure support.",
+      "fr": "FR2.1",
+      "data": {
+        "registrationState": "Registered",
+        "namespace": "Microsoft.ContainerRegistry"
+      },
+      "timestamp": "2026-09-24T22:24:41.8094984Z"
+    },
+    {
+      "id": "rp-microsoft-documentdb",
+      "name": "resource provider Microsoft.DocumentDB",
+      "status": "Pass",
+      "detail": "registrationState=Registered",
+      "remediation": "Confirm the deploying identity has Microsoft.Resources/subscriptions/providers/register/action, then retry. If Microsoft.DocumentDB remains Registering beyond 900 seconds, escalate to Azure support.",
+      "fr": "FR2.1",
+      "data": {
+        "registrationState": "Registered",
+        "namespace": "Microsoft.DocumentDB"
+      },
+      "timestamp": "2026-09-24T22:24:46.9525263Z"
+    },
+    {
+      "id": "rp-microsoft-keyvault",
+      "name": "resource provider Microsoft.KeyVault",
+      "status": "Pass",
+      "detail": "registrationState=Registered",
+      "remediation": "Confirm the deploying identity has Microsoft.Resources/subscriptions/providers/register/action, then retry. If Microsoft.KeyVault remains Registering beyond 900 seconds, escalate to Azure support.",
+      "fr": "FR2.1",
+      "data": {
+        "registrationState": "Registered",
+        "namespace": "Microsoft.KeyVault"
+      },
+      "timestamp": "2026-09-24T22:24:52.2121007Z"
+    },
+    {
+      "id": "rp-microsoft-machinelearningservices",
+      "name": "resource provider Microsoft.MachineLearningServices",
+      "status": "Pass",
+      "detail": "registrationState=Registered",
+      "remediation": "Confirm the deploying identity has Microsoft.Resources/subscriptions/providers/register/action, then retry. If Microsoft.MachineLearningServices remains Registering beyond 900 seconds, escalate to Azure support.",
+      "fr": "FR2.1",
+      "data": {
+        "registrationState": "Registered",
+        "namespace": "Microsoft.MachineLearningServices"
+      },
+      "timestamp": "2026-09-24T22:24:58.3622743Z"
+    },
+    {
+      "id": "rp-microsoft-netapp",
+      "name": "resource provider Microsoft.NetApp",
+      "status": "Pass",
+      "detail": "registrationState=Registered",
+      "remediation": "Confirm the deploying identity has Microsoft.Resources/subscriptions/providers/register/action, then retry. If Microsoft.NetApp remains Registering beyond 900 seconds, escalate to Azure support.",
+      "fr": "FR2.1",
+      "data": {
+        "registrationState": "Registered",
+        "namespace": "Microsoft.NetApp"
+      },
+      "timestamp": "2026-09-24T22:25:03.7655809Z"
+    },
+    {
+      "id": "rp-microsoft-search",
+      "name": "resource provider Microsoft.Search",
+      "status": "Pass",
+      "detail": "registrationState=Registered",
+      "remediation": "Confirm the deploying identity has Microsoft.Resources/subscriptions/providers/register/action, then retry. If Microsoft.Search remains Registering beyond 900 seconds, escalate to Azure support.",
+      "fr": "FR2.1",
+      "data": {
+        "registrationState": "Registered",
+        "namespace": "Microsoft.Search"
+      },
+      "timestamp": "2026-09-24T22:25:08.9506007Z"
+    },
+    {
+      "id": "rp-microsoft-web",
+      "name": "resource provider Microsoft.Web",
+      "status": "Pass",
+      "detail": "registrationState=Registered",
+      "remediation": "Confirm the deploying identity has Microsoft.Resources/subscriptions/providers/register/action, then retry. If Microsoft.Web remains Registering beyond 900 seconds, escalate to Azure support.",
+      "fr": "FR2.1",
+      "data": {
+        "registrationState": "Registered",
+        "namespace": "Microsoft.Web"
+      },
+      "timestamp": "2026-09-24T22:25:14.9137684Z"
+    },
+    {
+      "id": "rp-microsoft-app",
+      "name": "resource provider Microsoft.App",
+      "status": "Pass",
+      "detail": "registrationState=Registered",
+      "remediation": "Confirm the deploying identity has Microsoft.Resources/subscriptions/providers/register/action, then retry. If Microsoft.App remains Registering beyond 900 seconds, escalate to Azure support.",
+      "fr": "FR2.1",
+      "data": {
+        "registrationState": "Registered",
+        "namespace": "Microsoft.App"
+      },
+      "timestamp": "2026-09-24T22:25:19.8573545Z"
+    },
+    {
+      "id": "rp-microsoft-insights",
+      "name": "resource provider Microsoft.Insights",
+      "status": "Pass",
+      "detail": "registrationState=Registered",
+      "remediation": "Confirm the deploying identity has Microsoft.Resources/subscriptions/providers/register/action, then retry. If Microsoft.Insights remains Registering beyond 900 seconds, escalate to Azure support.",
+      "fr": "FR2.1",
+      "data": {
+        "registrationState": "Registered",
+        "namespace": "Microsoft.Insights"
+      },
+      "timestamp": "2026-09-24T22:25:25.1829729Z"
+    },
+    {
+      "id": "rp-microsoft-operationalinsights",
+      "name": "resource provider Microsoft.OperationalInsights",
+      "status": "Pass",
+      "detail": "registrationState=Registered",
+      "remediation": "Confirm the deploying identity has Microsoft.Resources/subscriptions/providers/register/action, then retry. If Microsoft.OperationalInsights remains Registering beyond 900 seconds, escalate to Azure support.",
+      "fr": "FR2.1",
+      "data": {
+        "registrationState": "Registered",
+        "namespace": "Microsoft.OperationalInsights"
+      },
+      "timestamp": "2026-09-24T22:25:30.0648724Z"
+    },
+    {
+      "id": "rp-microsoft-sql",
+      "name": "resource provider Microsoft.Sql",
+      "status": "Pass",
+      "detail": "registrationState=Registered",
+      "remediation": "Confirm the deploying identity has Microsoft.Resources/subscriptions/providers/register/action, then retry. If Microsoft.Sql remains Registering beyond 900 seconds, escalate to Azure support.",
+      "fr": "FR2.1",
+      "data": {
+        "registrationState": "Registered",
+        "namespace": "Microsoft.Sql"
+      },
+      "timestamp": "2026-09-24T22:25:38.3618988Z"
+    },
+    {
+      "id": "rp-microsoft-bing",
+      "name": "resource provider Microsoft.Bing",
+      "status": "Pass",
+      "detail": "registrationState=Registered",
+      "remediation": "Confirm the deploying identity has Microsoft.Resources/subscriptions/providers/register/action, then retry. If Microsoft.Bing remains Registering beyond 900 seconds, escalate to Azure support.",
+      "fr": "FR2.1",
+      "data": {
+        "registrationState": "Registered",
+        "namespace": "Microsoft.Bing"
+      },
+      "timestamp": "2026-09-24T22:25:43.3354171Z"
+    },
+    {
+      "id": "rbac-gsk-sim-rg1-platform-administrator-35644e08-c894-4013-9b03-e7fa82689870",
+      "name": "Platform Administrator on gsk-sim-rg1",
+      "status": "Pass",
+      "detail": "Assigned to 35644e08-c894-4013-9b03-e7fa82689870.",
+      "remediation": "",
+      "fr": "FR2.1",
+      "data": {
+        "role": "Platform Administrator",
+        "state": "created",
+        "principal": "35644e08-c894-4013-9b03-e7fa82689870",
+        "scope": "/subscriptions/546ec9a3-31a2-4360-a459-7e628a08dcbb/resourceGroups/gsk-sim-rg1",
+        "roleDefinitionId": "7a2b6e6c-472e-4b39-8878-a26eb63d75c6"
+      },
+      "timestamp": "2026-09-24T22:25:57.1811453Z"
+    },
+    {
+      "id": "rbac-gsk-sim-rg1-platform-contributor-35644e08-c894-4013-9b03-e7fa82689870",
+      "name": "Platform Contributor on gsk-sim-rg1",
+      "status": "Pass",
+      "detail": "Assigned to 35644e08-c894-4013-9b03-e7fa82689870.",
+      "remediation": "",
+      "fr": "FR2.1",
+      "data": {
+        "role": "Platform Contributor",
+        "state": "created",
+        "principal": "35644e08-c894-4013-9b03-e7fa82689870",
+        "scope": "/subscriptions/546ec9a3-31a2-4360-a459-7e628a08dcbb/resourceGroups/gsk-sim-rg1",
+        "roleDefinitionId": "01288891-85ee-45a7-b367-9db3b752fc65"
+      },
+      "timestamp": "2026-09-24T22:26:05.3286244Z"
+    },
+    {
+      "id": "rbac-gsk-sim-rg1-platform-reader-35644e08-c894-4013-9b03-e7fa82689870",
+      "name": "Platform Reader on gsk-sim-rg1",
+      "status": "Pass",
+      "detail": "Assigned to 35644e08-c894-4013-9b03-e7fa82689870.",
+      "remediation": "",
+      "fr": "FR2.1",
+      "data": {
+        "role": "Platform Reader",
+        "state": "created",
+        "principal": "35644e08-c894-4013-9b03-e7fa82689870",
+        "scope": "/subscriptions/546ec9a3-31a2-4360-a459-7e628a08dcbb/resourceGroups/gsk-sim-rg1",
+        "roleDefinitionId": "3bb7c424-af4e-436b-bfcc-8779c8934c31"
+      },
+      "timestamp": "2026-09-24T22:26:14.4120985Z"
+    },
+    {
+      "id": "rbac-gsk-sim-rg1-bookshelf-index-data-reader-35644e08-c894-4013-9b03-e7fa82689870",
+      "name": "Bookshelf Index Data Reader on gsk-sim-rg1",
+      "status": "Pass",
+      "detail": "Assigned to 35644e08-c894-4013-9b03-e7fa82689870.",
+      "remediation": "",
+      "fr": "FR2.1",
+      "data": {
+        "role": "Bookshelf Index Data Reader",
+        "state": "created",
+        "principal": "35644e08-c894-4013-9b03-e7fa82689870",
+        "scope": "/subscriptions/546ec9a3-31a2-4360-a459-7e628a08dcbb/resourceGroups/gsk-sim-rg1",
+        "roleDefinitionId": "8ec773c5-7ce6-4b78-91d1-182f8faa536d"
+      },
+      "timestamp": "2026-09-24T22:26:21.9183776Z"
+    },
+    {
+      "id": "nsp-perimeter-joiner-role",
+      "name": "NSP Perimeter Joiner custom role and assignment",
+      "status": "Pass",
+      "detail": "role=Discovery NSP Perimeter Joiner state=exists; assignment=exists",
+      "remediation": "",
+      "fr": "FR2.1a",
+      "data": {
+        "actions": [
+          "Microsoft.Network/networkSecurityPerimeters/joinPerimeterRule/action",
+          "Microsoft.Network/locations/networkSecurityPerimeterOperationStatuses/read"
+        ],
+        "scope": "/subscriptions/546ec9a3-31a2-4360-a459-7e628a08dcbb",
+        "roleName": "Discovery NSP Perimeter Joiner",
+        "appId": "92c174ac-8e41-4815-a1b7-d81b19ab03ce",
+        "assigned": "exists",
+        "principalObjectId": "1ef0db83-ecd6-4944-8378-09bf099e77a0",
+        "roleDefinitionId": "436e1c8b-89bb-48a7-87f3-f479d29438c1"
+      },
+      "timestamp": "2026-09-24T22:26:37.0686806Z"
+    },
+    {
+      "id": "network-vnet",
+      "name": "VNet vnet-gsksim-poc-ws",
+      "status": "Pass",
+      "detail": "created; cidr=10.46.252.0/23",
+      "remediation": "",
+      "fr": "FR2.2",
+      "data": {
+        "resourceGroup": "gsk-sim-rg1",
+        "id": "/subscriptions/546ec9a3-31a2-4360-a459-7e628a08dcbb/resourceGroups/gsk-sim-rg1/providers/Microsoft.Network/virtualNetworks/vnet-gsksim-poc-ws",
+        "state": "created",
+        "cidr": "10.46.252.0/23",
+        "name": "vnet-gsksim-poc-ws"
+      },
+      "timestamp": "2026-09-24T22:27:05.4495742Z"
+    },
+    {
+      "id": "network-subnet-agent-containerapp",
+      "name": "subnet agent-containerapp",
+      "status": "Pass",
+      "detail": "subnet=snet-agent-containerapp cidr=10.46.252.0/26 delegation=Microsoft.App/environments nsg=nsg-agent-containerapp(created) routeTable=rt-agent-containerapp(created)",
+      "remediation": "If delegation cannot be set, ensure the subnet is empty or move workloads before patching.",
+      "fr": "FR2.2",
+      "data": {
+        "routeTableId": "/subscriptions/546ec9a3-31a2-4360-a459-7e628a08dcbb/resourceGroups/gsk-sim-rg1/providers/Microsoft.Network/routeTables/rt-agent-containerapp",
+        "role": "agent-containerapp",
+        "subnetId": "/subscriptions/546ec9a3-31a2-4360-a459-7e628a08dcbb/resourceGroups/gsk-sim-rg1/providers/Microsoft.Network/virtualNetworks/vnet-gsksim-poc-ws/subnets/snet-agent-containerapp",
+        "cidr": "10.46.252.0/26",
+        "nsgId": "/subscriptions/546ec9a3-31a2-4360-a459-7e628a08dcbb/resourceGroups/gsk-sim-rg1/providers/Microsoft.Network/networkSecurityGroups/nsg-agent-containerapp",
+        "delegation": "Microsoft.App/environments",
+        "subnetName": "snet-agent-containerapp"
+      },
+      "timestamp": "2026-09-24T22:27:46.8393567Z"
+    },
+    {
+      "id": "network-subnet-workspace-containerapp",
+      "name": "subnet workspace-containerapp",
+      "status": "Pass",
+      "detail": "subnet=snet-workspace-containerapp cidr=10.46.252.64/26 delegation=Microsoft.App/environments nsg=nsg-workspace-containerapp(created) routeTable=rt-workspace-containerapp(created)",
+      "remediation": "If delegation cannot be set, ensure the subnet is empty or move workloads before patching.",
+      "fr": "FR2.2",
+      "data": {
+        "routeTableId": "/subscriptions/546ec9a3-31a2-4360-a459-7e628a08dcbb/resourceGroups/gsk-sim-rg1/providers/Microsoft.Network/routeTables/rt-workspace-containerapp",
+        "role": "workspace-containerapp",
+        "subnetId": "/subscriptions/546ec9a3-31a2-4360-a459-7e628a08dcbb/resourceGroups/gsk-sim-rg1/providers/Microsoft.Network/virtualNetworks/vnet-gsksim-poc-ws/subnets/snet-workspace-containerapp",
+        "cidr": "10.46.252.64/26",
+        "nsgId": "/subscriptions/546ec9a3-31a2-4360-a459-7e628a08dcbb/resourceGroups/gsk-sim-rg1/providers/Microsoft.Network/networkSecurityGroups/nsg-workspace-containerapp",
+        "delegation": "Microsoft.App/environments",
+        "subnetName": "snet-workspace-containerapp"
+      },
+      "timestamp": "2026-09-24T22:28:27.5230320Z"
+    },
+    {
+      "id": "network-subnet-search-containerapp",
+      "name": "subnet search-containerapp",
+      "status": "Pass",
+      "detail": "subnet=snet-search-containerapp cidr=10.46.253.32/27 delegation=Microsoft.App/environments nsg=nsg-search-containerapp(created) routeTable=rt-search-containerapp(created)",
+      "remediation": "If delegation cannot be set, ensure the subnet is empty or move workloads before patching.",
+      "fr": "FR2.2",
+      "data": {
+        "routeTableId": "/subscriptions/546ec9a3-31a2-4360-a459-7e628a08dcbb/resourceGroups/gsk-sim-rg1/providers/Microsoft.Network/routeTables/rt-search-containerapp",
+        "role": "search-containerapp",
+        "subnetId": "/subscriptions/546ec9a3-31a2-4360-a459-7e628a08dcbb/resourceGroups/gsk-sim-rg1/providers/Microsoft.Network/virtualNetworks/vnet-gsksim-poc-ws/subnets/snet-search-containerapp",
+        "cidr": "10.46.253.32/27",
+        "nsgId": "/subscriptions/546ec9a3-31a2-4360-a459-7e628a08dcbb/resourceGroups/gsk-sim-rg1/providers/Microsoft.Network/networkSecurityGroups/nsg-search-containerapp",
+        "delegation": "Microsoft.App/environments",
+        "subnetName": "snet-search-containerapp"
+      },
+      "timestamp": "2026-09-24T22:29:08.0783501Z"
+    },
+    {
+      "id": "network-subnet-managedcluster",
+      "name": "subnet managedcluster",
+      "status": "Pass",
+      "detail": "subnet=snet-managedcluster cidr=10.46.253.128/26 delegation=Microsoft.ContainerService/managedClusters nsg=nsg-managedcluster(created) routeTable=rt-managedcluster(created)",
+      "remediation": "If delegation cannot be set, ensure the subnet is empty or move workloads before patching.",
+      "fr": "FR2.2",
+      "data": {
+        "routeTableId": "/subscriptions/546ec9a3-31a2-4360-a459-7e628a08dcbb/resourceGroups/gsk-sim-rg1/providers/Microsoft.Network/routeTables/rt-managedcluster",
+        "role": "managedcluster",
+        "subnetId": "/subscriptions/546ec9a3-31a2-4360-a459-7e628a08dcbb/resourceGroups/gsk-sim-rg1/providers/Microsoft.Network/virtualNetworks/vnet-gsksim-poc-ws/subnets/snet-managedcluster",
+        "cidr": "10.46.253.128/26",
+        "nsgId": "/subscriptions/546ec9a3-31a2-4360-a459-7e628a08dcbb/resourceGroups/gsk-sim-rg1/providers/Microsoft.Network/networkSecurityGroups/nsg-managedcluster",
+        "delegation": "Microsoft.ContainerService/managedClusters",
+        "subnetName": "snet-managedcluster"
+      },
+      "timestamp": "2026-09-24T22:29:50.9064637Z"
+    },
+    {
+      "id": "network-subnet-nodepool",
+      "name": "subnet nodepool",
+      "status": "Pass",
+      "detail": "subnet=snet-nodepool cidr=10.46.252.128/26 delegation=none nsg=nsg-nodepool(created) routeTable=rt-nodepool(created)",
+      "remediation": "If delegation cannot be set, ensure the subnet is empty or move workloads before patching.",
+      "fr": "FR2.2",
+      "data": {
+        "routeTableId": "/subscriptions/546ec9a3-31a2-4360-a459-7e628a08dcbb/resourceGroups/gsk-sim-rg1/providers/Microsoft.Network/routeTables/rt-nodepool",
+        "role": "nodepool",
+        "subnetId": "/subscriptions/546ec9a3-31a2-4360-a459-7e628a08dcbb/resourceGroups/gsk-sim-rg1/providers/Microsoft.Network/virtualNetworks/vnet-gsksim-poc-ws/subnets/snet-nodepool",
+        "cidr": "10.46.252.128/26",
+        "nsgId": "/subscriptions/546ec9a3-31a2-4360-a459-7e628a08dcbb/resourceGroups/gsk-sim-rg1/providers/Microsoft.Network/networkSecurityGroups/nsg-nodepool",
+        "delegation": "none",
+        "subnetName": "snet-nodepool"
+      },
+      "timestamp": "2026-09-24T22:30:32.2669051Z"
+    },
+    {
+      "id": "network-subnet-private-endpoints",
+      "name": "subnet private-endpoints",
+      "status": "Pass",
+      "detail": "subnet=snet-private-endpoints cidr=10.46.253.0/27 delegation=none nsg=nsg-private-endpoints(created) routeTable=rt-private-endpoints(created)",
+      "remediation": "If delegation cannot be set, ensure the subnet is empty or move workloads before patching.",
+      "fr": "FR2.2",
+      "data": {
+        "routeTableId": "/subscriptions/546ec9a3-31a2-4360-a459-7e628a08dcbb/resourceGroups/gsk-sim-rg1/providers/Microsoft.Network/routeTables/rt-private-endpoints",
+        "role": "private-endpoints",
+        "subnetId": "/subscriptions/546ec9a3-31a2-4360-a459-7e628a08dcbb/resourceGroups/gsk-sim-rg1/providers/Microsoft.Network/virtualNetworks/vnet-gsksim-poc-ws/subnets/snet-private-endpoints",
+        "cidr": "10.46.253.0/27",
+        "nsgId": "/subscriptions/546ec9a3-31a2-4360-a459-7e628a08dcbb/resourceGroups/gsk-sim-rg1/providers/Microsoft.Network/networkSecurityGroups/nsg-private-endpoints",
+        "delegation": "none",
+        "subnetName": "snet-private-endpoints"
+      },
+      "timestamp": "2026-09-24T22:31:09.8367309Z"
+    },
+    {
+      "id": "network-subnet-spare",
+      "name": "subnet spare",
+      "status": "Pass",
+      "detail": "subnet=snet-spare cidr=10.46.253.64/27 delegation=none nsg=nsg-spare(created) routeTable=rt-spare(created)",
+      "remediation": "If delegation cannot be set, ensure the subnet is empty or move workloads before patching.",
+      "fr": "FR2.2",
+      "data": {
+        "routeTableId": "/subscriptions/546ec9a3-31a2-4360-a459-7e628a08dcbb/resourceGroups/gsk-sim-rg1/providers/Microsoft.Network/routeTables/rt-spare",
+        "role": "spare",
+        "subnetId": "/subscriptions/546ec9a3-31a2-4360-a459-7e628a08dcbb/resourceGroups/gsk-sim-rg1/providers/Microsoft.Network/virtualNetworks/vnet-gsksim-poc-ws/subnets/snet-spare",
+        "cidr": "10.46.253.64/27",
+        "nsgId": "/subscriptions/546ec9a3-31a2-4360-a459-7e628a08dcbb/resourceGroups/gsk-sim-rg1/providers/Microsoft.Network/networkSecurityGroups/nsg-spare",
+        "delegation": "none",
+        "subnetName": "snet-spare"
+      },
+      "timestamp": "2026-09-24T22:31:49.8517774Z"
+    },
+    {
+      "id": "nsg-rules-agent-containerapp-dns",
+      "name": "DNS egress rule for nsg-agent-containerapp",
+      "status": "Warn",
+      "detail": "config.network.corpDns is empty; skipped customer DNS-specific egress rule.",
+      "remediation": "Set config.network.corpDns to corporate resolver IPs and rerun.",
+      "fr": "FR2.3",
+      "data": null,
+      "timestamp": "2026-09-24T22:32:10.8534923Z"
+    },
+    {
+      "id": "nsg-rules-agent-containerapp",
+      "name": "NSG rules for agent-containerapp",
+      "status": "Pass",
+      "detail": "Applied required rules to nsg-agent-containerapp.",
+      "remediation": "",
+      "fr": "FR2.3",
+      "data": {
+        "actions": [
+          "created",
+          "created",
+          "created",
+          "created",
+          "created",
+          "created",
+          "created",
+          "created",
+          "created",
+          "created",
+          "created",
+          "created",
+          "created"
+        ],
+        "nsg": "nsg-agent-containerapp",
+        "subnet": "snet-agent-containerapp"
+      },
+      "timestamp": "2026-09-24T22:33:29.6845743Z"
+    },
+    {
+      "id": "nsg-rules-workspace-containerapp-dns",
+      "name": "DNS egress rule for nsg-workspace-containerapp",
+      "status": "Warn",
+      "detail": "config.network.corpDns is empty; skipped customer DNS-specific egress rule.",
+      "remediation": "Set config.network.corpDns to corporate resolver IPs and rerun.",
+      "fr": "FR2.3",
+      "data": null,
+      "timestamp": "2026-09-24T22:33:49.1622379Z"
+    },
+    {
+      "id": "nsg-rules-workspace-containerapp",
+      "name": "NSG rules for workspace-containerapp",
+      "status": "Pass",
+      "detail": "Applied required rules to nsg-workspace-containerapp.",
+      "remediation": "",
+      "fr": "FR2.3",
+      "data": {
+        "actions": [
+          "created",
+          "created",
+          "created",
+          "created",
+          "created",
+          "created",
+          "created",
+          "created",
+          "created",
+          "created",
+          "created",
+          "created",
+          "created"
+        ],
+        "nsg": "nsg-workspace-containerapp",
+        "subnet": "snet-workspace-containerapp"
+      },
+      "timestamp": "2026-09-24T22:35:12.1773021Z"
+    },
+    {
+      "id": "nsg-rules-search-containerapp-dns",
+      "name": "DNS egress rule for nsg-search-containerapp",
+      "status": "Warn",
+      "detail": "config.network.corpDns is empty; skipped customer DNS-specific egress rule.",
+      "remediation": "Set config.network.corpDns to corporate resolver IPs and rerun.",
+      "fr": "FR2.3",
+      "data": null,
+      "timestamp": "2026-09-24T22:35:29.0659454Z"
+    },
+    {
+      "id": "nsg-rules-search-containerapp",
+      "name": "NSG rules for search-containerapp",
+      "status": "Pass",
+      "detail": "Applied required rules to nsg-search-containerapp.",
+      "remediation": "",
+      "fr": "FR2.3",
+      "data": {
+        "actions": [
+          "created",
+          "created",
+          "created",
+          "created",
+          "created",
+          "created",
+          "created",
+          "created",
+          "created",
+          "created",
+          "created",
+          "created",
+          "created"
+        ],
+        "nsg": "nsg-search-containerapp",
+        "subnet": "snet-search-containerapp"
+      },
+      "timestamp": "2026-09-24T22:36:47.1604389Z"
+    },
+    {
+      "id": "nsg-rules-managedcluster-dns",
+      "name": "DNS egress rule for nsg-managedcluster",
+      "status": "Warn",
+      "detail": "config.network.corpDns is empty; skipped customer DNS-specific egress rule.",
+      "remediation": "Set config.network.corpDns to corporate resolver IPs and rerun.",
+      "fr": "FR2.3",
+      "data": null,
+      "timestamp": "2026-09-24T22:37:04.4321689Z"
+    },
+    {
+      "id": "nsg-rules-managedcluster",
+      "name": "NSG rules for managedcluster",
+      "status": "Pass",
+      "detail": "Applied required rules to nsg-managedcluster.",
+      "remediation": "",
+      "fr": "FR2.3",
+      "data": {
+        "actions": [
+          "created",
+          "created",
+          "created",
+          "created",
+          "created",
+          "created",
+          "created",
+          "created",
+          "created",
+          "created",
+          "created",
+          "created",
+          "created"
+        ],
+        "nsg": "nsg-managedcluster",
+        "subnet": "snet-managedcluster"
+      },
+      "timestamp": "2026-09-24T22:38:21.7500231Z"
+    },
+    {
+      "id": "nsg-rules-nodepool-dns",
+      "name": "DNS egress rule for nsg-nodepool",
+      "status": "Warn",
+      "detail": "config.network.corpDns is empty; skipped customer DNS-specific egress rule.",
+      "remediation": "Set config.network.corpDns to corporate resolver IPs and rerun.",
+      "fr": "FR2.3",
+      "data": null,
+      "timestamp": "2026-09-24T22:38:40.4050445Z"
+    },
+    {
+      "id": "nsg-rules-nodepool",
+      "name": "NSG rules for nodepool",
+      "status": "Pass",
+      "detail": "Applied required rules to nsg-nodepool.",
+      "remediation": "",
+      "fr": "FR2.3",
+      "data": {
+        "actions": [
+          "created",
+          "created",
+          "created",
+          "created",
+          "created",
+          "created",
+          "created",
+          "created",
+          "created",
+          "created",
+          "created",
+          "created",
+          "created"
+        ],
+        "nsg": "nsg-nodepool",
+        "subnet": "snet-nodepool"
+      },
+      "timestamp": "2026-09-24T22:40:02.9677242Z"
+    },
+    {
+      "id": "nsg-rules-private-endpoints-dns",
+      "name": "DNS egress rule for nsg-private-endpoints",
+      "status": "Warn",
+      "detail": "config.network.corpDns is empty; skipped customer DNS-specific egress rule.",
+      "remediation": "Set config.network.corpDns to corporate resolver IPs and rerun.",
+      "fr": "FR2.3",
+      "data": null,
+      "timestamp": "2026-09-24T22:40:21.8253475Z"
+    },
+    {
+      "id": "nsg-rules-private-endpoints",
+      "name": "NSG rules for private-endpoints",
+      "status": "Pass",
+      "detail": "Applied required rules to nsg-private-endpoints.",
+      "remediation": "",
+      "fr": "FR2.3",
+      "data": {
+        "actions": [
+          "created",
+          "created",
+          "created",
+          "created",
+          "created",
+          "created",
+          "created",
+          "created",
+          "created",
+          "created",
+          "created",
+          "created",
+          "created"
+        ],
+        "nsg": "nsg-private-endpoints",
+        "subnet": "snet-private-endpoints"
+      },
+      "timestamp": "2026-09-24T22:41:47.1895469Z"
+    },
+    {
+      "id": "nsg-rules-spare-dns",
+      "name": "DNS egress rule for nsg-spare",
+      "status": "Warn",
+      "detail": "config.network.corpDns is empty; skipped customer DNS-specific egress rule.",
+      "remediation": "Set config.network.corpDns to corporate resolver IPs and rerun.",
+      "fr": "FR2.3",
+      "data": null,
+      "timestamp": "2026-09-24T22:42:04.3359886Z"
+    },
+    {
+      "id": "nsg-rules-spare",
+      "name": "NSG rules for spare",
+      "status": "Pass",
+      "detail": "Applied required rules to nsg-spare.",
+      "remediation": "",
+      "fr": "FR2.3",
+      "data": {
+        "actions": [
+          "created",
+          "created",
+          "created",
+          "created",
+          "created",
+          "created",
+          "created",
+          "created",
+          "created",
+          "created",
+          "created",
+          "created",
+          "created"
+        ],
+        "nsg": "nsg-spare",
+        "subnet": "snet-spare"
+      },
+      "timestamp": "2026-09-24T22:43:26.7038409Z"
+    },
+    {
+      "id": "routes-agent-containerapp",
+      "name": "route table for agent-containerapp",
+      "status": "Pass",
+      "detail": "Recreated required routes on rt-agent-containerapp.",
+      "remediation": "",
+      "fr": "FR2.4",
+      "data": {
+        "routeTable": "rt-agent-containerapp",
+        "subnet": "snet-agent-containerapp",
+        "routes": [
+          {
+            "nextHop": "VirtualAppliance",
+            "prefix": "0.0.0.0/0",
+            "nextHopIpAddress": "10.100.0.4",
+            "name": "default-to-nva"
+          },
+          {
+            "nextHop": "VirtualAppliance",
+            "prefix": "10.0.0.0/8",
+            "nextHopIpAddress": "10.100.0.4",
+            "name": "rfc1918-10-to-nva"
+          }
+        ]
+      },
+      "timestamp": "2026-09-24T22:43:51.2885071Z"
+    },
+    {
+      "id": "routes-workspace-containerapp",
+      "name": "route table for workspace-containerapp",
+      "status": "Pass",
+      "detail": "Recreated required routes on rt-workspace-containerapp.",
+      "remediation": "",
+      "fr": "FR2.4",
+      "data": {
+        "routeTable": "rt-workspace-containerapp",
+        "subnet": "snet-workspace-containerapp",
+        "routes": [
+          {
+            "nextHop": "VirtualAppliance",
+            "prefix": "0.0.0.0/0",
+            "nextHopIpAddress": "10.100.0.4",
+            "name": "default-to-nva"
+          },
+          {
+            "nextHop": "VirtualAppliance",
+            "prefix": "10.0.0.0/8",
+            "nextHopIpAddress": "10.100.0.4",
+            "name": "rfc1918-10-to-nva"
+          }
+        ]
+      },
+      "timestamp": "2026-09-24T22:44:13.6340369Z"
+    },
+    {
+      "id": "routes-search-containerapp",
+      "name": "route table for search-containerapp",
+      "status": "Pass",
+      "detail": "Recreated required routes on rt-search-containerapp.",
+      "remediation": "",
+      "fr": "FR2.4",
+      "data": {
+        "routeTable": "rt-search-containerapp",
+        "subnet": "snet-search-containerapp",
+        "routes": [
+          {
+            "nextHop": "VirtualAppliance",
+            "prefix": "0.0.0.0/0",
+            "nextHopIpAddress": "10.100.0.4",
+            "name": "default-to-nva"
+          },
+          {
+            "nextHop": "VirtualAppliance",
+            "prefix": "10.0.0.0/8",
+            "nextHopIpAddress": "10.100.0.4",
+            "name": "rfc1918-10-to-nva"
+          }
+        ]
+      },
+      "timestamp": "2026-09-24T22:44:35.5826210Z"
+    },
+    {
+      "id": "routes-managedcluster",
+      "name": "route table for managedcluster",
+      "status": "Pass",
+      "detail": "Recreated required routes on rt-managedcluster.",
+      "remediation": "",
+      "fr": "FR2.4",
+      "data": {
+        "routeTable": "rt-managedcluster",
+        "subnet": "snet-managedcluster",
+        "routes": [
+          {
+            "nextHop": "VirtualAppliance",
+            "prefix": "0.0.0.0/0",
+            "nextHopIpAddress": "10.100.0.4",
+            "name": "default-to-nva"
+          },
+          {
+            "nextHop": "VirtualAppliance",
+            "prefix": "10.0.0.0/8",
+            "nextHopIpAddress": "10.100.0.4",
+            "name": "rfc1918-10-to-nva"
+          },
+          {
+            "nextHop": "VnetLocal",
+            "prefix": "10.46.253.128/26",
+            "name": "managedcluster-vnetlocal"
+          }
+        ]
+      },
+      "timestamp": "2026-09-24T22:45:00.1564926Z"
+    },
+    {
+      "id": "routes-nodepool",
+      "name": "route table for nodepool",
+      "status": "Pass",
+      "detail": "Recreated required routes on rt-nodepool.",
+      "remediation": "",
+      "fr": "FR2.4",
+      "data": {
+        "routeTable": "rt-nodepool",
+        "subnet": "snet-nodepool",
+        "routes": [
+          {
+            "nextHop": "VirtualAppliance",
+            "prefix": "0.0.0.0/0",
+            "nextHopIpAddress": "10.100.0.4",
+            "name": "default-to-nva"
+          },
+          {
+            "nextHop": "VirtualAppliance",
+            "prefix": "10.0.0.0/8",
+            "nextHopIpAddress": "10.100.0.4",
+            "name": "rfc1918-10-to-nva"
+          }
+        ]
+      },
+      "timestamp": "2026-09-24T22:45:17.6998128Z"
+    },
+    {
+      "id": "routes-private-endpoints",
+      "name": "route table for private-endpoints",
+      "status": "Pass",
+      "detail": "Recreated required routes on rt-private-endpoints.",
+      "remediation": "",
+      "fr": "FR2.4",
+      "data": {
+        "routeTable": "rt-private-endpoints",
+        "subnet": "snet-private-endpoints",
+        "routes": [
+          {
+            "nextHop": "VirtualAppliance",
+            "prefix": "0.0.0.0/0",
+            "nextHopIpAddress": "10.100.0.4",
+            "name": "default-to-nva"
+          },
+          {
+            "nextHop": "VirtualAppliance",
+            "prefix": "10.0.0.0/8",
+            "nextHopIpAddress": "10.100.0.4",
+            "name": "rfc1918-10-to-nva"
+          }
+        ]
+      },
+      "timestamp": "2026-09-24T22:45:36.9420058Z"
+    },
+    {
+      "id": "routes-spare",
+      "name": "route table for spare",
+      "status": "Pass",
+      "detail": "Recreated required routes on rt-spare.",
+      "remediation": "",
+      "fr": "FR2.4",
+      "data": {
+        "routeTable": "rt-spare",
+        "subnet": "snet-spare",
+        "routes": [
+          {
+            "nextHop": "VirtualAppliance",
+            "prefix": "0.0.0.0/0",
+            "nextHopIpAddress": "10.100.0.4",
+            "name": "default-to-nva"
+          },
+          {
+            "nextHop": "VirtualAppliance",
+            "prefix": "10.0.0.0/8",
+            "nextHopIpAddress": "10.100.0.4",
+            "name": "rfc1918-10-to-nva"
+          }
+        ]
+      },
+      "timestamp": "2026-09-24T22:45:57.2094708Z"
+    },
+    {
+      "id": "private-dns-privatelink-blob-core-windows-net",
+      "name": "private DNS privatelink.blob.core.windows.net",
+      "status": "Pass",
+      "detail": "zone=created link=created vnet=vnet-gsksim-poc-ws",
+      "remediation": "",
+      "fr": "FR2.5",
+      "data": {
+        "zoneState": "created",
+        "linkName": "link-blob-core-windows-net",
+        "zone": "privatelink.blob.core.windows.net",
+        "vnetId": "/subscriptions/546ec9a3-31a2-4360-a459-7e628a08dcbb/resourceGroups/gsk-sim-rg1/providers/Microsoft.Network/virtualNetworks/vnet-gsksim-poc-ws",
+        "linkState": "created"
+      },
+      "timestamp": "2026-09-24T22:47:22.7872871Z"
+    },
+    {
+      "id": "private-dns-privatelink-queue-core-windows-net",
+      "name": "private DNS privatelink.queue.core.windows.net",
+      "status": "Pass",
+      "detail": "zone=created link=created vnet=vnet-gsksim-poc-ws",
+      "remediation": "",
+      "fr": "FR2.5",
+      "data": {
+        "zoneState": "created",
+        "linkName": "link-queue-core-windows-net",
+        "zone": "privatelink.queue.core.windows.net",
+        "vnetId": "/subscriptions/546ec9a3-31a2-4360-a459-7e628a08dcbb/resourceGroups/gsk-sim-rg1/providers/Microsoft.Network/virtualNetworks/vnet-gsksim-poc-ws",
+        "linkState": "created"
+      },
+      "timestamp": "2026-09-24T22:48:41.1002560Z"
+    },
+    {
+      "id": "private-dns-privatelink-file-core-windows-net",
+      "name": "private DNS privatelink.file.core.windows.net",
+      "status": "Pass",
+      "detail": "zone=created link=created vnet=vnet-gsksim-poc-ws",
+      "remediation": "",
+      "fr": "FR2.5",
+      "data": {
+        "zoneState": "created",
+        "linkName": "link-file-core-windows-net",
+        "zone": "privatelink.file.core.windows.net",
+        "vnetId": "/subscriptions/546ec9a3-31a2-4360-a459-7e628a08dcbb/resourceGroups/gsk-sim-rg1/providers/Microsoft.Network/virtualNetworks/vnet-gsksim-poc-ws",
+        "linkState": "created"
+      },
+      "timestamp": "2026-09-24T22:49:59.7867074Z"
+    },
+    {
+      "id": "private-dns-privatelink-table-core-windows-net",
+      "name": "private DNS privatelink.table.core.windows.net",
+      "status": "Pass",
+      "detail": "zone=created link=created vnet=vnet-gsksim-poc-ws",
+      "remediation": "",
+      "fr": "FR2.5",
+      "data": {
+        "zoneState": "created",
+        "linkName": "link-table-core-windows-net",
+        "zone": "privatelink.table.core.windows.net",
+        "vnetId": "/subscriptions/546ec9a3-31a2-4360-a459-7e628a08dcbb/resourceGroups/gsk-sim-rg1/providers/Microsoft.Network/virtualNetworks/vnet-gsksim-poc-ws",
+        "linkState": "created"
+      },
+      "timestamp": "2026-09-24T22:51:17.4773731Z"
+    },
+    {
+      "id": "private-dns-privatelink-dfs-core-windows-net",
+      "name": "private DNS privatelink.dfs.core.windows.net",
+      "status": "Pass",
+      "detail": "zone=created link=created vnet=vnet-gsksim-poc-ws",
+      "remediation": "",
+      "fr": "FR2.5",
+      "data": {
+        "zoneState": "created",
+        "linkName": "link-dfs-core-windows-net",
+        "zone": "privatelink.dfs.core.windows.net",
+        "vnetId": "/subscriptions/546ec9a3-31a2-4360-a459-7e628a08dcbb/resourceGroups/gsk-sim-rg1/providers/Microsoft.Network/virtualNetworks/vnet-gsksim-poc-ws",
+        "linkState": "created"
+      },
+      "timestamp": "2026-09-24T22:52:34.3324698Z"
+    },
+    {
+      "id": "private-dns-privatelink-vaultcore-azure-net",
+      "name": "private DNS privatelink.vaultcore.azure.net",
+      "status": "Pass",
+      "detail": "zone=created link=created vnet=vnet-gsksim-poc-ws",
+      "remediation": "",
+      "fr": "FR2.5",
+      "data": {
+        "zoneState": "created",
+        "linkName": "link-vaultcore-azure-net",
+        "zone": "privatelink.vaultcore.azure.net",
+        "vnetId": "/subscriptions/546ec9a3-31a2-4360-a459-7e628a08dcbb/resourceGroups/gsk-sim-rg1/providers/Microsoft.Network/virtualNetworks/vnet-gsksim-poc-ws",
+        "linkState": "created"
+      },
+      "timestamp": "2026-09-24T22:53:52.1472647Z"
+    },
+    {
+      "id": "private-dns-privatelink-search-windows-net",
+      "name": "private DNS privatelink.search.windows.net",
+      "status": "Pass",
+      "detail": "zone=created link=created vnet=vnet-gsksim-poc-ws",
+      "remediation": "",
+      "fr": "FR2.5",
+      "data": {
+        "zoneState": "created",
+        "linkName": "link-search-windows-net",
+        "zone": "privatelink.search.windows.net",
+        "vnetId": "/subscriptions/546ec9a3-31a2-4360-a459-7e628a08dcbb/resourceGroups/gsk-sim-rg1/providers/Microsoft.Network/virtualNetworks/vnet-gsksim-poc-ws",
+        "linkState": "created"
+      },
+      "timestamp": "2026-09-24T22:55:09.1583406Z"
+    },
+    {
+      "id": "private-dns-privatelink-cognitiveservices-azure-com",
+      "name": "private DNS privatelink.cognitiveservices.azure.com",
+      "status": "Pass",
+      "detail": "zone=created link=created vnet=vnet-gsksim-poc-ws",
+      "remediation": "",
+      "fr": "FR2.5",
+      "data": {
+        "zoneState": "created",
+        "linkName": "link-cognitiveservices-azure-com",
+        "zone": "privatelink.cognitiveservices.azure.com",
+        "vnetId": "/subscriptions/546ec9a3-31a2-4360-a459-7e628a08dcbb/resourceGroups/gsk-sim-rg1/providers/Microsoft.Network/virtualNetworks/vnet-gsksim-poc-ws",
+        "linkState": "created"
+      },
+      "timestamp": "2026-09-24T22:56:25.9619414Z"
+    },
+    {
+      "id": "private-dns-privatelink-openai-azure-com",
+      "name": "private DNS privatelink.openai.azure.com",
+      "status": "Pass",
+      "detail": "zone=created link=created vnet=vnet-gsksim-poc-ws",
+      "remediation": "",
+      "fr": "FR2.5",
+      "data": {
+        "zoneState": "created",
+        "linkName": "link-openai-azure-com",
+        "zone": "privatelink.openai.azure.com",
+        "vnetId": "/subscriptions/546ec9a3-31a2-4360-a459-7e628a08dcbb/resourceGroups/gsk-sim-rg1/providers/Microsoft.Network/virtualNetworks/vnet-gsksim-poc-ws",
+        "linkState": "created"
+      },
+      "timestamp": "2026-09-24T22:57:44.3183213Z"
+    },
+    {
+      "id": "private-dns-privatelink-services-ai-azure-com",
+      "name": "private DNS privatelink.services.ai.azure.com",
+      "status": "Pass",
+      "detail": "zone=created link=created vnet=vnet-gsksim-poc-ws",
+      "remediation": "",
+      "fr": "FR2.5",
+      "data": {
+        "zoneState": "created",
+        "linkName": "link-services-ai-azure-com",
+        "zone": "privatelink.services.ai.azure.com",
+        "vnetId": "/subscriptions/546ec9a3-31a2-4360-a459-7e628a08dcbb/resourceGroups/gsk-sim-rg1/providers/Microsoft.Network/virtualNetworks/vnet-gsksim-poc-ws",
+        "linkState": "created"
+      },
+      "timestamp": "2026-09-24T22:59:02.1686728Z"
+    },
+    {
+      "id": "private-dns-privatelink-documents-azure-com",
+      "name": "private DNS privatelink.documents.azure.com",
+      "status": "Pass",
+      "detail": "zone=created link=created vnet=vnet-gsksim-poc-ws",
+      "remediation": "",
+      "fr": "FR2.5",
+      "data": {
+        "zoneState": "created",
+        "linkName": "link-documents-azure-com",
+        "zone": "privatelink.documents.azure.com",
+        "vnetId": "/subscriptions/546ec9a3-31a2-4360-a459-7e628a08dcbb/resourceGroups/gsk-sim-rg1/providers/Microsoft.Network/virtualNetworks/vnet-gsksim-poc-ws",
+        "linkState": "created"
+      },
+      "timestamp": "2026-09-24T23:00:18.2887024Z"
+    },
+    {
+      "id": "private-dns-privatelink-azurecr-io",
+      "name": "private DNS privatelink.azurecr.io",
+      "status": "Pass",
+      "detail": "zone=created link=created vnet=vnet-gsksim-poc-ws",
+      "remediation": "",
+      "fr": "FR2.5",
+      "data": {
+        "zoneState": "created",
+        "linkName": "link-azurecr-io",
+        "zone": "privatelink.azurecr.io",
+        "vnetId": "/subscriptions/546ec9a3-31a2-4360-a459-7e628a08dcbb/resourceGroups/gsk-sim-rg1/providers/Microsoft.Network/virtualNetworks/vnet-gsksim-poc-ws",
+        "linkState": "created"
+      },
+      "timestamp": "2026-09-24T23:01:34.4493568Z"
+    },
+    {
+      "id": "byo-storage-model",
+      "name": "BYO storage model",
+      "status": "Skip",
+      "detail": "storage.model=managed; no BYO storage requested.",
+      "remediation": "",
+      "fr": "FR2.6",
+      "data": null,
+      "timestamp": "2026-09-24T23:01:34.4539158Z"
+    },
+    {
+      "id": "firewall-request-artifact",
+      "name": "firewall request artifact",
+      "status": "Pass",
+      "detail": "Wrote C:\\code\\misc-doc\\discovery-doc\\onboarding\\scripts\\stage2-landing-zone\\out\\firewall-request-gsksim-poc-ws.md and C:\\code\\misc-doc\\discovery-doc\\onboarding\\scripts\\stage2-landing-zone\\out\\firewall-request-gsksim-poc-ws.json using source CIDR 10.46.252.0/23.",
+      "remediation": "",
+      "fr": "FR2.7",
+      "data": {
+        "sourceCidr": "10.46.252.0/23",
+        "markdownPath": "C:\\code\\misc-doc\\discovery-doc\\onboarding\\scripts\\stage2-landing-zone\\out\\firewall-request-gsksim-poc-ws.md",
+        "jsonPath": "C:\\code\\misc-doc\\discovery-doc\\onboarding\\scripts\\stage2-landing-zone\\out\\firewall-request-gsksim-poc-ws.json"
+      },
+      "timestamp": "2026-09-24T23:01:34.5673685Z"
+    },
+    {
+      "id": "quota-request-artifact",
+      "name": "quota increase request artifact",
+      "status": "Pass",
+      "detail": "Wrote C:\\code\\misc-doc\\discovery-doc\\onboarding\\scripts\\stage2-landing-zone\\out\\quota-increase-requests-gsksim-poc-ws.json and C:\\code\\misc-doc\\discovery-doc\\onboarding\\scripts\\stage2-landing-zone\\out\\quota-increase-requests-gsksim-poc-ws.md.",
+      "remediation": "",
+      "fr": "FR2.8",
+      "data": {
+        "markdownPath": "C:\\code\\misc-doc\\discovery-doc\\onboarding\\scripts\\stage2-landing-zone\\out\\quota-increase-requests-gsksim-poc-ws.md",
+        "jsonPath": "C:\\code\\misc-doc\\discovery-doc\\onboarding\\scripts\\stage2-landing-zone\\out\\quota-increase-requests-gsksim-poc-ws.json",
+        "requestCount": 3
+      },
+      "timestamp": "2026-09-24T23:01:34.5968028Z"
+    },
+    {
+      "id": "policy-exemption-artifact",
+      "name": "policy exemption request artifact",
+      "status": "Pass",
+      "detail": "Wrote C:\\code\\misc-doc\\discovery-doc\\onboarding\\scripts\\stage2-landing-zone\\out\\policy-exemption-requests-gsksim-poc-ws.json and C:\\code\\misc-doc\\discovery-doc\\onboarding\\scripts\\stage2-landing-zone\\out\\policy-exemption-requests-gsksim-poc-ws.md.",
+      "remediation": "",
+      "fr": "FR2.8",
+      "data": {
+        "markdownPath": "C:\\code\\misc-doc\\discovery-doc\\onboarding\\scripts\\stage2-landing-zone\\out\\policy-exemption-requests-gsksim-poc-ws.md",
+        "jsonPath": "C:\\code\\misc-doc\\discovery-doc\\onboarding\\scripts\\stage2-landing-zone\\out\\policy-exemption-requests-gsksim-poc-ws.json",
+        "requestCount": 3
+      },
+      "timestamp": "2026-09-24T23:01:34.6188644Z"
+    }
+  ]
+}
