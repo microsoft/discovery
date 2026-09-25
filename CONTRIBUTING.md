@@ -27,7 +27,7 @@ The remainder of this file is about **contributing** to the catalog (agents and 
 
 ## Where contributions go
 
-Code contributions to the Microsoft Discovery app itself — its plugin, MCP tool, and use-case surfaces — are not handled in this repository (the app's source code lives elsewhere). Conversations about those surfaces happen in **Discussions**. Public contributors may submit catalog content under `agents/` and `starter-kits/`, along with documentation fixes, by pull request. Trusted automation, repository configuration, schemas, generated output, and executable utilities must be authored by a maintainer with `write`, `maintain`, or `admin` permission; public contributors should propose those changes in **Discussions**. Every PR runs through an automated review that checks structure, schema conformance, documentation, and secrets; any failures are reported inline on the PR with a remediation hint.
+Code contributions to the Microsoft Discovery app itself — its plugin, MCP tool, and use-case surfaces — are not handled in this repository (the app's source code lives elsewhere). Conversations about those surfaces happen in **Discussions**. Public contributors may submit catalog content under `agents/` and `starter-kits/`, along with documentation fixes, by pull request. Changes to trusted automation, repository configuration, schemas, generated output, and executable utilities are security-sensitive and require maintainer/CODEOWNER review; public contributors should discuss substantial proposals in **Discussions** before opening a pull request. Every PR runs through an automated review that checks structure, schema conformance, documentation, and secrets; any failures are reported inline on the PR with a remediation hint.
 
 | Type of contribution | Where it goes | Best for |
 | --- | --- | --- |
@@ -83,7 +83,9 @@ representative runs are validated.
 
 #### For a starter kit (`starter-kits/<starter-kit-name>/`)
 
-The kit folder must contain **only** `kit.json`. Logos, screenshots, and any other assets must be referenced via HTTPS URLs — they cannot live inside the kit folder.
+The kit folder must contain `kit.json` and may also contain Markdown documentation
+and compliant local images. Catalog-card `logo` and `screenshots` fields must
+still reference HTTPS URLs.
 
 | File | Purpose | Schema |
 |------|---------|--------|
