@@ -23,6 +23,7 @@ _FROM_RE = re.compile(
 )
 _ARG_RE = re.compile(r"^\s*ARG\s+(?P<name>[A-Za-z_][A-Za-z0-9_]*)(?:=(?P<default>\S*))?", re.IGNORECASE)
 _VAR_RE = re.compile(r"\$\{?([A-Za-z_][A-Za-z0-9_]*)\}?")
+_ESCAPE_RE = re.compile(r"^\s*#\s*escape\s*=\s*([\\`])\s*$", re.IGNORECASE)
 _DIGEST_RE = re.compile(
     r"^[A-Za-z][A-Za-z0-9]*(?:[+._-][A-Za-z][A-Za-z0-9]*)*:"
     r"[A-Fa-f0-9]{32,}$"
@@ -145,20 +146,30 @@ def parse_image_ref(ref: str) -> ImageRef:
 
 
 def _logical_lines(text: str) -> list[tuple[int, str]]:
-    """Join backslash-continued physical lines into logical lines.
+    """Join continued physical lines into logical lines.
 
     Each result is ``(lineno, text)`` where ``lineno`` is the first physical
     line of the logical line, so a finding still points at the ``FROM`` keyword
     even when the reference is written across a continuation.
     """
+    lines = text.splitlines()
+    escape = "\\"
+    for line in lines:
+        match = _ESCAPE_RE.match(line)
+        if match:
+            escape = match.group(1)
+            break
+        if not line.lstrip().startswith("#"):
+            break
+
     logical: list[tuple[int, str]] = []
     buffer = ""
     start = 0
-    for lineno, line in enumerate(text.splitlines(), start=1):
+    for lineno, line in enumerate(lines, start=1):
         stripped = line.rstrip()
         if not buffer:
             start = lineno
-        if stripped.endswith("\\"):
+        if stripped.endswith(escape) and not _ESCAPE_RE.match(stripped):
             buffer += stripped[:-1] + " "
             continue
         buffer += stripped

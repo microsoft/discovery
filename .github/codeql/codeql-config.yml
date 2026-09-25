@@ -13,8 +13,6 @@ paths:
   - starter-kits
 
 paths-ignore:
-  # Worked examples are inputs to simulators, not code that runs.
-  - "agents/**/example-input-files/**"
   # Scratch directories are local deployer artifacts (POL-012).
   - "agents/tmp/**"
   - "starter-kits/tmp/**"

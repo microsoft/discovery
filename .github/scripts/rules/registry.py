@@ -409,4 +409,14 @@ def _invoke(rule: Rule, ctx: RuleContext) -> list[Finding]:
 
 
 def _stamp(rule: Rule, findings: list[Finding]) -> list[Finding]:
-    return [dataclasses.replace(f, severity=rule.severity) for f in findings]
+    return [
+        dataclasses.replace(
+            finding,
+            severity=(
+                Severity.WARNING
+                if finding.severity is Severity.WARNING
+                else rule.severity
+            ),
+        )
+        for finding in findings
+    ]

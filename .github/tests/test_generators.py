@@ -241,7 +241,7 @@ def test_baseline_cli_detects_added_and_removed_violations_and_reports(
     added_path.unlink()
     original.unlink()
     removed = run_script("generate_baseline.py", tmp_path, "--check")
-    assert removed.returncode == 0
+    assert removed.returncode == 1
     assert "baselined violation(s) have been fixed" in removed.stdout
 
 

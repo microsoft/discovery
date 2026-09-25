@@ -102,7 +102,7 @@ jobs:
         with:
           directory-to-scan: agents
           output-filename: devskim-agents.sarif
-          ignore-globs: "**/.git/**,**/example-input-files/**,agents/tmp/**"
+          ignore-globs: "**/.git/**,agents/tmp/**"
 
       - name: Scan starter-kits/
         uses: microsoft/DevSkim-Action@4b5047945a44163b94642a1cecc0d93a3f428cc6 # v1
@@ -197,7 +197,7 @@ jobs:
               -s "$dir" \
               -f markdown \
               -o "$out" \
-              -g "**/.git/**,**/example-input-files/**,**/tmp/**" \
+              -g "**/.git/**,**/tmp/**" \
               || echo "_Application Inspector exited non-zero for $dir._" >> "$out"
           }
           scan agents capabilities-agents.md

@@ -322,6 +322,7 @@ def main() -> int:
         if removed:
             print(f"{len(removed)} baselined violation(s) have been fixed — "
                   f"regenerate the baseline to lock in the improvement.")
+            return 1
         print(summarize(violations))
         return 0
 

@@ -10,7 +10,7 @@ from contact_network_validator import (
     is_unverifiable_error,
     validate_email_domain,
 )
-from rules.base import Finding, Rule, RuleContext, Scope
+from rules.base import Finding, Rule, RuleContext, Scope, Severity
 from source_locations import line_for_key_path
 
 POLICY_PATH = ".github/policy/contact-network.json"
@@ -78,6 +78,11 @@ def check(ctx: RuleContext) -> list[Finding]:
                 file=rel,
                 line=line,
                 message=message,
+                severity=(
+                    Severity.WARNING
+                    if is_unverifiable_error(error)
+                    else Severity.ERROR
+                ),
             ))
     return findings
 

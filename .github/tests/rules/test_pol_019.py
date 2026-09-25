@@ -5,6 +5,7 @@ from __future__ import annotations
 from conftest import files, run_rule, write
 
 from rules import pol_019
+from rules.base import Severity
 
 
 def test_invalid_agent_contact_domain_is_reported(repo, monkeypatch):
@@ -20,6 +21,25 @@ def test_invalid_agent_contact_domain_is_reported(repo, monkeypatch):
     assert files(result) == [rel]
     assert result.findings[0].line == 2
     assert "publisher.contact" in result.findings[0].message
+
+
+def test_transient_dns_failure_is_a_warning(repo, monkeypatch):
+    rel = write(
+        repo,
+        "agents/demo/metadata.yaml",
+        "publisher:\n  contact: owner@example.com\n",
+    )
+    monkeypatch.setattr(
+        pol_019,
+        "validate_email_domain",
+        lambda *_: "DNS lookup timed out",
+    )
+
+    result = run_rule(repo, pol_019.RULE, [rel])
+
+    assert result.blocking == []
+    assert result.warnings[0].severity is Severity.WARNING
+    assert "could not be verified" in result.warnings[0].message
 
 
 def test_same_email_domain_is_resolved_once(repo, monkeypatch):

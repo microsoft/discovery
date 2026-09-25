@@ -41,6 +41,16 @@ def test_multiline_from_is_joined():
     assert directives[0].image.tag == "24.04"
 
 
+def test_backtick_escape_directive_controls_line_continuation():
+    text = "# escape=`\nFROM `\n  ghcr.io/example/payload:1.0\n"
+    directives = parse_from_directives(text)
+    assert len(directives) == 1
+    assert directives[0].line == 2
+    assert directives[0].image is not None
+    assert directives[0].image.registry == "ghcr.io"
+    assert directives[0].image.repository == "payload"
+
+
 def test_multiline_from_with_platform_flag_is_joined():
     text = "FROM --platform=$BUILDPLATFORM \\\n  python:3.12-slim AS build\n"
     directives = parse_from_directives(text)

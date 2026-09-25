@@ -115,9 +115,18 @@ def test_codeql_configs_cover_expected_sources_and_queries():
 
         assert set(config["paths"]) == expected_paths
         assert all((REPO_ROOT / path).exists() for path in config["paths"])
+        assert not any(
+            "example-input-files" in pattern
+            for pattern in config.get("paths-ignore", [])
+        )
         suites = {query["uses"] for query in config["queries"]}
         assert suites <= {"security-and-quality", "security-extended"}
         assert suites
+
+
+def test_source_scanners_include_example_input_files():
+    workflow = CODE_SCAN_PATH.read_text(encoding="utf-8")
+    assert "**/example-input-files/**" not in workflow
 
 
 def test_all_codeql_actions_use_current_supported_major():
