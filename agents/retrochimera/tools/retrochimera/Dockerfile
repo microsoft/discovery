@@ -5,7 +5,7 @@
 
 # RetroChimera requires conda for PyTorch + PyG + rdchiral_cpp
 # Pinned to a specific mambaforge release for reproducibility (avoid :latest).
-FROM condaforge/mambaforge:24.3.0-0
+FROM condaforge/mambaforge:24.9.2-0
 
 ENV PYTHONUNBUFFERED=1
 ENV PYTHONDONTWRITEBYTECODE=1
