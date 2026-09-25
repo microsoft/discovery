@@ -213,6 +213,12 @@ def test_baseline_cli_detects_added_and_removed_violations_and_reports(
             baseline_entry(
                 "POL-008", "agents/demo/tools/example/original.txt"
             ),
+            # Linux libmagic also reaches the Unicode-safety rule for this
+            # synthetic ELF payload. Windows stops at the binary classifier,
+            # so the writer simply removes this unused entry there.
+            baseline_entry(
+                "POL-020", "agents/demo/tools/example/original.txt"
+            ),
         ],
     )
 
