@@ -21,12 +21,42 @@ _REGISTRY_REFRESH_BOT_AUTHORS = frozenset({
     "github-actions[bot]",
     "discovery-registry-bot[bot]",
 })
+_DEPENDABOT_AUTHOR = "dependabot[bot]"
+_DEPENDABOT_PROTECTED_PATHS = {
+    "dependabot/pip/dot-github/": frozenset({
+        ".github/requirements-ci.txt",
+    }),
+    "dependabot/nuget/dot-config/": frozenset({
+        ".config/dotnet-tools.json",
+    }),
+}
 
 
 def is_trusted_registry_refresh(author: str, head_ref: str) -> bool:
     return (
         head_ref.startswith("chore/registry-refresh")
         and author in _REGISTRY_REFRESH_BOT_AUTHORS
+    )
+
+
+def is_trusted_dependabot_update(path: str, author: str, head_ref: str) -> bool:
+    """Allow only configured Dependabot manifests on matching bot branches."""
+    if author != _DEPENDABOT_AUTHOR:
+        return False
+
+    normalized = path.replace("\\", "/")
+    for ref_prefix, allowed_paths in _DEPENDABOT_PROTECTED_PATHS.items():
+        if head_ref.startswith(ref_prefix):
+            return normalized in allowed_paths
+
+    if not head_ref.startswith("dependabot/github_actions/"):
+        return False
+
+    parts = normalized.split("/")
+    return (
+        len(parts) == 3
+        and parts[:2] == [".github", "workflows"]
+        and _suffix(parts[-1]) in {".yml", ".yaml"}
     )
 
 
@@ -81,6 +111,8 @@ def check_contributor_scope(
     actor = f"@{author}" if author else "The PR author"
     failures: list[Failure] = []
     for changed_file in changed_files:
+        if is_trusted_dependabot_update(changed_file, author, head_ref):
+            continue
         if not _is_public_contribution_path(changed_file):
             failures.append(Failure(
                 "POL-021",
