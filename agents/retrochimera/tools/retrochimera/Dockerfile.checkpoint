@@ -8,7 +8,7 @@
 # The checkpoint is ~4.2 GB zipped from Figshare.  This image only needs
 # base Python (no conda, no RDKit) since it just downloads and extracts.
 
-FROM python:3.9-slim
+FROM python:3.14-slim
 
 # Override CHECKPOINT_URL if the default Figshare file ID is stale.
 # NOTE: use ndownloader.figshare.com (302→S3), not figshare.com/ndownloader (WAF).
