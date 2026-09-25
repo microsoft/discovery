@@ -40,6 +40,7 @@ POL-009,Model weight safety,"Requires model weights to use Git LFS, remain withi
 POL-010,OS and editor artifact prohibition,Blocks hidden environment files and common OS or editor artifacts.,.github/scripts/catalog_validation/policy_checks.py
 POL-011,Generated registry integrity,Blocks hand edits to generated .auto-registry content except the trusted registry refresh bot flow.,.github/scripts/catalog_validation/policy_checks.py
 POL-012,Scratch artifact prohibition,Blocks deployer scratch content under agents/tmp and starter-kits/tmp.,.github/scripts/catalog_validation/policy_checks.py
+POL-021,Contributor path scope,Restricts public contributors to catalog content and documentation while protecting trusted automation schemas configuration and utilities.,.github/scripts/catalog_validation/contributor_scope.py; .github/workflows/pr-review.yml
 POL-014,Approved Docker base images,Requires Dockerfile base images to come from approved registries or publisher namespaces.,.github/scripts/rules/pol_014.py; .github/scripts/dockerfile_parser.py; .github/policy/base-images.yaml
 POL-015,Approved source file types,Requires contributed files to use an approved source extension filename or exempt directory.,.github/scripts/rules/pol_015.py; .github/policy/source-allowlist.yaml
 POL-016,Markdown image safety,Allows PNG JPEG GIF WebP and inert SVG images up to 1 MiB only when embedded by Markdown in the same catalog item.,.github/scripts/rules/pol_016.py; .github/scripts/image_inspector.py

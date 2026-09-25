@@ -26,6 +26,7 @@ jobs:
       has_agents: ${{ steps.changed.outputs.has_agents }}
       has_catalog: ${{ steps.changed.outputs.has_catalog }}
       has_docs_only: ${{ steps.changed.outputs.has_docs_only }}
+      author_permission: ${{ steps.author_permission.outputs.permission }}
     steps:
       # Do not check out attacker-controlled PR content in this privileged
       # pull_request_target workflow. The API supplies the authoritative list.
@@ -55,6 +56,40 @@ jobs:
               String(names.length > 0 && names.every(name => name.startsWith('docs/schemas/'))),
             );
             core.info(`Changed files (${names.length}):\n${names.join('\n')}`);
+
+      - name: Resolve PR author repository permission
+        id: author_permission
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const username = context.payload.pull_request.user.login;
+            const knownPermissions = new Set([
+              'admin', 'maintain', 'write', 'triage', 'read', 'none'
+            ]);
+            let permission = 'unknown';
+
+            try {
+              const response = await github.rest.repos.getCollaboratorPermissionLevel({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                username,
+              });
+              const reported = String(response.data.permission || '').toLowerCase();
+              permission = knownPermissions.has(reported) ? reported : 'unknown';
+            } catch (error) {
+              if (error.status === 404) {
+                permission = 'none';
+              } else {
+                core.warning(
+                  `Could not resolve repository permission for @${username}; ` +
+                  `applying public-contributor scope. ${error.message}`
+                );
+              }
+            }
+
+            core.info(`Repository permission for @${username}: ${permission}`);
+            core.setOutput('permission', permission);
 
   # ── Stages 2–4: Structural + Schema + Content/Policy + Documentation ───────
   validate:
@@ -138,6 +173,9 @@ jobs:
           # Exempt requires BOTH author and head ref to match.
           PR_AUTHOR: ${{ github.event.pull_request.user.login }}
           PR_HEAD_REF: ${{ github.event.pull_request.head.ref }}
+          # POL-021 treats an absent or failed lookup as public scope. Only
+          # admin/maintain/write can modify trusted repository paths.
+          PR_AUTHOR_PERMISSION: ${{ needs.classify.outputs.author_permission || 'unknown' }}
         run: |
           # Invoke validator from the trusted checkout (base SHA) against PR content.
           python trusted/.github/scripts/validate_pr.py \

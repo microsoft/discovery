@@ -9,6 +9,7 @@ import os
 import sys
 from pathlib import Path
 
+from catalog_validation.contributor_scope import check_contributor_scope
 from catalog_validation.documentation import check_documentation
 from catalog_validation.findings import Failure
 from catalog_validation.policy_checks import (
@@ -103,6 +104,7 @@ def main() -> None:
     result = run_validation(
         repo,
         changed_files,
+        author_permission=os.environ.get("PR_AUTHOR_PERMISSION"),
         author=os.environ.get("PR_AUTHOR", ""),
         head_ref=os.environ.get("PR_HEAD_REF", ""),
     )
