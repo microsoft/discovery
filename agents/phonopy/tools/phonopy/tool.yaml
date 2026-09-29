@@ -1,0 +1,45 @@
+name: phonopy
+description: "Phonon and lattice-dynamics analysis from force constants produced by DFT codes: band structures, DOS, and thermal properties."
+version: 1.0.0
+category: Materials Science
+license: BSD-3-Clause
+infra:
+  - name: worker
+    infra_type: container
+    image:
+      acr: "{name}.azurecr.io/phonopy:latest"
+    compute:
+      min_resources:
+        cpu: 1
+        ram: 4Gi
+        storage: 32Gi
+        gpu: 0
+      max_resources:
+        cpu: 4
+        ram: 8Gi
+        storage: 64Gi
+        gpu: 0
+      recommended_sku:
+        - Standard_D4s_v6
+      pool_type: static
+      pool_size: 1
+actions:
+  - name: compute_phonons
+    description: "Generate displacements and report supercell info from a crystal structure."
+    infra_node: worker
+    input_schema:
+      type: object
+      properties:
+        input_directory:
+          type: string
+          description: "Directory containing input files."
+        output_directory:
+          type: string
+          description: "Directory where results are written."
+        supercell:
+          type: string
+          description: "Supercell matrix, e.g. '2 2 2' (default '2 2 2')"
+      required:
+        - input_directory
+        - output_directory
+    command: "python3 /app/entrypoint.py --action compute_phonons --input {{input_directory}} --output {{output_directory}} {{#if supercell}}--supercell {{supercell}}{{/if}}"

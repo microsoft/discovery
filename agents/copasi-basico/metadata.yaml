@@ -1,0 +1,18 @@
+name: copasi-basico
+type: agent
+version: 1.0.0
+associated_tools:
+  - agents/copasi-basico/tools/copasi-basico
+publisher:
+  name: Microsoft
+  contact: discovery-catalog@microsoft.com
+  support_url: https://techcommunity.microsoft.com/category/azure/discussions/microsoft-discovery-discussions
+  party: 1p
+description: >
+  Simulation and analysis of biochemical reaction networks via COPASI through the basico Python interface: time-
+  courses, steady states, and parameter scans.
+tags:
+  - systems-biology
+  - biochemical-networks
+  - copasi
+  - basico

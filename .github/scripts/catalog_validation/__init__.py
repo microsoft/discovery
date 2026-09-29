@@ -1,0 +1,1 @@
+"""Shared validation components for Discovery catalog checks."""

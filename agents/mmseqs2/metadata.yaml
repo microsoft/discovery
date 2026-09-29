@@ -1,0 +1,18 @@
+name: mmseqs2
+type: agent
+version: 1.0.0
+associated_tools:
+  - agents/mmseqs2/tools/mmseqs2
+publisher:
+  name: Microsoft
+  contact: discovery-catalog@microsoft.com
+  support_url: https://techcommunity.microsoft.com/category/azure/discussions/microsoft-discovery-discussions
+  party: 1p
+description: >
+  Ultra-fast and sensitive sequence search and clustering for huge protein and nucleotide datasets, running
+  efficiently on CPU.
+tags:
+  - bioinformatics
+  - sequence-search
+  - clustering
+  - mmseqs2

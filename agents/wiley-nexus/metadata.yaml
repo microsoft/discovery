@@ -1,0 +1,21 @@
+name: wiley-nexus
+type: agent
+version: 1.0.0
+associated_tools: []
+publisher:
+  name: Wiley Applied Research Intelligence Team
+  contact: nexus@wiley.com
+  support_url: https://nexus.wiley.com/playground/docs/v1/getting-started/overview
+  party: 3p
+description: >
+  Answers scientific and technical questions from Wiley's peer-reviewed scholarly corpus via the
+  Wiley Nexus MCP server. Surveys published evidence from multiple angles, reads key publications in
+  full, and returns a citation-backed synthesis with IEEE references linked to Wiley Online Library,
+  then handles follow-ups in the same conversation. Includes an optional three-agent Discovery Engine
+  pipeline for per-paper full-text analysis. Requires a Wiley Nexus API key.
+tags:
+  - literature-review
+  - research
+  - full-text-analysis
+  - scholarly-publishing
+  - evidence-synthesis

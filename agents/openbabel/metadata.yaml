@@ -1,0 +1,18 @@
+name: openbabel
+type: agent
+version: 1.0.0
+associated_tools:
+  - agents/openbabel/tools/openbabel
+publisher:
+  name: Microsoft
+  contact: discovery-catalog@microsoft.com
+  support_url: https://techcommunity.microsoft.com/category/azure/discussions/microsoft-discovery-discussions
+  party: 1p
+description: >
+  Universal chemical toolbox for interconverting 100+ chemical file formats, generating 3D coordinates, and
+  computing molecular descriptors and fingerprints.
+tags:
+  - cheminformatics
+  - file-conversion
+  - descriptors
+  - openbabel

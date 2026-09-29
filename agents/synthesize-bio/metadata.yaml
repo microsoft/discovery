@@ -1,0 +1,22 @@
+name: synthesize-bio
+type: agent
+version: 1.0.0
+publisher:
+  name: Synthesize Bio
+  contact: support@synthesize.bio
+  support_url: https://www.synthesize.bio/
+  party: 3p
+description: >
+  Generate gene expression from a virtual human. Describe any experiment — "tumor
+  vs normal lung tissue" or "KRAS knockout vs control" — and Synthesize Bio generates
+  realistic human expression profiles using its Gene Expression Model (GEM). Supports
+  bulk and single-cell RNA-seq modalities.
+tags:
+  - life-sciences
+  - bioinformatics
+  - transcriptomics
+  - gene-expression
+  - rna-seq
+  - single-cell
+compliance:
+  soc2: true

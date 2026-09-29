@@ -6,10 +6,10 @@ This project uses **GitHub Discussions** for all community support. Please use t
 
 | You want to… | Post to |
 | --- | --- |
-| Ask a how-to or troubleshooting question | [Discussions → Q&A](https://github.com/microsoft/discovery/discussions/categories/q-a) |
-| Report a bug | [Discussions → Bugs](https://github.com/microsoft/discovery/discussions/categories/bugs) (the Bug template prompts you for version, repro steps, and logs) |
-| Propose a feature or improvement | [Discussions → Ideas](https://github.com/microsoft/discovery/discussions/categories/ideas) |
-| Show something you've built on Microsoft Discovery | [Discussions → Show and tell](https://github.com/microsoft/discovery/discussions/categories/show-and-tell) |
+| Ask a how-to or troubleshooting question | [Discussions → Q&A](https://techcommunity.microsoft.com/category/azure/discussions/microsoft-discovery-discussions) |
+| Report a bug | [Discussions → Bugs](https://techcommunity.microsoft.com/category/azure/discussions/microsoft-discovery-discussions) (the Bug template prompts you for version, repro steps, and logs) |
+| Propose a feature or improvement | [Discussions → Ideas](https://techcommunity.microsoft.com/category/azure/discussions/microsoft-discovery-discussions) |
+| Show something you've built on Microsoft Discovery | [Discussions → Show and tell](https://techcommunity.microsoft.com/category/azure/discussions/microsoft-discovery-discussions) |
 
 Before opening a new discussion, please search existing posts — the answer or a related thread may already be there.
 

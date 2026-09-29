@@ -84,4 +84,4 @@ Unlike the other utilities in this folder, this is a **Bash** script rather than
 
 ## Support and contributions
 
-For issues, improvements, or new utility proposals, open a [Discussion](https://github.com/microsoft/discovery/discussions) with the **services** surface tag, or submit a PR per [`CONTRIBUTING.md`](../CONTRIBUTING.md). Utility changes are CODEOWNERS-gated like the rest of the repo.
+For issues, improvements, or new utility proposals, open a [Discussion](https://techcommunity.microsoft.com/category/azure/discussions/microsoft-discovery-discussions) with the **services** surface tag, or submit a PR per [`CONTRIBUTING.md`](../CONTRIBUTING.md). Utility changes are CODEOWNERS-gated like the rest of the repo.

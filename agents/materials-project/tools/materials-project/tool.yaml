@@ -1,0 +1,48 @@
+name: materials-project
+description: "Query the Materials Project database for computed properties of inorganic materials via the mp-api client."
+version: 1.0.0
+category: Data Source
+license: Open data (API key required)
+infra:
+  - name: worker
+    infra_type: container
+    image:
+      acr: "{name}.azurecr.io/materials-project:latest"
+    compute:
+      min_resources:
+        cpu: 1
+        ram: 4Gi
+        storage: 32Gi
+        gpu: 0
+      max_resources:
+        cpu: 4
+        ram: 8Gi
+        storage: 64Gi
+        gpu: 0
+      recommended_sku:
+        - Standard_D4s_v6
+      pool_type: static
+      pool_size: 1
+actions:
+  - name: query_materials
+    description: "Query Materials Project by chemical formula and return key computed properties."
+    infra_node: worker
+    input_schema:
+      type: object
+      properties:
+        input_directory:
+          type: string
+          description: "Directory containing input files."
+        output_directory:
+          type: string
+          description: "Directory where results are written."
+        formula:
+          type: string
+          description: "Chemical formula or system, e.g. 'Fe2O3' or 'Li-Fe-O'"
+        api_key:
+          type: string
+          description: "Materials Project API key (or set MP_API_KEY)"
+      required:
+        - input_directory
+        - output_directory
+    command: "python3 /app/entrypoint.py --action query_materials --input {{input_directory}} --output {{output_directory}} {{#if formula}}--formula {{formula}}{{/if}} {{#if api_key}}--api_key {{api_key}}{{/if}}"

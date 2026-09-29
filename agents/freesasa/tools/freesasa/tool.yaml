@@ -1,0 +1,42 @@
+name: freesasa
+description: "Compute solvent-accessible surface area (SASA) of proteins with the Shrake-Rupley and Lee-Richards algorithms, per-atom and per-residue."
+version: 1.0.0
+category: Structural Biology
+license: MIT
+infra:
+  - name: worker
+    infra_type: container
+    image:
+      acr: "{name}.azurecr.io/freesasa:latest"
+    compute:
+      min_resources:
+        cpu: 1
+        ram: 4Gi
+        storage: 32Gi
+        gpu: 0
+      max_resources:
+        cpu: 4
+        ram: 8Gi
+        storage: 64Gi
+        gpu: 0
+      recommended_sku:
+        - Standard_D4s_v6
+      pool_type: static
+      pool_size: 1
+actions:
+  - name: compute_sasa
+    description: "Compute solvent-accessible surface area for each protein structure."
+    infra_node: worker
+    input_schema:
+      type: object
+      properties:
+        input_directory:
+          type: string
+          description: "Directory containing input files."
+        output_directory:
+          type: string
+          description: "Directory where results are written."
+      required:
+        - input_directory
+        - output_directory
+    command: "python3 /app/entrypoint.py --action compute_sasa --input {{input_directory}} --output {{output_directory}}"

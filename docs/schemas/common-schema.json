@@ -1,0 +1,62 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "common-schema.json",
+  "title": "Discovery Catalog Common Definitions",
+  "description": "Reusable scalar and path definitions shared by Discovery catalog schemas.",
+  "type": "object",
+  "additionalProperties": false,
+  "definitions": {
+    "agentPath": {
+      "type": "string",
+      "maxLength": 128,
+      "pattern": "^agents/[a-z0-9](?:[a-z0-9-]{0,110}[a-z0-9])?$"
+    },
+    "agentRole": {
+      "type": "string",
+      "enum": ["primary", "supporting"]
+    },
+    "agentType": {
+      "type": "string",
+      "const": "agent"
+    },
+    "azureRegion": {
+      "type": "string",
+      "enum": ["eastus", "uksouth", "swedencentral"]
+    },
+    "dateTime": {
+      "type": "string",
+      "format": "date-time",
+      "maxLength": 64
+    },
+    "emailAddress": {
+      "type": "string",
+      "format": "email",
+      "maxLength": 254,
+      "pattern": "^[A-Za-z0-9.!#$%&'*+/=?^_`{|}~-]{1,64}@[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?(?:\\.[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?)+$"
+    },
+    "httpsUrl": {
+      "type": "string",
+      "format": "uri",
+      "maxLength": 2048,
+      "pattern": "^https://[^\\s]+$"
+    },
+    "kebabCaseString": {
+      "type": "string",
+      "maxLength": 128,
+      "pattern": "^[a-z0-9](?:[a-z0-9-]{0,126}[a-z0-9])?$"
+    },
+    "lifecycle": {
+      "type": "string",
+      "enum": ["active", "archived"]
+    },
+    "party": {
+      "type": "string",
+      "enum": ["1p", "3p"]
+    },
+    "semanticVersion": {
+      "type": "string",
+      "maxLength": 32,
+      "pattern": "^(0|[1-9]\\d{0,9})\\.(0|[1-9]\\d{0,9})\\.(0|[1-9]\\d{0,9})$"
+    }
+  }
+}

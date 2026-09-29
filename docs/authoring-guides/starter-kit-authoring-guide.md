@@ -2,7 +2,7 @@
 
 > **Audience:** Anyone authoring a starter kit for the Discovery catalog. Starter kits bundle one or more existing catalog agents into a deployable, opinionated workflow that customers can launch from Discovery Studio.
 >
-> **Scope:** Defining and submitting a single starter kit via `kit.json`.
+> **Scope:** Defining and submitting a starter kit via `kit.json`, with optional Markdown documentation and modest documentation images.
 
 For agent authoring, see [`agent-authoring-guide.md`](./agent-authoring-guide.md).
 
@@ -10,7 +10,7 @@ For agent authoring, see [`agent-authoring-guide.md`](./agent-authoring-guide.md
 
 ## 1. Overview
 
-A starter kit references one or more **agents that already exist in this catalog** and presents them as a single launchable experience in Discovery Studio. The kit itself contains only metadata — the agents it references must be authored separately.
+A starter kit references one or more **agents that already exist in this catalog** and presents them as a single launchable experience in Discovery Studio. The kit contains metadata and may include supporting Markdown documentation — the agents it references must be authored separately.
 
 Every kit lives under `starter-kits/<kit-name>/` and is described by a single `kit.json` file that conforms to [`docs/schemas/starter-kit-schema.json`](../schemas/starter-kit-schema.json).
 
@@ -21,10 +21,20 @@ Every kit lives under `starter-kits/<kit-name>/` and is described by a single `k
 ```text
 starter-kits/
 └── drug-discovery/
-    └── kit.json
+  ├── kit.json
+  ├── README.md                 # Optional
+  └── media/                    # Optional; Markdown images only
+    └── workflow.png
 ```
 
-The kit folder must contain **only `kit.json`**. Logos, screenshots, and any other assets must be referenced via HTTPS URLs — they cannot live inside the kit folder.
+Besides `kit.json`, the kit folder may contain Markdown and local PNG, JPEG,
+GIF, WebP, or inert SVG images. Each local image must be no larger than **1
+MiB** and embedded by Markdown in the same kit folder. This includes the
+Markdown in `kit.json`'s `longDescription`, for example
+`![Workflow](media/workflow.png)`. Unreferenced images are rejected.
+
+The structured `logo` and `screenshots` fields remain HTTPS URLs because they
+feed catalog-card metadata; local images are documentation assets only.
 
 The folder name must match `kit.json`'s `name` field.
 
@@ -45,7 +55,7 @@ The folder name must match `kit.json`'s `name` field.
 | `lifecycle` | `active` or `archived`. |
 | `agentRefs` | Agents that make up the kit (see §5). |
 
-Optional top-level fields include `$schema` (relative path to the schema for editor IntelliSense — recommended), `license` (SPDX identifier), `homepage`, `repository`, `featureFlag`, `logo` (HTTPS URL), `screenshots` (HTTPS URLs), `websiteURL`, `privacyPolicyURL`, `riskProfile`, and `party` (`1p` / `3p` — drives the contribution-source PR label).
+Optional top-level fields include `$schema` (relative path to the schema for editor IntelliSense — recommended), `license` (SPDX identifier), `homepage`, `repository`, `featureFlag`, `logo` (HTTPS URL), `screenshots` (HTTPS URLs), `websiteURL`, `privacyPolicyURL`, `riskProfile`, and `party` (`1p` / `3p` — drives the contribution-source PR label). Local documentation images belong in Markdown, not in `logo` or `screenshots`.
 
 Active kits must also include `samplePrompts`.
 
@@ -182,7 +192,7 @@ git fetch upstream && git merge upstream/main
 # 2. Create your kit folder
 git checkout -b add-drug-discovery-kit
 mkdir starter-kits/drug-discovery
-# … create kit.json — and ONLY kit.json — in this folder …
+# … create kit.json and optional Markdown documentation assets …
 
 # 3. Open the PR
 git add starter-kits/drug-discovery/kit.json
@@ -197,7 +207,7 @@ The automated PR review will validate:
 - Exactly one `agentRefs[]` entry has `role: primary` and `required: true`.
 - No duplicate refs.
 - For active kits, every `ref` resolves to an existing agent.
-- The kit folder contains only `kit.json`.
+- The kit folder contains only `kit.json`, Markdown, and compliant Markdown images.
 - For active kits, `samplePrompts` is non-empty.
 - Newly added kits have `lifecycle: active`.
 - Kit `name` is globally unique across the catalog.

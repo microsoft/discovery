@@ -29,7 +29,7 @@ class StorageMountProtocol(str, Enum):
     BLOBFUSE_CACHING = "BlobfuseCaching"
 
     @classmethod
-    def parse(cls, value: str) -> "StorageMountProtocol":
+    def parse(cls, value: str) -> StorageMountProtocol:
         """Case-insensitive parse to a member; raises ``ValueError`` on unknown."""
         if isinstance(value, cls):
             return value
@@ -60,8 +60,14 @@ class InlineFile(BaseModel):
 
 class DataMount(BaseModel):
     mount_path: str = Field(..., alias="mountPath", min_length=1)
-    uri: str | None = Field(None, description="discovery://dataassets URI (api <= 2025-12-01-preview)")
-    storage_uri: str | None = Field(None, alias="storageUri", description="discovery://storageassets URI (api >= 2026-02-01-preview)")
+    uri: str | None = Field(
+        None, description="discovery://dataassets URI (api <= 2025-12-01-preview)"
+    )
+    storage_uri: str | None = Field(
+        None,
+        alias="storageUri",
+        description="discovery://storageassets URI (api >= 2026-02-01-preview)",
+    )
     mount_protocol: StorageMountProtocol | None = Field(
         None,
         alias="mountProtocol",
@@ -113,13 +119,15 @@ class InfraOverridesFlat(BaseModel):
 
     Flat schema matching the server-side ``InfraOverrides`` contract in
     Microsoft.AiForScience.Supercomputer.Common.Models.Version20251201Preview and
-    Version20260201Preview. The server rejects unknown members, so the legacy nested
-    ``resources`` field must not be sent on these api versions.
+    later versions. The server rejects unknown members, so the legacy nested
+    ``resources`` field must not be sent on these api versions. ``shm`` is only
+    accepted by api-version 2026-06-01 and later.
     """
 
     cpu: str | None = None
     ram: str | None = None
     gpu: str | None = None
+    shm: str | None = None
     replica_count: int | None = Field(None, alias="replicaCount")
     image_uri: str | None = Field(None, alias="imageUri")
 
@@ -138,7 +146,9 @@ class ToolRunRequest(BaseModel):
     input_data: list[DataMount] = Field(default_factory=list, alias="inputData")
     output_data: list[DataMount] = Field(default_factory=list, alias="outputData")
     node_pool_ids: list[str] = Field(default_factory=list, alias="nodePoolIds")
-    infra_overrides: InfraOverrides | InfraOverridesFlat | None = Field(None, alias="infraOverrides")
+    infra_overrides: InfraOverrides | InfraOverridesFlat | None = Field(
+        None, alias="infraOverrides"
+    )
 
     model_config = ConfigDict(
         populate_by_name=True,
