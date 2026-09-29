@@ -32,7 +32,7 @@ SandboxAQ AI Simulation Platform MCP server  ({{AQ_MCP_SERVER_URL}})
         └── list_jobs / check_job_status / get_job_results
 ```
 
-The agent holds no compute of its own and ships no container. It is a prompt agent with a single Foundry-native MCP tool, scoped by `allowed_tools` to the AQPotency, upload, and job-management tools. All prediction happens on SandboxAQ infrastructure.
+The agent holds no compute of its own and ships no container. It is a prompt agent with a single Foundry-native MCP tool, scoped by `allowedTools` to the AQPotency, upload, and job-management tools. All prediction happens on SandboxAQ infrastructure.
 
 **Data flow.** Molecules enter as SMILES and targets as protein accessions. Library screens require the library to be uploaded to the platform first, so the agent completes the upload chain — obtain destination, upload, confirm, verify session — before submitting a screen, and stops if any step fails rather than screening a library that may be absent or truncated.
 

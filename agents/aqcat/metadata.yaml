@@ -13,8 +13,7 @@ description: >
   ranks adsorbate binding across candidate surfaces. Reached over the SandboxAQ
   AI Simulation Platform MCP endpoint.
 tags:
-  - catalysis
   - materials-science
-  - adsorption-energy
-  - surface-chemistry
-  - sandboxaq
+  - materials-discovery
+  - computational-chemistry
+  - chemistry

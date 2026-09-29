@@ -12,6 +12,4 @@ description: >
   Invokes SandboxAQ models subscribed through Azure AI Foundry for secure,
   structured inference workflows.
 tags:
-  - sandboxaq
-  - foundry
-  - model-inference
+  - language-model

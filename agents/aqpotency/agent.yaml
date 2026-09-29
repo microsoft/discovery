@@ -176,27 +176,34 @@ tools:
     description: >
       SandboxAQ AI Simulation Platform MCP server, scoped to the AQPotency
       prediction tools plus the shared upload and job-management tools.
+    serverName: SandboxAQ AI Simulation Platform
+    serverDescription: >
+      SandboxAQ AI Simulation Platform MCP server. Submits AQPotency jobs to
+      SandboxAQ infrastructure and returns job status and results.
+    # Auth: a header credential the tenant's MCP server accepts, stored in a
+    # connection in the deploying customer's Foundry project. Configure at
+    # deploy time; do not commit secrets.
     connection:
-      kind: reference
+      kind: remote
       name: '{{AQ_MCP_CONNECTION}}'
+      endpoint: '{{AQ_MCP_SERVER_URL}}'
+      authenticationMode: apiKey
       usageDescription: >
-        Reference to a connection in the deploying customer's Azure AI Foundry
-        project that holds the credential for the SandboxAQ AI Simulation
-        Platform MCP server. The credential is supplied by that connection at
-        deploy time and is never stored in this definition.
-    options:
-      server_label: aqpotency
-      server_url: '{{AQ_MCP_SERVER_URL}}'
-      allowed_tools:
-        - AqpotencyPotency
-        - AqpotencyScan
-        - AqpotencySelectivity
-        - AqpotencyScreen
-        - upload_files
-        - upload_local_files
-        - get_upload_url
-        - confirm_file_upload
-        - check_upload_session
-        - list_jobs
-        - check_job_status
-        - get_job_results
+        Credential for the SandboxAQ AI Simulation Platform MCP server,
+        supplied as a request header by the deploying customer's Foundry
+        connection. It is never stored in this definition.
+    approvalMode:
+      kind: never
+    allowedTools:
+      - AqpotencyPotency
+      - AqpotencyScan
+      - AqpotencySelectivity
+      - AqpotencyScreen
+      - upload_files
+      - upload_local_files
+      - get_upload_url
+      - confirm_file_upload
+      - check_upload_session
+      - list_jobs
+      - check_job_status
+      - get_job_results

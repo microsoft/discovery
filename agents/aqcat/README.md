@@ -30,7 +30,7 @@ SandboxAQ AI Simulation Platform MCP server  ({{AQ_MCP_SERVER_URL}})
         └── list_jobs / check_job_status / get_job_results
 ```
 
-The agent holds no compute of its own and ships no container. It is a prompt agent with a single Foundry-native MCP tool, scoped by `allowed_tools` to the AQCat and job-management tools on the platform's MCP server. All calculation happens on SandboxAQ infrastructure.
+The agent holds no compute of its own and ships no container. It is a prompt agent with a single Foundry-native MCP tool, scoped by `allowedTools` to the AQCat and job-management tools on the platform's MCP server. All calculation happens on SandboxAQ infrastructure.
 
 **Data flow.** The user's request goes in as natural language; the agent maps it to a tool call, receives a job identifier, polls until the job completes, and retrieves results. Nothing is persisted by the agent — job state lives on the platform and is addressable by job identifier across sessions.
 
