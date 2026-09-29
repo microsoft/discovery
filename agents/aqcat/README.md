@@ -102,7 +102,7 @@ The agent prefers `aqcat_compare` for comparative questions rather than assembli
 - **Asynchronous jobs may outlive a conversation.** Long relaxations will not complete within a single turn; the agent returns a job identifier for later retrieval.
 - **No offline mode.** Every calculation requires network access to the platform, and the agent has no local fallback.
 - **Interactive-OAuth tenants are not supported** without a header credential — see the authentication note under Prerequisites.
-- **The Claude `aqcat-adsorption-spin` skill does not transfer.** Discovery has no skill loader; the workflow it encodes is reproduced in this agent's `instructions` block and may diverge from the skill over time.
+- **The `aqcat-adsorption-spin` skill does not transfer.** Discovery has no skill loader; the workflow it encodes is reproduced in this agent's `instructions` block and may diverge from the skill over time.
 
 ## Support
 
