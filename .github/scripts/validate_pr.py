@@ -107,6 +107,7 @@ def main() -> None:
         author_permission=os.environ.get("PR_AUTHOR_PERMISSION"),
         author=os.environ.get("PR_AUTHOR", ""),
         head_ref=os.environ.get("PR_HEAD_REF", ""),
+        author_association=os.environ.get("PR_AUTHOR_ASSOCIATION", ""),
     )
     for warning in result.setup_warnings:
         print(f"WARNING: {warning}", file=sys.stderr)
