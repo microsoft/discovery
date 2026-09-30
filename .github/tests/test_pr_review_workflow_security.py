@@ -106,8 +106,8 @@ def test_manifest_auto_approval_is_narrow_and_check_gated():
     source = AUTO_MERGE_PATH.read_text(encoding="utf-8")
 
     assert "classify_fastlane.py" in source
-    assert "manifest_auto_approval" in source
-    assert "toolbox_one_approval" in source
+    assert "--eligible-for manifest" in source
+    assert "--eligible-for toolbox" in source
     assert "actions/create-github-app-token@" in source
     assert "permission-pull-requests: write" in source
     assert "APPROVAL_TOKEN" in source

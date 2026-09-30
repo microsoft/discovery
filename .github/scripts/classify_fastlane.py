@@ -4,7 +4,6 @@
 from __future__ import annotations
 
 import argparse
-import json
 import re
 from pathlib import Path
 from typing import Any
@@ -73,20 +72,26 @@ def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--files-json", required=True)
     parser.add_argument("--author-association", default="NONE")
-    parser.add_argument("--output", required=True)
+    parser.add_argument(
+        "--eligible-for",
+        choices=("manifest", "toolbox"),
+        required=True,
+    )
     args = parser.parse_args()
 
     with Path(args.files_json).open(encoding="utf-8") as stream:
+        import json
+
         files = json.load(stream)
     if not isinstance(files, list):
         raise SystemExit("Pull request files payload must be a JSON array.")
-    Path(args.output).write_text(
-        json.dumps(
-            classify(files, args.author_association),
-            separators=(",", ":"),
-        ),
-        encoding="utf-8",
+    classification = classify(files, args.author_association)
+    eligible = (
+        classification["manifest_auto_approval"]
+        if args.eligible_for == "manifest"
+        else classification["toolbox_one_approval"]
     )
+    raise SystemExit(0 if eligible else 1)
 
 
 if __name__ == "__main__":
