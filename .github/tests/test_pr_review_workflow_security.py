@@ -108,7 +108,10 @@ def test_manifest_auto_approval_is_narrow_and_check_gated():
     assert "classify_fastlane.py" in source
     assert "manifest_auto_approval" in source
     assert "toolbox_one_approval" in source
-    assert "can_approve_pull_request_reviews" in source
+    assert "actions/create-github-app-token@" in source
+    assert "permission-pull-requests: write" in source
+    assert "APPROVAL_TOKEN" in source
+    assert "GH_TOKEN=\"$APPROVAL_TOKEN\" gh api" in source
     assert "Microsoft WinGet manifest automation" in source
     assert 'if [ "$MANIFEST_FAST_LANE" = "true" ]' in source
     assert 'if [ "$CHECKS_PASSED" = "true" ]' in source

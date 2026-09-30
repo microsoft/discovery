@@ -6,7 +6,7 @@ name: Auto-merge on Approval
 #   2. up_to_date     — PR branch is not behind base (no "Update branch" needed).
 #   3. approved       — standard and VSIX release PRs require a non-bot approval.
 #                       A Microsoft-member, manifest-only PR may receive a trusted
-#                       github-actions approval after gates 1, 2, and 4 pass.
+#                       GitHub App approval after gates 1, 2, and 4 pass.
 #   4. images_reviewed — the `needs-image-review` label is absent. pr-review.yml
 #                       applies that label whenever a PR adds or modifies an image;
 #                       a maintainer clears it by hand after inspecting the files.
@@ -119,6 +119,31 @@ jobs:
           echo "manifest=$(echo "$CLASSIFICATION" | jq -r '.manifest_auto_approval')" >> "$GITHUB_OUTPUT"
           echo "toolbox=$(echo "$CLASSIFICATION" | jq -r '.toolbox_one_approval')" >> "$GITHUB_OUTPUT"
 
+      - name: Check for approval App secrets
+        if: steps.pr.outputs.skip != 'true' && steps.fastlane.outputs.manifest == 'true'
+        id: approval_app_check
+        env:
+          APPROVAL_APP_ID: ${{ secrets.REGISTRY_APP_ID }}
+          APPROVAL_APP_PRIVATE_KEY: ${{ secrets.REGISTRY_APP_PRIVATE_KEY }}
+        run: |
+          if [ -n "${APPROVAL_APP_ID:-}" ] && [ -n "${APPROVAL_APP_PRIVATE_KEY:-}" ]; then
+            echo "configured=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "configured=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      # The organization prohibits GITHUB_TOKEN from approving PRs. Reuse the
+      # installed discovery-registry-bot App, but mint a short-lived token
+      # restricted to this repository and Pull requests: Write.
+      - name: Generate approval App token
+        if: steps.approval_app_check.outputs.configured == 'true'
+        id: approval_app_token
+        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
+        with:
+          app-id: ${{ secrets.REGISTRY_APP_ID }}
+          private-key: ${{ secrets.REGISTRY_APP_PRIVATE_KEY }}
+          permission-pull-requests: write
+
       - name: Ensure managed labels exist
         if: steps.pr.outputs.skip != 'true'
         env:
@@ -147,6 +172,7 @@ jobs:
           PR_NUMBER: ${{ steps.pr.outputs.number }}
           MANIFEST_FAST_LANE: ${{ steps.fastlane.outputs.manifest }}
           TOOLBOX_FAST_LANE: ${{ steps.fastlane.outputs.toolbox }}
+          APPROVAL_TOKEN: ${{ steps.approval_app_token.outputs.token }}
         run: |
           set -euo pipefail
 
@@ -271,22 +297,19 @@ jobs:
           # an automated approval only after every required check reports
           # success. This follows Microsoft WinGet manifest automation:
           # https://learn.microsoft.com/windows/package-manager/package/repository
-          # The repository setting can_approve_pull_request_reviews must also
-          # be enabled; otherwise this fails closed and leaves the PR unapproved.
+          # A short-lived GitHub App token is required because organization
+          # policy prevents GITHUB_TOKEN from approving pull requests.
           if [ "$MANIFEST_FAST_LANE" = "true" ] && \
              [ "$CHECKS_PASSED" = "true" ] && \
              [ "$UP_TO_DATE" = "true" ] && \
              [ "$IMAGES_REVIEWED" = "true" ] && \
              [ "$REVIEW_DECISION" != "CHANGES_REQUESTED" ] && \
              [ "$AUTOMATED_APPROVALS" -eq 0 ]; then
-            APPROVAL_SETTING=$(gh api \
-              "/repos/$REPO/actions/permissions/workflow" \
-              --jq '.can_approve_pull_request_reviews' 2>/dev/null || echo false)
-            if [ "$APPROVAL_SETTING" = "true" ]; then
+            if [ -n "${APPROVAL_TOKEN:-}" ]; then
               printf -v APPROVAL_BODY '%s\n\n%s\n' \
                 "Automated approval for a Microsoft-member, manifest-only fast-lane PR." \
                 "The trusted base-branch validator confirmed the governed release-manifest schema and all required checks passed. Rationale: Microsoft WinGet uses automated validation and approval for manifest submissions, with exceptions routed to manual review: https://learn.microsoft.com/windows/package-manager/package/repository"
-              if gh api -X POST "/repos/$REPO/pulls/$PR_NUMBER/reviews" \
+              if GH_TOKEN="$APPROVAL_TOKEN" gh api -X POST "/repos/$REPO/pulls/$PR_NUMBER/reviews" \
                 -f event=APPROVE -f body="$APPROVAL_BODY" >/dev/null; then
                 echo "Submitted schema-gated automated manifest approval."
                 sleep 2
@@ -303,7 +326,7 @@ jobs:
                 echo "::warning::Could not submit automated manifest approval."
               fi
             else
-              echo "::warning::Actions approval is disabled; manifest fast lane fails closed."
+              echo "::warning::Approval App credentials are unavailable; manifest fast lane fails closed."
             fi
           fi
 
