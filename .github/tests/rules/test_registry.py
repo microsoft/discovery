@@ -30,7 +30,7 @@ from rules.registry import (
 RULES_DIR = Path(__file__).resolve().parents[2] / "scripts" / "rules"
 TESTS_DIR = Path(__file__).resolve().parent
 CATALOG_VALIDATION_DIR = RULES_DIR.parent / "catalog_validation"
-RULE_ID_RE = re.compile(r"^(?:CFG|STR|SCH|POL|DOC|TAG)-\d{3}$")
+RULE_ID_RE = re.compile(r"^(?:CFG|REL|STR|SCH|POL|DOC|TAG)-\d{3}$")
 
 
 def _iso(days_from_now: int) -> str:

@@ -3,7 +3,7 @@
   "isRoot": true,
   "tools": {
     "microsoft.cst.applicationinspector.cli": {
-      "version": "1.9.55",
+      "version": "1.10.2",
       "commands": [
         "appinspector"
       ],
