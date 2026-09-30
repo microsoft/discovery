@@ -1,0 +1,118 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "discovery-release-manifest-schema.json",
+  "title": "Microsoft Discovery Application Release Manifest",
+  "description": "Schema for ring-specific application release manifests under docs/discovery-app/releases/manifests/. These manifests are eligible for automated approval only when the trusted PR validator confirms this shape and all required checks pass.",
+  "type": "object",
+  "required": [
+    "ring",
+    "latestVersion",
+    "minimumVersion",
+    "schemaVersion",
+    "platforms",
+    "releaseNotesUrl",
+    "releaseNotesSummary",
+    "releasedAt"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "ring": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 32,
+      "pattern": "^[a-z][a-z0-9-]*$",
+      "description": "Release ring identifier. The validator also requires this to equal the manifest filename."
+    },
+    "latestVersion": {
+      "$ref": "#/definitions/semanticVersion"
+    },
+    "minimumVersion": {
+      "$ref": "#/definitions/semanticVersion"
+    },
+    "schemaVersion": {
+      "type": "integer",
+      "const": 1
+    },
+    "platforms": {
+      "type": "object",
+      "required": ["osx-arm64", "win-arm64", "win-x64"],
+      "additionalProperties": false,
+      "properties": {
+        "osx-arm64": {
+          "allOf": [
+            { "$ref": "#/definitions/platformRelease" },
+            {
+              "properties": {
+                "installerUrl": {
+                  "const": "https://aka.ms/discovery/download/osx/current"
+                }
+              }
+            }
+          ]
+        },
+        "win-arm64": {
+          "allOf": [
+            { "$ref": "#/definitions/platformRelease" },
+            {
+              "properties": {
+                "installerUrl": {
+                  "const": "https://aka.ms/discovery/download/arm64/current"
+                }
+              }
+            }
+          ]
+        },
+        "win-x64": {
+          "allOf": [
+            { "$ref": "#/definitions/platformRelease" },
+            {
+              "properties": {
+                "installerUrl": {
+                  "const": "https://aka.ms/discovery/download/current"
+                }
+              }
+            }
+          ]
+        }
+      }
+    },
+    "releaseNotesUrl": {
+      "type": "string",
+      "maxLength": 2048,
+      "pattern": "^(|https://[^\\s]+)$"
+    },
+    "releaseNotesSummary": {
+      "type": "string",
+      "maxLength": 4000
+    },
+    "releasedAt": {
+      "type": "string",
+      "maxLength": 40,
+      "format": "date-time"
+    }
+  },
+  "definitions": {
+    "semanticVersion": {
+      "type": "string",
+      "maxLength": 64,
+      "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+(?:-[0-9A-Za-z.-]+)?(?:\\+[0-9A-Za-z.-]+)?$"
+    },
+    "platformRelease": {
+      "type": "object",
+      "required": ["installerUrl", "sha256"],
+      "additionalProperties": false,
+      "properties": {
+        "installerUrl": {
+          "type": "string",
+          "pattern": "^https://[^\\s]+$",
+          "maxLength": 2048
+        },
+        "sha256": {
+          "type": "string",
+          "maxLength": 64,
+          "pattern": "^[0-9a-f]{64}$"
+        }
+      }
+    }
+  }
+}

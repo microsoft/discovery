@@ -77,6 +77,44 @@ def test_public_scope_rejects_noncanonical_or_escaping_paths(path: str) -> None:
     ]
 
 
+def test_microsoft_org_member_can_modify_ordinary_repository_content() -> None:
+    changed = [
+        "docs/discovery-app/releases/manifests/preview.json",
+        "utilities/discovery-toolbox/vsix/DiscoveryToolbox-v1.9.11.vsix",
+        "utilities/discovery-toolbox/vsix/latest.json",
+        "utilities/agent-evaluation/evaluators/pipeline.py",
+    ]
+
+    assert check_contributor_scope(
+        changed,
+        "read",
+        "employee",
+        author_association="MEMBER",
+    ) == []
+
+
+@pytest.mark.parametrize("association", ["MEMBER", "OWNER"])
+def test_microsoft_org_member_still_cannot_modify_control_plane(
+    association: str,
+) -> None:
+    changed = [
+        ".github/workflows/pr-review.yml",
+        "docs/schemas/metadata-schema.json",
+        ".auto-registry/agent-registry.json",
+        ".vscode/settings.json",
+        ".gitattributes",
+    ]
+
+    failures = check_contributor_scope(
+        changed,
+        "read",
+        "employee",
+        author_association=association,
+    )
+
+    assert [failure.file for failure in failures] == changed
+
+
 def test_absent_permission_disables_pr_only_check_for_local_validation() -> None:
     assert check_contributor_scope([".github/workflows/new.yml"], None) == []
 
@@ -90,6 +128,20 @@ def test_non_catalog_validation_enforces_contributor_scope(tmp_path) -> None:
     )
 
     assert [failure.rule_id for failure in result.blocking] == ["POL-021"]
+
+
+def test_non_catalog_validation_allows_microsoft_org_member_utility(
+    tmp_path,
+) -> None:
+    result = run_validation(
+        tmp_path,
+        ["utilities/example/tool.py"],
+        author_permission="read",
+        author="employee",
+        author_association="MEMBER",
+    )
+
+    assert result.blocking == []
 
 
 def test_public_contributor_cannot_add_executable_under_docs() -> None:
@@ -130,6 +182,21 @@ def test_trusted_registry_refresh_bot_can_update_generated_files() -> None:
             ".config/dotnet-tools.json",
             "dependabot/nuget/dot-config/nuget-minor-patch-123",
         ),
+        (
+            "agents/gwp-predictor/training/requirements.txt",
+            "dependabot/pip/agents/gwp-predictor/training/pip-123",
+        ),
+        (
+            "agents/zinc/tools/zinc/requirements.txt",
+            "dependabot/pip/agents/zinc/tools/zinc/pip-123",
+        ),
+        (
+            "utilities/supercomputer-cli/discovery/uv.lock",
+            (
+                "dependabot/uv/utilities/supercomputer-cli/discovery/"
+                "anyio-4.14.2"
+            ),
+        ),
     ],
 )
 def test_dependabot_can_update_configured_protected_manifests(
@@ -141,6 +208,21 @@ def test_dependabot_can_update_configured_protected_manifests(
         "none",
         "dependabot[bot]",
         head_ref,
+    )
+
+    assert failures == []
+
+
+def test_dependabot_grouped_update_can_span_configured_pip_directories() -> None:
+    failures = check_contributor_scope(
+        [
+            ".github/requirements-ci.txt",
+            "agents/gwp-predictor/training/requirements.txt",
+            "agents/zinc/tools/zinc/requirements.txt",
+        ],
+        "none",
+        "dependabot[bot]",
+        "dependabot/pip/pip-minor-patch-123",
     )
 
     assert failures == []
@@ -173,6 +255,11 @@ def test_dependabot_can_update_configured_protected_manifests(
             ".github/requirements-ci.txt",
             "dependabot[bot]",
             "dependabot/nuget/dot-config/nuget-minor-patch-123",
+        ),
+        (
+            "utilities/supercomputer-cli/discovery/uv.lock",
+            "dependabot[bot]",
+            "dependabot/pip/utilities/supercomputer-cli/discovery/anyio-4.14.2",
         ),
     ],
 )
