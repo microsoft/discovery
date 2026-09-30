@@ -86,5 +86,5 @@ warn_unused_configs = true
 
 [dependency-groups]
 dev = [
-    "pytest-cov>=7.0.0",
+    "pytest-cov>=7.1.0",
 ]

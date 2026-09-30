@@ -1,7 +1,7 @@
 # ============================================================================
 # Stage 1: Builder - Build Quantum ESPRESSO
 # ============================================================================
-FROM ubuntu:22.04 AS builder
+FROM ubuntu:26.04 AS builder
 
 LABEL maintainer="Discovery Platform"
 LABEL description="Versatile Quantum ESPRESSO 7.3 build for AKS/HPC"
@@ -91,7 +91,7 @@ RUN mkdir -p ${QE_PREFIX}/pseudo && \
 # ============================================================================
 # Stage 2: Runtime - Minimal image with only runtime dependencies
 # ============================================================================
-FROM ubuntu:22.04 AS runtime
+FROM ubuntu:26.04 AS runtime
 
 ENV APPS=/opt/apps
 ENV QE_VERSION=7.3
