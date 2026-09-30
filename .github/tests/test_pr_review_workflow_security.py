@@ -6,6 +6,11 @@ import yaml
 
 
 WORKFLOW_PATH = Path(__file__).resolve().parents[1] / "workflows" / "pr-review.yml"
+AUTO_MERGE_PATH = (
+    Path(__file__).resolve().parents[1]
+    / "workflows"
+    / "auto-merge-on-approval.yml"
+)
 CODEOWNERS_PATH = Path(__file__).resolve().parents[1] / "CODEOWNERS"
 
 
@@ -83,7 +88,32 @@ def test_codeowners_targets_sensitive_paths_without_global_fanout():
     assert not any(line.split(maxsplit=1)[0] == "*" for line in active_lines)
     assert any(line.startswith("/.github/") for line in active_lines)
     assert any(line.startswith("/docs/schemas/") for line in active_lines)
-    assert any(line.startswith("/utilities/") for line in active_lines)
+    assert not any(
+        line.split(maxsplit=1)[0] == "/utilities/"
+        for line in active_lines
+    )
+    assert any(
+        line.startswith("/utilities/supercomputer-cli/")
+        for line in active_lines
+    )
+    assert not any(
+        line.startswith("/utilities/discovery-toolbox/")
+        for line in active_lines
+    )
+
+
+def test_manifest_auto_approval_is_narrow_and_check_gated():
+    source = AUTO_MERGE_PATH.read_text(encoding="utf-8")
+
+    assert "classify_fastlane.py" in source
+    assert "manifest_auto_approval" in source
+    assert "toolbox_one_approval" in source
+    assert "can_approve_pull_request_reviews" in source
+    assert "Microsoft WinGet manifest automation" in source
+    assert 'if [ "$MANIFEST_FAST_LANE" = "true" ]' in source
+    assert 'if [ "$CHECKS_PASSED" = "true" ]' in source
+    assert "author_association" in source
+    assert "Evaluate PR gates and merge when ready" in source
 
 
 def test_trufflehog_install_and_repository_layout_are_stable():

@@ -545,6 +545,7 @@ def test_registry_refresh_cannot_rewrite_or_self_approve_generated_prs():
     assert "chore/registry-refresh-*" in auto_merge_source
     assert "require_code_owner_reviews" in auto_merge_source
     assert '"$HUMAN_APPROVALS" -gt 0' in auto_merge_source
+    assert "manifest_auto_approval" in auto_merge_source
 
 
 def test_baseline_debt_is_codeowned_tracked_and_shrink_only():

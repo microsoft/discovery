@@ -33,5 +33,11 @@
 /agents/                                @mukesh-dua @charwen @leijgao @karthikananth @anzaman @surajmb @umamaheshmsft @yousefi-msft @ryansok
 /starter-kits/                          @mukesh-dua @charwen @leijgao @karthikananth @anzaman @surajmb @umamaheshmsft @yousefi-msft @ryansok
 
-# Operator utilities for Discovery services (PowerShell scripts).
-/utilities/                             @mukesh-dua @charwen @leijgao @karthikananth @anzaman @surajmb @umamaheshmsft  @yousefi-msft @ryansok
+# Executable operator utilities. Discovery Toolbox release PRs intentionally
+# use the repository's ordinary one-approval rule instead of requiring a
+# specific CODEOWNER; REL-002 verifies the VSIX pointer and digest.
+/utilities/dataasset-migration/         @mukesh-dua @charwen @leijgao @karthikananth @anzaman @surajmb @umamaheshmsft @yousefi-msft @ryansok
+/utilities/delete-discovery-deployment/ @mukesh-dua @charwen @leijgao @karthikananth @anzaman @surajmb @umamaheshmsft @yousefi-msft @ryansok
+/utilities/rbac-roles-assignment/       @mukesh-dua @charwen @leijgao @karthikananth @anzaman @surajmb @umamaheshmsft @yousefi-msft @ryansok
+/utilities/resource-provider-registration/ @mukesh-dua @charwen @leijgao @karthikananth @anzaman @surajmb @umamaheshmsft @yousefi-msft @ryansok
+/utilities/supercomputer-cli/           @mukesh-dua @charwen @leijgao @karthikananth @anzaman @surajmb @umamaheshmsft @yousefi-msft @ryansok

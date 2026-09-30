@@ -1,11 +1,12 @@
 name: Auto-merge on Approval
 
-# Evaluates a PR against three gates and manages labels accordingly:
+# Evaluates a PR against four gates and manages labels accordingly:
 #   1. checks_passed  — all status checks on the PR head are SUCCESS / NEUTRAL / SKIPPED
-#                       (no FAILURE / CANCELLED / TIMED_OUT and no PENDING entries).
+#                       and every configured required check has reported.
 #   2. up_to_date     — PR branch is not behind base (no "Update branch" needed).
-#   3. human_approved — at least one non-bot reviewer has APPROVED, and the overall
-#                       reviewDecision is not CHANGES_REQUESTED.
+#   3. approved       — standard and VSIX release PRs require a non-bot approval.
+#                       A Microsoft-member, manifest-only PR may receive a trusted
+#                       github-actions approval after gates 1, 2, and 4 pass.
 #   4. images_reviewed — the `needs-image-review` label is absent. pr-review.yml
 #                       applies that label whenever a PR adds or modifies an image;
 #                       a maintainer clears it by hand after inspecting the files.
@@ -15,6 +16,8 @@ name: Auto-merge on Approval
 #   - needs-human-review     when no human approval (or changes requested)
 #   - ready-for-auto-merge   when all four gates pass; on this state the workflow
 #                            also performs a squash merge with branch deletion.
+#   - fast-lane-manifest     schema-validated manifest-only automated approval
+#   - fast-lane-vsix        VSIX release integrity checks plus one human approval
 #
 # The workflow runs on PR events, review events, and check_suite completions, so it
 # re-evaluates whenever any of the inputs change.
@@ -48,6 +51,7 @@ jobs:
         id: pr
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
         run: |
           set -euo pipefail
           PR_NUMBER=""
@@ -72,9 +76,48 @@ jobs:
             echo "PR #$PR_NUMBER is authored by Dependabot — skipping (Dependabot manages its own merge)."
             echo "skip=true" >> "$GITHUB_OUTPUT"
           else
+            PR_PAYLOAD=$(gh api "/repos/$REPO/pulls/$PR_NUMBER")
+            BASE_SHA=$(echo "$PR_PAYLOAD" | jq -r '.base.sha')
+            AUTHOR_ASSOCIATION=$(echo "$PR_PAYLOAD" | jq -r '.author_association // "NONE"')
             echo "Resolved PR #$PR_NUMBER (author=$PR_AUTHOR)"
             echo "number=$PR_NUMBER" >> "$GITHUB_OUTPUT"
+            echo "base_sha=$BASE_SHA" >> "$GITHUB_OUTPUT"
+            echo "author_association=$AUTHOR_ASSOCIATION" >> "$GITHUB_OUTPUT"
           fi
+
+      - name: Checkout trusted fast-lane classifier
+        if: steps.pr.outputs.skip != 'true'
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ steps.pr.outputs.base_sha }}
+          fetch-depth: 1
+          path: trusted
+          persist-credentials: false
+
+      - name: Classify fast lane
+        if: steps.pr.outputs.skip != 'true'
+        id: fastlane
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          PR_NUMBER: ${{ steps.pr.outputs.number }}
+          AUTHOR_ASSOCIATION: ${{ steps.pr.outputs.author_association }}
+        run: |
+          set -euo pipefail
+          gh api "/repos/$REPO/pulls/$PR_NUMBER/files?per_page=100" > /tmp/pr-files.json
+          FILE_COUNT=$(jq 'length' /tmp/pr-files.json)
+          if [ "$FILE_COUNT" -ge 100 ]; then
+            echo "::warning::PR has at least 100 files; fast-lane classification fails closed."
+            CLASSIFICATION='{"lane":"standard","manifest_auto_approval":false,"toolbox_one_approval":false}'
+          else
+            CLASSIFICATION=$(python trusted/.github/scripts/classify_fastlane.py \
+              --files-json /tmp/pr-files.json \
+              --author-association "$AUTHOR_ASSOCIATION")
+          fi
+          echo "Fast-lane classification: $CLASSIFICATION"
+          echo "lane=$(echo "$CLASSIFICATION" | jq -r '.lane')" >> "$GITHUB_OUTPUT"
+          echo "manifest=$(echo "$CLASSIFICATION" | jq -r '.manifest_auto_approval')" >> "$GITHUB_OUTPUT"
+          echo "toolbox=$(echo "$CLASSIFICATION" | jq -r '.toolbox_one_approval')" >> "$GITHUB_OUTPUT"
 
       - name: Ensure managed labels exist
         if: steps.pr.outputs.skip != 'true'
@@ -93,6 +136,8 @@ jobs:
           ensure_label "needs-human-review"   "0075ca" "Awaiting human approval"
           ensure_label "ready-for-auto-merge" "0e8a16" "All gates green — will be auto-merged"
           ensure_label "checks-in-progress"   "ededed" "One or more required status checks are still running on this PR"
+          ensure_label "fast-lane-manifest"   "1d76db" "Manifest-only PR eligible for schema-gated automated approval"
+          ensure_label "fast-lane-vsix"       "5319e7" "Toolbox VSIX release requiring one ordinary approval"
 
       - name: Evaluate gates, update labels, and merge if ready
         if: steps.pr.outputs.skip != 'true'
@@ -100,6 +145,8 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           REPO: ${{ github.repository }}
           PR_NUMBER: ${{ steps.pr.outputs.number }}
+          MANIFEST_FAST_LANE: ${{ steps.fastlane.outputs.manifest }}
+          TOOLBOX_FAST_LANE: ${{ steps.fastlane.outputs.toolbox }}
         run: |
           set -euo pipefail
 
@@ -129,6 +176,7 @@ jobs:
           # Any null/IN_PROGRESS/QUEUED conclusion or PENDING state means "still running".
           CHECKS_FAILED=$(echo "$PR_JSON" | jq '
             [.statusCheckRollup[]?
+             | select((.name // .context // "") != "Evaluate PR gates and merge when ready")
              | (.conclusion // .state // "PENDING")
              | ascii_upcase
              | select(. == "FAILURE" or . == "CANCELLED" or . == "TIMED_OUT"
@@ -136,10 +184,28 @@ jobs:
             ] | length')
           CHECKS_PENDING=$(echo "$PR_JSON" | jq '
             [.statusCheckRollup[]?
+             | select((.name // .context // "") != "Evaluate PR gates and merge when ready")
              | (.conclusion // .state // "PENDING")
              | ascii_upcase
              | select(. == "PENDING" or . == "IN_PROGRESS" or . == "QUEUED" or . == "WAITING")
             ] | length')
+          PROTECTION=$(gh api \
+            "/repos/$REPO/branches/$BASE_REF/protection/required_status_checks" \
+            2>/dev/null || true)
+          if [ -z "$PROTECTION" ]; then
+            MISSING_REQUIRED=1
+            echo "::warning::Could not read required status checks; failing closed."
+          else
+            REQUIRED_CHECKS=$(echo "$PROTECTION" | jq -c \
+              '[.checks[]?.context] | unique')
+            OBSERVED_CHECKS=$(echo "$PR_JSON" | jq -c \
+              '[.statusCheckRollup[]? | (.name // .context // "")] | unique')
+            MISSING_REQUIRED=$(jq -n \
+              --argjson required "$REQUIRED_CHECKS" \
+              --argjson observed "$OBSERVED_CHECKS" \
+              '$required - $observed | length')
+          fi
+          CHECKS_PENDING=$((CHECKS_PENDING + MISSING_REQUIRED))
           if [ "$CHECKS_FAILED" -gt 0 ] || [ "$CHECKS_PENDING" -gt 0 ]; then
             CHECKS_PASSED=false
           else
@@ -153,7 +219,7 @@ jobs:
             UP_TO_DATE=true
           fi
 
-          # ── Gate 3: human_approved ─────────────────────────────────
+          # ── Gate 3: approved ───────────────────────────────────────
           # Trust GitHub's own reviewDecision instead of re-implementing the
           # logic locally. GitHub already accounts for CODEOWNERS, dismissals,
           # required_approving_review_count, etc. — and our previous local
@@ -167,11 +233,12 @@ jobs:
              | select(.state == "APPROVED")
              | select((.author.login // "") | endswith("[bot]") | not)
             ] | length')
-          if [ "$REVIEW_DECISION" = "APPROVED" ] && [ "$HUMAN_APPROVALS" -gt 0 ]; then
-            HUMAN_APPROVED=true
-          else
-            HUMAN_APPROVED=false
-          fi
+          AUTOMATED_APPROVALS=$(echo "$PR_JSON" | jq '
+            [.reviews[]?
+             | select(.state == "APPROVED")
+             | select((.author.login // "") == "github-actions"
+                      or ((.author.login // "") | endswith("[bot]")))
+            ] | length')
 
           # Generated registry PRs have elevated write provenance. Fail closed
           # unless the target branch currently requires CODEOWNER review;
@@ -200,8 +267,60 @@ jobs:
             IMAGES_REVIEWED=true
           fi
 
+          # Manifest-only PRs from Microsoft organization members may receive
+          # an automated approval only after every required check reports
+          # success. This follows Microsoft WinGet manifest automation:
+          # https://learn.microsoft.com/windows/package-manager/package/repository
+          # The repository setting can_approve_pull_request_reviews must also
+          # be enabled; otherwise this fails closed and leaves the PR unapproved.
+          if [ "$MANIFEST_FAST_LANE" = "true" ] && \
+             [ "$CHECKS_PASSED" = "true" ] && \
+             [ "$UP_TO_DATE" = "true" ] && \
+             [ "$IMAGES_REVIEWED" = "true" ] && \
+             [ "$REVIEW_DECISION" != "CHANGES_REQUESTED" ] && \
+             [ "$AUTOMATED_APPROVALS" -eq 0 ]; then
+            APPROVAL_SETTING=$(gh api \
+              "/repos/$REPO/actions/permissions/workflow" \
+              --jq '.can_approve_pull_request_reviews' 2>/dev/null || echo false)
+            if [ "$APPROVAL_SETTING" = "true" ]; then
+              printf -v APPROVAL_BODY '%s\n\n%s\n' \
+                "Automated approval for a Microsoft-member, manifest-only fast-lane PR." \
+                "The trusted base-branch validator confirmed the governed release-manifest schema and all required checks passed. Rationale: Microsoft WinGet uses automated validation and approval for manifest submissions, with exceptions routed to manual review: https://learn.microsoft.com/windows/package-manager/package/repository"
+              if gh api -X POST "/repos/$REPO/pulls/$PR_NUMBER/reviews" \
+                -f event=APPROVE -f body="$APPROVAL_BODY" >/dev/null; then
+                echo "Submitted schema-gated automated manifest approval."
+                sleep 2
+                PR_JSON=$(gh pr view "$PR_NUMBER" --repo "$REPO" --json \
+                  number,isDraft,state,baseRefName,headRefName,mergeStateStatus,mergeable,reviewDecision,reviews,statusCheckRollup,labels,author)
+                REVIEW_DECISION=$(echo "$PR_JSON" | jq -r '.reviewDecision')
+                AUTOMATED_APPROVALS=$(echo "$PR_JSON" | jq '
+                  [.reviews[]?
+                   | select(.state == "APPROVED")
+                   | select((.author.login // "") == "github-actions"
+                            or ((.author.login // "") | endswith("[bot]")))
+                  ] | length')
+              else
+                echo "::warning::Could not submit automated manifest approval."
+              fi
+            else
+              echo "::warning::Actions approval is disabled; manifest fast lane fails closed."
+            fi
+          fi
+
+          if [ "$MANIFEST_FAST_LANE" = "true" ]; then
+            if [ "$REVIEW_DECISION" = "APPROVED" ] && [ "$AUTOMATED_APPROVALS" -gt 0 ]; then
+              HUMAN_APPROVED=true
+            else
+              HUMAN_APPROVED=false
+            fi
+          elif [ "$REVIEW_DECISION" = "APPROVED" ] && [ "$HUMAN_APPROVALS" -gt 0 ]; then
+            HUMAN_APPROVED=true
+          else
+            HUMAN_APPROVED=false
+          fi
+
           echo "Gates: checks_passed=$CHECKS_PASSED up_to_date=$UP_TO_DATE human_approved=$HUMAN_APPROVED images_reviewed=$IMAGES_REVIEWED registry_protection=$REGISTRY_PROTECTION_OK"
-          echo "       (checks_failed=$CHECKS_FAILED pending=$CHECKS_PENDING human_approvals=$HUMAN_APPROVALS reviewDecision=$REVIEW_DECISION)"
+          echo "       (checks_failed=$CHECKS_FAILED pending=$CHECKS_PENDING human_approvals=$HUMAN_APPROVALS automated_approvals=$AUTOMATED_APPROVALS reviewDecision=$REVIEW_DECISION)"
 
           # ── Label management ───────────────────────────────────────
           add_label() {
@@ -212,7 +331,14 @@ jobs:
           }
 
           if [ "$UP_TO_DATE" = "false" ]; then add_label "update-branch"; else remove_label "update-branch"; fi
-          if [ "$HUMAN_APPROVED" = "false" ]; then add_label "needs-human-review"; else remove_label "needs-human-review"; fi
+          if [ "$MANIFEST_FAST_LANE" = "true" ]; then
+            remove_label "needs-human-review"
+            add_label "fast-lane-manifest"
+          else
+            remove_label "fast-lane-manifest"
+            if [ "$HUMAN_APPROVED" = "false" ]; then add_label "needs-human-review"; else remove_label "needs-human-review"; fi
+          fi
+          if [ "$TOOLBOX_FAST_LANE" = "true" ]; then add_label "fast-lane-vsix"; else remove_label "fast-lane-vsix"; fi
           # checks-in-progress: any required check is still PENDING / IN_PROGRESS / QUEUED.
           # Cleared as soon as every check has reported (pass or fail).
           if [ "$CHECKS_PENDING" -gt 0 ]; then add_label "checks-in-progress"; else remove_label "checks-in-progress"; fi

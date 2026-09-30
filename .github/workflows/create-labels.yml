@@ -32,6 +32,8 @@ jobs:
               { name: 'needs-human-review',      color: '0075ca', description: 'Awaiting human approval' },
               { name: 'ready-for-auto-merge',    color: '0e8a16', description: 'All gates green — will be auto-merged' },
               { name: 'checks-in-progress',      color: 'ededed', description: 'One or more required status checks are still running on this PR. Removed automatically once all checks have reported.' },
+              { name: 'fast-lane-manifest',      color: '1d76db', description: 'Manifest-only PR eligible for schema-gated automated approval' },
+              { name: 'fast-lane-vsix',          color: '5319e7', description: 'Toolbox VSIX release requiring one ordinary approval' },
               // ── Discussion-template labels ──
               { name: 'bug',                     color: 'd73a4a', description: 'Bug report (Discussions → Bugs template)' },
               { name: 'idea',                    color: 'a2eeef', description: 'Feature idea / proposal (Discussions → Ideas template)' },
