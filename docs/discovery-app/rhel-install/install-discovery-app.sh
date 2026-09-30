@@ -12,7 +12,7 @@ Usage:
   ./install-discovery-app.sh --rpm PATH [-y|--yes] [--signing-key PATH] [--setup-mode MODE]
 
 Options:
-  --rpm PATH          Discovery App binary RPM. PATH.sha256 must also exist.
+  --rpm PATH          Discovery App Preview RHEL x64 binary RPM.
   -y, --yes           Accept the installation plan and answer yes to all
                       installer questions. Does not authenticate user accounts.
   --signing-key PATH  Public RPM signing key to import before verification.
@@ -96,6 +96,7 @@ RPM_PATH=""
 SIGNING_KEY_PATH=""
 SETUP_MODE="automatic"
 ASSUME_YES=false
+PREVIEW_MANIFEST_URL="https://raw.githubusercontent.com/microsoft/discovery/main/docs/discovery-app/releases/manifests/preview.json"
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -137,7 +138,6 @@ esac
 [[ -f "$RPM_PATH" ]] || fail "RPM not found: $RPM_PATH"
 [[ "$RPM_PATH" == *.rpm && "$RPM_PATH" != *.src.rpm ]] \
   || fail "--rpm must name one binary .rpm file."
-[[ -f "${RPM_PATH}.sha256" ]] || fail "Checksum sidecar not found: ${RPM_PATH}.sha256"
 if [[ -n "$SIGNING_KEY_PATH" ]]; then
   [[ -f "$SIGNING_KEY_PATH" ]] || fail "Signing key not found: $SIGNING_KEY_PATH"
 fi
@@ -155,15 +155,14 @@ case "${ID:-}" in
   *) fail "Unsupported distribution: ${PRETTY_NAME:-unknown}. Use RHEL, AlmaLinux, or Rocky Linux." ;;
 esac
 MACHINE_ARCH="$(uname -m)"
-[[ "$MACHINE_ARCH" == "x86_64" || "$MACHINE_ARCH" == "aarch64" ]] \
-  || fail "This installer supports x86_64 and aarch64 only (found $MACHINE_ARCH)."
+[[ "$MACHINE_ARCH" == "x86_64" ]] \
+  || fail "This installer supports Preview RHEL x64 only (found $MACHINE_ARCH)."
 
-for command_name in rpm sha256sum; do
+for command_name in curl python3 rpm sha256sum; do
   require_command "$command_name"
 done
 
 RPM_PATH="$(absolute_path "$RPM_PATH")"
-CHECKSUM_PATH="${RPM_PATH}.sha256"
 # Only an explicitly supplied key is trusted. A key discovered next to the RPM
 # would be supplied by the same source as the package it is meant to vouch for.
 if [[ -n "$SIGNING_KEY_PATH" ]]; then
@@ -171,15 +170,41 @@ if [[ -n "$SIGNING_KEY_PATH" ]]; then
   echo "Using RPM signing key: $SIGNING_KEY_PATH"
 fi
 
-mapfile -t CHECKSUM_LINES <"$CHECKSUM_PATH"
-[[ ${#CHECKSUM_LINES[@]} -eq 1 ]] \
-  || fail "Checksum sidecar must contain exactly one record: $CHECKSUM_PATH"
-read -r EXPECTED_SHA256 CHECKSUM_FILENAME CHECKSUM_EXTRA <<<"${CHECKSUM_LINES[0]}"
-EXPECTED_SHA256="${EXPECTED_SHA256,,}"
-[[ "$EXPECTED_SHA256" =~ ^[0-9a-f]{64}$ ]] \
-  || fail "Checksum sidecar does not contain a valid SHA-256 digest: $CHECKSUM_PATH"
-[[ -z "$CHECKSUM_EXTRA" && "$CHECKSUM_FILENAME" == "$(basename "$RPM_PATH")" ]] \
-  || fail "Checksum sidecar must name the selected RPM: $(basename "$RPM_PATH")"
+TEMP_DIRECTORY="$(mktemp -d)"
+cleanup() {
+  rm -rf "$TEMP_DIRECTORY"
+}
+trap cleanup EXIT
+
+PREVIEW_MANIFEST_PATH="$TEMP_DIRECTORY/preview.json"
+echo "Downloading Preview release manifest..."
+curl --fail --silent --show-error --location --proto '=https' --proto-redir '=https' --tlsv1.2 \
+  --max-filesize 1048576 \
+  "$PREVIEW_MANIFEST_URL" \
+  --output "$PREVIEW_MANIFEST_PATH" \
+  || fail "Could not download the Preview release manifest."
+
+EXPECTED_SHA256="$(python3 - "$PREVIEW_MANIFEST_PATH" <<'PY'
+import json
+import re
+import sys
+
+def reject_nonstandard_constant(value):
+    raise ValueError(f"Non-standard JSON constant: {value}")
+
+try:
+    with open(sys.argv[1], encoding="utf-8") as manifest_file:
+        manifest = json.load(manifest_file, parse_constant=reject_nonstandard_constant)
+    digest = manifest["platforms"]["rhel-x64"]["sha256"]
+except (KeyError, TypeError, ValueError, OSError):
+    sys.exit(1)
+
+if not isinstance(digest, str) or re.fullmatch(r"[0-9a-fA-F]{64}", digest) is None:
+    sys.exit(1)
+
+print(digest.lower())
+PY
+)" || fail "Preview release manifest does not contain a valid rhel-x64 SHA-256 digest."
 ACTUAL_SHA256="$(sha256sum "$RPM_PATH" | awk '{ print tolower($1) }')"
 [[ "$ACTUAL_SHA256" == "$EXPECTED_SHA256" ]] \
   || fail "RPM SHA-256 mismatch. Expected $EXPECTED_SHA256, got $ACTUAL_SHA256."
@@ -292,12 +317,6 @@ EOF
 confirm_installation
 
 sudo -v
-
-TEMP_DIRECTORY="$(mktemp -d)"
-cleanup() {
-  rm -rf "$TEMP_DIRECTORY"
-}
-trap cleanup EXIT
 
 MICROSOFT_KEY="$TEMP_DIRECTORY/microsoft.asc"
 MICROSOFT_REPO_RPM="$TEMP_DIRECTORY/packages-microsoft-prod.rpm"

@@ -10,7 +10,7 @@ Linux systems.
 - Red Hat Enterprise Linux 9 or later.
 - AlmaLinux 9 or later.
 - Rocky Linux 9 or later.
-- An `x86_64` or `aarch64` system with a matching Discovery App RPM.
+- An `x86_64` system with the current Preview Discovery App RPM.
 - A graphical desktop session.
 - A normal user account with `sudo` access.
 - An active GitHub Copilot subscription with Copilot CLI enabled by the
@@ -21,18 +21,16 @@ with `sudo`.
 
 ## Download the release files
 
-Download the RPM and its matching `.sha256` checksum sidecar from the same
-Microsoft Discovery release. Keep both files in the same directory and preserve
-their published filenames:
+Download the current Preview RHEL x64 RPM from the Microsoft Discovery Preview
+release and preserve its published filename:
 
 ```text
-discovery-app-VERSION-RELEASE.ARCH.rpm
-discovery-app-VERSION-RELEASE.ARCH.rpm.sha256
+discovery-app-preview-VERSION-RELEASE.x86_64.rpm
 ```
 
-The checksum file is required. The installer appends `.sha256` to the path
-passed through `--rpm` and verifies that the checksum record names that exact
-RPM.
+The installer downloads the current Preview release manifest over HTTPS and
+validates the RPM against `platforms.rhel-x64.sha256`. Do not use an adjacent
+checksum sidecar or a package from a different release ring.
 
 Download the installation script:
 
@@ -69,7 +67,8 @@ or `-y`:
 
 The installer:
 
-1. Validates the RPM against its `.sha256` checksum sidecar.
+1. Downloads the current Preview release manifest over HTTPS and validates the
+   RPM against its `rhel-x64` SHA-256 digest.
 2. Confirms that the RPM contains a supported Discovery App package and matches
    the machine architecture.
 3. Imports Microsoft's public package-signing key.
@@ -120,20 +119,42 @@ Use these steps when the standalone installer cannot be used.
 ### 1. Verify the RPM checksum
 
 ```bash
-RPM_PATH=./discovery-app-VERSION-RELEASE.x86_64.rpm
+RPM_PATH=./discovery-app-preview-VERSION-RELEASE.x86_64.rpm
+MANIFEST_URL=https://raw.githubusercontent.com/microsoft/discovery/main/docs/discovery-app/releases/manifests/preview.json
+tmp_dir="$(mktemp -d)"
 
-sha256sum --check "${RPM_PATH}.sha256"
+curl --fail --silent --show-error --location --proto '=https' --proto-redir '=https' --tlsv1.2 \
+  "$MANIFEST_URL" --output "$tmp_dir/preview.json"
+EXPECTED_SHA256="$(python3 - "$tmp_dir/preview.json" <<'PY'
+import json
+import re
+import sys
+
+def reject_nonstandard_constant(value):
+    raise ValueError(f"Non-standard JSON constant: {value}")
+
+with open(sys.argv[1], encoding="utf-8") as manifest_file:
+    digest = json.load(
+        manifest_file,
+        parse_constant=reject_nonstandard_constant,
+    )["platforms"]["rhel-x64"]["sha256"]
+if not isinstance(digest, str) or re.fullmatch(r"[0-9a-fA-F]{64}", digest) is None:
+    raise ValueError("Invalid rhel-x64 SHA-256 digest")
+print(digest.lower())
+PY
+)"
+ACTUAL_SHA256="$(sha256sum "$RPM_PATH" | awk '{ print tolower($1) }')"
+[[ "$ACTUAL_SHA256" == "$EXPECTED_SHA256" ]]
 rpm -qp --queryformat '%{NAME} %{VERSION}-%{RELEASE} %{ARCH}\n' "$RPM_PATH"
 ```
 
-Stop if the checksum fails, the RPM architecture does not match `uname -m`, or
-the package name is not `discovery-app`, `discovery-app-preview`, or
-`discovery-app-dev`.
+Stop if the manifest cannot be downloaded or parsed, the digest does not
+match, the machine is not `x86_64`, or the package name is not
+`discovery-app-preview`.
 
 ### 2. Import Microsoft's package key
 
 ```bash
-tmp_dir="$(mktemp -d)"
 curl --fail --silent --show-error --location \
   https://packages.microsoft.com/keys/microsoft.asc \
   --output "$tmp_dir/microsoft.asc"
@@ -230,8 +251,8 @@ rm -rf "$tmp_dir"
 
 | Problem | Resolution |
 | --- | --- |
-| Checksum sidecar not found | Download the matching `.rpm.sha256` file, place it beside the RPM, and preserve both published filenames. |
-| RPM architecture mismatch | Download the package matching `uname -m`. |
+| Preview manifest validation fails | Download the current Preview RHEL x64 RPM again. Old Preview RPMs intentionally fail after the manifest advances. |
+| Unsupported architecture | This installer supports Preview RHEL x64 only. |
 | RPM signature reports `NOKEY` | Import Microsoft's published key or provide the approved release key with `--signing-key`. |
 | `sudo` is unavailable | Ask an administrator to perform the system package installation. |
 | GitHub Copilot CLI is unavailable | Confirm outbound HTTPS access to `gh.io` and that Copilot CLI is enabled for the account. |
