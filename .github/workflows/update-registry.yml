@@ -6,6 +6,11 @@ on:
     paths:
       - "agents/**"
       - "starter-kits/**"
+      - ".github/policy/base-images.yaml"
+      - ".github/scripts/compute_tags.py"
+      - ".github/scripts/dockerfile_parser.py"
+      - ".github/scripts/list_base_images.py"
+      - ".github/scripts/rules/base.py"
 
   workflow_dispatch:
     inputs:
@@ -15,8 +20,8 @@ on:
         default: "Manual registry refresh"
 
 permissions:
-  contents: write
-  pull-requests: write
+  contents: read
+  pull-requests: read
 
 concurrency:
   group: update-registry
@@ -34,7 +39,7 @@ jobs:
         with:
           # Full history needed so the commit author is resolved correctly
           fetch-depth: 1
-          token: ${{ secrets.GITHUB_TOKEN }}
+          persist-credentials: false
 
       - name: Set up Python
         uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
@@ -42,7 +47,7 @@ jobs:
           python-version: "3.11"
 
       - name: Install dependencies
-        run: pip install pyyaml jsonschema
+        run: pip install -c .github/requirements-ci.txt pyyaml jsonschema referencing
 
       - name: Rebuild .auto-registry/agent-registry.json
         run: python .github/scripts/update_registry.py --repo-root . --output .auto-registry/agent-registry.json
@@ -51,11 +56,25 @@ jobs:
         run: |
           python -c "
           import json, sys, jsonschema
+          from referencing import Registry, Resource
+          with open('docs/schemas/common-schema.json') as f:
+              common_schema = json.load(f)
+          with open('docs/schemas/metadata-schema.json') as f:
+              metadata_schema = json.load(f)
           with open('docs/schemas/registry-schema.json') as f:
               schema = json.load(f)
           with open('.auto-registry/agent-registry.json') as f:
               data = json.load(f)
-          v = jsonschema.Draft7Validator(schema)
+          # registry-schema.json \$refs both common-schema.json and
+          # metadata-schema.json (associated_tools); register both so the
+          # references resolve instead of raising an unresolvable-reference error.
+          schema_registry = Registry().with_resources([
+              ('common-schema.json', Resource.from_contents(common_schema)),
+              ('metadata-schema.json', Resource.from_contents(metadata_schema)),
+          ])
+          v = jsonschema.Draft7Validator(
+              schema, registry=schema_registry, format_checker=jsonschema.FormatChecker()
+          )
           errors = sorted(v.iter_errors(data), key=lambda e: list(e.path))
           if errors:
               for e in errors:
@@ -78,15 +97,29 @@ jobs:
           import json, sys, os
           try:
               import jsonschema
+              from referencing import Registry, Resource
               if not os.path.exists('.auto-registry/starter-kit-registry.json'):
                   print('  SKIP: no starter-kit-registry.json produced (no kits in repo).')
                   sys.exit(0)
+              with open('docs/schemas/common-schema.json') as f:
+                  common_schema = json.load(f)
+              with open('docs/schemas/starter-kit-schema.json') as f:
+                  starter_kit_schema = json.load(f)
               with open('docs/schemas/starter-kit-registry-schema.json') as f:
                   schema = json.load(f)
               with open('.auto-registry/starter-kit-registry.json') as f:
                   registry = json.load(f)
               jsonschema.Draft7Validator.check_schema(schema)
-              validator = jsonschema.Draft7Validator(schema)
+              # starter-kit-registry-schema.json \$refs both common-schema.json
+              # and starter-kit-schema.json; register both so those references
+              # resolve instead of raising an unresolvable-reference error.
+              schema_registry = Registry().with_resources([
+                  ('common-schema.json', Resource.from_contents(common_schema)),
+                  ('starter-kit-schema.json', Resource.from_contents(starter_kit_schema)),
+              ])
+              validator = jsonschema.Draft7Validator(
+                schema, registry=schema_registry, format_checker=jsonschema.FormatChecker()
+              )
               errors = sorted(validator.iter_errors(registry), key=lambda e: list(e.absolute_path))
               if errors:
                   for err in errors:
@@ -99,6 +132,12 @@ jobs:
               sys.exit(1)
           "
 
+      # Computed tags are derived from agent contents (tools, tests, base
+      # images, publisher party), so they belong with the other generated
+      # registries: bot-owned, never hand-edited, refreshed on the same push.
+      - name: Rebuild .auto-registry/agent-tags.json
+        run: python .github/scripts/compute_tags.py --repo-root .
+
       - name: Check for changes
         id: diff
         run: |
@@ -109,6 +148,9 @@ jobs:
           git add .auto-registry/agent-registry.json
           if [ -f .auto-registry/starter-kit-registry.json ]; then
             git add .auto-registry/starter-kit-registry.json
+          fi
+          if [ -f .auto-registry/agent-tags.json ]; then
+            git add .auto-registry/agent-tags.json
           fi
           if git diff --cached --quiet -- .auto-registry/; then
             echo "changed=false" >> "$GITHUB_OUTPUT"
@@ -126,20 +168,20 @@ jobs:
         if: steps.diff.outputs.changed == 'true'
         env:
           REGISTRY_APP_ID: ${{ secrets.REGISTRY_APP_ID }}
+          REGISTRY_APP_PRIVATE_KEY: ${{ secrets.REGISTRY_APP_PRIVATE_KEY }}
         run: |
-          if [ -n "${REGISTRY_APP_ID:-}" ]; then
+          if [ -n "${REGISTRY_APP_ID:-}" ] && [ -n "${REGISTRY_APP_PRIVATE_KEY:-}" ]; then
             echo "configured=true" >> "$GITHUB_OUTPUT"
           else
             echo "configured=false" >> "$GITHUB_OUTPUT"
           fi
 
       # Mint a short-lived (~1h) GitHub App installation token. Required
-      # because the org disables "Allow GitHub Actions to create and approve
-      # pull requests", so the default GITHUB_TOKEN cannot call gh pr create /
-      # gh pr merge --auto on this repo. The App (discovery-registry-bot) has
-      # Contents: Read + Pull requests: Write on microsoft/discovery.
+      # because the default GITHUB_TOKEN is read-only. The App
+      # (discovery-registry-bot) must have Contents: Write and Pull requests:
+      # Write on microsoft/discovery.
       # If REGISTRY_APP_ID is unset (App not yet wired up), this step is
-      # skipped and the workflow falls back to the warn-and-exit path below.
+      # skipped and the workflow fails without pushing any branch.
       - name: Generate App installation token
         if: steps.app_check.outputs.configured == 'true'
         id: app_token
@@ -149,26 +191,18 @@ jobs:
           private-key: ${{ secrets.REGISTRY_APP_PRIVATE_KEY }}
 
       - name: Commit updated registry to a PR
-        if: steps.diff.outputs.changed == 'true'
+        if: steps.diff.outputs.changed == 'true' && steps.app_check.outputs.configured == 'true'
         env:
-          # Use the App installation token for gh pr create / gh pr merge --auto
-          # when available; fall back to GITHUB_TOKEN otherwise so the script
-          # can still log a useful diagnostic instead of hard-failing.
-          GH_TOKEN: ${{ steps.app_token.outputs.token || secrets.GITHUB_TOKEN }}
-          HAS_APP_TOKEN: ${{ steps.app_token.outputs.token != '' }}
+          GH_TOKEN: ${{ steps.app_token.outputs.token }}
         run: |
           set -euo pipefail
           git config user.name  "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
-          # Branch name is deterministic so concurrent runs converge on the same
-          # PR instead of creating dozens of stale branches.
-          BRANCH="chore/registry-refresh"
-
-          # If a previous run left the branch behind, reset it to main so we
-          # don't accumulate unrelated commits.
-          git fetch origin "$BRANCH" --depth=1 2>/dev/null || true
-          git checkout -B "$BRANCH"
+          # Each run owns its branch. Normal pushes cannot overwrite a prior
+          # run's reviewed content or rewrite an existing PR.
+          BRANCH="chore/registry-refresh-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+          git checkout -b "$BRANCH"
 
           # Compose a commit message that reflects what actually changed.
           # Both files are already staged in the previous step. `|| true`
@@ -176,6 +210,7 @@ jobs:
           # the script under `set -euo pipefail`.
           AGENT_DIFF=$(git diff --cached -- .auto-registry/agent-registry.json || true)
           KIT_DIFF=$(git diff --cached -- .auto-registry/starter-kit-registry.json || true)
+          TAGS_DIFF=$(git diff --cached -- .auto-registry/agent-tags.json || true)
           AGENT_ADDED=$(echo "$AGENT_DIFF" | { grep '^\+.*"path"' || true; } | wc -l | tr -d ' ')
           AGENT_REMOVED=$(echo "$AGENT_DIFF" | { grep '^\-.*"path"' || true; } | wc -l | tr -d ' ')
           PARTS=()
@@ -185,36 +220,26 @@ jobs:
           if [ -n "$KIT_DIFF" ]; then
             PARTS+=("starter-kit-registry updated")
           fi
+          if [ -n "$TAGS_DIFF" ]; then
+            PARTS+=("agent-tags updated")
+          fi
           # Join PARTS with ", "
           SUMMARY=$(IFS=', '; echo "${PARTS[*]}")
           COMMIT_MSG="chore: update .auto-registry/ ($SUMMARY) [skip ci]"
           git commit -m "$COMMIT_MSG"
 
-          # Force-push so the branch is always exactly "main + this commit".
-          # GITHUB_TOKEN has Contents: write here, so the push works regardless
-          # of which token GH_TOKEN points at.
-          git push --force \
-            "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${GITHUB_REPOSITORY}.git" \
-            "$BRANCH"
+          gh auth setup-git
+          git push --set-upstream origin "$BRANCH"
 
-          if [ "$HAS_APP_TOKEN" != "true" ]; then
-            echo "::warning::REGISTRY_APP_ID/REGISTRY_APP_PRIVATE_KEY secrets are not configured. Branch ${BRANCH} was force-pushed with the regenerated registry files, but no PR can be opened from GITHUB_TOKEN under this repo's policy. A maintainer must open the PR manually, or wire up the discovery-registry-bot GitHub App."
-            exit 0
-          fi
+          gh pr create \
+            --repo "$GITHUB_REPOSITORY" \
+            --base main \
+            --head "$BRANCH" \
+            --title "$COMMIT_MSG" \
+            --body "Automated registry refresh triggered by catalog changes. Generated by the *Update Registry* workflow. A human CODEOWNER must approve this PR before the approval-gated auto-merge workflow can act."
 
-          # Create the PR if one doesn't already exist for this branch.
-          if ! gh pr view "$BRANCH" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
-            gh pr create \
-              --repo "$GITHUB_REPOSITORY" \
-              --base main \
-              --head "$BRANCH" \
-              --title "$COMMIT_MSG" \
-              --body "Automated registry refresh triggered by changes under \`agents/**\` or \`starter-kits/**\`. Generated by the *Update Registry* workflow.\n\nContains both \`.auto-registry/agent-registry.json\` and \`.auto-registry/starter-kit-registry.json\` updates (whichever changed)."
-          else
-            echo "PR already exists for $BRANCH — force-push updated it in place."
-          fi
-
-          # Try to enable auto-merge so this lands as soon as required checks pass.
-          PR_NUMBER=$(gh pr view "$BRANCH" --repo "$GITHUB_REPOSITORY" --json number --jq .number)
-          gh pr merge "$PR_NUMBER" --repo "$GITHUB_REPOSITORY" --auto --squash --delete-branch || \
-            echo "::warning::Could not enable auto-merge on PR #$PR_NUMBER — a maintainer will need to merge it manually."
+      - name: Report missing App credentials
+        if: steps.diff.outputs.changed == 'true' && steps.app_check.outputs.configured != 'true'
+        run: |
+          echo "::error::Registry output changed, but REGISTRY_APP_ID/REGISTRY_APP_PRIVATE_KEY are not configured. No branch was pushed. Configure the write-scoped registry App and rerun this workflow."
+          exit 1

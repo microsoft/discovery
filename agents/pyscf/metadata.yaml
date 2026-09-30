@@ -1,0 +1,18 @@
+name: pyscf
+type: agent
+version: 1.0.0
+associated_tools:
+  - agents/pyscf/tools/pyscf
+publisher:
+  name: Microsoft
+  contact: discovery-catalog@microsoft.com
+  support_url: https://techcommunity.microsoft.com/category/azure/discussions/microsoft-discovery-discussions
+  party: 1p
+description: >
+  Python-based ab initio quantum chemistry. Runs Hartree-Fock and DFT single-point energies and geometry
+  properties for small molecules on CPU.
+tags:
+  - quantum-chemistry
+  - dft
+  - hartree-fock
+  - pyscf

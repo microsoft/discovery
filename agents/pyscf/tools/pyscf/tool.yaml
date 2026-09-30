@@ -1,0 +1,67 @@
+name: pyscf
+description: "Python-based ab initio quantum chemistry. Runs Hartree-Fock and DFT single-point energies and geometry properties for small molecules on CPU."
+version: 1.0.0
+category: Quantum Chemistry
+license: Apache-2.0
+infra:
+  - name: worker
+    infra_type: container
+    image:
+      acr: "{name}.azurecr.io/pyscf:latest"
+    compute:
+      min_resources:
+        cpu: 1
+        ram: 8Gi
+        storage: 32Gi
+        gpu: 0
+      max_resources:
+        cpu: 8
+        ram: 16Gi
+        storage: 64Gi
+        gpu: 0
+      recommended_sku:
+        - Standard_D8s_v6
+      pool_type: static
+      pool_size: 1
+actions:
+  - name: run_scf
+    description: "Run an RHF single-point energy calculation on an XYZ geometry."
+    infra_node: worker
+    input_schema:
+      type: object
+      properties:
+        input_directory:
+          type: string
+          description: "Directory containing input files."
+        output_directory:
+          type: string
+          description: "Directory where results are written."
+        basis:
+          type: string
+          description: "Basis set (default sto-3g)"
+      required:
+        - input_directory
+        - output_directory
+    command: "python3 /app/entrypoint.py --action run_scf --input {{input_directory}} --output {{output_directory}} {{#if basis}}--basis {{basis}}{{/if}}"
+  - name: run_dft
+    description: "Run a DFT single-point energy calculation on an XYZ geometry."
+    infra_node: worker
+    input_schema:
+      type: object
+      properties:
+        input_directory:
+          type: string
+          description: "Directory containing input files."
+        output_directory:
+          type: string
+          description: "Directory where results are written."
+        basis:
+          type: string
+          description: "Basis set (default 6-31g)"
+        xc:
+          type: string
+          description: "Exchange-correlation functional (default b3lyp)"
+      required:
+        - input_directory
+        - output_directory
+    command: "python3 /app/entrypoint.py --action run_dft --input {{input_directory}} --output {{output_directory}} {{#if basis}}--basis {{basis}}{{/if}} {{#if xc}}--xc {{xc}}{{/if}}"

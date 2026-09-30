@@ -1,0 +1,920 @@
+"""Regression tests for GitHub-native security automation."""
+
+from __future__ import annotations
+
+import json
+from pathlib import Path, PurePosixPath
+import re
+from typing import Any
+
+import yaml
+
+
+REPO_ROOT = Path(__file__).resolve().parents[2]
+CODE_SCAN_PATH = REPO_ROOT / ".github" / "workflows" / "code-scan.yml"
+DEPENDENCY_REVIEW_PATH = REPO_ROOT / ".github" / "workflows" / "dependency-review.yml"
+DEPENDABOT_PATH = REPO_ROOT / ".github" / "dependabot.yml"
+CI_REQUIREMENTS_PATH = REPO_ROOT / ".github" / "requirements-ci.txt"
+DOTNET_TOOL_MANIFEST_PATH = REPO_ROOT / ".config" / "dotnet-tools.json"
+
+CODEQL_SCOPES = {
+    ("python", "catalog-python"): ".github/codeql/codeql-config.yml",
+}
+
+CODEQL_PATHS = {
+    ".github/codeql/codeql-config.yml": {"agents", "starter-kits"},
+}
+
+CODEQL_TRIGGER_PATHS = {
+    "agents/**",
+    "starter-kits/**",
+}
+CATALOG_TRIGGER_PATHS = CODEQL_TRIGGER_PATHS
+DEPENDENCY_REVIEW_TRIGGER_PATHS = CATALOG_TRIGGER_PATHS | {
+    ".github/requirements-ci.txt",
+    ".github/dependabot.yml",
+    ".github/workflows/**",
+    ".config/dotnet-tools.json",
+}
+
+
+def load_yaml(path: Path) -> dict[str, Any]:
+    document = yaml.safe_load(path.read_text(encoding="utf-8"))
+    assert isinstance(document, dict), f"Expected a YAML mapping in {path}"
+    return document
+
+
+def load_workflow(path: Path) -> dict[str, Any]:
+    # BaseLoader preserves the GitHub Actions key `on` instead of treating it
+    # as a YAML 1.1 boolean.
+    document = yaml.load(path.read_text(encoding="utf-8"), Loader=yaml.BaseLoader)
+    assert isinstance(document, dict), f"Expected a workflow mapping in {path}"
+    return document
+
+
+def uses_action(step: dict[str, Any], action: str) -> bool:
+    """Match an action independently of whether its revision is a tag or SHA."""
+    return step.get("uses", "").partition("@")[0] == action
+
+
+def dependabot_update(ecosystem: str) -> dict[str, Any]:
+    updates = load_yaml(DEPENDABOT_PATH)["updates"]
+    matches = [
+        update for update in updates if update["package-ecosystem"] == ecosystem
+    ]
+    assert len(matches) == 1, f"Expected one Dependabot block for {ecosystem}"
+    return matches[0]
+
+
+def directory_matches(directory: str, patterns: list[str]) -> bool:
+    relative = PurePosixPath(directory.lstrip("/"))
+    return any(relative.match(pattern.lstrip("/")) for pattern in patterns)
+
+
+def test_codeql_matrix_keeps_scopes_separate_and_supported():
+    workflow = load_workflow(CODE_SCAN_PATH)
+    codeql_job = workflow["jobs"]["codeql"]
+    matrix = codeql_job["strategy"]["matrix"]["include"]
+
+    actual_scopes = {
+        (entry["language"], entry["scope"]): entry["config"].removeprefix("./")
+        for entry in matrix
+    }
+    assert actual_scopes == CODEQL_SCOPES
+    assert codeql_job["strategy"]["fail-fast"] == "false"
+
+    action_refs = {
+        step["uses"].partition("@")[0]
+        for step in codeql_job["steps"]
+        if step.get("uses", "").startswith("github/codeql-action/")
+    }
+    assert action_refs == {
+        "github/codeql-action/init",
+        "github/codeql-action/analyze",
+    }
+    analyze_step = next(step for step in codeql_job["steps"] if step.get("name") == "Analyze")
+    assert analyze_step["with"]["category"] == (
+        "/language:${{ matrix.language }}/scope:${{ matrix.scope }}"
+    )
+    assert analyze_step["with"]["output"] == "codeql-results"
+    assert analyze_step["with"]["upload"] == (
+        "${{ github.event_name != 'pull_request' || "
+        "github.event.pull_request.head.repo.full_name == github.repository }}"
+    )
+    artifact_step = next(
+        step for step in codeql_job["steps"]
+        if step.get("name") == "Upload CodeQL SARIF artifact"
+    )
+    assert artifact_step["if"] == "always()"
+
+
+def test_codeql_configs_cover_expected_sources_and_queries():
+    for relative_path, expected_paths in CODEQL_PATHS.items():
+        config_path = REPO_ROOT / relative_path
+        config = load_yaml(config_path)
+
+        assert set(config["paths"]) == expected_paths
+        assert all((REPO_ROOT / path).exists() for path in config["paths"])
+        assert not any(
+            "example-input-files" in pattern
+            for pattern in config.get("paths-ignore", [])
+        )
+        suites = {query["uses"] for query in config["queries"]}
+        assert suites <= {"security-and-quality", "security-extended"}
+        assert suites
+
+
+def test_source_scanners_include_example_input_files():
+    workflow = CODE_SCAN_PATH.read_text(encoding="utf-8")
+    assert "**/example-input-files/**" not in workflow
+
+
+def test_all_codeql_actions_use_current_supported_major():
+    references: list[tuple[str, str]] = []
+    for workflow_path in (REPO_ROOT / ".github" / "workflows").glob("*.yml"):
+        for reference, version in re.findall(
+            r"(github/codeql-action/[^@\s]+@[0-9a-f]{40})\s+#\s+(v\d+)",
+            workflow_path.read_text(encoding="utf-8"),
+        ):
+            references.append((workflow_path.name, f"{reference} # {version}"))
+
+    assert references, "Expected at least one CodeQL action reference"
+    stale = [
+        (path, reference)
+        for path, reference in references
+        if not reference.endswith("# v4")
+    ]
+    assert not stale, f"CodeQL actions not using v4: {stale}"
+
+
+def test_codeql_runs_when_any_scanned_source_changes():
+    workflow = load_workflow(CODE_SCAN_PATH)
+    triggers = workflow["on"]
+
+    assert set(triggers["pull_request"]["paths"]) == CODEQL_TRIGGER_PATHS
+    assert set(triggers["push"]["paths"]) == CODEQL_TRIGGER_PATHS
+
+
+def test_dependabot_monitors_each_supported_ecosystem():
+    config = load_yaml(DEPENDABOT_PATH)
+    ecosystems = {update["package-ecosystem"] for update in config["updates"]}
+    assert ecosystems == {"github-actions", "nuget", "pip", "docker"}
+
+    for update in config["updates"]:
+        assert update["schedule"]["interval"] == "weekly"
+        assert update["open-pull-requests-limit"] > 0
+
+    assert dependabot_update("github-actions")["directory"] == "/"
+
+
+def test_dependency_review_blocks_new_high_severity_vulnerabilities():
+    workflow = load_workflow(DEPENDENCY_REVIEW_PATH)
+    assert "pull_request" in workflow["on"]
+    assert set(workflow["on"]["pull_request"]["paths"]) == (
+        DEPENDENCY_REVIEW_TRIGGER_PATHS
+    )
+    assert workflow["permissions"] == {"contents": "read"}
+
+    job = workflow["jobs"]["dependency-review"]
+    review_step = next(
+        step
+        for step in job["steps"]
+        if uses_action(step, "actions/dependency-review-action")
+    )
+    assert review_step["with"] == {
+        "fail-on-severity": "high",
+        "fail-on-scopes": "runtime, development, unknown",
+        "show-patched-versions": "true",
+    }
+
+
+def test_weekly_msdo_checks_out_only_catalog_roots():
+    workflow = load_workflow(
+        REPO_ROOT / ".github" / "workflows" / "weekly-deep-scan.yml"
+    )
+    checkout = next(
+        step for step in workflow["jobs"]["msdo"]["steps"]
+        if uses_action(step, "actions/checkout")
+    )
+
+    assert checkout["with"]["sparse-checkout"].splitlines() == [
+        "/agents/",
+        "/starter-kits/",
+    ]
+    assert checkout["with"]["sparse-checkout-cone-mode"] == "false"
+    assert checkout["with"]["persist-credentials"] == "false"
+
+    msdo_step = next(
+        step for step in workflow["jobs"]["msdo"]["steps"]
+        if step.get("name") == "Run Microsoft Security DevOps"
+    )
+    assert msdo_step["with"]["tools"].split(",") == [
+        "bandit",
+        "checkov",
+        "trivy",
+    ]
+
+
+def test_weekly_manual_dry_run_suppresses_security_publication_and_failure():
+    workflow = load_workflow(
+        REPO_ROOT / ".github" / "workflows" / "weekly-deep-scan.yml"
+    )
+    dry_run = workflow["on"]["workflow_dispatch"]["inputs"]["dry_run"]
+    assert dry_run["type"] == "boolean"
+    assert dry_run["default"] == "true"
+    assert workflow["permissions"] == {"contents": "read"}
+
+    msdo_steps = workflow["jobs"]["msdo"]["steps"]
+    security_upload = next(
+        step for step in msdo_steps
+        if step.get("name") == "Upload results to the Security tab"
+    )
+    assert security_upload["if"] == (
+        "${{ !inputs.dry_run && steps.msdo.outputs.sarifFile != '' }}"
+    )
+
+    report = workflow["jobs"]["report"]
+    assert report["permissions"] == {"contents": "read"}
+    assert "!inputs.dry_run" in report["if"]
+
+
+def test_weekly_disabled_scans_are_explicitly_staged():
+    path = REPO_ROOT / ".github" / "workflows" / "weekly-deep-scan.yml"
+    workflow = load_workflow(path)
+    source = path.read_text(encoding="utf-8")
+
+    assert workflow["name"] == "Weekly Catalog Audit"
+    assert workflow["jobs"]["url-reputation-audit"]["if"] == "${{ false }}"
+    assert workflow["jobs"]["discover-images"]["if"] == (
+        "${{ false && !inputs.skip_image_scan }}"
+    )
+    assert "Staged capabilities (not executed)" in source
+    assert "Do not describe" in source
+
+
+def test_security_rollout_has_owners_deadline_and_response_slas():
+    security = (REPO_ROOT / "SECURITY.md").read_text(encoding="utf-8")
+
+    assert "Discovery catalog CODEOWNERS own scanner triage and promotion" in security
+    assert "December 31, 2026" in security
+    assert "Critical finding or verified credential" in security
+    assert "High severity" in security
+    assert "Medium severity" in security
+    assert "GitHub Issues are disabled" in security
+
+    contributing = (REPO_ROOT / "CONTRIBUTING.md").read_text(encoding="utf-8")
+    security = (REPO_ROOT / "SECURITY.md").read_text(encoding="utf-8")
+    assert "staged but currently disabled" in contributing
+    assert "staged but disabled" in security
+
+
+def test_trusted_code_workflows_do_not_cache_from_pr_data():
+    jobs = {
+        "pr-review.yml": "validate",
+        "validate-agent-schemas.yml": "validate-schemas",
+        "validate-starter-kit-schema.yml": "validate-schema",
+        "validate-starter-kits.yml": "validate",
+    }
+    for workflow_name, job_name in jobs.items():
+        workflow = load_workflow(
+            REPO_ROOT / ".github" / "workflows" / workflow_name
+        )
+        steps = workflow["jobs"][job_name]["steps"]
+        setup_python = next(
+            step for step in steps if uses_action(step, "actions/setup-python")
+        )
+        assert "cache" not in setup_python.get("with", {})
+        assert "cache-dependency-path" not in setup_python.get("with", {})
+
+        checkouts = [
+            step for step in steps if uses_action(step, "actions/checkout")
+        ]
+        assert checkouts
+        assert all(
+            step.get("with", {}).get("persist-credentials") == "false"
+            for step in checkouts
+        )
+
+        commands = "\n".join(step.get("run", "") for step in steps)
+        assert not re.search(r"(?m)^\s*python\s+(?:pr/|\$GITHUB_WORKSPACE/pr/)", commands)
+
+
+def test_weekly_url_reputation_provider_errors_are_report_only():
+    workflow = load_workflow(
+        REPO_ROOT / ".github" / "workflows" / "weekly-deep-scan.yml"
+    )
+    reputation_step = next(
+        step for step in workflow["jobs"]["url-reputation-audit"]["steps"]
+        if step.get("id") == "reputation"
+    )
+    command = reputation_step["run"]
+    assert "EXIT_CODE=0" in command
+    assert "|| EXIT_CODE=$?" in command
+    assert command.rstrip().endswith("exit 0")
+
+
+def test_unavailable_external_scanners_remain_disabled():
+    workflow = load_workflow(
+        REPO_ROOT / ".github" / "workflows" / "weekly-deep-scan.yml"
+    )
+
+    assert workflow["jobs"]["url-reputation-audit"]["if"] == "${{ false }}"
+    assert workflow["jobs"]["discover-images"]["if"] == (
+        "${{ false && !inputs.skip_image_scan }}"
+    )
+
+
+def test_weekly_security_findings_warn_then_fail_the_scheduled_triage_gate():
+    path = REPO_ROOT / ".github" / "workflows" / "weekly-deep-scan.yml"
+    workflow = load_workflow(path)
+    full_audit = workflow["jobs"]["full-catalog-audit"]
+    audit_command = next(
+        step["run"] for step in full_audit["steps"] if step.get("id") == "audit"
+    )
+    generated_command = next(
+        step["run"] for step in full_audit["steps"] if step.get("id") == "generated"
+    )
+    msdo = workflow["jobs"]["msdo"]
+    summarize_command = next(
+        step["run"] for step in msdo["steps"] if step.get("id") == "summarize"
+    )
+    report = workflow["jobs"]["report"]
+
+    assert "::warning" in audit_command
+    assert "::warning" in generated_command
+    assert "::warning" in summarize_command
+    assert "exit 1" not in audit_command + generated_command + summarize_command
+    assert msdo["outputs"]["actionable"] == (
+        "${{ steps.summarize.outputs.actionable }}"
+    )
+    assert report["needs"] == ["full-catalog-audit", "msdo"]
+    assert report["permissions"] == {"contents": "read"}
+    assert "needs.msdo.outputs.actionable == 'true'" in report["if"]
+    report_command = report["steps"][0]["run"]
+    assert "exit 1" in report_command
+    assert "GITHUB_STEP_SUMMARY" in report_command
+    assert "issues.create" not in path.read_text(encoding="utf-8")
+
+
+def test_validation_workflows_publish_actionable_diagnostics():
+    unit_workflow = load_workflow(
+        REPO_ROOT / ".github" / "workflows" / "unit-tests.yml"
+    )
+    unit_steps = unit_workflow["jobs"]["pytest"]["steps"]
+    unit_test_step = next(step for step in unit_steps if step.get("id") == "unit_tests")
+    assert "-n auto --dist worksteal" in unit_test_step["run"]
+    assert "set -o pipefail" in unit_test_step["run"]
+    assert "--junitxml=\"$RUNNER_TEMP/unit-tests.xml\"" in unit_test_step["run"]
+    assert "2>&1 | tee \"$RUNNER_TEMP/unit-tests.log\"" in unit_test_step["run"]
+    unit_summary = next(
+        step for step in unit_steps if step.get("name") == "Summarize unit test results"
+    )
+    assert "render_ci_summary.py pytest" in unit_summary["run"]
+    unit_artifact = next(
+        step for step in unit_steps if step.get("name") == "Upload unit test diagnostics"
+    )
+    assert unit_artifact["if"].startswith("${{ always()")
+
+    full_workflow = load_workflow(
+        REPO_ROOT / ".github" / "workflows" / "validate-everything.yml"
+    )
+    full_steps = full_workflow["jobs"]["validate-all-agents"]["steps"]
+    full_checkout = next(
+        step for step in full_steps if uses_action(step, "actions/checkout")
+    )
+    assert full_checkout["with"]["lfs"] == "true"
+    assert "validate-all-starter-kits" not in full_workflow["jobs"]
+    assert any(
+        step.get("name") == "Validate every starter kit against current schema"
+        for step in full_steps
+    )
+    validation_step_ids = {"unit_tests", "catalog", "starter_kits"}
+    for step in full_steps:
+        if step.get("id") in validation_step_ids:
+            assert step.get("continue-on-error") == "true"
+    aggregate_failure = next(
+        step for step in full_steps
+        if step.get("name") == "Fail when any full-catalog validation failed"
+    )
+    assert aggregate_failure["if"] == "always()"
+    assert "UNIT_TEST_OUTCOME" in aggregate_failure["env"]
+    assert "CATALOG_OUTCOME" in aggregate_failure["env"]
+    assert "STARTER_KIT_OUTCOME" in aggregate_failure["env"]
+    for step in full_steps:
+        if "| tee" in step.get("run", ""):
+            assert "set -o pipefail" in step["run"] or "|| true" in step["run"]
+    assert any(
+        "render_ci_summary.py pytest" in step.get("run", "") for step in full_steps
+    )
+    assert any(
+        "render_ci_summary.py catalog" in step.get("run", "") for step in full_steps
+    )
+    shadow_steps = full_workflow["jobs"]["shadow-pr"]["steps"]
+    shadow_summary = next(
+        step for step in shadow_steps
+        if step.get("name") == "Summarize report-only results"
+    )
+    assert "trusted/.github/scripts/render_ci_summary.py shadow" in shadow_summary["run"]
+    assert "--catalog-report" in shadow_summary["run"]
+    assert "--schema-log" in shadow_summary["run"]
+
+    pr_workflow = load_workflow(
+        REPO_ROOT / ".github" / "workflows" / "pr-review.yml"
+    )
+    pr_steps = pr_workflow["jobs"]["validate"]["steps"]
+    pr_summary = next(
+        step for step in pr_steps if step.get("name") == "Summarize validation results"
+    )
+    assert pr_summary["if"] == "always()"
+    assert "trusted/.github/scripts/render_ci_summary.py catalog" in pr_summary["run"]
+    post_results = pr_workflow["jobs"]["post-results"]["steps"]
+    feedback = next(
+        step for step in post_results
+        if step.get("name") == "Manage labels and post PR feedback"
+    )["with"]["script"]
+    assert "**How to fix:** ${remediation(f)}" in feedback
+    assert "**Guidance:** ${guidanceUrl(f)}" in feedback
+    assert "results.has_markdown_only" in feedback
+    assert "results.has_dockerfile" in feedback
+    assert "results.has_code" in feedback
+    assert "'markdown-only':             { color: '8250df'" in feedback
+    assert "'contains-dockerfile':       { color: '2496ed'" in feedback
+    assert "'contains-code':             { color: '1f883d'" in feedback
+
+
+def test_unit_tests_run_for_every_validator_and_policy_input():
+    source = (
+        REPO_ROOT / ".github" / "workflows" / "unit-tests.yml"
+    ).read_text(encoding="utf-8")
+
+    assert (
+        r"^\.github/workflows/(probe-aka-ms|unit-tests)\.yml$"
+        in source
+    )
+    assert '- ".github/policy/**"' in source
+    assert '- ".github/requirements-ci.txt"' in source
+    assert r"^\.github/(scripts|tests|policy)/" in source
+    assert r"^\.github/requirements-ci\.txt$" in source
+    assert "--check-no-growth" in source
+    assert 'fetch-depth: 0' in source
+    assert r"/^\.github\/workflows\/.*\.yml$/" not in source
+
+
+def test_pr_review_limits_new_labels_and_image_gate_to_catalog_changes():
+    source = (
+        REPO_ROOT / ".github" / "workflows" / "pr-review.yml"
+    ).read_text(encoding="utf-8")
+
+    assert "const hasCatalog =" in source
+    assert "} else if (hasDocsOnly) {" in source
+    assert "labelsToAdd.push('docs-only');" in source
+    assert "if (hasCatalog && results.has_images)" in source
+    assert "if (hasCatalog && imageFiles.length > 0)" in source
+
+
+def test_schema_bootstrap_never_executes_pr_python():
+    for workflow_name, step_name in {
+        "validate-agent-schemas.yml": "Run AS-001 through AS-005 schema checks against PR data",
+        "validate-starter-kit-schema.yml": "Run SKS-001 through SKS-003 schema checks against PR data",
+    }.items():
+        workflow = load_workflow(REPO_ROOT / ".github" / "workflows" / workflow_name)
+        command = next(
+            step["run"]
+            for job in workflow["jobs"].values()
+            for step in job["steps"]
+            if step.get("name") == step_name
+        )
+        assert "pr/.github/tests" not in command
+        assert "${{ github.workspace }}/pr/.github/scripts" not in command
+        assert "embedded bootstrap checks" in command
+
+    starter_workflow = load_workflow(
+        REPO_ROOT / ".github" / "workflows" / "validate-starter-kits.yml"
+    )
+    starter_command = next(
+        step["run"]
+        for step in starter_workflow["jobs"]["validate"]["steps"]
+        if step.get("name") == "Run validation"
+    )
+    assert 'script="trusted/.github/scripts/validate_starter_kits.py"' in starter_command
+    assert 'script="pr/' not in starter_command
+    assert "embedded bootstrap checks" in starter_command
+
+
+def test_registry_refresh_tracks_computed_tag_inputs():
+    workflow = load_workflow(
+        REPO_ROOT / ".github" / "workflows" / "update-registry.yml"
+    )
+    paths = set(workflow["on"]["push"]["paths"])
+
+    assert {
+        "agents/**",
+        "starter-kits/**",
+        ".github/policy/base-images.yaml",
+        ".github/scripts/compute_tags.py",
+        ".github/scripts/dockerfile_parser.py",
+        ".github/scripts/list_base_images.py",
+        ".github/scripts/rules/base.py",
+    } <= paths
+
+
+def test_registry_refresh_cannot_rewrite_or_self_approve_generated_prs():
+    path = REPO_ROOT / ".github" / "workflows" / "update-registry.yml"
+    workflow = load_workflow(path)
+    source = path.read_text(encoding="utf-8")
+
+    assert workflow["permissions"] == {
+        "contents": "read",
+        "pull-requests": "read",
+    }
+    assert "git push --force" not in source
+    assert "gh pr merge" not in source
+    assert "x-access-token" not in source
+    assert "persist-credentials: false" in source
+    assert "gh auth setup-git" in source
+    assert "chore/registry-refresh-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}" in source
+    assert "git push --set-upstream" in source
+    assert "A human CODEOWNER must approve this PR" in source
+    assert not (
+        REPO_ROOT / ".github" / "workflows" / "auto-approve-registry-prs.yml"
+    ).exists()
+
+    auto_merge_source = (
+        REPO_ROOT / ".github" / "workflows" / "auto-merge-on-approval.yml"
+    ).read_text(encoding="utf-8")
+    assert "chore/registry-refresh-*" in auto_merge_source
+    assert "require_code_owner_reviews" in auto_merge_source
+    assert '"$HUMAN_APPROVALS" -gt 0' in auto_merge_source
+
+
+def test_baseline_debt_is_codeowned_tracked_and_shrink_only():
+    codeowners = (REPO_ROOT / ".github" / "CODEOWNERS").read_text(
+        encoding="utf-8"
+    )
+    debt = (REPO_ROOT / "docs" / "validation-baseline-debt.md").read_text(
+        encoding="utf-8"
+    )
+    baseline = json.loads(
+        (REPO_ROOT / ".github" / "policy" / "baseline.json").read_text(
+            encoding="utf-8"
+        )
+    )
+
+    assert "/.github/policy/baseline.json" in codeowners
+    assert "/docs/validation-baseline-debt.md" in codeowners
+    assert "New entries are prohibited" in debt
+    assert "December 31, 2026" in debt
+    assert baseline["count"] == len(baseline["violations"]) == 3
+    for entry in baseline["violations"]:
+        assert entry["owner"] == "Discovery catalog CODEOWNERS"
+        assert entry["tracking_ref"].startswith(
+            "docs/validation-baseline-debt.md#"
+        )
+        assert entry["remove_by"] == "2026-12-31"
+
+
+def test_dependabot_covers_all_requirements_files():
+    requirements = sorted(
+        [CI_REQUIREMENTS_PATH]
+        + [*REPO_ROOT.glob("agents/**/requirements.txt")]
+    )
+    expected_directories = {
+        f"/{path.parent.relative_to(REPO_ROOT).as_posix()}" for path in requirements
+    }
+
+    assert requirements, "Expected at least one requirements.txt"
+    assert set(dependabot_update("pip")["directories"]) == expected_directories
+
+
+def test_ci_python_dependencies_are_pinned_and_workflows_use_the_manifest():
+    requirements = [
+        line
+        for line in CI_REQUIREMENTS_PATH.read_text(encoding="utf-8").splitlines()
+        if line and not line.startswith("#")
+    ]
+    assert all(
+        re.fullmatch(r"[A-Za-z0-9_.-]+==[A-Za-z0-9_.+!-]+", requirement)
+        for requirement in requirements
+    )
+    assert {requirement.split("==", 1)[0].lower() for requirement in requirements} == {
+        "codespell",
+        "dnspython",
+        "jsonschema",
+        "onnx",
+        "picklescan",
+        "pytest",
+        "pytest-xdist",
+        "pyyaml",
+        "referencing",
+    }
+
+    install_steps: list[tuple[str, str]] = []
+    for workflow_path in (REPO_ROOT / ".github" / "workflows").glob("*.yml"):
+        workflow = load_workflow(workflow_path)
+        for job in workflow.get("jobs", {}).values():
+            for step in job.get("steps", []):
+                command = step.get("run", "")
+                if re.search(r"(?m)^\s*(?:python -m )?pip install\b", command):
+                    install_steps.append((workflow_path.name, command))
+
+    assert install_steps
+    unmanaged = [
+        (workflow, command)
+        for workflow, command in install_steps
+        if "requirements-ci.txt" not in command
+    ]
+    assert not unmanaged, f"Inline CI Python dependencies found: {unmanaged}"
+
+
+def test_python_validation_jobs_use_github_hosted_linux():
+    expected_jobs = {
+        "check-agent-removal-impact.yml": {"check-impact"},
+        "pr-review.yml": {"validate"},
+        "unit-tests.yml": {"pytest"},
+        "validate-everything.yml": {"validate-all-agents"},
+        "validate-agent-schemas.yml": {"validate-schemas"},
+        "validate-starter-kit-schema.yml": {"validate-schema"},
+        "validate-starter-kits.yml": {"validate"},
+        "weekly-deep-scan.yml": {
+            "full-catalog-audit",
+            "url-reputation-audit",
+            "discover-images",
+        },
+    }
+    slim_jobs = {
+        ("check-agent-removal-impact.yml", "check-impact"),
+        ("validate-agent-schemas.yml", "validate-schemas"),
+        ("validate-starter-kit-schema.yml", "validate-schema"),
+        ("validate-starter-kits.yml", "validate"),
+        ("weekly-deep-scan.yml", "discover-images"),
+    }
+
+    for workflow_name, job_names in expected_jobs.items():
+        workflow = load_workflow(REPO_ROOT / ".github" / "workflows" / workflow_name)
+        for job_name in job_names:
+            job = workflow["jobs"][job_name]
+            expected_runner = (
+                "ubuntu-slim"
+                if (workflow_name, job_name) in slim_jobs
+                else "ubuntu-latest"
+            )
+            assert job["runs-on"] == expected_runner
+            assert "container" not in job
+            if expected_runner == "ubuntu-slim":
+                assert int(job["timeout-minutes"]) <= 15
+
+            setup_steps = [
+                step
+                for step in job["steps"]
+                if uses_action(step, "actions/setup-python")
+            ]
+            assert len(setup_steps) == 1
+            assert setup_steps[0]["with"]["python-version"] == "3.12"
+
+    workflow_text = "\n".join(
+        path.read_text(encoding="utf-8")
+        for path in (REPO_ROOT / ".github" / "workflows").glob("*.yml")
+    )
+    assert "mcr.microsoft.com/azurelinux" not in workflow_text
+    assert "tdnf install" not in workflow_text
+    assert "packagefeedproxy.microsoft.io" not in workflow_text
+
+
+def test_pull_request_target_jobs_keep_pr_data_untrusted():
+    for workflow_name, job_name in {
+        "check-agent-removal-impact.yml": "check-impact",
+        "pr-review.yml": "validate",
+    }.items():
+        workflow = load_workflow(REPO_ROOT / ".github" / "workflows" / workflow_name)
+        steps = workflow["jobs"][job_name]["steps"]
+        trusted_checkout = next(
+            step for step in steps if step.get("with", {}).get("path") == "trusted"
+        )
+        pr_checkout = next(
+            step for step in steps if step.get("with", {}).get("path") == "pr"
+        )
+
+        assert trusted_checkout["with"]["ref"] == (
+            "${{ github.event.pull_request.base.sha }}"
+        )
+        assert trusted_checkout["with"]["persist-credentials"] == "false"
+        assert pr_checkout["with"]["repository"] == (
+            "${{ github.event.pull_request.head.repo.full_name }}"
+        )
+        assert pr_checkout["with"]["ref"] == (
+            "${{ github.event.pull_request.head.sha }}"
+        )
+        assert pr_checkout["with"]["persist-credentials"] == "false"
+
+    pr_review_path = REPO_ROOT / ".github" / "workflows" / "pr-review.yml"
+    pr_review = load_workflow(pr_review_path)
+    head_checkouts = [
+        step
+        for job in pr_review["jobs"].values()
+        for step in job.get("steps", [])
+        if uses_action(step, "actions/checkout")
+        and step.get("with", {}).get("ref")
+        == "${{ github.event.pull_request.head.sha }}"
+    ]
+    assert len(head_checkouts) == 1
+    pr_head_checkout = head_checkouts[0]
+    assert pr_head_checkout["with"]["repository"] == (
+        "${{ github.event.pull_request.head.repo.full_name }}"
+    )
+    assert pr_head_checkout["with"]["persist-credentials"] == "false"
+    # The only head checkout lands untrusted content in pr/ (never executed).
+    # #141 removed the classify/secret-scan head checkouts; #106 requires
+    # allow-unsafe-pr-checkout so forked pull_request_target PRs can be fetched.
+    assert pr_head_checkout["with"]["path"] == "pr"
+    assert pr_head_checkout["with"]["allow-unsafe-pr-checkout"] == "true"
+
+
+def test_manual_shadow_validation_is_report_only_and_fork_aware():
+    workflow = load_workflow(
+        REPO_ROOT / ".github" / "workflows" / "validate-everything.yml"
+    )
+    assert workflow["permissions"] == {
+        "contents": "read",
+        "pull-requests": "read",
+    }
+    assert "pr_number" in workflow["on"]["workflow_dispatch"]["inputs"]
+
+    shadow_job = workflow["jobs"]["shadow-pr"]
+    assert shadow_job["if"] == "${{ inputs.pr_number != '' }}"
+    steps = shadow_job["steps"]
+    trusted_checkout = next(
+        step for step in steps if step.get("with", {}).get("path") == "trusted"
+    )
+    assert trusted_checkout["with"]["ref"] == "${{ github.sha }}"
+    assert trusted_checkout["if"] == "always()"
+    assert trusted_checkout["with"]["persist-credentials"] == "false"
+    assert not any(
+        step.get("with", {}).get("path") == "pr"
+        for step in steps
+        if uses_action(step, "actions/checkout")
+    )
+    setup_python = next(
+        step for step in steps if uses_action(step, "actions/setup-python")
+    )
+    assert "cache" not in setup_python.get("with", {})
+    integration_step = next(
+        step for step in steps
+        if step.get("name") == "Build ephemeral integration tree"
+    )
+    assert "https://github.com/${HEAD_REPOSITORY}.git" in integration_step["run"]
+    assert '"$HEAD_SHA"' in integration_step["run"]
+    assert steps.index(setup_python) < steps.index(integration_step)
+
+    report_only_steps = {
+        "Build ephemeral integration tree",
+        "Run primary catalog validator",
+        "Run schema regression suite against PR data",
+        "Run starter-kit validation against PR data",
+        "Run removal-impact validation without write access",
+    }
+    assert report_only_steps <= {step.get("name") for step in steps}
+    for step in steps:
+        if step.get("name") in report_only_steps:
+            assert step.get("continue-on-error") == "true"
+
+    source = (
+        REPO_ROOT / ".github" / "workflows" / "validate-everything.yml"
+    ).read_text(encoding="utf-8")
+    commands = "\n".join(step.get("run", "") for step in steps)
+    assert "python trusted/.github/scripts/" in commands
+    assert not re.search(r"(?m)^\s*python\s+pr/", commands)
+    assert '--repo-root "$GITHUB_WORKSPACE/evaluation"' in commands
+    assert "DISCOVERY_CATALOG_ROOT: ${{ github.workspace }}/evaluation" in source
+    assert "--github-token" not in commands
+    assert "did not change or publish a check to the target PR" in commands
+
+    for mutation in (
+        "issues.createComment",
+        "issues.addLabels",
+        "pulls.createReview",
+        "pulls.merge",
+    ):
+        assert mutation not in source
+
+    branch_job = workflow["jobs"]["validate-all-agents"]
+    assert branch_job["if"] == "${{ inputs.pr_number == '' }}"
+    assert any(
+        "python -m pytest .github/tests/" in step.get("run", "")
+        and "-n auto --dist worksteal" in step.get("run", "")
+        for step in branch_job["steps"]
+    )
+    full_catalog_command = next(
+        step["run"] for step in branch_job["steps"]
+        if step.get("name") == "Build full file list and run validate_pr.py"
+    )
+    assert "git ls-files agents" in full_catalog_command
+    assert "git ls-files starter-kits" in full_catalog_command
+    assert "git ls-files docs/schemas" not in full_catalog_command
+
+
+def test_dependabot_covers_all_conventional_dockerfiles():
+    dockerfiles = sorted(
+        [*REPO_ROOT.glob("agents/*/tools/*/Dockerfile")]
+    )
+    patterns = dependabot_update("docker")["directories"]
+    uncovered = [
+        path.relative_to(REPO_ROOT).as_posix()
+        for path in dockerfiles
+        if not directory_matches(
+            f"/{path.parent.relative_to(REPO_ROOT).as_posix()}", patterns
+        )
+    ]
+
+    assert dockerfiles, "Expected at least one conventional Dockerfile"
+    assert not uncovered, f"Dockerfiles missing Dependabot coverage: {uncovered}"
+
+
+def test_workflow_executables_are_immutable_and_dependency_managed():
+    workflow_sources = {
+        path.name: path.read_text(encoding="utf-8")
+        for path in (REPO_ROOT / ".github" / "workflows").glob("*.yml")
+    }
+    problems: list[str] = []
+
+    for workflow_name, source in workflow_sources.items():
+        if re.search(r"(?m)^\s*uses:\s*[^\s#]+@latest(?:\s|$)", source):
+            problems.append(f"{workflow_name}: action uses @latest")
+
+        for installer_match in re.finditer(
+            r"https://raw\.githubusercontent\.com/[^/\s]+/[^/\s]+/"
+            r"(?P<revision>[^/\s]+)/[^\s]*install\.sh",
+            source,
+        ):
+            revision = installer_match.group("revision")
+            if not re.fullmatch(r"[0-9a-f]{40}", revision):
+                problems.append(
+                    f"{workflow_name}: installer is not pinned to a full commit SHA"
+                )
+
+            install_command = source[installer_match.end() : installer_match.end() + 160]
+            if not re.search(r"\bv\d+\.\d+\.\d+\b", install_command):
+                problems.append(
+                    f"{workflow_name}: installer does not select an explicit release"
+                )
+
+    if not DOTNET_TOOL_MANIFEST_PATH.is_file():
+        problems.append("Application Inspector has no local .NET tool manifest")
+    else:
+        manifest = json.loads(DOTNET_TOOL_MANIFEST_PATH.read_text(encoding="utf-8"))
+        application_inspector = manifest.get("tools", {}).get(
+            "microsoft.cst.applicationinspector.cli"
+        )
+        if not application_inspector:
+            problems.append("Application Inspector is absent from the .NET tool manifest")
+        else:
+            if not re.fullmatch(
+                r"\d+\.\d+\.\d+", application_inspector.get("version", "")
+            ):
+                problems.append("Application Inspector has no exact manifest version")
+            if application_inspector.get("commands") != ["appinspector"]:
+                problems.append("Application Inspector manifest command changed")
+
+    code_scan_source = workflow_sources[CODE_SCAN_PATH.name]
+    if "dotnet tool restore" not in code_scan_source:
+        problems.append("code-scan.yml does not restore the .NET tool manifest")
+    if "dotnet tool run appinspector analyze" not in code_scan_source:
+        problems.append("code-scan.yml does not invoke the manifest-pinned tool")
+
+    nuget_updates = [
+        update
+        for update in load_yaml(DEPENDABOT_PATH)["updates"]
+        if update["package-ecosystem"] == "nuget"
+    ]
+    if len(nuget_updates) != 1 or nuget_updates[0].get("directory") != "/":
+        problems.append("Dependabot does not manage the root .NET tool manifest")
+
+    assert not problems, "Unpinned workflow executables:\n- " + "\n- ".join(problems)
+
+# uses: owner/name@<40-hex-sha> # vX.Y.Z   (trailing version comment required)
+_PINNED_USES_RE = re.compile(
+    r"^\s*(?:-\s+)?uses:\s+(?P<ref>[^\s#]+)\s+#\s*(?P<comment>\S+)\s*$"
+)
+
+
+def test_workflow_actions_are_sha_pinned_with_version_comments():
+    """Every third-party action is immutable and carries a readable version."""
+    problems: list[str] = []
+
+    for workflow_path in (REPO_ROOT / ".github" / "workflows").glob("*.yml"):
+        workflow_name = workflow_path.name
+        source = workflow_path.read_text(encoding="utf-8")
+        for line in source.splitlines():
+            stripped = line.strip()
+            if not stripped.startswith(("uses:", "- uses:")):
+                continue
+            match = _PINNED_USES_RE.match(line)
+            if match is None:
+                problems.append(f"{workflow_name}: not SHA-pinned with a comment -> {stripped}")
+                continue
+            digest = match.group("ref").partition("@")[2]
+            if not re.fullmatch(r"[0-9a-f]{40}", digest):
+                problems.append(f"{workflow_name}: not a full commit SHA -> {stripped}")
+            if not re.fullmatch(r"v\d+(?:\.\d+){0,2}", match.group("comment")):
+                problems.append(f"{workflow_name}: missing version comment -> {stripped}")
+
+    assert not problems, "Actions not SHA-pinned:\n- " + "\n- ".join(problems)

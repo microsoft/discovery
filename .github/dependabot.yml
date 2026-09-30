@@ -12,3 +12,72 @@ updates:
       prefix: "chore(actions)"
     cooldown:
       default-days: 7
+
+  # The root local tool manifest pins Application Inspector for code scanning.
+  - package-ecosystem: "nuget"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "tuesday"
+      time: "07:00"
+      timezone: "Etc/UTC"
+    open-pull-requests-limit: 10
+    groups:
+      nuget-minor-patch:
+        patterns:
+          - "*"
+        update-types:
+          - "minor"
+          - "patch"
+    labels:
+      - "automated-dep-update"
+    commit-message:
+      prefix: "chore(dotnet)"
+
+  # Python dependencies used by catalog validation and contributed agents.
+  - package-ecosystem: "pip"
+    directories:
+      - "/.github"
+      - "/agents/gwp-predictor/training"
+      - "/agents/zinc/tools/zinc"
+    schedule:
+      interval: "weekly"
+      day: "tuesday"
+      time: "08:00"
+      timezone: "Etc/UTC"
+    open-pull-requests-limit: 10
+    groups:
+      pip-minor-patch:
+        patterns:
+          - "*"
+        update-types:
+          - "minor"
+          - "patch"
+        group-by: "dependency-name"
+    labels:
+      - "automated-dep-update"
+    commit-message:
+      prefix: "chore(python)"
+
+  # Track base images in catalog tools.
+  - package-ecosystem: "docker"
+    directories:
+      - "/agents/*/tools/*"
+    schedule:
+      interval: "weekly"
+      day: "wednesday"
+      time: "07:00"
+      timezone: "Etc/UTC"
+    open-pull-requests-limit: 10
+    groups:
+      docker-minor-patch:
+        patterns:
+          - "*"
+        update-types:
+          - "minor"
+          - "patch"
+        group-by: "dependency-name"
+    labels:
+      - "automated-dep-update"
+    commit-message:
+      prefix: "chore(images)"

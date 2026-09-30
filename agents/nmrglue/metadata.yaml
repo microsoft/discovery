@@ -1,0 +1,18 @@
+name: nmrglue
+type: agent
+version: 1.0.0
+associated_tools:
+  - agents/nmrglue/tools/nmrglue
+publisher:
+  name: Microsoft
+  contact: discovery-catalog@microsoft.com
+  support_url: https://techcommunity.microsoft.com/category/azure/discussions/microsoft-discovery-discussions
+  party: 1p
+description: >
+  Read, process, and analyze NMR data from Bruker, Varian/Agilent, and NMRPipe formats. Extract spectra and
+  basic processing metadata.
+tags:
+  - nmr
+  - spectroscopy
+  - signal-processing
+  - nmrglue

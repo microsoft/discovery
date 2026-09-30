@@ -456,6 +456,7 @@ def poll_operation(
     start_time = time.time()
     attempt = 0
     old_logs: list[str] = []
+    old_runtime_details = ""
     spinner = itertools.cycle(["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"])
 
     while True:
@@ -467,6 +468,12 @@ def poll_operation(
         # Use the single-call status function
         data = get_operation_status(project_name, operation_id, workspace_url, api_version=api_version)
         debug(f"Attempt {attempt} status={data.status}")
+
+        runtime_details = data.result.runtime_details if data.result else ""
+        if runtime_details and runtime_details != old_runtime_details:
+            sys.stdout.write("\r\033[K")
+            info(f"Runtime details: {runtime_details}")
+            old_runtime_details = runtime_details
 
         logs = _extract_tool_report_logs(data.result.tool_report)  # type: ignore
         new_logs = _log_diff(old_logs, logs)

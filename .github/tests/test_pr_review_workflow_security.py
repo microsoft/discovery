@@ -39,6 +39,28 @@ def test_untrusted_jobs_do_not_checkout_before_shell_execution():
     assert "trufflehog git file:///tmp/pr-history" in command
 
 
+def test_author_permission_is_resolved_and_passed_to_validator():
+    workflow = load_workflow()
+    classify = workflow["jobs"]["classify"]
+    permission_step = next(
+        step for step in classify["steps"] if step.get("id") == "author_permission"
+    )
+
+    assert "getCollaboratorPermissionLevel" in permission_step["with"]["script"]
+    assert classify["outputs"]["author_permission"] == (
+        "${{ steps.author_permission.outputs.permission }}"
+    )
+
+    validator = next(
+        step
+        for step in workflow["jobs"]["validate"]["steps"]
+        if step.get("id") == "run_validator"
+    )
+    assert validator["env"]["PR_AUTHOR_PERMISSION"] == (
+        "${{ needs.classify.outputs.author_permission || 'unknown' }}"
+    )
+
+
 def test_trufflehog_install_and_repository_layout_are_stable():
     workflow = load_workflow()
     command = workflow["jobs"]["secret-scan"]["steps"][0]["run"]

@@ -1,0 +1,18 @@
+name: phonopy
+type: agent
+version: 1.0.0
+associated_tools:
+  - agents/phonopy/tools/phonopy
+publisher:
+  name: Microsoft
+  contact: discovery-catalog@microsoft.com
+  support_url: https://techcommunity.microsoft.com/category/azure/discussions/microsoft-discovery-discussions
+  party: 1p
+description: >
+  Phonon and lattice-dynamics analysis from force constants produced by DFT codes: band structures, DOS, and
+  thermal properties.
+tags:
+  - materials-science
+  - phonons
+  - lattice-dynamics
+  - phonopy
