@@ -440,7 +440,6 @@ jobs:
             // Images always get a human look. POL-016 proves a file is the
             // format it claims to be; it cannot judge whether the picture is
             // appropriate, correctly licensed, or carries unreviewed text.
-            const imageFiles = results.image_files || [];
             if (hasCatalog && results.has_images) labelsToAdd.push('needs-image-review');
 
             // ── 3. Apply pass/fail labels ──────────────────────────
@@ -455,37 +454,6 @@ jobs:
               await github.rest.issues.addLabels({
                 owner, repo, issue_number: prNumber, labels: labelsToAdd
               });
-            }
-
-            // ── 3b. Image review notice ───────────────────────────
-            if (hasCatalog && imageFiles.length > 0) {
-              const rows = imageFiles.map(f => `| \`${f}\` |`).join('\n');
-              const body = [
-                '## 🖼️ Image review required',
-                '',
-                `This PR adds or modifies ${imageFiles.length} image file(s). Automated checks confirm each file is the format its name claims (POL-016) and that SVGs contain no scripts, event handlers, or remote references — but a maintainer must still look at them.`,
-                '',
-                '| File |',
-                '|------|',
-                rows,
-                '',
-                '**Reviewer checklist**',
-                '',
-                '- [ ] The image renders as expected and shows what the PR claims',
-                '- [ ] No embedded text containing credentials, internal URLs, or unreleased information',
-                '- [ ] Content is appropriate and the contributor has the right to publish it',
-                '- [ ] Licensing and attribution are correct for third-party artwork',
-                '- [ ] The image is genuinely needed — prefer diagrams as text (Mermaid) or linked external assets',
-                '',
-                'Remove the `needs-image-review` label to clear this gate. Pushing a new commit re-applies it.',
-              ].join('\n');
-              try {
-                await github.rest.issues.createComment({
-                  owner, repo, issue_number: prNumber, body
-                });
-              } catch (e) {
-                console.log(`Could not post image review notice: ${e.message}`);
-              }
             }
 
             // ── 4. Post inline review comments (one per failure) ───
@@ -603,23 +571,4 @@ jobs:
                 console.log(`Could not dismiss bot reviews: ${e.message}`);
               }
 
-              // ── 6. Post success summary ──────────────────────────
-              try {
-                await github.rest.issues.createComment({
-                  owner,
-                  repo,
-                  issue_number: prNumber,
-                  body: [
-                    '## ✅ Automated Check Results — All checks passed',
-                    '',
-                    'All structural, schema, content, documentation, and secret scan checks passed.',
-                    '',
-                    'This PR is ready for review or merge under the repository rules.',
-                    '',
-                    '> CODEOWNERS are automatically requested only when a changed path has an explicit owner.',
-                  ].join('\n')
-                });
-              } catch (e) {
-                console.log(`Could not post success comment (PR may be locked): ${e.message}`);
-              }
             }

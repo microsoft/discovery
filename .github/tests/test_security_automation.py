@@ -490,7 +490,6 @@ def test_pr_review_limits_new_labels_and_image_gate_to_catalog_changes():
     assert "} else if (hasDocsOnly) {" in source
     assert "labelsToAdd.push('docs-only');" in source
     assert "if (hasCatalog && results.has_images)" in source
-    assert "if (hasCatalog && imageFiles.length > 0)" in source
 
 
 def test_schema_bootstrap_never_executes_pr_python():
@@ -560,13 +559,23 @@ def test_registry_refresh_cannot_rewrite_or_self_approve_generated_prs():
         REPO_ROOT / ".github" / "workflows" / "auto-approve-registry-prs.yml"
     ).exists()
 
+    codeowners = (REPO_ROOT / ".github" / "CODEOWNERS").read_text(
+        encoding="utf-8"
+    )
+    registry_owner = next(
+        line for line in codeowners.splitlines()
+        if line.startswith("/.auto-registry/")
+    )
+    assert registry_owner.split()[1:] == [
+        "@microsoft/discovery-samples-maintainer"
+    ]
+
     auto_merge_source = (
         REPO_ROOT / ".github" / "workflows" / "auto-merge-on-approval.yml"
     ).read_text(encoding="utf-8")
-    assert "chore/registry-refresh-*" in auto_merge_source
-    assert "require_code_owner_reviews" in auto_merge_source
-    assert '"$HUMAN_APPROVALS" -gt 0' in auto_merge_source
-    assert "--eligible-for manifest" in auto_merge_source
+    assert "chore/registry-refresh-*" not in auto_merge_source
+    assert "files.length === 1" in auto_merge_source
+    assert "docs\\/discovery-app\\/releases\\/manifests\\/" in auto_merge_source
 
 
 def test_baseline_debt_is_codeowned_tracked_and_shrink_only():

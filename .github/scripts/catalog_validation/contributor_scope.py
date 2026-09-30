@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-import re
-
 from .findings import Failure
 
 
@@ -25,27 +23,15 @@ _REGISTRY_REFRESH_BOT_AUTHORS = frozenset({
     "discovery-registry-bot[bot]",
 })
 _DEPENDABOT_AUTHOR = "dependabot[bot]"
-_DEPENDABOT_PROTECTED_PATHS = {
-    "dependabot/pip/dot-github/": frozenset({
-        ".github/requirements-ci.txt",
-    }),
-    "dependabot/nuget/dot-config/": frozenset({
-        ".config/dotnet-tools.json",
-    }),
-    "dependabot/pip/agents/gwp-predictor/training/": frozenset({
-        "agents/gwp-predictor/training/requirements.txt",
-    }),
-    "dependabot/pip/agents/zinc/tools/zinc/": frozenset({
-        "agents/zinc/tools/zinc/requirements.txt",
-    }),
-    "dependabot/uv/utilities/supercomputer-cli/discovery/": frozenset({
-        "utilities/supercomputer-cli/discovery/pyproject.toml",
-        "utilities/supercomputer-cli/discovery/uv.lock",
-    }),
-}
-_DEPENDABOT_DOCKERFILE = re.compile(
-    r"^agents/[^/]+/tools/[^/]+/Dockerfile$"
-)
+_DEPENDABOT_PIP_PATHS = frozenset({
+    ".github/requirements-ci.txt",
+    "agents/gwp-predictor/training/requirements.txt",
+    "agents/zinc/tools/zinc/requirements.txt",
+})
+_DEPENDABOT_UV_PATHS = frozenset({
+    "utilities/supercomputer-cli/discovery/pyproject.toml",
+    "utilities/supercomputer-cli/discovery/uv.lock",
+})
 
 
 def is_trusted_registry_refresh(author: str, head_ref: str) -> bool:
@@ -56,15 +42,11 @@ def is_trusted_registry_refresh(author: str, head_ref: str) -> bool:
 
 
 def is_trusted_dependabot_update(path: str, author: str, head_ref: str) -> bool:
-    """Allow only configured Dependabot manifests on matching bot branches."""
+    """Allow configured manifests changed by the real Dependabot App."""
     if author != _DEPENDABOT_AUTHOR:
         return False
 
     normalized = path.replace("\\", "/")
-    for ref_prefix, allowed_paths in _DEPENDABOT_PROTECTED_PATHS.items():
-        if head_ref.startswith(ref_prefix):
-            return normalized in allowed_paths
-
     parts = normalized.split("/")
     if head_ref.startswith("dependabot/github_actions/"):
         return (
@@ -72,13 +54,13 @@ def is_trusted_dependabot_update(path: str, author: str, head_ref: str) -> bool:
             and parts[:2] == [".github", "workflows"]
             and _suffix(parts[-1]) in {".yml", ".yaml"}
         )
-
-    return (
-        head_ref.startswith(
-            f"dependabot/docker/{normalized.rsplit('/', 1)[0]}/"
-        )
-        and _DEPENDABOT_DOCKERFILE.fullmatch(normalized) is not None
-    )
+    if head_ref.startswith("dependabot/nuget/"):
+        return normalized == ".config/dotnet-tools.json"
+    if head_ref.startswith("dependabot/pip/"):
+        return normalized in _DEPENDABOT_PIP_PATHS
+    if head_ref.startswith("dependabot/uv/"):
+        return normalized in _DEPENDABOT_UV_PATHS
+    return False
 
 
 def _suffix(name: str) -> str:

@@ -11,33 +11,33 @@
 # without notifying every maintainer.
 
 # CI / workflow tooling
-/.github/workflows/                     @mukesh-dua @charwen @leijgao @karthikananth @anzaman @surajmb @umamaheshmsft @yousefi-msft @ryansok
-/.github/scripts/                       @mukesh-dua @charwen @leijgao @karthikananth @anzaman @surajmb @umamaheshmsft @yousefi-msft @ryansok
-/.github/CODEOWNERS                     @mukesh-dua @charwen @leijgao @karthikananth @anzaman @surajmb @umamaheshmsft @yousefi-msft @ryansok
+/.github/workflows/                     @microsoft/discovery-samples-maintainer
+/.github/scripts/                       @microsoft/discovery-samples-maintainer
+/.github/CODEOWNERS                     @microsoft/discovery-samples-maintainer
 
 # Validation policy — the approved base images, source allowlist, tag taxonomy,
 # rule waivers, and ratchet baseline. Editing these changes what the catalog
 # will accept, so the gate must be explicit rather than inherited from `*`.
-/.github/policy/                        @mukesh-dua @charwen @leijgao @karthikananth @anzaman @surajmb @prashney @umamaheshmsft @cjtozer @yousefi-msft @ryansok
-/.github/policy/baseline.json           @mukesh-dua @charwen @leijgao @karthikananth @anzaman @surajmb @prashney @umamaheshmsft @cjtozer @yousefi-msft @ryansok
-/docs/validation-baseline-debt.md       @mukesh-dua @charwen @leijgao @karthikananth @anzaman @surajmb @prashney @umamaheshmsft @cjtozer @yousefi-msft @ryansok
+/.github/policy/                        @microsoft/discovery-samples-maintainer
+/.github/policy/baseline.json           @microsoft/discovery-samples-maintainer
+/docs/validation-baseline-debt.md       @microsoft/discovery-samples-maintainer
 
 # Schema files — changes here can break every agent/kit in the catalog.
-/docs/schemas/                          @mukesh-dua @charwen @leijgao @karthikananth @anzaman @surajmb @umamaheshmsft  @yousefi-msft @ryansok
+/docs/schemas/                          @microsoft/discovery-samples-maintainer
 
 # Auto-generated registries — should normally never be hand-edited (see
 # POL-011). Bot-authored refresh PRs still require a human CODEOWNER approval.
-/.auto-registry/                        @mukesh-dua @charwen @leijgao @karthikananth @anzaman @surajmb @umamaheshmsft @yousefi-msft @ryansok
+/.auto-registry/                        @microsoft/discovery-samples-maintainer
 
 # Per-content area
-/agents/                                @mukesh-dua @charwen @leijgao @karthikananth @anzaman @surajmb @umamaheshmsft @yousefi-msft @ryansok
-/starter-kits/                          @mukesh-dua @charwen @leijgao @karthikananth @anzaman @surajmb @umamaheshmsft @yousefi-msft @ryansok
+/agents/                                @microsoft/discovery-samples-maintainer
+/starter-kits/                          @microsoft/discovery-samples-maintainer
 
 # Executable operator utilities. Discovery Toolbox release PRs intentionally
 # use the repository's ordinary one-approval rule instead of requiring a
 # specific CODEOWNER; REL-002 verifies the VSIX pointer and digest.
-/utilities/dataasset-migration/         @mukesh-dua @charwen @leijgao @karthikananth @anzaman @surajmb @umamaheshmsft @yousefi-msft @ryansok
-/utilities/delete-discovery-deployment/ @mukesh-dua @charwen @leijgao @karthikananth @anzaman @surajmb @umamaheshmsft @yousefi-msft @ryansok
-/utilities/rbac-roles-assignment/       @mukesh-dua @charwen @leijgao @karthikananth @anzaman @surajmb @umamaheshmsft @yousefi-msft @ryansok
-/utilities/resource-provider-registration/ @mukesh-dua @charwen @leijgao @karthikananth @anzaman @surajmb @umamaheshmsft @yousefi-msft @ryansok
-/utilities/supercomputer-cli/           @mukesh-dua @charwen @leijgao @karthikananth @anzaman @surajmb @umamaheshmsft @yousefi-msft @ryansok
+/utilities/dataasset-migration/         @microsoft/discovery-samples-maintainer
+/utilities/delete-discovery-deployment/ @microsoft/discovery-samples-maintainer
+/utilities/rbac-roles-assignment/       @microsoft/discovery-samples-maintainer
+/utilities/resource-provider-registration/ @microsoft/discovery-samples-maintainer
+/utilities/supercomputer-cli/           @microsoft/discovery-samples-maintainer

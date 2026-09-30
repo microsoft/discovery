@@ -191,10 +191,6 @@ def test_trusted_registry_refresh_bot_can_update_generated_files() -> None:
             "dependabot/pip/agents/zinc/tools/zinc/pip-123",
         ),
         (
-            "agents/demo/tools/api/Dockerfile",
-            "dependabot/docker/agents/demo/tools/api/python-3.14",
-        ),
-        (
             "utilities/supercomputer-cli/discovery/uv.lock",
             (
                 "dependabot/uv/utilities/supercomputer-cli/discovery/"
@@ -212,6 +208,21 @@ def test_dependabot_can_update_configured_protected_manifests(
         "none",
         "dependabot[bot]",
         head_ref,
+    )
+
+    assert failures == []
+
+
+def test_dependabot_grouped_update_can_span_configured_pip_directories() -> None:
+    failures = check_contributor_scope(
+        [
+            ".github/requirements-ci.txt",
+            "agents/gwp-predictor/training/requirements.txt",
+            "agents/zinc/tools/zinc/requirements.txt",
+        ],
+        "none",
+        "dependabot[bot]",
+        "dependabot/pip/pip-minor-patch-123",
     )
 
     assert failures == []

@@ -100,48 +100,31 @@ def test_codeowners_targets_sensitive_paths_without_global_fanout():
         line.startswith("/utilities/discovery-toolbox/")
         for line in active_lines
     )
+    assert all(
+        line.split()[1:] == ["@microsoft/discovery-samples-maintainer"]
+        for line in active_lines
+    )
 
 
-def test_manifest_auto_approval_is_narrow_and_check_gated():
+def test_native_auto_merge_keeps_only_the_manifest_exception():
     source = AUTO_MERGE_PATH.read_text(encoding="utf-8")
 
-    assert "classify_fastlane.py" in source
-    assert "contents/.github/scripts/classify_fastlane.py?ref=$BASE_SHA" in source
-    assert "/tmp/trusted/classify_fastlane.py" in source
-    assert "Checkout trusted fast-lane classifier" not in source
-    assert "--eligible-for manifest" in source
-    assert "--eligible-for toolbox" in source
-    assert "--eligible-for dependabot" in source
+    assert "actions/checkout" not in source
+    assert "pull_request_target" in source
+    assert "trustedAssociations.has(pr.author_association)" in source
+    assert "files.length === 1" in source
+    assert "docs\\/discovery-app\\/releases\\/manifests\\/" in source
+    assert "['added', 'modified'].includes(files[0].status)" in source
+    assert "'renamed'" not in source
     assert "actions/create-github-app-token@" in source
     assert "permission-pull-requests: write" in source
     assert "APPROVAL_TOKEN" in source
     assert "GH_TOKEN=\"$APPROVAL_TOKEN\" gh api" in source
-    assert "Microsoft WinGet manifest automation" in source
-    assert 'if [ "$MANIFEST_FAST_LANE" = "true" ]' in source
-    assert 'if [ "$CHECKS_PASSED" = "true" ]' in source
-    assert "author_association" in source
-    assert "Evaluate PR gates and merge when ready" in source
-
-
-def test_dependabot_approval_never_counts_as_human_peer_review():
-    source = AUTO_MERGE_PATH.read_text(encoding="utf-8")
-
-    assert "dependabot[bot]" not in source.split(
-        "select((.author.login // \"\") | endswith(\"[bot]\") | not)"
-    )[1].split("] | length", 1)[0]
-    assert "A separate non-bot human peer approval is still required." in source
-    assert '== "discovery-registry-bot[bot]"' in source
-    assert 'if [ "$DEPENDABOT_FAST_LANE" = "true" ]' in source
-    assert 'elif [ "$REVIEW_DECISION" = "APPROVED" ]' in source
-    assert '[ "$HUMAN_APPROVALS" -gt 0 ]' in source
-    assert "pull_request_target" in source
-    assert "actions/checkout" not in source
-    manifest_end = source.index(
-        "Approval App credentials are unavailable; manifest fast lane fails closed."
-    )
-    dependabot_start = source.index("# A configured Dependabot branch")
-    assert dependabot_start > manifest_end
-    assert '\n          if [ "$DEPENDABOT_FAST_LANE" = "true" ]' in source
+    assert 'gh pr merge "$PR_NUMBER" --repo "$REPO" --auto --squash' in source
+    assert "DEPENDABOT_FAST_LANE" not in source
+    assert "TOOLBOX_FAST_LANE" not in source
+    assert "HUMAN_APPROVALS" not in source
+    assert "CHECKS_PASSED" not in source
 
 
 def test_each_source_utility_directory_has_explicit_ownership():

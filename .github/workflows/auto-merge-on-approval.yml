@@ -1,162 +1,61 @@
-name: Auto-merge on Approval
+name: Enable Native Auto-merge
 
-# Evaluates a PR against four gates and manages labels accordingly:
-#   1. checks_passed  — all status checks on the PR head are SUCCESS / NEUTRAL / SKIPPED
-#                       and every configured required check has reported.
-#   2. up_to_date     — PR branch is not behind base (no "Update branch" needed).
-#   3. approved       — standard and VSIX release PRs require a non-bot approval.
-#                       A Microsoft-member, manifest-only PR may receive a trusted
-#                       GitHub App approval after gates 1, 2, and 4 pass.
-#                       A configured Dependabot PR may receive the same App's
-#                       verification approval, but still requires a separate
-#                       non-bot human peer approval before merge.
-#   4. images_reviewed — the `needs-image-review` label is absent. pr-review.yml
-#                       applies that label whenever a PR adds or modifies an image;
-#                       a maintainer clears it by hand after inspecting the files.
+# GitHub branch protection and the inherited organization ruleset are the
+# authoritative merge gates. This workflow only:
+#   1. enables GitHub's native auto-merge for each non-draft PR; and
+#   2. supplies the one required approval for an exact, Microsoft-authored
+#      Discovery release-manifest change.
 #
-# Labels applied:
-#   - update-branch          when the PR is behind base
-#   - needs-human-review     when no human approval (or changes requested)
-#   - ready-for-auto-merge   when all four gates pass; on this state the workflow
-#                            also performs a squash merge with branch deletion.
-#   - fast-lane-manifest     schema-validated manifest-only automated approval
-#   - fast-lane-vsix        VSIX release integrity checks plus one human approval
-#   - fast-lane-dependabot  verified Dependabot scope plus one human approval
-#
-# The workflow runs on PR events, review events, and check_suite completions, so it
-# re-evaluates whenever any of the inputs change.
+# Required checks, strict branch updates, CODEOWNER approval, stale-review
+# handling, last-push approval, and mergeability remain enforced by GitHub.
 
 on:
   pull_request_target:
-    types: [opened, synchronize, reopened, labeled, unlabeled, ready_for_review]
+    types: [opened, synchronize, reopened, ready_for_review]
   pull_request_review:
-    types: [submitted, dismissed, edited]
-  check_suite:
-    types: [completed]
+    types: [submitted]
 
 permissions:
   contents: write
   pull-requests: write
-  checks: read
-  statuses: read
-  actions: read
 
 concurrency:
-  group: auto-merge-${{ github.event.pull_request.number || github.event.check_suite.pull_requests[0].number || github.run_id }}
-  cancel-in-progress: false
+  group: native-auto-merge-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
 
 jobs:
-  evaluate-and-merge:
-    name: Evaluate PR gates and merge when ready
+  configure:
+    name: Enable GitHub auto-merge
+    if: github.event.pull_request.draft == false
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-      - name: Resolve PR number
-        id: pr
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          REPO: ${{ github.repository }}
-        run: |
-          set -euo pipefail
-          PR_NUMBER=""
-          PR_AUTHOR=""
-          case "${{ github.event_name }}" in
-            pull_request_target|pull_request_review)
-              PR_NUMBER="${{ github.event.pull_request.number }}"
-              PR_AUTHOR="${{ github.event.pull_request.user.login }}"
-              ;;
-            check_suite)
-              PR_NUMBER=$(jq -r '.check_suite.pull_requests[0].number // empty' "$GITHUB_EVENT_PATH")
-              PR_AUTHOR=$(jq -r '.check_suite.pull_requests[0].user.login // empty' "$GITHUB_EVENT_PATH")
-              ;;
-          esac
-          if [ -z "$PR_NUMBER" ]; then
-            echo "No PR associated with this event — skipping."
-            echo "skip=true" >> "$GITHUB_OUTPUT"
-          else
-            PR_PAYLOAD=$(gh api "/repos/$REPO/pulls/$PR_NUMBER")
-            BASE_SHA=$(echo "$PR_PAYLOAD" | jq -r '.base.sha')
-            PR_AUTHOR=$(echo "$PR_PAYLOAD" | jq -r '.user.login')
-            HEAD_REF=$(echo "$PR_PAYLOAD" | jq -r '.head.ref')
-            AUTHOR_ASSOCIATION=$(echo "$PR_PAYLOAD" | jq -r '.author_association // "NONE"')
-            echo "Resolved PR #$PR_NUMBER (author=$PR_AUTHOR)"
-            echo "number=$PR_NUMBER" >> "$GITHUB_OUTPUT"
-            echo "base_sha=$BASE_SHA" >> "$GITHUB_OUTPUT"
-            echo "author=$PR_AUTHOR" >> "$GITHUB_OUTPUT"
-            echo "head_ref=$HEAD_REF" >> "$GITHUB_OUTPUT"
-            echo "author_association=$AUTHOR_ASSOCIATION" >> "$GITHUB_OUTPUT"
-          fi
+      - name: Classify manifest-only exception
+        id: manifest
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const pr = context.payload.pull_request;
+            const trustedAssociations = new Set(['MEMBER', 'OWNER']);
+            const files = await github.paginate(github.rest.pulls.listFiles, {
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: pr.number,
+              per_page: 100,
+            });
+            const eligible = (
+              trustedAssociations.has(pr.author_association) &&
+              files.length === 1 &&
+              /^docs\/discovery-app\/releases\/manifests\/[a-z][a-z0-9-]*\.json$/
+                .test(files[0].filename) &&
+              ['added', 'modified'].includes(files[0].status)
+            );
+            core.setOutput('eligible', String(eligible));
 
-      - name: Retrieve trusted fast-lane classifier
-        if: steps.pr.outputs.skip != 'true'
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          REPO: ${{ github.repository }}
-          BASE_SHA: ${{ steps.pr.outputs.base_sha }}
-        run: |
-          set -euo pipefail
-          CLASSIFIER_JSON=$(gh api \
-            "/repos/$REPO/contents/.github/scripts/classify_fastlane.py?ref=$BASE_SHA")
-          if [ "$(echo "$CLASSIFIER_JSON" | jq -r '.type')" != "file" ] || \
-             [ "$(echo "$CLASSIFIER_JSON" | jq -r '.path')" != ".github/scripts/classify_fastlane.py" ]; then
-            echo "::error::Trusted classifier could not be retrieved from base commit $BASE_SHA."
-            exit 1
-          fi
-          mkdir -p /tmp/trusted
-          echo "$CLASSIFIER_JSON" | jq -r '.content' | base64 --decode \
-            > /tmp/trusted/classify_fastlane.py
-
-      - name: Classify fast lane
-        if: steps.pr.outputs.skip != 'true'
-        id: fastlane
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          REPO: ${{ github.repository }}
-          PR_NUMBER: ${{ steps.pr.outputs.number }}
-          PR_AUTHOR: ${{ steps.pr.outputs.author }}
-          PR_HEAD_REF: ${{ steps.pr.outputs.head_ref }}
-          AUTHOR_ASSOCIATION: ${{ steps.pr.outputs.author_association }}
-        run: |
-          set -euo pipefail
-          gh api "/repos/$REPO/pulls/$PR_NUMBER/files?per_page=100" > /tmp/pr-files.json
-          FILE_COUNT=$(jq 'length' /tmp/pr-files.json)
-          LANE=standard
-          MANIFEST=false
-          TOOLBOX=false
-          DEPENDABOT=false
-          if [ "$FILE_COUNT" -ge 100 ]; then
-            echo "::warning::PR has at least 100 files; fast-lane classification fails closed."
-          elif python /tmp/trusted/classify_fastlane.py \
-            --files-json /tmp/pr-files.json \
-            --author-association "$AUTHOR_ASSOCIATION" \
-            --eligible-for manifest; then
-            LANE=manifest-auto-approval
-            MANIFEST=true
-          elif python /tmp/trusted/classify_fastlane.py \
-            --files-json /tmp/pr-files.json \
-            --author-association "$AUTHOR_ASSOCIATION" \
-            --eligible-for toolbox; then
-            LANE=toolbox-vsix-one-approval
-            TOOLBOX=true
-          elif python /tmp/trusted/classify_fastlane.py \
-            --files-json /tmp/pr-files.json \
-            --author "$PR_AUTHOR" \
-            --head-ref "$PR_HEAD_REF" \
-            --eligible-for dependabot; then
-            LANE=dependabot-one-human-approval
-            DEPENDABOT=true
-          else
-            echo "PR does not match a fast lane."
-          fi
-          echo "Fast-lane classification: $LANE"
-          echo "lane=$LANE" >> "$GITHUB_OUTPUT"
-          echo "manifest=$MANIFEST" >> "$GITHUB_OUTPUT"
-          echo "toolbox=$TOOLBOX" >> "$GITHUB_OUTPUT"
-          echo "dependabot=$DEPENDABOT" >> "$GITHUB_OUTPUT"
-
-      - name: Check for approval App secrets
-        if: steps.pr.outputs.skip != 'true' && (steps.fastlane.outputs.manifest == 'true' || steps.fastlane.outputs.dependabot == 'true')
-        id: approval_app_check
+      - name: Check approval App configuration
+        if: steps.manifest.outputs.eligible == 'true'
+        id: approval_app
         env:
           APPROVAL_APP_ID: ${{ secrets.REGISTRY_APP_ID }}
           APPROVAL_APP_PRIVATE_KEY: ${{ secrets.REGISTRY_APP_PRIVATE_KEY }}
@@ -165,300 +64,45 @@ jobs:
             echo "configured=true" >> "$GITHUB_OUTPUT"
           else
             echo "configured=false" >> "$GITHUB_OUTPUT"
+            echo "::warning::Approval App credentials are unavailable; the manifest exception fails closed."
           fi
 
-      # The organization prohibits GITHUB_TOKEN from approving PRs. Reuse the
-      # installed discovery-registry-bot App, but mint a short-lived token
-      # restricted to this repository and Pull requests: Write.
+      # Organization policy prevents GITHUB_TOKEN from approving pull requests.
+      # Use the installed App with a short-lived, repository-scoped token.
       - name: Generate approval App token
-        if: steps.approval_app_check.outputs.configured == 'true'
-        id: approval_app_token
+        if: steps.approval_app.outputs.configured == 'true'
+        id: approval_token
         uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
         with:
           app-id: ${{ secrets.REGISTRY_APP_ID }}
           private-key: ${{ secrets.REGISTRY_APP_PRIVATE_KEY }}
           permission-pull-requests: write
 
-      - name: Ensure managed labels exist
-        if: steps.pr.outputs.skip != 'true'
+      - name: Approve manifest-only exception
+        if: steps.approval_app.outputs.configured == 'true'
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          APPROVAL_TOKEN: ${{ steps.approval_token.outputs.token }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
           REPO: ${{ github.repository }}
         run: |
           set -euo pipefail
-          ensure_label() {
-            local name="$1"; local color="$2"; local desc="$3"
-            gh api -X POST "/repos/$REPO/labels" \
-              -f name="$name" -f color="$color" -f description="$desc" \
-              >/dev/null 2>&1 || true
-          }
-          ensure_label "update-branch"        "fbca04" "PR branch is behind base — please update"
-          ensure_label "needs-human-review"   "0075ca" "Awaiting human approval"
-          ensure_label "ready-for-auto-merge" "0e8a16" "All gates green — will be auto-merged"
-          ensure_label "checks-in-progress"   "ededed" "One or more required status checks are still running on this PR"
-          ensure_label "fast-lane-manifest"   "1d76db" "Manifest-only PR eligible for schema-gated automated approval"
-          ensure_label "fast-lane-vsix"       "5319e7" "Toolbox VSIX release requiring one ordinary approval"
-          ensure_label "fast-lane-dependabot" "0366d6" "Verified Dependabot update requiring one human peer approval"
+          APPROVED=$(GH_TOKEN="$APPROVAL_TOKEN" gh api \
+            "/repos/$REPO/pulls/$PR_NUMBER/reviews" --paginate --slurp \
+            --jq '[.[][] | select(.state == "APPROVED" and .user.login == "discovery-registry-bot[bot]")] | length')
+          if [ "$APPROVED" -eq 0 ]; then
+            GH_TOKEN="$APPROVAL_TOKEN" gh api \
+              -X POST "/repos/$REPO/pulls/$PR_NUMBER/reviews" \
+              -f event=APPROVE \
+              -f body="Automated approval for an exact Microsoft-member Discovery release-manifest change. GitHub branch protection remains authoritative for schema validation, required checks, branch freshness, and mergeability." \
+              >/dev/null
+          fi
 
-      - name: Evaluate gates, update labels, and merge if ready
-        if: steps.pr.outputs.skip != 'true'
+      - name: Enable native auto-merge
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
           REPO: ${{ github.repository }}
-          PR_NUMBER: ${{ steps.pr.outputs.number }}
-          MANIFEST_FAST_LANE: ${{ steps.fastlane.outputs.manifest }}
-          TOOLBOX_FAST_LANE: ${{ steps.fastlane.outputs.toolbox }}
-          DEPENDABOT_FAST_LANE: ${{ steps.fastlane.outputs.dependabot }}
-          APPROVAL_TOKEN: ${{ steps.approval_app_token.outputs.token }}
         run: |
-          set -euo pipefail
-
-          PR_JSON=$(gh pr view "$PR_NUMBER" --repo "$REPO" --json \
-            number,isDraft,state,baseRefName,headRefName,mergeStateStatus,mergeable,reviewDecision,reviews,statusCheckRollup,labels,author)
-
-          STATE=$(echo "$PR_JSON"        | jq -r '.state')
-          IS_DRAFT=$(echo "$PR_JSON"     | jq -r '.isDraft')
-          AUTHOR=$(echo "$PR_JSON"       | jq -r '.author.login')
-          BASE_REF=$(echo "$PR_JSON"     | jq -r '.baseRefName')
-          HEAD_REF=$(echo "$PR_JSON"     | jq -r '.headRefName')
-          MERGE_STATE=$(echo "$PR_JSON"  | jq -r '.mergeStateStatus')
-          MERGEABLE=$(echo "$PR_JSON"    | jq -r '.mergeable')
-          REVIEW_DECISION=$(echo "$PR_JSON" | jq -r '.reviewDecision')
-
-          echo "PR #$PR_NUMBER author=$AUTHOR state=$STATE draft=$IS_DRAFT"
-          echo "mergeStateStatus=$MERGE_STATE mergeable=$MERGEABLE reviewDecision=$REVIEW_DECISION"
-
-          # Skip closed, merged, or draft PRs.
-          if [ "$STATE" != "OPEN" ] || [ "$IS_DRAFT" = "true" ]; then
-            echo "PR is not eligible (closed or draft) — skipping."
-            exit 0
-          fi
-
-          # ── Gate 1: checks_passed ──────────────────────────────────
-          # Any FAILURE/CANCELLED/TIMED_OUT/ACTION_REQUIRED/STALE conclusion fails.
-          # Any null/IN_PROGRESS/QUEUED conclusion or PENDING state means "still running".
-          CHECKS_FAILED=$(echo "$PR_JSON" | jq '
-            [.statusCheckRollup[]?
-             | select((.name // .context // "") != "Evaluate PR gates and merge when ready")
-             | (.conclusion // .state // "PENDING")
-             | ascii_upcase
-             | select(. == "FAILURE" or . == "CANCELLED" or . == "TIMED_OUT"
-                       or . == "ACTION_REQUIRED" or . == "STALE" or . == "ERROR")
-            ] | length')
-          CHECKS_PENDING=$(echo "$PR_JSON" | jq '
-            [.statusCheckRollup[]?
-             | select((.name // .context // "") != "Evaluate PR gates and merge when ready")
-             | (.conclusion // .state // "PENDING")
-             | ascii_upcase
-             | select(. == "PENDING" or . == "IN_PROGRESS" or . == "QUEUED" or . == "WAITING")
-            ] | length')
-          PROTECTION=$(gh api \
-            "/repos/$REPO/branches/$BASE_REF/protection/required_status_checks" \
-            2>/dev/null || true)
-          if [ -z "$PROTECTION" ]; then
-            MISSING_REQUIRED=1
-            echo "::warning::Could not read required status checks; failing closed."
-          else
-            REQUIRED_CHECKS=$(echo "$PROTECTION" | jq -c \
-              '[.checks[]?.context] | unique')
-            OBSERVED_CHECKS=$(echo "$PR_JSON" | jq -c \
-              '[.statusCheckRollup[]? | (.name // .context // "")] | unique')
-            MISSING_REQUIRED=$(jq -n \
-              --argjson required "$REQUIRED_CHECKS" \
-              --argjson observed "$OBSERVED_CHECKS" \
-              '$required - $observed | length')
-          fi
-          CHECKS_PENDING=$((CHECKS_PENDING + MISSING_REQUIRED))
-          if [ "$CHECKS_FAILED" -gt 0 ] || [ "$CHECKS_PENDING" -gt 0 ]; then
-            CHECKS_PASSED=false
-          else
-            CHECKS_PASSED=true
-          fi
-
-          # ── Gate 2: up_to_date ─────────────────────────────────────
-          if [ "$MERGE_STATE" = "BEHIND" ]; then
-            UP_TO_DATE=false
-          else
-            UP_TO_DATE=true
-          fi
-
-          # ── Gate 3: approved ───────────────────────────────────────
-          # Trust GitHub's own reviewDecision instead of re-implementing the
-          # logic locally. GitHub already accounts for CODEOWNERS, dismissals,
-          # required_approving_review_count, etc. — and our previous local
-          # heuristic (just counting non-bot APPROVED reviews) could disagree
-          # with branch protection (e.g. on repos with require_code_owner_reviews=true),
-          # which led the script to attempt `gh pr merge --auto` on PRs that
-          # GitHub still considered REVIEW_REQUIRED and fail with
-          # "User is not authorized for this protected branch".
-          HUMAN_APPROVALS=$(echo "$PR_JSON" | jq '
-            [.reviews[]?
-             | select(.state == "APPROVED")
-             | select((.author.login // "") | endswith("[bot]") | not)
-            ] | length')
-          AUTOMATED_APPROVALS=$(echo "$PR_JSON" | jq '
-            [.reviews[]?
-             | select(.state == "APPROVED")
-             | select((.author.login // "") == "discovery-registry-bot[bot]")
-            ] | length')
-
-          # Generated registry PRs have elevated write provenance. Fail closed
-          # unless the target branch currently requires CODEOWNER review;
-          # reviewDecision=APPROVED then proves GitHub applied that protection.
-          REGISTRY_PROTECTION_OK=true
-          if [[ "$HEAD_REF" == chore/registry-refresh-* ]]; then
-            PROTECTION=$(gh api \
-              "/repos/$REPO/branches/$BASE_REF/protection/required_pull_request_reviews" \
-              2>/dev/null || true)
-            if [ -z "$PROTECTION" ] || \
-               [ "$(echo "$PROTECTION" | jq -r '.require_code_owner_reviews // false')" != "true" ]; then
-              REGISTRY_PROTECTION_OK=false
-              HUMAN_APPROVED=false
-              echo "::warning::Generated registry PR cannot auto-merge because CODEOWNER review protection could not be verified on $BASE_REF."
-            fi
-          fi
-
-          # ── Gate 4: images_reviewed ────────────────────────────────
-          # Applied by pr-review.yml on any PR touching an image, and cleared
-          # by a maintainer once they have actually looked at the files. A new
-          # commit re-applies it, so approval never carries over to images the
-          # reviewer has not seen.
-          if echo "$PR_JSON" | jq -e '.labels[]? | select(.name == "needs-image-review")' >/dev/null; then
-            IMAGES_REVIEWED=false
-          else
-            IMAGES_REVIEWED=true
-          fi
-
-          # Manifest-only PRs from Microsoft organization members may receive
-          # an automated approval only after every required check reports
-          # success. This follows Microsoft WinGet manifest automation:
-          # https://learn.microsoft.com/windows/package-manager/package/repository
-          # A short-lived GitHub App token is required because organization
-          # policy prevents GITHUB_TOKEN from approving pull requests.
-          if [ "$MANIFEST_FAST_LANE" = "true" ] && \
-             [ "$CHECKS_PASSED" = "true" ] && \
-             [ "$UP_TO_DATE" = "true" ] && \
-             [ "$IMAGES_REVIEWED" = "true" ] && \
-             [ "$REVIEW_DECISION" != "CHANGES_REQUESTED" ] && \
-             [ "$AUTOMATED_APPROVALS" -eq 0 ]; then
-            if [ -n "${APPROVAL_TOKEN:-}" ]; then
-              printf -v APPROVAL_BODY '%s\n\n%s\n' \
-                "Automated approval for a Microsoft-member, manifest-only fast-lane PR." \
-                "The trusted base-branch validator confirmed the governed release-manifest schema and all required checks passed. Rationale: Microsoft WinGet uses automated validation and approval for manifest submissions, with exceptions routed to manual review: https://learn.microsoft.com/windows/package-manager/package/repository"
-              if GH_TOKEN="$APPROVAL_TOKEN" gh api -X POST "/repos/$REPO/pulls/$PR_NUMBER/reviews" \
-                -f event=APPROVE -f body="$APPROVAL_BODY" >/dev/null; then
-                echo "Submitted schema-gated automated manifest approval."
-                sleep 2
-                PR_JSON=$(gh pr view "$PR_NUMBER" --repo "$REPO" --json \
-                  number,isDraft,state,baseRefName,headRefName,mergeStateStatus,mergeable,reviewDecision,reviews,statusCheckRollup,labels,author)
-                REVIEW_DECISION=$(echo "$PR_JSON" | jq -r '.reviewDecision')
-                AUTOMATED_APPROVALS=$(echo "$PR_JSON" | jq '
-                  [.reviews[]?
-                   | select(.state == "APPROVED")
-                   | select((.author.login // "") == "discovery-registry-bot[bot]")
-                  ] | length')
-              else
-                echo "::warning::Could not submit automated manifest approval."
-              fi
-            else
-              echo "::warning::Approval App credentials are unavailable; manifest fast lane fails closed."
-            fi
-          fi
-
-          # A configured Dependabot branch may receive one governed verification
-          # approval after every required check passes. This approval is never
-          # treated as peer review: merge still requires a separate non-bot
-          # human approval, and reviewDecision must prove any CODEOWNER rule.
-          if [ "$DEPENDABOT_FAST_LANE" = "true" ] && \
-             [ "$CHECKS_PASSED" = "true" ] && \
-             [ "$UP_TO_DATE" = "true" ] && \
-             [ "$IMAGES_REVIEWED" = "true" ] && \
-             [ "$REVIEW_DECISION" != "CHANGES_REQUESTED" ] && \
-             [ "$AUTOMATED_APPROVALS" -eq 0 ]; then
-            if [ -n "${APPROVAL_TOKEN:-}" ]; then
-              printf -v APPROVAL_BODY '%s\n\n%s\n' \
-                "Automated verification approval for a configured Dependabot update." \
-                "The trusted base-branch classifier matched the bot, branch, and file scope, and every required check passed. A separate non-bot human peer approval is still required."
-              if GH_TOKEN="$APPROVAL_TOKEN" gh api -X POST "/repos/$REPO/pulls/$PR_NUMBER/reviews" \
-                -f event=APPROVE -f body="$APPROVAL_BODY" >/dev/null; then
-                echo "Submitted governed Dependabot verification approval."
-                sleep 2
-                PR_JSON=$(gh pr view "$PR_NUMBER" --repo "$REPO" --json \
-                  number,isDraft,state,baseRefName,headRefName,mergeStateStatus,mergeable,reviewDecision,reviews,statusCheckRollup,labels,author)
-                REVIEW_DECISION=$(echo "$PR_JSON" | jq -r '.reviewDecision')
-                AUTOMATED_APPROVALS=$(echo "$PR_JSON" | jq '
-                  [.reviews[]?
-                   | select(.state == "APPROVED")
-                   | select((.author.login // "") == "discovery-registry-bot[bot]")
-                  ] | length')
-              else
-                echo "::warning::Could not submit Dependabot verification approval."
-              fi
-            else
-              echo "::warning::Approval App credentials are unavailable; Dependabot lane fails closed."
-            fi
-          fi
-
-          if [ "$MANIFEST_FAST_LANE" = "true" ]; then
-            if [ "$REVIEW_DECISION" = "APPROVED" ] && [ "$AUTOMATED_APPROVALS" -gt 0 ]; then
-              HUMAN_APPROVED=true
-            else
-              HUMAN_APPROVED=false
-            fi
-          elif [ "$REVIEW_DECISION" = "APPROVED" ] && [ "$HUMAN_APPROVALS" -gt 0 ]; then
-            HUMAN_APPROVED=true
-          else
-            HUMAN_APPROVED=false
-          fi
-
-          echo "Gates: checks_passed=$CHECKS_PASSED up_to_date=$UP_TO_DATE human_approved=$HUMAN_APPROVED images_reviewed=$IMAGES_REVIEWED registry_protection=$REGISTRY_PROTECTION_OK"
-          echo "       (checks_failed=$CHECKS_FAILED pending=$CHECKS_PENDING human_approvals=$HUMAN_APPROVALS automated_approvals=$AUTOMATED_APPROVALS reviewDecision=$REVIEW_DECISION)"
-
-          # ── Label management ───────────────────────────────────────
-          add_label() {
-            gh pr edit "$PR_NUMBER" --repo "$REPO" --add-label "$1" >/dev/null 2>&1 || true
-          }
-          remove_label() {
-            gh pr edit "$PR_NUMBER" --repo "$REPO" --remove-label "$1" >/dev/null 2>&1 || true
-          }
-
-          if [ "$UP_TO_DATE" = "false" ]; then add_label "update-branch"; else remove_label "update-branch"; fi
-          if [ "$MANIFEST_FAST_LANE" = "true" ]; then
-            remove_label "needs-human-review"
-            add_label "fast-lane-manifest"
-          else
-            remove_label "fast-lane-manifest"
-            if [ "$HUMAN_APPROVED" = "false" ]; then add_label "needs-human-review"; else remove_label "needs-human-review"; fi
-          fi
-          if [ "$TOOLBOX_FAST_LANE" = "true" ]; then add_label "fast-lane-vsix"; else remove_label "fast-lane-vsix"; fi
-          if [ "$DEPENDABOT_FAST_LANE" = "true" ]; then add_label "fast-lane-dependabot"; else remove_label "fast-lane-dependabot"; fi
-          # checks-in-progress: any required check is still PENDING / IN_PROGRESS / QUEUED.
-          # Cleared as soon as every check has reported (pass or fail).
-          if [ "$CHECKS_PENDING" -gt 0 ]; then add_label "checks-in-progress"; else remove_label "checks-in-progress"; fi
-
-          if [ "$CHECKS_PASSED" = "true" ] && [ "$UP_TO_DATE" = "true" ] && [ "$HUMAN_APPROVED" = "true" ] && [ "$IMAGES_REVIEWED" = "true" ] && [ "$REGISTRY_PROTECTION_OK" = "true" ]; then
-            add_label "ready-for-auto-merge"
-
-            # Also ensure the PR isn't blocked by merge conflicts.
-            if [ "$MERGEABLE" != "MERGEABLE" ]; then
-              echo "::warning::All gates pass but PR is not in a MERGEABLE state ($MERGEABLE) — leaving for manual review."
-              exit 0
-            fi
-
-            echo "All gates green — enabling auto-merge (squash)."
-            # IMPORTANT: enabling auto-merge can fail for many benign reasons
-            # (user not authorized to push to the protected branch, auto-merge
-            # not enabled in repo settings, PR not eligible, etc.). This
-            # workflow is a *required* status check, so a non-zero exit here
-            # would mark the check FAILED and block the PR forever — creating
-            # an approval/merge-retry loop. Treat the failure as advisory.
-            if ! gh pr merge "$PR_NUMBER" --repo "$REPO" --auto --squash --delete-branch; then
-              echo "::warning::Could not enable auto-merge on PR #$PR_NUMBER. A maintainer with admin/bypass rights will need to merge it manually."
-            fi
-          else
-            remove_label "ready-for-auto-merge"
-            if [ "$IMAGES_REVIEWED" = "false" ]; then
-              echo "Blocked: this PR changes image files and still carries the needs-image-review label."
-            fi
-            echo "Not ready for auto-merge yet."
+          if ! gh pr merge "$PR_NUMBER" --repo "$REPO" --auto --squash --delete-branch; then
+            echo "::warning::GitHub auto-merge could not be enabled. Branch protection remains in force and the PR can be merged manually."
           fi
