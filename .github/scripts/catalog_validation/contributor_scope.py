@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import re
+
 from .findings import Failure
 
 
@@ -30,7 +32,20 @@ _DEPENDABOT_PROTECTED_PATHS = {
     "dependabot/nuget/dot-config/": frozenset({
         ".config/dotnet-tools.json",
     }),
+    "dependabot/pip/agents/gwp-predictor/training/": frozenset({
+        "agents/gwp-predictor/training/requirements.txt",
+    }),
+    "dependabot/pip/agents/zinc/tools/zinc/": frozenset({
+        "agents/zinc/tools/zinc/requirements.txt",
+    }),
+    "dependabot/uv/utilities/supercomputer-cli/discovery/": frozenset({
+        "utilities/supercomputer-cli/discovery/pyproject.toml",
+        "utilities/supercomputer-cli/discovery/uv.lock",
+    }),
 }
+_DEPENDABOT_DOCKERFILE = re.compile(
+    r"^agents/[^/]+/tools/[^/]+/Dockerfile$"
+)
 
 
 def is_trusted_registry_refresh(author: str, head_ref: str) -> bool:
@@ -50,14 +65,19 @@ def is_trusted_dependabot_update(path: str, author: str, head_ref: str) -> bool:
         if head_ref.startswith(ref_prefix):
             return normalized in allowed_paths
 
-    if not head_ref.startswith("dependabot/github_actions/"):
-        return False
-
     parts = normalized.split("/")
+    if head_ref.startswith("dependabot/github_actions/"):
+        return (
+            len(parts) == 3
+            and parts[:2] == [".github", "workflows"]
+            and _suffix(parts[-1]) in {".yml", ".yaml"}
+        )
+
     return (
-        len(parts) == 3
-        and parts[:2] == [".github", "workflows"]
-        and _suffix(parts[-1]) in {".yml", ".yaml"}
+        head_ref.startswith(
+            f"dependabot/docker/{normalized.rsplit('/', 1)[0]}/"
+        )
+        and _DEPENDABOT_DOCKERFILE.fullmatch(normalized) is not None
     )
 
 

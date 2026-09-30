@@ -158,13 +158,34 @@ def test_codeql_runs_when_any_scanned_source_changes():
 def test_dependabot_monitors_each_supported_ecosystem():
     config = load_yaml(DEPENDABOT_PATH)
     ecosystems = {update["package-ecosystem"] for update in config["updates"]}
-    assert ecosystems == {"github-actions", "nuget", "pip", "docker"}
+    assert ecosystems == {"github-actions", "nuget", "pip", "docker", "uv"}
 
     for update in config["updates"]:
         assert update["schedule"]["interval"] == "weekly"
-        assert update["open-pull-requests-limit"] > 0
+        assert update["open-pull-requests-limit"] == 3
+        groups = update["groups"]
+        assert any(
+            group.get("applies-to") == "security-updates"
+            for group in groups.values()
+        )
 
     assert dependabot_update("github-actions")["directory"] == "/"
+    assert dependabot_update("uv")["directory"] == (
+        "/utilities/supercomputer-cli/discovery"
+    )
+
+
+def test_dependabot_minor_patch_updates_are_grouped_by_ecosystem():
+    for ecosystem in ("github-actions", "nuget", "pip", "docker", "uv"):
+        groups = dependabot_update(ecosystem)["groups"]
+        version_groups = [
+            group for group in groups.values()
+            if group.get("applies-to", "version-updates") == "version-updates"
+        ]
+        assert len(version_groups) == 1
+        assert version_groups[0]["patterns"] == ["*"]
+        assert set(version_groups[0]["update-types"]) == {"minor", "patch"}
+        assert "group-by" not in version_groups[0]
 
 
 def test_dependency_review_blocks_new_high_severity_vulnerabilities():

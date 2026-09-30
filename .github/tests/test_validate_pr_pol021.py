@@ -182,6 +182,25 @@ def test_trusted_registry_refresh_bot_can_update_generated_files() -> None:
             ".config/dotnet-tools.json",
             "dependabot/nuget/dot-config/nuget-minor-patch-123",
         ),
+        (
+            "agents/gwp-predictor/training/requirements.txt",
+            "dependabot/pip/agents/gwp-predictor/training/pip-123",
+        ),
+        (
+            "agents/zinc/tools/zinc/requirements.txt",
+            "dependabot/pip/agents/zinc/tools/zinc/pip-123",
+        ),
+        (
+            "agents/demo/tools/api/Dockerfile",
+            "dependabot/docker/agents/demo/tools/api/python-3.14",
+        ),
+        (
+            "utilities/supercomputer-cli/discovery/uv.lock",
+            (
+                "dependabot/uv/utilities/supercomputer-cli/discovery/"
+                "anyio-4.14.2"
+            ),
+        ),
     ],
 )
 def test_dependabot_can_update_configured_protected_manifests(
@@ -225,6 +244,11 @@ def test_dependabot_can_update_configured_protected_manifests(
             ".github/requirements-ci.txt",
             "dependabot[bot]",
             "dependabot/nuget/dot-config/nuget-minor-patch-123",
+        ),
+        (
+            "utilities/supercomputer-cli/discovery/uv.lock",
+            "dependabot[bot]",
+            "dependabot/pip/utilities/supercomputer-cli/discovery/anyio-4.14.2",
         ),
     ],
 )

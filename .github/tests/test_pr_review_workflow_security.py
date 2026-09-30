@@ -111,6 +111,7 @@ def test_manifest_auto_approval_is_narrow_and_check_gated():
     assert "Checkout trusted fast-lane classifier" not in source
     assert "--eligible-for manifest" in source
     assert "--eligible-for toolbox" in source
+    assert "--eligible-for dependabot" in source
     assert "actions/create-github-app-token@" in source
     assert "permission-pull-requests: write" in source
     assert "APPROVAL_TOKEN" in source
@@ -120,6 +121,44 @@ def test_manifest_auto_approval_is_narrow_and_check_gated():
     assert 'if [ "$CHECKS_PASSED" = "true" ]' in source
     assert "author_association" in source
     assert "Evaluate PR gates and merge when ready" in source
+
+
+def test_dependabot_approval_never_counts_as_human_peer_review():
+    source = AUTO_MERGE_PATH.read_text(encoding="utf-8")
+
+    assert "dependabot[bot]" not in source.split(
+        "select((.author.login // \"\") | endswith(\"[bot]\") | not)"
+    )[1].split("] | length", 1)[0]
+    assert "A separate non-bot human peer approval is still required." in source
+    assert '== "discovery-registry-bot[bot]"' in source
+    assert 'if [ "$DEPENDABOT_FAST_LANE" = "true" ]' in source
+    assert 'elif [ "$REVIEW_DECISION" = "APPROVED" ]' in source
+    assert '[ "$HUMAN_APPROVALS" -gt 0 ]' in source
+    assert "pull_request_target" in source
+    assert "actions/checkout" not in source
+    manifest_end = source.index(
+        "Approval App credentials are unavailable; manifest fast lane fails closed."
+    )
+    dependabot_start = source.index("# A configured Dependabot branch")
+    assert dependabot_start > manifest_end
+    assert '\n          if [ "$DEPENDABOT_FAST_LANE" = "true" ]' in source
+
+
+def test_each_source_utility_directory_has_explicit_ownership():
+    owners = CODEOWNERS_PATH.read_text(encoding="utf-8")
+    utilities = CODEOWNERS_PATH.parents[1] / "utilities"
+    source_suffixes = {
+        ".bat", ".bicep", ".cmd", ".cs", ".go", ".js", ".ps1", ".py",
+        ".rs", ".sh", ".tf", ".ts",
+    }
+    source_directories = {
+        path.relative_to(utilities).parts[0]
+        for path in utilities.rglob("*")
+        if path.is_file() and path.suffix.lower() in source_suffixes
+    }
+
+    for directory in source_directories:
+        assert f"/utilities/{directory}/" in owners
 
 
 def test_trufflehog_install_and_repository_layout_are_stable():

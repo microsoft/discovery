@@ -183,3 +183,100 @@ def test_toolbox_lane_requires_pointer_and_one_added_vsix():
 
     assert result["lane"] == "toolbox-vsix-one-approval"
     assert result["manifest_auto_approval"] is False
+
+
+def test_dependabot_lane_matches_configured_bot_branch_and_files():
+    cases = [
+        (
+            [{"filename": ".config/dotnet-tools.json", "status": "modified"}],
+            "dependabot/nuget/dot-config/nuget-minor-patch-123",
+        ),
+        (
+            [
+                {
+                    "filename": ".github/workflows/code-scan.yml",
+                    "status": "modified",
+                },
+                {
+                    "filename": ".github/workflows/dependency-review.yml",
+                    "status": "modified",
+                },
+            ],
+            "dependabot/github_actions/actions/checkout-7.0.1",
+        ),
+        (
+            [
+                {
+                    "filename": "agents/zinc/tools/zinc/requirements.txt",
+                    "status": "modified",
+                },
+            ],
+            "dependabot/pip/agents/zinc/tools/zinc/pip-123",
+        ),
+        (
+            [
+                {
+                    "filename": (
+                        "utilities/supercomputer-cli/discovery/uv.lock"
+                    ),
+                    "status": "modified",
+                },
+            ],
+            (
+                "dependabot/uv/utilities/supercomputer-cli/discovery/"
+                "anyio-4.14.2"
+            ),
+        ),
+        (
+            [
+                {
+                    "filename": "agents/demo/tools/api/Dockerfile",
+                    "status": "modified",
+                },
+            ],
+            "dependabot/docker/agents/demo/tools/api/python-3.14",
+        ),
+    ]
+
+    for files, head_ref in cases:
+        result = classify(
+            files,
+            "CONTRIBUTOR",
+            "dependabot[bot]",
+            head_ref,
+        )
+        assert result["lane"] == "dependabot-one-human-approval"
+        assert result["dependabot_one_human_approval"] is True
+
+
+def test_dependabot_lane_fails_closed_for_spoofed_or_mixed_changes():
+    valid_file = {
+        "filename": "agents/zinc/tools/zinc/requirements.txt",
+        "status": "modified",
+    }
+    head_ref = "dependabot/pip/agents/zinc/tools/zinc/pip-123"
+
+    assert classify(
+        [valid_file],
+        "CONTRIBUTOR",
+        "octocat",
+        head_ref,
+    )["lane"] == "standard"
+    assert classify(
+        [valid_file],
+        "CONTRIBUTOR",
+        "dependabot[bot]",
+        "dependabot/pip/dot-github/pip-123",
+    )["lane"] == "standard"
+    assert classify(
+        [valid_file, {"filename": "agents/zinc/agent.yaml", "status": "modified"}],
+        "CONTRIBUTOR",
+        "dependabot[bot]",
+        head_ref,
+    )["lane"] == "standard"
+    assert classify(
+        [{**valid_file, "status": "removed"}],
+        "CONTRIBUTOR",
+        "dependabot[bot]",
+        head_ref,
+    )["lane"] == "standard"
