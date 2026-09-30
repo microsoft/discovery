@@ -170,7 +170,7 @@ Further reading: `docs/authoring-guides/agent-authoring-guide.md#tags`
 
 ## Other validation families
 
-The `STR-*`, `SCH-*`, `DOC-*`, and remaining `POL-*` checks live in
+The `REL-*`, `STR-*`, `SCH-*`, `DOC-*`, and remaining `POL-*` checks live in
 `.github/scripts/catalog_validation/`. They run alongside this modular
 engine from the shared PR validation runner. See `docs/validation-rules.csv`
 for the complete source-backed inventory.

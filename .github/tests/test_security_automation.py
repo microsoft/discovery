@@ -158,13 +158,34 @@ def test_codeql_runs_when_any_scanned_source_changes():
 def test_dependabot_monitors_each_supported_ecosystem():
     config = load_yaml(DEPENDABOT_PATH)
     ecosystems = {update["package-ecosystem"] for update in config["updates"]}
-    assert ecosystems == {"github-actions", "nuget", "pip", "docker"}
+    assert ecosystems == {"github-actions", "nuget", "pip", "docker", "uv"}
 
     for update in config["updates"]:
         assert update["schedule"]["interval"] == "weekly"
-        assert update["open-pull-requests-limit"] > 0
+        assert update["open-pull-requests-limit"] == 3
+        groups = update["groups"]
+        assert any(
+            group.get("applies-to") == "security-updates"
+            for group in groups.values()
+        )
 
     assert dependabot_update("github-actions")["directory"] == "/"
+    assert dependabot_update("uv")["directory"] == (
+        "/utilities/supercomputer-cli/discovery"
+    )
+
+
+def test_dependabot_minor_patch_updates_are_grouped_by_ecosystem():
+    for ecosystem in ("github-actions", "nuget", "pip", "docker", "uv"):
+        groups = dependabot_update(ecosystem)["groups"]
+        version_groups = [
+            group for group in groups.values()
+            if group.get("applies-to", "version-updates") == "version-updates"
+        ]
+        assert len(version_groups) == 1
+        assert version_groups[0]["patterns"] == ["*"]
+        assert set(version_groups[0]["update-types"]) == {"minor", "patch"}
+        assert "group-by" not in version_groups[0]
 
 
 def test_dependency_review_blocks_new_high_severity_vulnerabilities():
@@ -469,7 +490,6 @@ def test_pr_review_limits_new_labels_and_image_gate_to_catalog_changes():
     assert "} else if (hasDocsOnly) {" in source
     assert "labelsToAdd.push('docs-only');" in source
     assert "if (hasCatalog && results.has_images)" in source
-    assert "if (hasCatalog && imageFiles.length > 0)" in source
 
 
 def test_schema_bootstrap_never_executes_pr_python():
@@ -539,12 +559,23 @@ def test_registry_refresh_cannot_rewrite_or_self_approve_generated_prs():
         REPO_ROOT / ".github" / "workflows" / "auto-approve-registry-prs.yml"
     ).exists()
 
+    codeowners = (REPO_ROOT / ".github" / "CODEOWNERS").read_text(
+        encoding="utf-8"
+    )
+    registry_owner = next(
+        line for line in codeowners.splitlines()
+        if line.startswith("/.auto-registry/")
+    )
+    assert registry_owner.split()[1:] == [
+        "@microsoft/discovery-samples-maintainer"
+    ]
+
     auto_merge_source = (
         REPO_ROOT / ".github" / "workflows" / "auto-merge-on-approval.yml"
     ).read_text(encoding="utf-8")
-    assert "chore/registry-refresh-*" in auto_merge_source
-    assert "require_code_owner_reviews" in auto_merge_source
-    assert '"$HUMAN_APPROVALS" -gt 0' in auto_merge_source
+    assert "chore/registry-refresh-*" not in auto_merge_source
+    assert "files.length === 1" in auto_merge_source
+    assert "docs\\/discovery-app\\/releases\\/manifests\\/" in auto_merge_source
 
 
 def test_baseline_debt_is_codeowned_tracked_and_shrink_only():

@@ -6,6 +6,7 @@ from .findings import Failure
 
 
 _MAINTAINER_PERMISSIONS = frozenset({"admin", "maintain", "write"})
+_MICROSOFT_ORG_ASSOCIATIONS = frozenset({"member", "owner"})
 _PUBLIC_CATALOG_ROOTS = frozenset({"agents", "starter-kits"})
 _PROTECTED_ROOTS = frozenset({".auto-registry", ".github", ".vscode"})
 _PROTECTED_PATHS = frozenset({"docs/validation-rules.md"})
@@ -22,14 +23,15 @@ _REGISTRY_REFRESH_BOT_AUTHORS = frozenset({
     "discovery-registry-bot[bot]",
 })
 _DEPENDABOT_AUTHOR = "dependabot[bot]"
-_DEPENDABOT_PROTECTED_PATHS = {
-    "dependabot/pip/dot-github/": frozenset({
-        ".github/requirements-ci.txt",
-    }),
-    "dependabot/nuget/dot-config/": frozenset({
-        ".config/dotnet-tools.json",
-    }),
-}
+_DEPENDABOT_PIP_PATHS = frozenset({
+    ".github/requirements-ci.txt",
+    "agents/gwp-predictor/training/requirements.txt",
+    "agents/zinc/tools/zinc/requirements.txt",
+})
+_DEPENDABOT_UV_PATHS = frozenset({
+    "utilities/supercomputer-cli/discovery/pyproject.toml",
+    "utilities/supercomputer-cli/discovery/uv.lock",
+})
 
 
 def is_trusted_registry_refresh(author: str, head_ref: str) -> bool:
@@ -40,24 +42,25 @@ def is_trusted_registry_refresh(author: str, head_ref: str) -> bool:
 
 
 def is_trusted_dependabot_update(path: str, author: str, head_ref: str) -> bool:
-    """Allow only configured Dependabot manifests on matching bot branches."""
+    """Allow configured manifests changed by the real Dependabot App."""
     if author != _DEPENDABOT_AUTHOR:
         return False
 
     normalized = path.replace("\\", "/")
-    for ref_prefix, allowed_paths in _DEPENDABOT_PROTECTED_PATHS.items():
-        if head_ref.startswith(ref_prefix):
-            return normalized in allowed_paths
-
-    if not head_ref.startswith("dependabot/github_actions/"):
-        return False
-
     parts = normalized.split("/")
-    return (
-        len(parts) == 3
-        and parts[:2] == [".github", "workflows"]
-        and _suffix(parts[-1]) in {".yml", ".yaml"}
-    )
+    if head_ref.startswith("dependabot/github_actions/"):
+        return (
+            len(parts) == 3
+            and parts[:2] == [".github", "workflows"]
+            and _suffix(parts[-1]) in {".yml", ".yaml"}
+        )
+    if head_ref.startswith("dependabot/nuget/"):
+        return normalized == ".config/dotnet-tools.json"
+    if head_ref.startswith("dependabot/pip/"):
+        return normalized in _DEPENDABOT_PIP_PATHS
+    if head_ref.startswith("dependabot/uv/"):
+        return normalized in _DEPENDABOT_UV_PATHS
+    return False
 
 
 def _suffix(name: str) -> str:
@@ -91,17 +94,36 @@ def _is_public_contribution_path(path: str) -> bool:
     return False
 
 
+def _is_maintainer_only_path(path: str) -> bool:
+    normalized = path.replace("\\", "/")
+    parts = normalized.split("/")
+    if not parts or any(part in {"", ".", ".."} for part in parts):
+        return True
+
+    if normalized in _PROTECTED_PATHS or parts[0] in _PROTECTED_ROOTS:
+        return True
+    if len(parts) >= 2 and parts[:2] == ["docs", "schemas"]:
+        return True
+
+    # Root configuration changes can alter repository-wide behavior. Keep
+    # ordinary root documentation public/member-accessible, but require a
+    # maintainer for everything else at the repository root.
+    return len(parts) == 1 and parts[-1].lower() not in _PUBLIC_ROOT_DOCS
+
+
 def check_contributor_scope(
     changed_files: list[str],
     author_permission: str | None,
     author: str = "",
     head_ref: str = "",
+    author_association: str = "",
 ) -> list[Failure]:
     """Protect trusted code and configuration from non-maintainer PRs."""
     if author_permission is None:
         return []
 
     permission = author_permission.strip().lower() or "unknown"
+    association = author_association.strip().lower()
     if (
         permission in _MAINTAINER_PERMISSIONS
         or is_trusted_registry_refresh(author, head_ref)
@@ -113,14 +135,26 @@ def check_contributor_scope(
     for changed_file in changed_files:
         if is_trusted_dependabot_update(changed_file, author, head_ref):
             continue
-        if not _is_public_contribution_path(changed_file):
+        allowed = (
+            not _is_maintainer_only_path(changed_file)
+            if association in _MICROSOFT_ORG_ASSOCIATIONS
+            else _is_public_contribution_path(changed_file)
+        )
+        if not allowed:
+            trust_description = (
+                "a Microsoft organization member "
+                f"with repository permission '{permission}'"
+                if association in _MICROSOFT_ORG_ASSOCIATIONS
+                else f"a contributor with repository permission '{permission}'"
+            )
             failures.append(Failure(
                 "POL-021",
                 changed_file,
-                f"{actor} has repository permission '{permission}'. Public contributors "
-                "may modify catalog content and documentation, but trusted automation, "
-                "repository configuration, schemas, generated output, and executable "
-                "utilities require a maintainer-authored change. Remove this file from "
+                f"{actor} is classified as {trust_description}. Public contributors "
+                "may modify catalog content and documentation, and Microsoft organization "
+                "members may also modify ordinary repository content. Trusted automation, "
+                "repository configuration, schemas, generated output, and root control "
+                "files still require a maintainer-authored change. Remove this file from "
                 "the PR or ask a repository maintainer to author the change.",
             ))
     return failures
