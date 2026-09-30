@@ -174,8 +174,11 @@ jobs:
           PR_AUTHOR: ${{ github.event.pull_request.user.login }}
           PR_HEAD_REF: ${{ github.event.pull_request.head.ref }}
           # POL-021 treats an absent or failed lookup as public scope. Only
-          # admin/maintain/write can modify trusted repository paths.
+          # admin/maintain/write can modify trusted control-plane paths.
+          # Microsoft organization members may contribute ordinary repository
+          # content without receiving repository write access.
           PR_AUTHOR_PERMISSION: ${{ needs.classify.outputs.author_permission || 'unknown' }}
+          PR_AUTHOR_ASSOCIATION: ${{ github.event.pull_request.author_association || 'NONE' }}
         run: |
           # Invoke validator from the trusted checkout (base SHA) against PR content.
           python trusted/.github/scripts/validate_pr.py \
@@ -437,7 +440,6 @@ jobs:
             // Images always get a human look. POL-016 proves a file is the
             // format it claims to be; it cannot judge whether the picture is
             // appropriate, correctly licensed, or carries unreviewed text.
-            const imageFiles = results.image_files || [];
             if (hasCatalog && results.has_images) labelsToAdd.push('needs-image-review');
 
             // ── 3. Apply pass/fail labels ──────────────────────────
@@ -452,37 +454,6 @@ jobs:
               await github.rest.issues.addLabels({
                 owner, repo, issue_number: prNumber, labels: labelsToAdd
               });
-            }
-
-            // ── 3b. Image review notice ───────────────────────────
-            if (hasCatalog && imageFiles.length > 0) {
-              const rows = imageFiles.map(f => `| \`${f}\` |`).join('\n');
-              const body = [
-                '## 🖼️ Image review required',
-                '',
-                `This PR adds or modifies ${imageFiles.length} image file(s). Automated checks confirm each file is the format its name claims (POL-016) and that SVGs contain no scripts, event handlers, or remote references — but a maintainer must still look at them.`,
-                '',
-                '| File |',
-                '|------|',
-                rows,
-                '',
-                '**Reviewer checklist**',
-                '',
-                '- [ ] The image renders as expected and shows what the PR claims',
-                '- [ ] No embedded text containing credentials, internal URLs, or unreleased information',
-                '- [ ] Content is appropriate and the contributor has the right to publish it',
-                '- [ ] Licensing and attribution are correct for third-party artwork',
-                '- [ ] The image is genuinely needed — prefer diagrams as text (Mermaid) or linked external assets',
-                '',
-                'Remove the `needs-image-review` label to clear this gate. Pushing a new commit re-applies it.',
-              ].join('\n');
-              try {
-                await github.rest.issues.createComment({
-                  owner, repo, issue_number: prNumber, body
-                });
-              } catch (e) {
-                console.log(`Could not post image review notice: ${e.message}`);
-              }
             }
 
             // ── 4. Post inline review comments (one per failure) ───
@@ -527,7 +498,10 @@ jobs:
                     repo,
                     pull_number: prNumber,
                     commit_id: pr.head.sha,
-                    event: 'REQUEST_CHANGES',
+                    // The required Validate PR status check is the authoritative
+                    // blocker. Use a comment review for inline diagnostics so a
+                    // stale bot review cannot remain as a second merge gate.
+                    event: 'COMMENT',
                     body: '',
                     comments: inlineComments
                   });
@@ -597,39 +571,4 @@ jobs:
                 console.log(`Could not dismiss bot reviews: ${e.message}`);
               }
 
-              // ── 6. Auto-request maintainer review ───────────────
-              // Reviewers are now governed by .github/CODEOWNERS; GitHub
-              // will automatically request the listed owners. We still
-              // keep an explicit request so the request fires even when
-              // branch protection isn't enforcing CODEOWNERS yet.
-              try {
-                await github.rest.pulls.requestReviewers({
-                  owner,
-                  repo,
-                  pull_number: prNumber,
-                });
-              } catch (e) {
-                // PR author cannot be requested — silently skip if that's the case
-                console.log(`Could not request reviewers: ${e.message}`);
-              }
-
-              // ── 7. Post success summary ──────────────────────────
-              try {
-                await github.rest.issues.createComment({
-                  owner,
-                  repo,
-                  issue_number: prNumber,
-                  body: [
-                    '## ✅ Automated Check Results — All checks passed',
-                    '',
-                    'All structural, schema, content, documentation, and secret scan checks passed.',
-                    '',
-                    'This PR is ready for human review. The maintainers have been automatically requested.',
-                    '',
-                    '> Reminder: 1 approval from a CODEOWNERS reviewer is required before this PR can be merged.',
-                  ].join('\n')
-                });
-              } catch (e) {
-                console.log(`Could not post success comment (PR may be locked): ${e.message}`);
-              }
             }
