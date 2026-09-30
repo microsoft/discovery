@@ -51,10 +51,14 @@ signature before installation.
 | Argument | Purpose |
 | --- | --- |
 | `-y`, `--yes` | Accept the installation plan noninteractively. |
-| `--signing-key PATH` | Import an approved RPM signing key before signature validation. |
+| `--signing-key PATH` | Import an explicitly approved alternate RPM signing key. Not required for official Microsoft-signed RPMs. |
 | `--setup-mode automatic` | Configure dependencies and install the RPM. This is the default. |
 | `--setup-mode prompt` | Ask whether to use automatic or manual setup. |
 | `--setup-mode manual` | Make no system changes and print the manual setup location. |
+
+Official Discovery App RPMs are signed by Microsoft. For a standard
+installation, do not pass `--signing-key`; the installer retrieves and imports
+Microsoft's published signing key automatically.
 
 For example:
 
