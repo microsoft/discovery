@@ -135,6 +135,7 @@ def run_validation(
     author_permission: str | None = None,
     author: str = "",
     head_ref: str = "",
+    author_association: str = "",
 ) -> ValidationRun:
     catalog_changed = any(
         path.replace("\\", "/").startswith(("agents/", "starter-kits/"))
@@ -145,6 +146,7 @@ def run_validation(
         author_permission,
         author,
         head_ref,
+        author_association,
     )
     if not catalog_changed:
         failures = scope_failures + check_policy(

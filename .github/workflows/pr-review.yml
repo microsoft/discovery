@@ -174,8 +174,11 @@ jobs:
           PR_AUTHOR: ${{ github.event.pull_request.user.login }}
           PR_HEAD_REF: ${{ github.event.pull_request.head.ref }}
           # POL-021 treats an absent or failed lookup as public scope. Only
-          # admin/maintain/write can modify trusted repository paths.
+          # admin/maintain/write can modify trusted control-plane paths.
+          # Microsoft organization members may contribute ordinary repository
+          # content without receiving repository write access.
           PR_AUTHOR_PERMISSION: ${{ needs.classify.outputs.author_permission || 'unknown' }}
+          PR_AUTHOR_ASSOCIATION: ${{ github.event.pull_request.author_association || 'NONE' }}
         run: |
           # Invoke validator from the trusted checkout (base SHA) against PR content.
           python trusted/.github/scripts/validate_pr.py \
@@ -527,7 +530,10 @@ jobs:
                     repo,
                     pull_number: prNumber,
                     commit_id: pr.head.sha,
-                    event: 'REQUEST_CHANGES',
+                    // The required Validate PR status check is the authoritative
+                    // blocker. Use a comment review for inline diagnostics so a
+                    // stale bot review cannot remain as a second merge gate.
+                    event: 'COMMENT',
                     body: '',
                     comments: inlineComments
                   });
@@ -597,23 +603,7 @@ jobs:
                 console.log(`Could not dismiss bot reviews: ${e.message}`);
               }
 
-              // ── 6. Auto-request maintainer review ───────────────
-              // Reviewers are now governed by .github/CODEOWNERS; GitHub
-              // will automatically request the listed owners. We still
-              // keep an explicit request so the request fires even when
-              // branch protection isn't enforcing CODEOWNERS yet.
-              try {
-                await github.rest.pulls.requestReviewers({
-                  owner,
-                  repo,
-                  pull_number: prNumber,
-                });
-              } catch (e) {
-                // PR author cannot be requested — silently skip if that's the case
-                console.log(`Could not request reviewers: ${e.message}`);
-              }
-
-              // ── 7. Post success summary ──────────────────────────
+              // ── 6. Post success summary ──────────────────────────
               try {
                 await github.rest.issues.createComment({
                   owner,
@@ -624,9 +614,9 @@ jobs:
                     '',
                     'All structural, schema, content, documentation, and secret scan checks passed.',
                     '',
-                    'This PR is ready for human review. The maintainers have been automatically requested.',
+                    'This PR is ready for review or merge under the repository rules.',
                     '',
-                    '> Reminder: 1 approval from a CODEOWNERS reviewer is required before this PR can be merged.',
+                    '> CODEOWNERS are automatically requested only when a changed path has an explicit owner.',
                   ].join('\n')
                 });
               } catch (e) {

@@ -6,6 +6,7 @@ import yaml
 
 
 WORKFLOW_PATH = Path(__file__).resolve().parents[1] / "workflows" / "pr-review.yml"
+CODEOWNERS_PATH = Path(__file__).resolve().parents[1] / "CODEOWNERS"
 
 
 def load_workflow() -> dict:
@@ -39,7 +40,7 @@ def test_untrusted_jobs_do_not_checkout_before_shell_execution():
     assert "trufflehog git file:///tmp/pr-history" in command
 
 
-def test_author_permission_is_resolved_and_passed_to_validator():
+def test_author_trust_signals_are_passed_to_validator():
     workflow = load_workflow()
     classify = workflow["jobs"]["classify"]
     permission_step = next(
@@ -59,6 +60,30 @@ def test_author_permission_is_resolved_and_passed_to_validator():
     assert validator["env"]["PR_AUTHOR_PERMISSION"] == (
         "${{ needs.classify.outputs.author_permission || 'unknown' }}"
     )
+    assert validator["env"]["PR_AUTHOR_ASSOCIATION"] == (
+        "${{ github.event.pull_request.author_association || 'NONE' }}"
+    )
+
+
+def test_validation_feedback_does_not_submit_blocking_bot_reviews():
+    workflow_text = WORKFLOW_PATH.read_text(encoding="utf-8")
+
+    assert "event: 'COMMENT'" in workflow_text
+    assert "event: 'REQUEST_CHANGES'" not in workflow_text
+    assert "requestReviewers" not in workflow_text
+
+
+def test_codeowners_targets_sensitive_paths_without_global_fanout():
+    active_lines = [
+        line.strip()
+        for line in CODEOWNERS_PATH.read_text(encoding="utf-8").splitlines()
+        if line.strip() and not line.lstrip().startswith("#")
+    ]
+
+    assert not any(line.split(maxsplit=1)[0] == "*" for line in active_lines)
+    assert any(line.startswith("/.github/") for line in active_lines)
+    assert any(line.startswith("/docs/schemas/") for line in active_lines)
+    assert any(line.startswith("/utilities/") for line in active_lines)
 
 
 def test_trufflehog_install_and_repository_layout_are_stable():

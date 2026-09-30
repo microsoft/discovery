@@ -6,6 +6,7 @@ from .findings import Failure
 
 
 _MAINTAINER_PERMISSIONS = frozenset({"admin", "maintain", "write"})
+_MICROSOFT_ORG_ASSOCIATIONS = frozenset({"member", "owner"})
 _PUBLIC_CATALOG_ROOTS = frozenset({"agents", "starter-kits"})
 _PROTECTED_ROOTS = frozenset({".auto-registry", ".github", ".vscode"})
 _PROTECTED_PATHS = frozenset({"docs/validation-rules.md"})
@@ -91,17 +92,36 @@ def _is_public_contribution_path(path: str) -> bool:
     return False
 
 
+def _is_maintainer_only_path(path: str) -> bool:
+    normalized = path.replace("\\", "/")
+    parts = normalized.split("/")
+    if not parts or any(part in {"", ".", ".."} for part in parts):
+        return True
+
+    if normalized in _PROTECTED_PATHS or parts[0] in _PROTECTED_ROOTS:
+        return True
+    if len(parts) >= 2 and parts[:2] == ["docs", "schemas"]:
+        return True
+
+    # Root configuration changes can alter repository-wide behavior. Keep
+    # ordinary root documentation public/member-accessible, but require a
+    # maintainer for everything else at the repository root.
+    return len(parts) == 1 and parts[-1].lower() not in _PUBLIC_ROOT_DOCS
+
+
 def check_contributor_scope(
     changed_files: list[str],
     author_permission: str | None,
     author: str = "",
     head_ref: str = "",
+    author_association: str = "",
 ) -> list[Failure]:
     """Protect trusted code and configuration from non-maintainer PRs."""
     if author_permission is None:
         return []
 
     permission = author_permission.strip().lower() or "unknown"
+    association = author_association.strip().lower()
     if (
         permission in _MAINTAINER_PERMISSIONS
         or is_trusted_registry_refresh(author, head_ref)
@@ -113,14 +133,26 @@ def check_contributor_scope(
     for changed_file in changed_files:
         if is_trusted_dependabot_update(changed_file, author, head_ref):
             continue
-        if not _is_public_contribution_path(changed_file):
+        allowed = (
+            not _is_maintainer_only_path(changed_file)
+            if association in _MICROSOFT_ORG_ASSOCIATIONS
+            else _is_public_contribution_path(changed_file)
+        )
+        if not allowed:
+            trust_description = (
+                "a Microsoft organization member "
+                f"with repository permission '{permission}'"
+                if association in _MICROSOFT_ORG_ASSOCIATIONS
+                else f"a contributor with repository permission '{permission}'"
+            )
             failures.append(Failure(
                 "POL-021",
                 changed_file,
-                f"{actor} has repository permission '{permission}'. Public contributors "
-                "may modify catalog content and documentation, but trusted automation, "
-                "repository configuration, schemas, generated output, and executable "
-                "utilities require a maintainer-authored change. Remove this file from "
+                f"{actor} is classified as {trust_description}. Public contributors "
+                "may modify catalog content and documentation, and Microsoft organization "
+                "members may also modify ordinary repository content. Trusted automation, "
+                "repository configuration, schemas, generated output, and root control "
+                "files still require a maintainer-authored change. Remove this file from "
                 "the PR or ask a repository maintainer to author the change.",
             ))
     return failures
