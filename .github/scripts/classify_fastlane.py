@@ -73,13 +73,20 @@ def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--files-json", required=True)
     parser.add_argument("--author-association", default="NONE")
+    parser.add_argument("--output", required=True)
     args = parser.parse_args()
 
     with Path(args.files_json).open(encoding="utf-8") as stream:
         files = json.load(stream)
     if not isinstance(files, list):
         raise SystemExit("Pull request files payload must be a JSON array.")
-    print(json.dumps(classify(files, args.author_association), separators=(",", ":")))
+    Path(args.output).write_text(
+        json.dumps(
+            classify(files, args.author_association),
+            separators=(",", ":"),
+        ),
+        encoding="utf-8",
+    )
 
 
 if __name__ == "__main__":

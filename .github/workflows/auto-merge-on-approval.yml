@@ -110,12 +110,15 @@ jobs:
             echo "::warning::PR has at least 100 files; fast-lane classification fails closed."
             CLASSIFICATION='{"lane":"standard","manifest_auto_approval":false,"toolbox_one_approval":false}'
           else
-            CLASSIFICATION=$(python trusted/.github/scripts/classify_fastlane.py \
+            python trusted/.github/scripts/classify_fastlane.py \
               --files-json /tmp/pr-files.json \
-              --author-association "$AUTHOR_ASSOCIATION")
+              --author-association "$AUTHOR_ASSOCIATION" \
+              --output /tmp/fastlane-classification.json
+            CLASSIFICATION=$(cat /tmp/fastlane-classification.json)
           fi
-          echo "Fast-lane classification: $CLASSIFICATION"
-          echo "lane=$(echo "$CLASSIFICATION" | jq -r '.lane')" >> "$GITHUB_OUTPUT"
+          LANE=$(echo "$CLASSIFICATION" | jq -r '.lane')
+          echo "Fast-lane classification: $LANE"
+          echo "lane=$LANE" >> "$GITHUB_OUTPUT"
           echo "manifest=$(echo "$CLASSIFICATION" | jq -r '.manifest_auto_approval')" >> "$GITHUB_OUTPUT"
           echo "toolbox=$(echo "$CLASSIFICATION" | jq -r '.toolbox_one_approval')" >> "$GITHUB_OUTPUT"
 
