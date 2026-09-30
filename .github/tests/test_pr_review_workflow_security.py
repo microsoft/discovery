@@ -106,6 +106,9 @@ def test_manifest_auto_approval_is_narrow_and_check_gated():
     source = AUTO_MERGE_PATH.read_text(encoding="utf-8")
 
     assert "classify_fastlane.py" in source
+    assert "contents/.github/scripts/classify_fastlane.py?ref=$BASE_SHA" in source
+    assert "/tmp/trusted/classify_fastlane.py" in source
+    assert "Checkout trusted fast-lane classifier" not in source
     assert "--eligible-for manifest" in source
     assert "--eligible-for toolbox" in source
     assert "actions/create-github-app-token@" in source

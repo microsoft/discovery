@@ -85,14 +85,24 @@ jobs:
             echo "author_association=$AUTHOR_ASSOCIATION" >> "$GITHUB_OUTPUT"
           fi
 
-      - name: Checkout trusted fast-lane classifier
+      - name: Retrieve trusted fast-lane classifier
         if: steps.pr.outputs.skip != 'true'
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          ref: ${{ steps.pr.outputs.base_sha }}
-          fetch-depth: 1
-          path: trusted
-          persist-credentials: false
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          BASE_SHA: ${{ steps.pr.outputs.base_sha }}
+        run: |
+          set -euo pipefail
+          CLASSIFIER_JSON=$(gh api \
+            "/repos/$REPO/contents/.github/scripts/classify_fastlane.py?ref=$BASE_SHA")
+          if [ "$(echo "$CLASSIFIER_JSON" | jq -r '.type')" != "file" ] || \
+             [ "$(echo "$CLASSIFIER_JSON" | jq -r '.path')" != ".github/scripts/classify_fastlane.py" ]; then
+            echo "::error::Trusted classifier could not be retrieved from base commit $BASE_SHA."
+            exit 1
+          fi
+          mkdir -p /tmp/trusted
+          echo "$CLASSIFIER_JSON" | jq -r '.content' | base64 --decode \
+            > /tmp/trusted/classify_fastlane.py
 
       - name: Classify fast lane
         if: steps.pr.outputs.skip != 'true'
@@ -111,13 +121,13 @@ jobs:
           TOOLBOX=false
           if [ "$FILE_COUNT" -ge 100 ]; then
             echo "::warning::PR has at least 100 files; fast-lane classification fails closed."
-          elif python trusted/.github/scripts/classify_fastlane.py \
+          elif python /tmp/trusted/classify_fastlane.py \
             --files-json /tmp/pr-files.json \
             --author-association "$AUTHOR_ASSOCIATION" \
             --eligible-for manifest; then
             LANE=manifest-auto-approval
             MANIFEST=true
-          elif python trusted/.github/scripts/classify_fastlane.py \
+          elif python /tmp/trusted/classify_fastlane.py \
             --files-json /tmp/pr-files.json \
             --author-association "$AUTHOR_ASSOCIATION" \
             --eligible-for toolbox; then
