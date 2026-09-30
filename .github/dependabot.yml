@@ -5,7 +5,18 @@ updates:
     directory: "/"
     schedule:
       interval: "weekly"
-    open-pull-requests-limit: 5
+    open-pull-requests-limit: 3
+    groups:
+      actions-minor-patch:
+        patterns:
+          - "*"
+        update-types:
+          - "minor"
+          - "patch"
+      actions-security:
+        applies-to: "security-updates"
+        patterns:
+          - "*"
     labels:
       - "automated-dep-update"
     commit-message:
@@ -21,7 +32,7 @@ updates:
       day: "tuesday"
       time: "07:00"
       timezone: "Etc/UTC"
-    open-pull-requests-limit: 10
+    open-pull-requests-limit: 3
     groups:
       nuget-minor-patch:
         patterns:
@@ -29,6 +40,10 @@ updates:
         update-types:
           - "minor"
           - "patch"
+      nuget-security:
+        applies-to: "security-updates"
+        patterns:
+          - "*"
     labels:
       - "automated-dep-update"
     commit-message:
@@ -45,7 +60,7 @@ updates:
       day: "tuesday"
       time: "08:00"
       timezone: "Etc/UTC"
-    open-pull-requests-limit: 10
+    open-pull-requests-limit: 3
     groups:
       pip-minor-patch:
         patterns:
@@ -53,7 +68,10 @@ updates:
         update-types:
           - "minor"
           - "patch"
-        group-by: "dependency-name"
+      pip-security:
+        applies-to: "security-updates"
+        patterns:
+          - "*"
     labels:
       - "automated-dep-update"
     commit-message:
@@ -68,7 +86,7 @@ updates:
       day: "wednesday"
       time: "07:00"
       timezone: "Etc/UTC"
-    open-pull-requests-limit: 10
+    open-pull-requests-limit: 3
     groups:
       docker-minor-patch:
         patterns:
@@ -76,8 +94,36 @@ updates:
         update-types:
           - "minor"
           - "patch"
-        group-by: "dependency-name"
+      docker-security:
+        applies-to: "security-updates"
+        patterns:
+          - "*"
     labels:
       - "automated-dep-update"
     commit-message:
       prefix: "chore(images)"
+
+  # The Supercomputer CLI uses uv and has active security advisories.
+  - package-ecosystem: "uv"
+    directory: "/utilities/supercomputer-cli/discovery"
+    schedule:
+      interval: "weekly"
+      day: "wednesday"
+      time: "08:00"
+      timezone: "Etc/UTC"
+    open-pull-requests-limit: 3
+    groups:
+      uv-minor-patch:
+        patterns:
+          - "*"
+        update-types:
+          - "minor"
+          - "patch"
+      uv-security:
+        applies-to: "security-updates"
+        patterns:
+          - "*"
+    labels:
+      - "automated-dep-update"
+    commit-message:
+      prefix: "chore(uv)"
