@@ -9,10 +9,11 @@
       <a href="https://aka.ms/discovery/download/current"><strong>x64</strong></a>
       <a href="https://aka.ms/discovery/download/arm64/current"><strong>Arm64</strong></a>
       <a href="https://aka.ms/discovery/download/osx/current"><strong>macOS</strong></a>
+      <a href="https://aka.ms/discovery/download/rhel/current"><strong>RHEL</strong></a>
     </td>
     <td valign="middle">
       A self-contained desktop app - no SDK, no cloud setup. Current release: <strong>v0.15.17</strong>.<br>
-      <sub>Windows x64, Windows ARM64, and macOS installers are available today. Linux is not supported yet.</sub><br><br>
+      <sub>Windows x64, Windows ARM64, macOS, and RHEL x64 (RPM) installers are available today.</sub><br><br>
       🛠️ <a href="docs/discovery-app/install.md">Install guide</a> - setup, verification, and upgrade steps.
     </td>
   </tr>
