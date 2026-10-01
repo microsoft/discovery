@@ -1,0 +1,20 @@
+name: flow-cytometry-referee
+type: agent
+version: 1.0.0
+associated_tools:
+  - agents/flow-cytometry-referee/tools/flow-qc
+publisher:
+  name: Aziz Muminov
+  contact: azizmuminov@users.noreply.github.com
+  support_url: https://github.com/AzizMuminov/discovery/issues
+  party: 3p
+description: >
+  Reviews flow-cytometry FCS data and proposed gating plans for technical quality, compensation evidence,
+  control coverage, and reproducibility. Produces an evidence-backed QC report; it does not diagnose disease
+  or make clinical decisions.
+tags:
+  - flow-cytometry
+  - fcs
+  - quality-control
+  - single-cell
+  - bioinformatics
