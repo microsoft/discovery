@@ -1,0 +1,19 @@
+name: aqcat
+type: agent
+version: 1.0.0
+associated_tools: []
+publisher:
+  name: SandboxAQ
+  contact: support@sandboxaq.com
+  support_url: https://www.sandboxaq.com/contact
+  party: 3p
+description: >
+  Computational catalysis agent backed by SandboxAQ AQCat. Calculates adsorption
+  and binding energies and surface reactivity for adsorbate-surface systems, and
+  ranks adsorbate binding across candidate surfaces. Reached over the SandboxAQ
+  AI Simulation Platform MCP endpoint.
+tags:
+  - materials-science
+  - materials-discovery
+  - computational-chemistry
+  - chemistry
