@@ -1,0 +1,32 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://flowblind.local/schemas/flowblind-catalog-research-v2-retained-package-manifest.schema.json",
+  "title": "FlowBlind catalog-native research v2 retained-package manifest",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "id",
+    "packageVersion",
+    "packages"
+  ],
+  "properties": {
+    "schemaVersion": {
+      "const": 1
+    },
+    "id": {
+      "const": "flowblind-catalog-research-v2-retained-package-manifest-v1"
+    },
+    "packageVersion": {
+      "const": "2.0.0"
+    },
+    "packages": {
+      "type": "array",
+      "minItems": 2,
+      "maxItems": 2,
+      "items": {
+        "$ref": "flowblind-retained-package-manifest-v1.schema.json"
+      }
+    }
+  }
+}

@@ -1,0 +1,231 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://flowblind.local/schemas/regional-agreement-study-manifest.schema.json",
+  "title": "FlowBlind regional agreement study manifest",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "id",
+    "actionId",
+    "studyFamily",
+    "methodVersion",
+    "title",
+    "classification",
+    "source",
+    "comparison",
+    "partition",
+    "sufficiency",
+    "resourceBounds",
+    "endpoints",
+    "interpretationBoundary"
+  ],
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "id": { "$ref": "#/$defs/id" },
+    "actionId": { "$ref": "#/$defs/id" },
+    "studyFamily": {
+      "const": "regional-agreement-selection-sensitivity-v1"
+    },
+    "methodVersion": { "const": "1.0.0" },
+    "title": { "$ref": "#/$defs/text" },
+    "classification": {
+      "const": "descriptive-spatial-selection-sensitivity"
+    },
+    "source": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "adapterId",
+        "registeredPairId",
+        "artifact"
+      ],
+      "properties": {
+        "adapterId": { "$ref": "#/$defs/id" },
+        "registeredPairId": { "$ref": "#/$defs/id" },
+        "artifact": { "$ref": "#/$defs/artifactIdentity" }
+      }
+    },
+    "comparison": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "quantityMethod",
+        "expectedGrid",
+        "expectedNominalPairedPoints",
+        "referenceContextPolicy",
+        "hotspotPercentile"
+      ],
+      "properties": {
+        "quantityMethod": {
+          "const": "interpolated-supplied-vxy"
+        },
+        "expectedGrid": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["width", "height"],
+          "properties": {
+            "width": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 4096
+            },
+            "height": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 4096
+            }
+          }
+        },
+        "expectedNominalPairedPoints": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 1000000
+        },
+        "referenceContextPolicy": {
+          "const": "full-nominal-valid-mask"
+        },
+        "hotspotPercentile": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "exclusiveMaximum": 1
+        }
+      }
+    },
+    "partition": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "kind",
+        "rows",
+        "columns",
+        "order",
+        "idFormat"
+      ],
+      "properties": {
+        "kind": { "const": "equal-grid-index-bins-v1" },
+        "rows": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 16
+        },
+        "columns": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 16
+        },
+        "order": { "const": "row-major" },
+        "idFormat": { "const": "row-{row}-column-{column}" }
+      }
+    },
+    "sufficiency": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "minimumPairedPoints",
+        "belowMinimumStatus",
+        "belowMinimumReason"
+      ],
+      "properties": {
+        "minimumPairedPoints": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 1000000
+        },
+        "belowMinimumStatus": {
+          "const": "insufficient-evidence"
+        },
+        "belowMinimumReason": {
+          "const": "paired-points-below-preregistered-minimum"
+        }
+      }
+    },
+    "resourceBounds": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "maximumGridPoints",
+        "maximumWindows",
+        "maximumPointWindowEvaluations"
+      ],
+      "properties": {
+        "maximumGridPoints": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 1000000
+        },
+        "maximumWindows": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 256
+        },
+        "maximumPointWindowEvaluations": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 50000000
+        }
+      }
+    },
+    "endpoints": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["primary", "secondary"],
+      "properties": {
+        "primary": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": { "$ref": "#/$defs/endpoint" }
+        },
+        "secondary": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": { "$ref": "#/$defs/endpoint" }
+        }
+      }
+    },
+    "interpretationBoundary": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/text" }
+    }
+  },
+  "$defs": {
+    "text": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 4096
+    },
+    "id": {
+      "type": "string",
+      "pattern": "^[a-z0-9][a-z0-9._-]{0,159}$"
+    },
+    "sha256": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "artifactIdentity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["reference", "byteLength", "sha256"],
+      "properties": {
+        "reference": { "$ref": "#/$defs/text" },
+        "byteLength": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 1073741824
+        },
+        "sha256": { "$ref": "#/$defs/sha256" }
+      }
+    },
+    "endpoint": {
+      "enum": [
+        "pearsonCorrelation",
+        "rangeNormalizedRmse",
+        "meanAbsoluteError",
+        "hotspotRecall",
+        "hotspotJaccard"
+      ]
+    }
+  }
+}

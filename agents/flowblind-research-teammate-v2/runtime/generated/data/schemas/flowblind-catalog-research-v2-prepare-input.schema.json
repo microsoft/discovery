@@ -1,0 +1,248 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://flowblind.local/schemas/flowblind-catalog-research-v2-prepare-input.schema.json",
+  "title": "FlowBlind catalog-native research v2 prepare input",
+  "oneOf": [
+    {
+      "$ref": "#/$defs/regionalInput"
+    },
+    {
+      "$ref": "#/$defs/vectorInput"
+    },
+    {
+      "$ref": "#/$defs/hiddenInput"
+    }
+  ],
+  "$defs": {
+    "text": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 4096
+    },
+    "optionalText": {
+      "oneOf": [
+        {
+          "$ref": "#/$defs/text"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "regionalInput": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "researchGoal",
+        "metadata"
+      ],
+      "properties": {
+        "researchGoal": {
+          "$ref": "#/$defs/text"
+        },
+        "decisionQuestion": {
+          "$ref": "#/$defs/optionalText"
+        },
+        "nextEvidenceIntent": {
+          "$ref": "#/$defs/optionalText"
+        },
+        "metadata": {
+          "$ref": "#/$defs/regionalMetadata"
+        }
+      }
+    },
+    "vectorInput": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "researchGoal",
+        "metadata"
+      ],
+      "properties": {
+        "researchGoal": {
+          "$ref": "#/$defs/text"
+        },
+        "decisionQuestion": {
+          "$ref": "#/$defs/optionalText"
+        },
+        "nextEvidenceIntent": {
+          "$ref": "#/$defs/optionalText"
+        },
+        "metadata": {
+          "$ref": "#/$defs/vectorMetadata"
+        }
+      }
+    },
+    "hiddenInput": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "researchGoal"
+      ],
+      "properties": {
+        "researchGoal": {
+          "$ref": "#/$defs/text"
+        },
+        "decisionQuestion": {
+          "$ref": "#/$defs/optionalText"
+        },
+        "nextEvidenceIntent": {
+          "$ref": "#/$defs/optionalText"
+        }
+      }
+    },
+    "regionalMetadata": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "quantity",
+        "referenceMeaning",
+        "candidateMeaning",
+        "coordinateUnit",
+        "valueUnit",
+        "provenance",
+        "license"
+      ],
+      "properties": {
+        "quantity": {
+          "$ref": "#/$defs/text"
+        },
+        "referenceMeaning": {
+          "$ref": "#/$defs/text"
+        },
+        "candidateMeaning": {
+          "$ref": "#/$defs/text"
+        },
+        "coordinateUnit": {
+          "$ref": "#/$defs/text"
+        },
+        "valueUnit": {
+          "$ref": "#/$defs/text"
+        },
+        "provenance": {
+          "$ref": "#/$defs/text"
+        },
+        "license": {
+          "$ref": "#/$defs/text"
+        }
+      }
+    },
+    "vectorMetadata": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "quantity",
+        "vectorMeaning",
+        "vectorSourceKind",
+        "coordinateUnit",
+        "valueUnit",
+        "timeUnit",
+        "samplingKind",
+        "provenance",
+        "license"
+      ],
+      "properties": {
+        "quantity": {
+          "$ref": "#/$defs/text"
+        },
+        "vectorMeaning": {
+          "$ref": "#/$defs/text"
+        },
+        "vectorSourceKind": {
+          "enum": [
+            "generated",
+            "measured",
+            "simulation"
+          ]
+        },
+        "coordinateUnit": {
+          "enum": [
+            "m",
+            "cm",
+            "mm"
+          ]
+        },
+        "valueUnit": {
+          "enum": [
+            "m/s",
+            "cm/s",
+            "mm/s"
+          ]
+        },
+        "timeUnit": {
+          "enum": [
+            "s",
+            "ms"
+          ]
+        },
+        "samplingKind": {
+          "enum": [
+            "instantaneous",
+            "steady-state",
+            "frame-average"
+          ]
+        },
+        "selectedTime": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "exposureDuration": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "exclusiveMinimum": 0
+        },
+        "exposureOperator": {
+          "enum": [
+            "uniform-window-average",
+            "unspecified",
+            null
+          ]
+        },
+        "timestampAnchor": {
+          "enum": [
+            "start",
+            "midpoint",
+            "end",
+            "unspecified",
+            null
+          ]
+        },
+        "cycleStartTime": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "cycleEndTime": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "cyclePeriod": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "exclusiveMinimum": 0
+        },
+        "cyclePhaseOrigin": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "provenance": {
+          "$ref": "#/$defs/text"
+        },
+        "license": {
+          "$ref": "#/$defs/text"
+        }
+      }
+    }
+  }
+}

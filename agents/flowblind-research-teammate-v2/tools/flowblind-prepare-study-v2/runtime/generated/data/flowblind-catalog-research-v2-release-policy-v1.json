@@ -1,0 +1,58 @@
+{
+  "$schema": "https://flowblind.local/schemas/flowblind-catalog-research-v2-release-policy.schema.json",
+  "advertisedMethods": [
+    "regional-agreement-v1@1.0.0",
+    "vector-time-readiness-audit-v1@1.0.0"
+  ],
+  "defaultOffMethods": [
+    "flowblind-finite-sensor-placement-v1@2.0.0",
+    "generic-planar-external-validation-v1@1.0.0"
+  ],
+  "id": "flowblind-catalog-research-v2-release-policy-v1",
+  "packageId": "flowblind-research-teammate-v2",
+  "packageVersion": "2.0.0",
+  "privateHiddenFlow": {
+    "advertiseToScientist": false,
+    "bridgeExtension": {
+      "acceptedBridgeSha256": "f61326fd42415d02d03686dad4bb1d9e5b3098225c5eebf37a2aa4fffc987122",
+      "acceptedBridgeSource": "tools/catalogResearchV2/integrations/hiddenFlowV1.ts",
+      "behavior": "accept-compact-or-stable-pretty-json-without-reencoding-and-preserve-reconciliation-detail",
+      "extensionByteLength": 95226,
+      "extensionSha256": "154d29dc5b5a0de67096fcb975fb90e310753af9ab6cb882a76d61d8af42181f",
+      "extensionSource": "tools/catalogResearchV2/package/hiddenFlowV1PortableBridge.ts",
+      "id": "flowblind-hidden-bridge-stable-json-bytes-v2"
+    },
+    "defaultOff": true,
+    "exactNativeBytePreservation": "versioned-package-source-extension",
+    "liveActivationEligible": false,
+    "liveImageManifestDigests": {
+      "prepare": "REQUIRED_BEFORE_LIVE_ACTIVATION",
+      "run": "REQUIRED_BEFORE_LIVE_ACTIVATION"
+    },
+    "method": "finite-basis-hidden-flow-v1@1.1.0",
+    "requiredActivationManifestDigest": "sha256:4d596e0cb8dee8a6c0402e3f2233d5e224ebf669284cbad0a98b5652d7a6ab3d",
+    "retainedTreeSha256": "718bf2b8e7f3abe6d4d6338ad4141e5a28ff28432f2847ff610fc5f7809d204c"
+  },
+  "promptAgent": {
+    "allowMultipleToolCalls": false,
+    "humanInTheLoop": "Enabled",
+    "temperature": 0
+  },
+  "publicTools": [
+    {
+      "action": "prepare-study",
+      "confirmation": "Disabled",
+      "folder": "flowblind-prepare-study-v2"
+    },
+    {
+      "action": "run-and-verify-study",
+      "confirmation": "Enabled",
+      "folder": "flowblind-run-and-verify-study-v2"
+    }
+  ],
+  "runtimeNetworkRequired": false,
+  "schemaVersion": 1,
+  "unregisteredMethods": [
+    "home-qc"
+  ]
+}

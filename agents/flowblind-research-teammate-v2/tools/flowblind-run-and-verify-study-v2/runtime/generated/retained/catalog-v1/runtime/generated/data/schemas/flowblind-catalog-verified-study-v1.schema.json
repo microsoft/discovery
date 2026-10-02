@@ -1,0 +1,673 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://flowblind.local/schemas/flowblind-catalog-verified-study-v1.schema.json",
+  "title": "FlowBlind catalog verified study v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "$schema",
+    "schemaVersion",
+    "recordType",
+    "status",
+    "containsResults",
+    "humanContext",
+    "capability",
+    "preparation",
+    "source",
+    "protocol",
+    "verification",
+    "study"
+  ],
+  "properties": {
+    "$schema": {
+      "const": "https://flowblind.local/schemas/flowblind-catalog-verified-study-v1.schema.json"
+    },
+    "schemaVersion": { "const": 1 },
+    "recordType": { "const": "flowblind-catalog-verified-study-v1" },
+    "status": { "const": "verified" },
+    "containsResults": { "const": true },
+    "humanContext": {
+      "$ref": "flowblind-catalog-research-input-v1.schema.json"
+    },
+    "capability": {
+      "$ref": "flowblind-catalog-preparation-bundle-v1.schema.json#/$defs/capability"
+    },
+    "preparation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "associationSha256", "bundle"],
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^flowblind-preparation-[a-f0-9]{32}$"
+        },
+        "associationSha256": { "$ref": "#/$defs/sha256" },
+        "bundle": { "$ref": "#/$defs/jsonArtifact" }
+      }
+    },
+    "source": { "$ref": "#/$defs/sourceIdentities" },
+    "protocol": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["sha256", "freezeReceipt"],
+      "properties": {
+        "sha256": { "$ref": "#/$defs/sha256" },
+        "freezeReceipt": {
+          "$ref": "flowblind-catalog-preparation-bundle-v1.schema.json#/$defs/protocol/properties/freezeReceipt"
+        }
+      }
+    },
+    "verification": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "artifactVerificationStatus",
+        "deterministicReplayMatched",
+        "sourceIdentityMatched",
+        "softwareIdentityMatched"
+      ],
+      "properties": {
+        "artifactVerificationStatus": { "const": "verified" },
+        "deterministicReplayMatched": { "const": true },
+        "sourceIdentityMatched": { "const": true },
+        "softwareIdentityMatched": { "const": true }
+      }
+    },
+    "study": { "$ref": "#/$defs/scientificProjection" }
+  },
+  "$defs": {
+    "text": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 4096
+    },
+    "sha256": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "jsonArtifact": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["reference", "byteLength", "sha256", "mediaType"],
+      "properties": {
+        "reference": { "$ref": "#/$defs/text" },
+        "byteLength": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 16777216
+        },
+        "sha256": { "$ref": "#/$defs/sha256" },
+        "mediaType": { "const": "application/json" }
+      }
+    },
+    "sourceIdentities": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["candidate", "trustedSidecar"],
+      "properties": {
+        "candidate": {
+          "$ref": "flowblind-catalog-preparation-bundle-v1.schema.json#/$defs/identity"
+        },
+        "trustedSidecar": {
+          "$ref": "flowblind-catalog-preparation-bundle-v1.schema.json#/properties/source/properties/trustedSidecar"
+        }
+      }
+    },
+    "baselineMetric": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["status", "value", "definition"],
+          "properties": {
+            "status": { "const": "available" },
+            "value": { "type": "number" },
+            "definition": { "$ref": "#/$defs/text" }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["status", "reason", "detail"],
+          "properties": {
+            "status": {
+              "enum": ["insufficient-evidence", "unavailable"]
+            },
+            "reason": { "$ref": "#/$defs/text" },
+            "detail": { "$ref": "#/$defs/text" }
+          }
+        }
+      ]
+    },
+    "windowMetric": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "status",
+            "value",
+            "absoluteDeltaFromFull",
+            "definition"
+          ],
+          "properties": {
+            "status": { "const": "available" },
+            "value": { "type": "number" },
+            "absoluteDeltaFromFull": {
+              "type": ["number", "null"]
+            },
+            "definition": { "$ref": "#/$defs/text" }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["status", "reason", "detail"],
+          "properties": {
+            "status": {
+              "enum": ["insufficient-evidence", "unavailable"]
+            },
+            "reason": { "$ref": "#/$defs/text" },
+            "detail": { "$ref": "#/$defs/text" }
+          }
+        }
+      ]
+    },
+    "metricSet": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "pearsonCorrelation",
+        "rangeNormalizedRmse",
+        "meanAbsoluteError",
+        "hotspotRecall",
+        "hotspotJaccard"
+      ],
+      "properties": {
+        "pearsonCorrelation": { "$ref": "#/$defs/windowMetric" },
+        "rangeNormalizedRmse": { "$ref": "#/$defs/windowMetric" },
+        "meanAbsoluteError": { "$ref": "#/$defs/windowMetric" },
+        "hotspotRecall": { "$ref": "#/$defs/windowMetric" },
+        "hotspotJaccard": { "$ref": "#/$defs/windowMetric" }
+      }
+    },
+    "windowDefinition": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "row",
+        "column",
+        "gridIndexBounds",
+        "physicalCoordinateBounds",
+        "cropPoints"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^row-[0-2]-column-[0-2]$"
+        },
+        "row": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 2
+        },
+        "column": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 2
+        },
+        "gridIndexBounds": { "$ref": "#/$defs/bounds" },
+        "physicalCoordinateBounds": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "xMinimum",
+            "xMaximum",
+            "yMinimum",
+            "yMaximum",
+            "unit"
+          ],
+          "properties": {
+            "xMinimum": { "type": "number" },
+            "xMaximum": { "type": "number" },
+            "yMinimum": { "type": "number" },
+            "yMaximum": { "type": "number" },
+            "unit": { "$ref": "#/$defs/text" }
+          }
+        },
+        "cropPoints": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 1000000
+        }
+      }
+    },
+    "bounds": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "xMinimum",
+        "xMaximum",
+        "yMinimum",
+        "yMaximum"
+      ],
+      "properties": {
+        "xMinimum": { "type": "integer", "minimum": 0 },
+        "xMaximum": { "type": "integer", "minimum": 0 },
+        "yMinimum": { "type": "integer", "minimum": 0 },
+        "yMaximum": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "window": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["status", "window", "pairedPoints", "metrics"],
+          "properties": {
+            "status": { "const": "available" },
+            "window": { "$ref": "#/$defs/windowDefinition" },
+            "pairedPoints": {
+              "type": "integer",
+              "minimum": 30,
+              "maximum": 1000000
+            },
+            "metrics": { "$ref": "#/$defs/metricSet" }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "status",
+            "reason",
+            "detail",
+            "window",
+            "pairedPoints",
+            "minimumPairedPoints",
+            "metrics"
+          ],
+          "properties": {
+            "status": { "const": "insufficient-evidence" },
+            "reason": {
+              "const": "paired-points-below-preregistered-minimum"
+            },
+            "detail": { "$ref": "#/$defs/text" },
+            "window": { "$ref": "#/$defs/windowDefinition" },
+            "pairedPoints": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 29
+            },
+            "minimumPairedPoints": { "const": 30 },
+            "metrics": { "const": null }
+          }
+        }
+      ]
+    },
+    "endpointValue": {
+      "type": ["object", "null"],
+      "additionalProperties": false,
+      "required": ["windowId", "value", "absoluteDeltaFromFull"],
+      "properties": {
+        "windowId": {
+          "type": "string",
+          "pattern": "^row-[0-2]-column-[0-2]$"
+        },
+        "value": { "type": "number" },
+        "absoluteDeltaFromFull": {
+          "type": ["number", "null"]
+        }
+      }
+    },
+    "endpointSummaryBase": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "endpoint",
+        "fullBaseline",
+        "validWindows",
+        "insufficientWindows",
+        "minimum",
+        "maximum",
+        "range",
+        "maximumAbsoluteDeltaFromFull"
+      ],
+      "properties": {
+        "endpoint": {
+          "enum": [
+            "pearsonCorrelation",
+            "rangeNormalizedRmse",
+            "meanAbsoluteError",
+            "hotspotRecall",
+            "hotspotJaccard"
+          ]
+        },
+        "fullBaseline": { "type": ["number", "null"] },
+        "validWindows": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9
+        },
+        "insufficientWindows": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9
+        },
+        "minimum": { "$ref": "#/$defs/endpointValue" },
+        "maximum": { "$ref": "#/$defs/endpointValue" },
+        "range": { "type": ["number", "null"] },
+        "maximumAbsoluteDeltaFromFull": {
+          "$ref": "#/$defs/endpointValue"
+        }
+      }
+    },
+    "scientificProjection": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "study",
+        "source",
+        "protocol",
+        "referenceContext",
+        "baseline",
+        "windows",
+        "endpointSummaries",
+        "claimBoundary"
+      ],
+      "properties": {
+        "study": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["id", "title", "family", "classification"],
+          "properties": {
+            "id": { "$ref": "#/$defs/text" },
+            "title": { "$ref": "#/$defs/text" },
+            "family": {
+              "const": "regional-agreement-selection-sensitivity-v1"
+            },
+            "classification": {
+              "const": "descriptive-spatial-selection-sensitivity"
+            }
+          }
+        },
+        "source": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "candidate",
+            "trustedSidecar",
+            "quantity",
+            "reference",
+            "candidateRole",
+            "units",
+            "provenance",
+            "license",
+            "geometry",
+            "temporalSampling"
+          ],
+          "properties": {
+            "candidate": {
+              "$ref": "flowblind-catalog-preparation-bundle-v1.schema.json#/$defs/identity"
+            },
+            "trustedSidecar": {
+              "$ref": "flowblind-catalog-preparation-bundle-v1.schema.json#/properties/source/properties/trustedSidecar"
+            },
+            "quantity": { "$ref": "#/$defs/text" },
+            "reference": { "$ref": "#/$defs/referenceRole" },
+            "candidateRole": { "$ref": "#/$defs/candidateRole" },
+            "units": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["coordinate", "value"],
+              "properties": {
+                "coordinate": { "$ref": "#/$defs/text" },
+                "value": { "$ref": "#/$defs/text" }
+              }
+            },
+            "provenance": { "$ref": "#/$defs/text" },
+            "license": { "$ref": "#/$defs/text" },
+            "geometry": {
+              "$ref": "flowblind-catalog-preparation-bundle-v1.schema.json#/$defs/canonicalSource/properties/geometry"
+            },
+            "temporalSampling": {
+              "$ref": "flowblind-catalog-preparation-bundle-v1.schema.json#/$defs/canonicalSource/properties/temporalSampling"
+            }
+          }
+        },
+        "protocol": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "quantityMethod",
+            "expectedGrid",
+            "partition",
+            "windowOrder",
+            "minimumPairedPoints",
+            "referenceContextPolicy",
+            "hotspotPercentile",
+            "endpoints"
+          ],
+          "properties": {
+            "quantityMethod": {
+              "const": "paired-planar-reference-candidate-values-v1"
+            },
+            "expectedGrid": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["width", "height"],
+              "properties": {
+                "width": {
+                  "type": "integer",
+                  "minimum": 3,
+                  "maximum": 4096
+                },
+                "height": {
+                  "type": "integer",
+                  "minimum": 3,
+                  "maximum": 4096
+                }
+              }
+            },
+            "partition": {
+              "$ref": "regional-agreement-study-manifest.schema.json#/properties/partition"
+            },
+            "windowOrder": {
+              "const": [
+                "row-0-column-0",
+                "row-0-column-1",
+                "row-0-column-2",
+                "row-1-column-0",
+                "row-1-column-1",
+                "row-1-column-2",
+                "row-2-column-0",
+                "row-2-column-1",
+                "row-2-column-2"
+              ]
+            },
+            "minimumPairedPoints": { "const": 30 },
+            "referenceContextPolicy": {
+              "const": "full-nominal-valid-mask"
+            },
+            "hotspotPercentile": { "const": 0.9 },
+            "endpoints": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["primary", "secondary"],
+              "properties": {
+                "primary": {
+                  "const": [
+                    "pearsonCorrelation",
+                    "rangeNormalizedRmse"
+                  ]
+                },
+                "secondary": {
+                  "const": [
+                    "meanAbsoluteError",
+                    "hotspotRecall",
+                    "hotspotJaccard"
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "referenceContext": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "minimum",
+            "maximum",
+            "range",
+            "hotspotPercentile",
+            "hotspotThreshold",
+            "eligiblePoints"
+          ],
+          "properties": {
+            "minimum": { "type": "number" },
+            "maximum": { "type": "number" },
+            "range": { "type": "number", "minimum": 0 },
+            "hotspotPercentile": { "const": 0.9 },
+            "hotspotThreshold": { "type": "number" },
+            "eligiblePoints": {
+              "type": "integer",
+              "minimum": 270,
+              "maximum": 1000000
+            }
+          }
+        },
+        "baseline": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["domain", "pairedPoints", "metrics"],
+          "properties": {
+            "domain": {
+              "const": "full reviewed paired comparison domain"
+            },
+            "pairedPoints": {
+              "type": "integer",
+              "minimum": 270,
+              "maximum": 1000000
+            },
+            "metrics": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "pearsonCorrelation",
+                "rangeNormalizedRmse",
+                "meanAbsoluteError",
+                "hotspotRecall",
+                "hotspotJaccard"
+              ],
+              "properties": {
+                "pearsonCorrelation": {
+                  "$ref": "#/$defs/baselineMetric"
+                },
+                "rangeNormalizedRmse": {
+                  "$ref": "#/$defs/baselineMetric"
+                },
+                "meanAbsoluteError": {
+                  "$ref": "#/$defs/baselineMetric"
+                },
+                "hotspotRecall": {
+                  "$ref": "#/$defs/baselineMetric"
+                },
+                "hotspotJaccard": {
+                  "$ref": "#/$defs/baselineMetric"
+                }
+              }
+            }
+          }
+        },
+        "windows": {
+          "type": "array",
+          "minItems": 9,
+          "maxItems": 9,
+          "items": { "$ref": "#/$defs/window" }
+        },
+        "endpointSummaries": {
+          "type": "array",
+          "minItems": 5,
+          "maxItems": 5,
+          "prefixItems": [
+            {
+              "allOf": [
+                { "$ref": "#/$defs/endpointSummaryBase" },
+                {
+                  "properties": {
+                    "endpoint": { "const": "pearsonCorrelation" }
+                  }
+                }
+              ]
+            },
+            {
+              "allOf": [
+                { "$ref": "#/$defs/endpointSummaryBase" },
+                {
+                  "properties": {
+                    "endpoint": { "const": "rangeNormalizedRmse" }
+                  }
+                }
+              ]
+            },
+            {
+              "allOf": [
+                { "$ref": "#/$defs/endpointSummaryBase" },
+                {
+                  "properties": {
+                    "endpoint": { "const": "meanAbsoluteError" }
+                  }
+                }
+              ]
+            },
+            {
+              "allOf": [
+                { "$ref": "#/$defs/endpointSummaryBase" },
+                {
+                  "properties": {
+                    "endpoint": { "const": "hotspotRecall" }
+                  }
+                }
+              ]
+            },
+            {
+              "allOf": [
+                { "$ref": "#/$defs/endpointSummaryBase" },
+                {
+                  "properties": {
+                    "endpoint": { "const": "hotspotJaccard" }
+                  }
+                }
+              ]
+            }
+          ],
+          "items": false
+        },
+        "claimBoundary": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/text" }
+        }
+      }
+    },
+    "referenceRole": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["role", "meaning"],
+      "properties": {
+        "role": { "const": "reference" },
+        "meaning": { "$ref": "#/$defs/text" }
+      }
+    },
+    "candidateRole": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["role", "meaning"],
+      "properties": {
+        "role": { "const": "candidate" },
+        "meaning": { "$ref": "#/$defs/text" }
+      }
+    }
+  }
+}
