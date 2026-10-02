@@ -1,0 +1,367 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "onboarding-config.schema.json",
+  "title": "Discovery onboarding config",
+  "description": "Single source of truth emitted by Stage 1 and consumed by Stages 2-5.",
+  "type": "object",
+  "required": [
+    "schemaVersion",
+    "subscriptionId",
+    "controlPlaneRegion",
+    "workloadRegion",
+    "network",
+    "sizingTier",
+    "names",
+    "deployingIdentity"
+  ],
+  "properties": {
+    "schemaVersion": {
+      "type": "string",
+      "const": "1.0"
+    },
+    "contentHash": {
+      "type": "string",
+      "description": "Integrity hash stamped at export."
+    },
+    "subscriptionId": {
+      "type": "string"
+    },
+    "environment": {
+      "type": "string",
+      "enum": [
+        "devtest",
+        "prod"
+      ]
+    },
+    "controlPlaneRegion": {
+      "type": "string"
+    },
+    "workloadRegion": {
+      "type": "string"
+    },
+    "deployingIdentity": {
+      "type": "object",
+      "required": [
+        "objectId",
+        "type"
+      ],
+      "properties": {
+        "objectId": {
+          "type": "string"
+        },
+        "type": {
+          "type": "string",
+          "enum": [
+            "user",
+            "servicePrincipal",
+            "managedIdentity"
+          ]
+        },
+        "canRegisterProviders": {
+          "type": "boolean"
+        }
+      }
+    },
+    "network": {
+      "type": "object",
+      "required": [
+        "model",
+        "vnetCidr",
+        "subnets"
+      ],
+      "properties": {
+        "model": {
+          "type": "string",
+          "description": "Network provisioning intent. byo/byo-spoke = the tool lays out the VNet, subnets, NSG, routes and private DNS (network.bicep). byo-existing = customer VNet already exists, validate only in Stage 3. greenfield = tool builds a self-contained VNet (typically LoadBalancer egress). managed = the Discovery RP creates the network.",
+          "enum": [
+            "byo",
+            "byo-spoke",
+            "byo-existing",
+            "greenfield",
+            "managed"
+          ],
+          "default": "byo-spoke"
+        },
+        "networkResourceGroup": {
+          "type": "string"
+        },
+        "vnetCidr": {
+          "type": "string"
+        },
+        "corpDns": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "nvaNextHop": {
+          "type": "string"
+        },
+        "outboundType": {
+          "type": "string",
+          "enum": [
+            "UserDefinedRouting",
+            "LoadBalancer"
+          ],
+          "default": "UserDefinedRouting"
+        },
+        "spokeCidr": {
+          "type": "string"
+        },
+        "existingSubnets": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "subnets": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "role",
+              "cidr"
+            ],
+            "properties": {
+              "role": {
+                "type": "string",
+                "enum": [
+                  "agent-containerapp",
+                  "workspace-containerapp",
+                  "search-containerapp",
+                  "managedcluster",
+                  "nodepool",
+                  "private-endpoints",
+                  "spare"
+                ]
+              },
+              "cidr": {
+                "type": "string"
+              },
+              "requiredPrefix": {
+                "type": "string",
+                "description": "e.g. /26 or /27; see FR1.2."
+              },
+              "delegation": {
+                "type": "string",
+                "enum": [
+                  "Microsoft.App/environments",
+                  "Microsoft.ContainerService/managedClusters",
+                  "none"
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    "storage": {
+      "type": "object",
+      "properties": {
+        "model": {
+          "type": "string",
+          "enum": [
+            "byo",
+            "managed"
+          ]
+        },
+        "account": {
+          "type": "string"
+        },
+        "access": {
+          "type": "string",
+          "enum": [
+            "privateEndpoint",
+            "serviceEndpoint"
+          ]
+        }
+      }
+    },
+    "sizingTier": {
+      "type": "string",
+      "enum": [
+        "Small",
+        "Medium",
+        "Large"
+      ],
+      "description": "Expands into concrete counts/quotas via sizingMap."
+    },
+    "bookshelf": {
+      "type": "object",
+      "properties": {
+        "inScope": {
+          "type": "boolean"
+        },
+        "instances": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    },
+    "projects": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "Drives Cosmos RU/s: 2400 + 400 x projects."
+    },
+    "deployMode": {
+      "type": "string",
+      "enum": [
+        "GlobalStandard",
+        "DataZoneStandard"
+      ]
+    },
+    "names": {
+      "type": "object",
+      "required": [
+        "workspace",
+        "supercomputer"
+      ],
+      "properties": {
+        "workspace": {
+          "type": "string",
+          "minLength": 3,
+          "maxLength": 24,
+          "description": "Also the endpoint subdomain; end with letter/digit."
+        },
+        "project": {
+          "type": "string",
+          "minLength": 3,
+          "maxLength": 12
+        },
+        "supercomputer": {
+          "type": "string",
+          "minLength": 3,
+          "maxLength": 24
+        },
+        "nodePool": {
+          "type": "string",
+          "minLength": 3,
+          "maxLength": 12
+        },
+        "tool": {
+          "type": "string",
+          "minLength": 3,
+          "maxLength": 24
+        },
+        "agent": {
+          "type": "string",
+          "minLength": 3,
+          "maxLength": 63
+        },
+        "storageContainer": {
+          "type": "string",
+          "minLength": 3,
+          "maxLength": 24
+        },
+        "storageAsset": {
+          "type": "string",
+          "minLength": 3,
+          "maxLength": 24
+        },
+        "investigation": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 20
+        }
+      }
+    },
+    "policySet": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Assigned policy definition/assignment ids for pre-flight."
+    },
+    "waivers": {
+      "type": "array",
+      "description": "Recorded justifications for overridden P0 checks (FR1.8).",
+      "items": {
+        "type": "object",
+        "required": [
+          "check",
+          "justification"
+        ],
+        "properties": {
+          "check": {
+            "type": "string"
+          },
+          "justification": {
+            "type": "string"
+          },
+          "approvedBy": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "sizingMap": {
+      "type": "object",
+      "description": "Tier -> concrete counts. Reference values; validated in FR1.5.",
+      "properties": {
+        "Small": {
+          "$ref": "#/$defs/tierSpec"
+        },
+        "Medium": {
+          "$ref": "#/$defs/tierSpec"
+        },
+        "Large": {
+          "$ref": "#/$defs/tierSpec"
+        }
+      },
+      "default": {
+        "Small": {
+          "bookshelfNodepoolSku": "Standard_D48s_v6",
+          "aiSearchSku": "S1",
+          "acaProfile": "dedicated"
+        },
+        "Medium": {
+          "bookshelfNodepoolSku": "Standard_D128s_v6",
+          "aiSearchSku": "S1",
+          "acaProfile": "dedicated"
+        },
+        "Large": {
+          "bookshelfNodepoolSku": "Standard_D192s_v6",
+          "aiSearchSku": "S1",
+          "acaProfile": "dedicated"
+        }
+      }
+    }
+  },
+  "$defs": {
+    "tierSpec": {
+      "type": "object",
+      "properties": {
+        "bookshelfNodepoolSku": {
+          "type": "string"
+        },
+        "aiSearchSku": {
+          "type": "string"
+        },
+        "acaProfile": {
+          "type": "string"
+        },
+        "vcpuByFamily": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "integer"
+          }
+        },
+        "gpuSkus": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "privateEndpointCount": {
+          "type": "integer"
+        },
+        "modelTpm": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "integer"
+          }
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,279 @@
+{
+  "title": "Stage 1 — Planning",
+  "generated": "2026-09-24T20:21:07.4874793Z",
+  "total": 25,
+  "pass": 22,
+  "fail": 0,
+  "warn": 3,
+  "skip": 0,
+  "waived": 0,
+  "verdict": "GO",
+  "results": [
+    {
+      "id": "capture",
+      "name": "Required fields captured",
+      "status": "Pass",
+      "detail": "All core planning fields present.",
+      "remediation": "",
+      "fr": "FR1.1",
+      "data": null,
+      "timestamp": "2026-09-24T20:19:31.8341666Z"
+    },
+    {
+      "id": "sub-prereq",
+      "name": "Subscription enabled for Discovery",
+      "status": "Warn",
+      "detail": "Could not read Microsoft.Discovery provider (may be allowlist-gated or access-limited).",
+      "remediation": "Confirm the subscription is allowlisted for Discovery by the Microsoft Discovery team.",
+      "fr": "FR1.0",
+      "data": null,
+      "timestamp": "2026-09-24T20:19:36.8016766Z"
+    },
+    {
+      "id": "identity-register",
+      "name": "Deploying identity can register providers",
+      "status": "Pass",
+      "detail": "",
+      "remediation": "",
+      "fr": "FR1.0",
+      "data": null,
+      "timestamp": "2026-09-24T20:19:36.8036741Z"
+    },
+    {
+      "id": "subnet-agent-containerapp",
+      "name": "Subnet agent-containerapp sizing/delegation",
+      "status": "Pass",
+      "detail": "10.46.252.0/26 delegation=Microsoft.App/environments",
+      "remediation": "",
+      "fr": "FR1.2",
+      "data": null,
+      "timestamp": "2026-09-24T20:19:36.8471604Z"
+    },
+    {
+      "id": "subnet-workspace-containerapp",
+      "name": "Subnet workspace-containerapp sizing/delegation",
+      "status": "Pass",
+      "detail": "10.46.252.64/26 delegation=Microsoft.App/environments",
+      "remediation": "",
+      "fr": "FR1.2",
+      "data": null,
+      "timestamp": "2026-09-24T20:19:36.8495002Z"
+    },
+    {
+      "id": "subnet-search-containerapp",
+      "name": "Subnet search-containerapp sizing/delegation",
+      "status": "Pass",
+      "detail": "10.46.253.32/27 delegation=Microsoft.App/environments",
+      "remediation": "",
+      "fr": "FR1.2",
+      "data": null,
+      "timestamp": "2026-09-24T20:19:36.8498921Z"
+    },
+    {
+      "id": "subnet-managedcluster",
+      "name": "Subnet managedcluster sizing/delegation",
+      "status": "Pass",
+      "detail": "10.46.253.128/26 delegation=Microsoft.ContainerService/managedClusters",
+      "remediation": "",
+      "fr": "FR1.2",
+      "data": null,
+      "timestamp": "2026-09-24T20:19:36.8506539Z"
+    },
+    {
+      "id": "subnet-nodepool",
+      "name": "Subnet nodepool sizing/delegation",
+      "status": "Pass",
+      "detail": "10.46.252.128/26 delegation=none",
+      "remediation": "",
+      "fr": "FR1.2",
+      "data": null,
+      "timestamp": "2026-09-24T20:19:36.8510188Z"
+    },
+    {
+      "id": "subnet-private-endpoints",
+      "name": "Subnet private-endpoints sizing/delegation",
+      "status": "Pass",
+      "detail": "10.46.253.0/27 delegation=none",
+      "remediation": "",
+      "fr": "FR1.2",
+      "data": null,
+      "timestamp": "2026-09-24T20:19:36.8513224Z"
+    },
+    {
+      "id": "subnet-spare",
+      "name": "Subnet spare sizing/delegation",
+      "status": "Pass",
+      "detail": "10.46.253.64/27 delegation=none",
+      "remediation": "",
+      "fr": "FR1.2",
+      "data": null,
+      "timestamp": "2026-09-24T20:19:36.8516132Z"
+    },
+    {
+      "id": "address-space",
+      "name": "Address-space conflict / fit",
+      "status": "Pass",
+      "detail": "No overlaps; all subnets fit inside the VNet.",
+      "remediation": "",
+      "fr": "FR1.3",
+      "data": null,
+      "timestamp": "2026-09-24T20:19:36.8735838Z"
+    },
+    {
+      "id": "region-capacity",
+      "name": "Region capacity",
+      "status": "Warn",
+      "detail": "Workload region 'eastus2' has known AKS API Server VNet Integration capacity pressure (AKSCapacityHeavyUsage) and AI Search capacity limits.",
+      "remediation": "Split control-plane and workload regions, or choose a region with capacity.",
+      "fr": "FR1.4",
+      "data": null,
+      "timestamp": "2026-09-24T20:19:36.8739231Z"
+    },
+    {
+      "id": "cosmos-ru",
+      "name": "Cosmos RU/s sizing",
+      "status": "Pass",
+      "detail": "Projects=2 -> required autoscale 3200 RU/s (2400 + 400 x projects).",
+      "remediation": "",
+      "fr": "FR1.5",
+      "data": {
+        "requiredRuPerSec": 3200
+      },
+      "timestamp": "2026-09-24T20:19:36.8764826Z"
+    },
+    {
+      "id": "sku-region",
+      "name": "VM SKU availability",
+      "status": "Pass",
+      "detail": "1137 VM SKUs offered in eastus2.",
+      "remediation": "",
+      "fr": "FR1.5",
+      "data": null,
+      "timestamp": "2026-09-24T20:21:05.2371598Z"
+    },
+    {
+      "id": "name-supercomputer",
+      "name": "Name 'supercomputer'",
+      "status": "Pass",
+      "detail": "gsk-rd-sc",
+      "remediation": "",
+      "fr": "FR1.6",
+      "data": null,
+      "timestamp": "2026-09-24T20:21:05.2440183Z"
+    },
+    {
+      "id": "name-nodePool",
+      "name": "Name 'nodePool'",
+      "status": "Pass",
+      "detail": "pool1",
+      "remediation": "",
+      "fr": "FR1.6",
+      "data": null,
+      "timestamp": "2026-09-24T20:21:05.2466603Z"
+    },
+    {
+      "id": "name-tool",
+      "name": "Name 'tool'",
+      "status": "Pass",
+      "detail": "hero-tool",
+      "remediation": "",
+      "fr": "FR1.6",
+      "data": null,
+      "timestamp": "2026-09-24T20:21:05.2490701Z"
+    },
+    {
+      "id": "name-storageContainer",
+      "name": "Name 'storageContainer'",
+      "status": "Pass",
+      "detail": "kb-container",
+      "remediation": "",
+      "fr": "FR1.6",
+      "data": null,
+      "timestamp": "2026-09-24T20:21:05.2510587Z"
+    },
+    {
+      "id": "name-storageAsset",
+      "name": "Name 'storageAsset'",
+      "status": "Pass",
+      "detail": "kb-asset",
+      "remediation": "",
+      "fr": "FR1.6",
+      "data": null,
+      "timestamp": "2026-09-24T20:21:05.2527828Z"
+    },
+    {
+      "id": "name-agent",
+      "name": "Name 'agent'",
+      "status": "Pass",
+      "detail": "hero-agent",
+      "remediation": "",
+      "fr": "FR1.6",
+      "data": null,
+      "timestamp": "2026-09-24T20:21:05.2544295Z"
+    },
+    {
+      "id": "name-project",
+      "name": "Name 'project'",
+      "status": "Pass",
+      "detail": "gsk-rd-p1",
+      "remediation": "",
+      "fr": "FR1.6",
+      "data": null,
+      "timestamp": "2026-09-24T20:21:05.2560830Z"
+    },
+    {
+      "id": "name-investigation",
+      "name": "Name 'investigation'",
+      "status": "Pass",
+      "detail": "hero-inv",
+      "remediation": "",
+      "fr": "FR1.6",
+      "data": null,
+      "timestamp": "2026-09-24T20:21:05.2577164Z"
+    },
+    {
+      "id": "name-workspace",
+      "name": "Name 'workspace'",
+      "status": "Pass",
+      "detail": "gsk-rd-disc-ws",
+      "remediation": "",
+      "fr": "FR1.6",
+      "data": null,
+      "timestamp": "2026-09-24T20:21:05.2593824Z"
+    },
+    {
+      "id": "policy-preflight",
+      "name": "Deny-policy pre-flight",
+      "status": "Warn",
+      "detail": "Cognitive Services accounts should disable public network access [exemption]; Storage accounts should disable public network access [configuration]",
+      "remediation": "Plan the exemption or configuration change now (feeds Stage 2 quota_exemption_requests).",
+      "fr": "FR1.7",
+      "data": [
+        {
+          "policy": "Cognitive Services accounts should disable public network access",
+          "handling": "exemption",
+          "note": "Cognitive Services public network access deny blocks Foundry provisioning."
+        },
+        {
+          "policy": "Storage accounts should disable public network access",
+          "handling": "configuration",
+          "note": "Storage public access deny requires private-endpoint config."
+        }
+      ],
+      "timestamp": "2026-09-24T20:21:07.4021892Z"
+    },
+    {
+      "id": "config-export",
+      "name": "Config exported",
+      "status": "Pass",
+      "detail": "Wrote examples\\generated-config.json (contentHash=95b04f0c9a86...).",
+      "remediation": "",
+      "fr": "FR1.8",
+      "data": null,
+      "timestamp": "2026-09-24T20:21:07.4808093Z"
+    }
+  ],
+  "extra": {
+    "outConfig": "examples\\generated-config.json"
+  }
+}

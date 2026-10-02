@@ -1,0 +1,48 @@
+{
+  "schemaVersion": "1.0",
+  "subscriptionId": "546ec9a3-31a2-4360-a459-7e628a08dcbb",
+  "environment": "devtest",
+  "controlPlaneRegion": "eastus",
+  "workloadRegion": "eastus2",
+  "deployingIdentity": {
+    "objectId": "35644e08-c894-4013-9b03-e7fa82689870",
+    "type": "user",
+    "canRegisterProviders": true
+  },
+  "network": {
+    "model": "byo",
+    "networkResourceGroup": "gsk-sim-rg1",
+    "vnetCidr": "10.46.252.0/23",
+    "corpDns": [],
+    "nvaNextHop": "10.100.0.4",
+    "spokeCidr": "10.46.252.0/23",
+    "existingSubnets": ["10.46.252.192/26"],
+    "subnets": [
+      { "role": "agent-containerapp",     "cidr": "10.46.252.0/26",   "requiredPrefix": "/26", "delegation": "Microsoft.App/environments" },
+      { "role": "workspace-containerapp", "cidr": "10.46.252.64/26",  "requiredPrefix": "/26", "delegation": "Microsoft.App/environments" },
+      { "role": "search-containerapp",    "cidr": "10.46.253.32/27",  "requiredPrefix": "/27", "delegation": "Microsoft.App/environments" },
+      { "role": "managedcluster",         "cidr": "10.46.253.128/26", "requiredPrefix": "/26", "delegation": "Microsoft.ContainerService/managedClusters" },
+      { "role": "nodepool",               "cidr": "10.46.252.128/26", "requiredPrefix": "/26", "delegation": "none" },
+      { "role": "private-endpoints",      "cidr": "10.46.253.0/27",   "requiredPrefix": "/27", "delegation": "none" },
+      { "role": "spare",                  "cidr": "10.46.253.64/27",  "requiredPrefix": "/27", "delegation": "none" }
+    ]
+  },
+  "storage": { "model": "managed", "access": "privateEndpoint" },
+  "sizingTier": "Small",
+  "bookshelf": { "inScope": true, "instances": 1 },
+  "projects": 2,
+  "deployMode": "GlobalStandard",
+  "names": {
+    "workspace": "gsksim-poc-ws",
+    "project": "gsksim-p1",
+    "supercomputer": "gsksim-sc",
+    "nodePool": "pool1",
+    "tool": "hero-tool",
+    "agent": "hero-agent",
+    "storageContainer": "kb-container",
+    "storageAsset": "kb-asset",
+    "investigation": "hero-inv"
+  },
+  "policySet": [],
+  "waivers": []
+}

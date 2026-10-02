@@ -1,0 +1,211 @@
+{
+  "schemaVersion": "1.0",
+  "contentHash": "95b04f0c9a86bd01c0af1d070f8669d2f1743b3cd2851c5df57e712ef48b492f",
+  "Count": 15,
+  "IsReadOnly": false,
+  "Keys": [
+    "schemaVersion",
+    "subscriptionId",
+    "environment",
+    "controlPlaneRegion",
+    "workloadRegion",
+    "deployingIdentity",
+    "network",
+    "storage",
+    "sizingTier",
+    "bookshelf",
+    "projects",
+    "deployMode",
+    "names",
+    "policySet",
+    "waivers"
+  ],
+  "Values": [
+    "1.0",
+    "67e7fe44-d943-4033-8f1f-742a9b0e6859",
+    "devtest",
+    "eastus2",
+    "eastus2",
+    {
+      "objectId": "00000000-0000-0000-0000-000000000000",
+      "type": "user",
+      "canRegisterProviders": true
+    },
+    {
+      "model": "byo",
+      "networkResourceGroup": "rd-research-network-vnet-devtest",
+      "vnetCidr": "10.46.252.0/23",
+      "corpDns": null,
+      "nvaNextHop": "10.42.157.126",
+      "spokeCidr": "10.46.252.0/23",
+      "existingSubnets": null,
+      "subnets": [
+        {
+          "role": "agent-containerapp",
+          "cidr": "10.46.252.0/26",
+          "requiredPrefix": "/26",
+          "delegation": "Microsoft.App/environments"
+        },
+        {
+          "role": "workspace-containerapp",
+          "cidr": "10.46.252.64/26",
+          "requiredPrefix": "/26",
+          "delegation": "Microsoft.App/environments"
+        },
+        {
+          "role": "search-containerapp",
+          "cidr": "10.46.253.32/27",
+          "requiredPrefix": "/27",
+          "delegation": "Microsoft.App/environments"
+        },
+        {
+          "role": "managedcluster",
+          "cidr": "10.46.253.128/26",
+          "requiredPrefix": "/26",
+          "delegation": "Microsoft.ContainerService/managedClusters"
+        },
+        {
+          "role": "nodepool",
+          "cidr": "10.46.252.128/26",
+          "requiredPrefix": "/26",
+          "delegation": "none"
+        },
+        {
+          "role": "private-endpoints",
+          "cidr": "10.46.253.0/27",
+          "requiredPrefix": "/27",
+          "delegation": "none"
+        },
+        {
+          "role": "spare",
+          "cidr": "10.46.253.64/27",
+          "requiredPrefix": "/27",
+          "delegation": "none"
+        }
+      ]
+    },
+    {
+      "model": "managed",
+      "account": null,
+      "access": "privateEndpoint"
+    },
+    "Small",
+    {
+      "inScope": true,
+      "instances": 1
+    },
+    2,
+    "GlobalStandard",
+    {
+      "workspace": "gsk-rd-disc-ws",
+      "project": "gsk-rd-p1",
+      "supercomputer": "gsk-rd-sc",
+      "nodePool": "pool1",
+      "tool": "hero-tool",
+      "agent": "hero-agent",
+      "storageContainer": "kb-container",
+      "storageAsset": "kb-asset",
+      "investigation": "hero-inv"
+    },
+    [
+      "Cognitive Services accounts should disable public network access",
+      "Storage accounts should disable public network access"
+    ],
+    []
+  ],
+  "IsFixedSize": false,
+  "SyncRoot": {
+    "schemaVersion": "1.0",
+    "subscriptionId": "67e7fe44-d943-4033-8f1f-742a9b0e6859",
+    "environment": "devtest",
+    "controlPlaneRegion": "eastus2",
+    "workloadRegion": "eastus2",
+    "deployingIdentity": {
+      "objectId": "00000000-0000-0000-0000-000000000000",
+      "type": "user",
+      "canRegisterProviders": true
+    },
+    "network": {
+      "model": "byo",
+      "networkResourceGroup": "rd-research-network-vnet-devtest",
+      "vnetCidr": "10.46.252.0/23",
+      "corpDns": null,
+      "nvaNextHop": "10.42.157.126",
+      "spokeCidr": "10.46.252.0/23",
+      "existingSubnets": null,
+      "subnets": [
+        {
+          "role": "agent-containerapp",
+          "cidr": "10.46.252.0/26",
+          "requiredPrefix": "/26",
+          "delegation": "Microsoft.App/environments"
+        },
+        {
+          "role": "workspace-containerapp",
+          "cidr": "10.46.252.64/26",
+          "requiredPrefix": "/26",
+          "delegation": "Microsoft.App/environments"
+        },
+        {
+          "role": "search-containerapp",
+          "cidr": "10.46.253.32/27",
+          "requiredPrefix": "/27",
+          "delegation": "Microsoft.App/environments"
+        },
+        {
+          "role": "managedcluster",
+          "cidr": "10.46.253.128/26",
+          "requiredPrefix": "/26",
+          "delegation": "Microsoft.ContainerService/managedClusters"
+        },
+        {
+          "role": "nodepool",
+          "cidr": "10.46.252.128/26",
+          "requiredPrefix": "/26",
+          "delegation": "none"
+        },
+        {
+          "role": "private-endpoints",
+          "cidr": "10.46.253.0/27",
+          "requiredPrefix": "/27",
+          "delegation": "none"
+        },
+        {
+          "role": "spare",
+          "cidr": "10.46.253.64/27",
+          "requiredPrefix": "/27",
+          "delegation": "none"
+        }
+      ]
+    },
+    "storage": {
+      "model": "managed",
+      "account": null,
+      "access": "privateEndpoint"
+    },
+    "sizingTier": "Small",
+    "bookshelf": {
+      "inScope": true,
+      "instances": 1
+    },
+    "projects": 2,
+    "deployMode": "GlobalStandard",
+    "names": {
+      "workspace": "gsk-rd-disc-ws",
+      "project": "gsk-rd-p1",
+      "supercomputer": "gsk-rd-sc",
+      "nodePool": "pool1",
+      "tool": "hero-tool",
+      "agent": "hero-agent",
+      "storageContainer": "kb-container",
+      "storageAsset": "kb-asset",
+      "investigation": "hero-inv"
+    },
+    "policySet": [
+      "Cognitive Services accounts should disable public network access",
+      "Storage accounts should disable public network access"
+    ],
+    "waivers": []
+  },
+  "IsSynchronized": false
+}

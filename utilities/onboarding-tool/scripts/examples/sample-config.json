@@ -1,0 +1,52 @@
+{
+  "schemaVersion": "1.0",
+  "subscriptionId": "00000000-0000-0000-0000-000000000000",
+  "environment": "devtest",
+  "controlPlaneRegion": "eastus2",
+  "workloadRegion": "eastus2",
+  "deployingIdentity": {
+    "objectId": "11111111-1111-1111-1111-111111111111",
+    "type": "user",
+    "canRegisterProviders": true
+  },
+  "network": {
+    "model": "byo",
+    "networkResourceGroup": "rg-discovery-net",
+    "vnetCidr": "10.10.0.0/23",
+    "corpDns": ["10.20.0.10"],
+    "nvaNextHop": "10.20.0.4",
+    "outboundType": "UserDefinedRouting",
+    "spokeCidr": "10.10.0.0/23",
+    "existingSubnets": ["10.10.1.128/25"],
+    "subnets": [
+      { "role": "agent-containerapp",     "cidr": "10.10.0.0/26",   "requiredPrefix": "/26", "delegation": "Microsoft.App/environments" },
+      { "role": "workspace-containerapp", "cidr": "10.10.0.64/26",  "requiredPrefix": "/26", "delegation": "Microsoft.App/environments" },
+      { "role": "search-containerapp",    "cidr": "10.10.0.128/27", "requiredPrefix": "/27", "delegation": "Microsoft.App/environments" },
+      { "role": "private-endpoints",      "cidr": "10.10.0.160/27", "requiredPrefix": "/27", "delegation": "none" },
+      { "role": "spare",                  "cidr": "10.10.0.192/27", "requiredPrefix": "/27", "delegation": "none" },
+      { "role": "managedcluster",         "cidr": "10.10.1.0/26",   "requiredPrefix": "/26", "delegation": "Microsoft.ContainerService/managedClusters" },
+      { "role": "nodepool",               "cidr": "10.10.1.64/26",  "requiredPrefix": "/26", "delegation": "none" }
+    ]
+  },
+  "storage": { "model": "managed", "access": "privateEndpoint" },
+  "sizingTier": "Small",
+  "bookshelf": { "inScope": true, "instances": 1 },
+  "projects": 2,
+  "deployMode": "GlobalStandard",
+  "names": {
+    "workspace": "contoso-disc-ws",
+    "project": "contoso-p1",
+    "supercomputer": "contoso-sc",
+    "nodePool": "pool1",
+    "tool": "hero-tool",
+    "agent": "hero-agent",
+    "storageContainer": "kb-container",
+    "storageAsset": "kb-asset",
+    "investigation": "hero-inv"
+  },
+  "policySet": [
+    "Cognitive Services accounts should disable public network access",
+    "Storage accounts should disable public network access"
+  ],
+  "waivers": []
+}

@@ -1,0 +1,270 @@
+{
+  "title": "Stage 1 — Planning",
+  "generated": "2026-09-24T20:37:25.7610235Z",
+  "total": 25,
+  "pass": 24,
+  "fail": 0,
+  "warn": 1,
+  "skip": 0,
+  "waived": 0,
+  "verdict": "GO",
+  "results": [
+    {
+      "id": "capture",
+      "name": "Required fields captured",
+      "status": "Pass",
+      "detail": "All core planning fields present.",
+      "remediation": "",
+      "fr": "FR1.1",
+      "data": null,
+      "timestamp": "2026-09-24T20:35:34.6715569Z"
+    },
+    {
+      "id": "sub-prereq",
+      "name": "Discovery RP visible on subscription",
+      "status": "Pass",
+      "detail": "Microsoft.Discovery registrationState=Registered (Stage 2 performs registration).",
+      "remediation": "",
+      "fr": "FR1.0",
+      "data": {
+        "registrationState": "Registered"
+      },
+      "timestamp": "2026-09-24T20:35:39.4452507Z"
+    },
+    {
+      "id": "identity-register",
+      "name": "Deploying identity can register providers",
+      "status": "Pass",
+      "detail": "",
+      "remediation": "",
+      "fr": "FR1.0",
+      "data": null,
+      "timestamp": "2026-09-24T20:35:39.4475087Z"
+    },
+    {
+      "id": "subnet-agent-containerapp",
+      "name": "Subnet agent-containerapp sizing/delegation",
+      "status": "Pass",
+      "detail": "10.46.252.0/26 delegation=Microsoft.App/environments",
+      "remediation": "",
+      "fr": "FR1.2",
+      "data": null,
+      "timestamp": "2026-09-24T20:35:39.5356254Z"
+    },
+    {
+      "id": "subnet-workspace-containerapp",
+      "name": "Subnet workspace-containerapp sizing/delegation",
+      "status": "Pass",
+      "detail": "10.46.252.64/26 delegation=Microsoft.App/environments",
+      "remediation": "",
+      "fr": "FR1.2",
+      "data": null,
+      "timestamp": "2026-09-24T20:35:39.5400449Z"
+    },
+    {
+      "id": "subnet-search-containerapp",
+      "name": "Subnet search-containerapp sizing/delegation",
+      "status": "Pass",
+      "detail": "10.46.253.32/27 delegation=Microsoft.App/environments",
+      "remediation": "",
+      "fr": "FR1.2",
+      "data": null,
+      "timestamp": "2026-09-24T20:35:39.5410370Z"
+    },
+    {
+      "id": "subnet-managedcluster",
+      "name": "Subnet managedcluster sizing/delegation",
+      "status": "Pass",
+      "detail": "10.46.253.128/26 delegation=Microsoft.ContainerService/managedClusters",
+      "remediation": "",
+      "fr": "FR1.2",
+      "data": null,
+      "timestamp": "2026-09-24T20:35:39.5416573Z"
+    },
+    {
+      "id": "subnet-nodepool",
+      "name": "Subnet nodepool sizing/delegation",
+      "status": "Pass",
+      "detail": "10.46.252.128/26 delegation=none",
+      "remediation": "",
+      "fr": "FR1.2",
+      "data": null,
+      "timestamp": "2026-09-24T20:35:39.5426740Z"
+    },
+    {
+      "id": "subnet-private-endpoints",
+      "name": "Subnet private-endpoints sizing/delegation",
+      "status": "Pass",
+      "detail": "10.46.253.0/27 delegation=none",
+      "remediation": "",
+      "fr": "FR1.2",
+      "data": null,
+      "timestamp": "2026-09-24T20:35:39.5433220Z"
+    },
+    {
+      "id": "subnet-spare",
+      "name": "Subnet spare sizing/delegation",
+      "status": "Pass",
+      "detail": "10.46.253.64/27 delegation=none",
+      "remediation": "",
+      "fr": "FR1.2",
+      "data": null,
+      "timestamp": "2026-09-24T20:35:39.5443046Z"
+    },
+    {
+      "id": "address-space",
+      "name": "Address-space conflict / fit",
+      "status": "Pass",
+      "detail": "No overlaps; all subnets fit inside the VNet.",
+      "remediation": "",
+      "fr": "FR1.3",
+      "data": null,
+      "timestamp": "2026-09-24T20:35:39.5849525Z"
+    },
+    {
+      "id": "region-capacity",
+      "name": "Region capacity",
+      "status": "Warn",
+      "detail": "Workload region 'eastus2' has known AKS API Server VNet Integration capacity pressure (AKSCapacityHeavyUsage) and AI Search capacity limits.",
+      "remediation": "Split already configured; confirm AI Search capacity in the workload region.",
+      "fr": "FR1.4",
+      "data": null,
+      "timestamp": "2026-09-24T20:35:39.5875681Z"
+    },
+    {
+      "id": "cosmos-ru",
+      "name": "Cosmos RU/s sizing",
+      "status": "Pass",
+      "detail": "Projects=2 -> required autoscale 3200 RU/s (2400 + 400 x projects).",
+      "remediation": "",
+      "fr": "FR1.5",
+      "data": {
+        "requiredRuPerSec": 3200
+      },
+      "timestamp": "2026-09-24T20:35:39.5954863Z"
+    },
+    {
+      "id": "sku-region",
+      "name": "VM SKU availability",
+      "status": "Pass",
+      "detail": "1137 VM SKUs offered in eastus2.",
+      "remediation": "",
+      "fr": "FR1.5",
+      "data": null,
+      "timestamp": "2026-09-24T20:37:22.4100686Z"
+    },
+    {
+      "id": "name-supercomputer",
+      "name": "Name 'supercomputer'",
+      "status": "Pass",
+      "detail": "gsksim-sc",
+      "remediation": "",
+      "fr": "FR1.6",
+      "data": null,
+      "timestamp": "2026-09-24T20:37:22.4237766Z"
+    },
+    {
+      "id": "name-project",
+      "name": "Name 'project'",
+      "status": "Pass",
+      "detail": "gsksim-p1",
+      "remediation": "",
+      "fr": "FR1.6",
+      "data": null,
+      "timestamp": "2026-09-24T20:37:22.4264841Z"
+    },
+    {
+      "id": "name-nodePool",
+      "name": "Name 'nodePool'",
+      "status": "Pass",
+      "detail": "pool1",
+      "remediation": "",
+      "fr": "FR1.6",
+      "data": null,
+      "timestamp": "2026-09-24T20:37:22.4286210Z"
+    },
+    {
+      "id": "name-agent",
+      "name": "Name 'agent'",
+      "status": "Pass",
+      "detail": "hero-agent",
+      "remediation": "",
+      "fr": "FR1.6",
+      "data": null,
+      "timestamp": "2026-09-24T20:37:22.4307489Z"
+    },
+    {
+      "id": "name-tool",
+      "name": "Name 'tool'",
+      "status": "Pass",
+      "detail": "hero-tool",
+      "remediation": "",
+      "fr": "FR1.6",
+      "data": null,
+      "timestamp": "2026-09-24T20:37:22.4328306Z"
+    },
+    {
+      "id": "name-storageAsset",
+      "name": "Name 'storageAsset'",
+      "status": "Pass",
+      "detail": "kb-asset",
+      "remediation": "",
+      "fr": "FR1.6",
+      "data": null,
+      "timestamp": "2026-09-24T20:37:22.4351013Z"
+    },
+    {
+      "id": "name-investigation",
+      "name": "Name 'investigation'",
+      "status": "Pass",
+      "detail": "hero-inv",
+      "remediation": "",
+      "fr": "FR1.6",
+      "data": null,
+      "timestamp": "2026-09-24T20:37:22.4372934Z"
+    },
+    {
+      "id": "name-storageContainer",
+      "name": "Name 'storageContainer'",
+      "status": "Pass",
+      "detail": "kb-container",
+      "remediation": "",
+      "fr": "FR1.6",
+      "data": null,
+      "timestamp": "2026-09-24T20:37:22.4400875Z"
+    },
+    {
+      "id": "name-workspace",
+      "name": "Name 'workspace'",
+      "status": "Pass",
+      "detail": "gsksim-poc-ws",
+      "remediation": "",
+      "fr": "FR1.6",
+      "data": null,
+      "timestamp": "2026-09-24T20:37:22.4430704Z"
+    },
+    {
+      "id": "policy-preflight",
+      "name": "Deny-policy pre-flight",
+      "status": "Pass",
+      "detail": "No known blocking deny policies in the assigned set.",
+      "remediation": "",
+      "fr": "FR1.7",
+      "data": null,
+      "timestamp": "2026-09-24T20:37:25.6854589Z"
+    },
+    {
+      "id": "config-export",
+      "name": "Config exported",
+      "status": "Pass",
+      "detail": "Wrote examples\\poc-gsksim-config.json (contentHash=bb6b3b748fc7...).",
+      "remediation": "",
+      "fr": "FR1.8",
+      "data": null,
+      "timestamp": "2026-09-24T20:37:25.7531018Z"
+    }
+  ],
+  "extra": {
+    "outConfig": "examples\\poc-gsksim-config.json"
+  }
+}
