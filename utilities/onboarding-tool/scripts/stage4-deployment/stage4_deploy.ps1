@@ -299,9 +299,54 @@ function Get-StorageAccountId {
     if ($id) { return [string]$id }
     $account = Get-ObjProp -Object $storage -Name 'account'
     if ($account) {
-        return "/subscriptions/$($Config.subscriptionId)/resourceGroups/$ResourceGroup/providers/Microsoft.Storage/storageAccounts/$account"
+        # Mirror Stage 2's storage-RG precedence (storage.resourceGroup/resourceGroupName,
+        # then the network RG) so the derived id points at the account Stage 2 actually created.
+        $storageRg = Get-ObjProp -Object $storage -Name 'resourceGroup'
+        if (-not $storageRg) { $storageRg = Get-ObjProp -Object $storage -Name 'resourceGroupName' }
+        if (-not $storageRg) {
+            $network = Get-ObjProp -Object $Config -Name 'network'
+            foreach ($n in 'networkResourceGroup', 'resourceGroup', 'rg') {
+                $v = Get-ObjProp -Object $network -Name $n
+                if ($v) { $storageRg = $v; break }
+            }
+        }
+        if (-not $storageRg) { $storageRg = $ResourceGroup }
+        return "/subscriptions/$($Config.subscriptionId)/resourceGroups/$storageRg/providers/Microsoft.Storage/storageAccounts/$account"
     }
     return ''
+}
+
+# Discover the workspace's managed AI Foundry (CognitiveServices) account so FR4.3 can verify
+# its true-state even when the config omits foundry.accountName/resourceGroup. Returns $null when
+# the managed RG or account can't be located (caller then degrades the gate to Warn).
+function Get-WorkspaceFoundryAccount {
+    param([string]$WorkspaceId, [object]$Config)
+    $ws = Get-AzJson -Args @('resource', 'show', '--ids', $WorkspaceId, '--api-version', $script:DiscoveryApiVersion) -AllowFail
+    $managedRg = ''
+    $wsProps = if ($ws) { Get-ObjProp -Object $ws -Name 'properties' } else { $null }
+    if ($wsProps) {
+        foreach ($p in 'managedResourceGroupId', 'managedResourceGroup') {
+            $v = Get-ObjProp -Object $wsProps -Name $p
+            if ($v) {
+                if ($v -match '/resourceGroups/([^/]+)') { $managedRg = $Matches[1] } else { $managedRg = [string]$v }
+                break
+            }
+        }
+    }
+    if (-not $managedRg) {
+        $wsName = Get-ConfigName -Config $Config -Name 'workspace' -Default ''
+        if ($wsName) {
+            $groups = Get-AzJson -Args @('group', 'list', '--query', "[?starts_with(name, 'mrg-dwsp-$wsName')].name") -AllowFail
+            if ($groups -and @($groups).Count) { $managedRg = [string]@($groups)[0] }
+        }
+    }
+    if (-not $managedRg) { return $null }
+    $accounts = Get-AzJson -Args @('cognitiveservices', 'account', 'list', '-g', $managedRg) -AllowFail
+    if (-not $accounts) { return $null }
+    $match = @($accounts | Where-Object { $_.kind -in @('AIServices', 'OpenAI', 'CognitiveServices') } | Select-Object -First 1)
+    if (-not $match.Count) { $match = @($accounts | Select-Object -First 1) }
+    if (-not $match.Count) { return $null }
+    return [pscustomobject]@{ accountName = [string]$match[0].name; resourceGroup = $managedRg }
 }
 
 function ConvertTo-JsonBodyFile {
@@ -546,13 +591,16 @@ if (-not $BicepPath) {
                     -Remediation "controlPlaneRegion ($($regionMismatch.expected)) must match the managedcluster/nodepool VNet region ($($regionMismatch.actual)); the supercomputer and its node pool subnet must be co-regional. Set controlPlaneRegion=$($regionMismatch.actual), delete the failed supercomputer, and re-run (region is immutable)." `
                     -Data $regionMismatch))
     } else {
+        $scNet = Get-ObjProp -Object $cfg -Name 'network'
+        $scOutboundType = Get-ObjProp -Object $scNet -Name 'outboundType'
+        if (-not $scOutboundType) { $scOutboundType = 'UserDefinedRouting' }
         $scBody = @{
             location   = $location
             tags       = @{ version = 'v2'; 'discovery.overridemrgregion' = [string]$cfg.workloadRegion }
             properties = @{
                 subnetId           = $scSubnet
                 managementSubnetId = $scMgmtSubnet
-                outboundType       = 'UserDefinedRouting'
+                outboundType       = [string]$scOutboundType
                 identities         = @{
                     clusterIdentity    = @{ id = $managedIdentityId }
                     kubeletIdentity    = @{ id = $managedIdentityId }
@@ -645,9 +693,21 @@ if ($scStateBeforeWorkspace -eq 'Failed') {
         $foundry = Get-ObjProp -Object $cfg -Name 'foundry'
         $foundryAccount = Get-ObjProp -Object $foundry -Name 'accountName'
         $foundryRg = Get-ObjProp -Object $foundry -Name 'resourceGroup'
+        if (-not ($foundryAccount -and $foundryRg)) {
+            $discovered = Get-WorkspaceFoundryAccount -WorkspaceId $workspaceId -Config $cfg
+            if ($discovered) { $foundryAccount = $discovered.accountName; $foundryRg = $discovered.resourceGroup }
+        }
         $gate = Wait-DiscoveryGate -ResourceId $workspaceId -FoundryAccountName $foundryAccount -FoundryResourceGroup $foundryRg
         $state = $gate.trueState -replace '^TimedOut:', ''
-        $results.Add((New-StepResult -Id 'deploy-workspace' -Name 'workspace deployment' -ResourceId $workspaceId -State $state -Fr 'FR4.1,FR4.3' -ErrorText $put.error -Extra $gate))
+        if (-not ($foundryAccount -and $foundryRg) -and $state -eq 'Succeeded') {
+            # FR4.3 managed Foundry true-state could not be verified; don't pass on workspace ARM state alone.
+            $results.Add((New-CheckResult -Id 'deploy-workspace' -Name 'workspace deployment' -Status 'Warn' -Fr 'FR4.1,FR4.3' `
+                        -Detail "resource=$workspaceId provisioningState=$state foundryTrueState=unverified (no foundry.accountName/resourceGroup and managed Foundry account not discoverable)" `
+                        -Remediation 'Set foundry.accountName and foundry.resourceGroup (the managed AI Foundry/CognitiveServices account) so FR4.3 can verify the workspace dependency true-state.' `
+                        -Data $gate))
+        } else {
+            $results.Add((New-StepResult -Id 'deploy-workspace' -Name 'workspace deployment' -ResourceId $workspaceId -State $state -Fr 'FR4.1,FR4.3' -ErrorText $put.error -Extra $gate))
+        }
     }
 }
 
@@ -695,6 +755,16 @@ if ($bookshelfInScope -and $storageAccountId) {
     $storageGate = Wait-DiscoveryGate -ResourceId $storageContainerId
     $storageState = $storageGate.trueState -replace '^TimedOut:', ''
     $results.Add((New-StepResult -Id 'deploy-bookshelf' -Name 'bookshelf storage container' -ResourceId $storageContainerId -State $storageState -Fr 'FR4.1' -ErrorText $storagePut.error -Extra $storageGate))
+
+    # The project was created before the bookshelf container, so on a first run
+    # storageContainerIds was omitted. Re-link it now that the container has Succeeded.
+    if ($storageState -eq 'Succeeded' -and ($projectProps.Keys -notcontains 'storageContainerIds')) {
+        $linkBody = @{ location = $location; properties = @{ storageContainerIds = @($storageContainerId) } }
+        $linkPut = Invoke-ArmPut -ResourceId $projectId -Body $linkBody
+        $linkGate = Wait-DiscoveryGate -ResourceId $projectId
+        $linkState = $linkGate.trueState -replace '^TimedOut:', ''
+        $results.Add((New-StepResult -Id 'link-bookshelf-project' -Name 'link bookshelf container to project' -ResourceId $projectId -State $linkState -Fr 'FR4.1' -ErrorText $linkPut.error -Extra $linkGate))
+    }
 } elseif ($bookshelfInScope) {
     $results.Add((New-CheckResult -Id 'deploy-bookshelf' -Name 'bookshelf storage container' -Status 'Fail' -Fr 'FR4.1' `
                 -Detail "resource=$storageContainerId provisioningState=NotSubmitted missing=storage.accountId or storage.account" `

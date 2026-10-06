@@ -209,6 +209,23 @@ resource nsg 'Microsoft.Network/networkSecurityGroups@2023-11-01' = {
           destinationPortRange: '*'
         }
       }
+      {
+        // Deny all remaining Internet egress so Azure's default AllowInternetOutBound (65001)
+        // can't permit arbitrary outbound. Lower-priority allows above (443/AzureCloud/Internet)
+        // still win; VirtualNetwork east-west traffic is unaffected because its destination is
+        // VirtualNetwork, not Internet.
+        name: 'Deny-Internet-Out'
+        properties: {
+          priority: 4000
+          direction: 'Outbound'
+          access: 'Deny'
+          protocol: '*'
+          sourceAddressPrefix: '*'
+          destinationAddressPrefix: 'Internet'
+          sourcePortRange: '*'
+          destinationPortRange: '*'
+        }
+      }
     ]
   }
 }

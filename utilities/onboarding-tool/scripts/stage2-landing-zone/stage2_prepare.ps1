@@ -561,9 +561,22 @@ else {
             Invoke-Az -Args @('storage', 'account', 'update', '-g', $storageRg, '-n', $account, '--allow-blob-public-access', 'false', '--default-action', $defaultAction) | Out-Null
 
             $containerStates = @()
+            $containerFailures = @()
+            $ruleFailures = @()
+            $peFailures = @()
             foreach ($container in $containers) {
-                Invoke-Az -Args @('storage', 'container', 'create', '--account-name', $account, '--name', [string]$container, '--auth-mode', 'login') -AllowFail | Out-Null
-                $containerStates += @{ name = [string]$container; state = 'ensured' }
+                $cname = [string]$container
+                $existsBefore = Get-AzJson -Args @('storage', 'container', 'exists', '--account-name', $account, '--name', $cname, '--auth-mode', 'login') -AllowFail
+                Invoke-Az -Args @('storage', 'container', 'create', '--account-name', $account, '--name', $cname, '--auth-mode', 'login') -AllowFail | Out-Null
+                $existsAfter = Get-AzJson -Args @('storage', 'container', 'exists', '--account-name', $account, '--name', $cname, '--auth-mode', 'login') -AllowFail
+                if ($existsAfter -and $existsAfter.exists) {
+                    $cstate = if ($existsBefore -and $existsBefore.exists) { 'exists' } else { 'created' }
+                }
+                else {
+                    $cstate = 'failed'
+                    $containerFailures += $cname
+                }
+                $containerStates += @{ name = $cname; state = $cstate }
             }
 
             $accessData = @{ model = $access }
@@ -573,6 +586,10 @@ else {
                     $subnetName = Get-SubnetName $sn
                     Invoke-Az -Args @('network', 'vnet', 'subnet', 'update', '-g', $networkRg, '--vnet-name', $vnet, '-n', $subnetName, '--service-endpoints', 'Microsoft.Storage') | Out-Null
                     Invoke-Az -Args @('storage', 'account', 'network-rule', 'add', '-g', $storageRg, '--account-name', $account, '--vnet-name', $vnet, '--subnet', $subnetName) -AllowFail | Out-Null
+                    $rules = Get-AzJson -Args @('storage', 'account', 'network-rule', 'list', '-g', $storageRg, '--account-name', $account) -AllowFail
+                    $vnetRules = if ($rules -and ($rules.PSObject.Properties.Name -contains 'virtualNetworkRules')) { @($rules.virtualNetworkRules) } else { @() }
+                    $matched = @($vnetRules | Where-Object { $_.virtualNetworkResourceId -and ($_.virtualNetworkResourceId -match "/subnets/$([regex]::Escape($subnetName))$") })
+                    if (-not $matched.Count) { $ruleFailures += $subnetName }
                 }
                 $accessData.vnet = $vnet
             }
@@ -590,7 +607,30 @@ else {
                         $peState = 'created'
                     }
                     else { $peState = 'exists' }
-                    $accessData.privateEndpoint = @{ name = $peName; state = $peState; subnetId = $subnetId }
+
+                    # Create + verify the private DNS zone group so blob FQDNs resolve to the PE.
+                    $dnsZone = 'privatelink.blob.core.windows.net'
+                    $zoneObj = Get-AzJson -Args @('network', 'private-dns', 'zone', 'show', '-g', $storageRg, '-n', $dnsZone) -AllowFail
+                    if (-not $zoneObj) {
+                        Invoke-Az -Args @('network', 'private-dns', 'zone', 'create', '-g', $storageRg, '-n', $dnsZone) -AllowFail | Out-Null
+                        $zoneObj = Get-AzJson -Args @('network', 'private-dns', 'zone', 'show', '-g', $storageRg, '-n', $dnsZone) -AllowFail
+                    }
+                    $zoneId = if ($zoneObj -and $zoneObj.id) { $zoneObj.id } else { "/subscriptions/$($cfg.subscriptionId)/resourceGroups/$storageRg/providers/Microsoft.Network/privateDnsZones/$dnsZone" }
+                    $linkName = "$account-blob-link"
+                    $link = Get-AzJson -Args @('network', 'private-dns', 'link', 'vnet', 'show', '-g', $storageRg, '-n', $linkName, '--zone-name', $dnsZone) -AllowFail
+                    if (-not $link) {
+                        $vnetId = "/subscriptions/$($cfg.subscriptionId)/resourceGroups/$networkRg/providers/Microsoft.Network/virtualNetworks/$vnet"
+                        Invoke-Az -Args @('network', 'private-dns', 'link', 'vnet', 'create', '-g', $storageRg, '-n', $linkName, '--zone-name', $dnsZone, '--virtual-network', $vnetId, '--registration-enabled', 'false') -AllowFail | Out-Null
+                    }
+                    $zgName = 'blob-zone-group'
+                    $zg = Get-AzJson -Args @('network', 'private-endpoint', 'dns-zone-group', 'show', '-g', $storageRg, '--endpoint-name', $peName, '-n', $zgName) -AllowFail
+                    if (-not $zg) {
+                        Invoke-Az -Args @('network', 'private-endpoint', 'dns-zone-group', 'create', '-g', $storageRg, '--endpoint-name', $peName, '-n', $zgName, '--private-dns-zone', $zoneId, '--zone-name', 'blob') -AllowFail | Out-Null
+                        $zg = Get-AzJson -Args @('network', 'private-endpoint', 'dns-zone-group', 'show', '-g', $storageRg, '--endpoint-name', $peName, '-n', $zgName) -AllowFail
+                    }
+                    $dnsZoneGroupState = if ($zg) { 'linked' } else { 'failed' }
+                    if ($dnsZoneGroupState -eq 'failed') { $peFailures += "$peName (dns-zone-group)" }
+                    $accessData.privateEndpoint = @{ name = $peName; state = $peState; subnetId = $subnetId; dnsZone = $dnsZone; dnsZoneGroup = $dnsZoneGroupState }
                 }
                 else {
                     $results.Add((New-CheckResult -Id 'byo-storage-pe-subnet' -Name 'BYO storage private endpoint subnet' -Status 'Warn' -Fr 'FR2.6' `
@@ -600,8 +640,16 @@ else {
             }
 
             $st = Get-AzJson -Args @('storage', 'account', 'show', '-g', $storageRg, '-n', $account)
-            $results.Add((New-CheckResult -Id 'byo-storage-account' -Name "BYO storage account $account" -Status 'Pass' -Fr 'FR2.6' `
-                        -Detail "storage=$state access=$access containers=$($containers -join ',')" `
+            $failParts = @()
+            if ($containerFailures.Count) { $failParts += "containers-failed=$($containerFailures -join ',')" }
+            if ($ruleFailures.Count) { $failParts += "network-rules-failed=$($ruleFailures -join ',')" }
+            if ($peFailures.Count) { $failParts += "pe-failed=$($peFailures -join ',')" }
+            $storageStatus = if ($failParts.Count) { 'Fail' } else { 'Pass' }
+            $storageDetail = "storage=$state access=$access containers=$($containers -join ',')"
+            if ($failParts.Count) { $storageDetail += " | " + ($failParts -join '; ') }
+            $results.Add((New-CheckResult -Id 'byo-storage-account' -Name "BYO storage account $account" -Status $storageStatus -Fr 'FR2.6' `
+                        -Detail $storageDetail `
+                        -Remediation $(if ($failParts.Count) { 'One or more containers, network rules, or the private DNS zone group could not be verified. Check RBAC (Storage/Network Contributor) and rerun.' } else { $null }) `
                         -Data @{ id = $st.id; resourceGroup = $storageRg; account = $account; state = $state; containers = $containerStates; access = $accessData }))
         }
         catch {

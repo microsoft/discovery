@@ -615,11 +615,23 @@ else { throw "Unsupported form type '$ext'. Provide a .xlsx planning form or a .
 
 $results = Invoke-Stage1Checks -Cfg $cfgModel
 
-# apply waivers: downgrade waived failing P0 checks
-$waiverChecks = @($cfgModel.waivers | ForEach-Object { $_.check })
+# apply waivers: downgrade waived failing P0 checks only when a non-empty justification is recorded
+$validWaivers = @{}
+$rejectedWaivers = @{}
+foreach ($w in @($cfgModel.waivers)) {
+    $check = if ($w -and ($w.PSObject.Properties.Name -contains 'check') -and $w.check) { [string]$w.check } else { '' }
+    if (-not $check) { continue }
+    $just = if (($w.PSObject.Properties.Name -contains 'justification') -and $w.justification) { [string]$w.justification } else { '' }
+    if ($just.Trim()) { $validWaivers[$check] = $w } else { $rejectedWaivers[$check] = $true }
+}
 $results = @($results | ForEach-Object {
-        if ($_.status -eq 'Fail' -and ($waiverChecks -contains $_.id)) {
-            New-CheckResult -Id $_.id -Name $_.name -Status 'Waived' -Fr $_.fr -Detail "$($_.detail) [waived]" -Data $_.data
+        if ($_.status -eq 'Fail' -and $validWaivers.ContainsKey($_.id)) {
+            $w = $validWaivers[$_.id]
+            New-CheckResult -Id $_.id -Name $_.name -Status 'Waived' -Fr $_.fr -Detail "$($_.detail) [waived: $($w.justification)]" -Data $_.data
+        }
+        elseif ($_.status -eq 'Fail' -and $rejectedWaivers.ContainsKey($_.id)) {
+            New-CheckResult -Id $_.id -Name $_.name -Status 'Fail' -Fr $_.fr -Detail "$($_.detail) [waiver rejected: a non-empty justification is required]" `
+                -Remediation 'Record a WAIVER row with a non-empty justification (and approvedBy) for this check, or resolve the finding.' -Data $_.data
         }
         else { $_ }
     })

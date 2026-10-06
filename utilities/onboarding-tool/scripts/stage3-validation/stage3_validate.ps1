@@ -126,12 +126,31 @@ function Invoke-DependencySpec {
     return $out.ToArray()
 }
 
+# Returns the subnet roles that belong to the selected profile, per dependency-spec.json.
+# Falls back to $null (meaning "all roles") when the spec or profile roles are unavailable.
+function Get-ProfileSubnetRoles {
+    param(
+        [string]$Profile = 'supercomputer',
+        [string]$SpecPath = (Join-Path $PSScriptRoot 'dependency-spec.json')
+    )
+    if (-not (Test-Path -LiteralPath $SpecPath)) { return $null }
+    try {
+        $spec = Get-Content -LiteralPath $SpecPath -Raw | ConvertFrom-Json -ErrorAction Stop
+        if (($spec.PSObject.Properties.Name -contains 'profiles') -and ($spec.profiles.PSObject.Properties.Name -contains $Profile)) {
+            $roles = @($spec.profiles.$Profile.subnetRoles)
+            if ($roles.Count) { return $roles }
+        }
+    } catch { return $null }
+    return $null
+}
+
 # ---------------------------------------------------------------------------
 # FR3.6a — subnet delegations (formerly check_subnet_delegation.ps1)
 # ---------------------------------------------------------------------------
 function Invoke-CheckSubnetDelegation {
     param([object]$Config, [string]$Profile = 'supercomputer')
     $out = [System.Collections.Generic.List[object]]::new()
+    $profileRoles = Get-ProfileSubnetRoles -Profile $Profile
     $expected = @{
         'agent-containerapp'     = 'Microsoft.App/environments'
         'workspace-containerapp' = 'Microsoft.App/environments'
@@ -157,6 +176,7 @@ function Invoke-CheckSubnetDelegation {
     }
     foreach ($sn in @($Config.network.subnets)) {
         $role = $sn.role
+        if ($profileRoles -and ($role -notin $profileRoles)) { continue }
         if (-not $expected.ContainsKey($role)) { continue }
         $id = "subnet-delegation-$role"
         if (Test-ConfigWaiver -Config $Config -CheckId $id) {
@@ -213,36 +233,74 @@ function Invoke-CheckNsgEffective {
         }
         return $null
     }
-    function Test-Allow443Rule {
-        param([object[]]$Rules)
-        foreach ($r in @($Rules)) {
-            $direction = if ($r.PSObject.Properties.Name -contains 'direction') { $r.direction } else { '' }
-            $access = if ($r.PSObject.Properties.Name -contains 'access') { $r.access } else { '' }
-            $ports = @()
-            if ($r.PSObject.Properties.Name -contains 'destinationPortRange' -and $r.destinationPortRange) { $ports += $r.destinationPortRange }
-            if ($r.PSObject.Properties.Name -contains 'destinationPortRanges' -and $r.destinationPortRanges) { $ports += @($r.destinationPortRanges) }
-            if ($direction -eq 'Outbound' -and $access -eq 'Allow' -and ($ports -contains '443' -or $ports -contains '*')) { return $true }
+    function Get-RulePorts {
+        param([object]$Rule)
+        $ports = @()
+        if (($Rule.PSObject.Properties.Name -contains 'destinationPortRange') -and $Rule.destinationPortRange) { $ports += $Rule.destinationPortRange }
+        if (($Rule.PSObject.Properties.Name -contains 'destinationPortRanges') -and $Rule.destinationPortRanges) { $ports += @($Rule.destinationPortRanges) }
+        return $ports
+    }
+    function Get-RuleAddrs {
+        param([object]$Rule, [string]$Single, [string]$Plural)
+        $vals = @()
+        if (($Rule.PSObject.Properties.Name -contains $Single) -and $Rule.$Single) { $vals += $Rule.$Single }
+        if (($Rule.PSObject.Properties.Name -contains $Plural) -and $Rule.$Plural) { $vals += @($Rule.$Plural) }
+        return $vals
+    }
+    function Get-RulePriority {
+        param([object]$Rule)
+        if (($Rule.PSObject.Properties.Name -contains 'priority') -and ($null -ne $Rule.priority)) { return [int]$Rule.priority }
+        return [int]::MaxValue
+    }
+    function Test-PortCovered {
+        param([int]$Port, [string[]]$Ranges)
+        foreach ($r in @($Ranges)) {
+            if (-not $r) { continue }
+            if ($r -eq '*') { return $true }
+            if ($r -match '^\d+$') { if ([int]$r -eq $Port) { return $true } }
+            elseif ($r -match '^(\d+)-(\d+)$') { if ($Port -ge [int]$Matches[1] -and $Port -le [int]$Matches[2]) { return $true } }
         }
         return $false
+    }
+    function Test-RuleMatchesInternet443 {
+        param([object]$Rule)
+        $dir = if ($Rule.PSObject.Properties.Name -contains 'direction') { $Rule.direction } else { '' }
+        if ($dir -ne 'Outbound') { return $false }
+        if (-not (Test-PortCovered -Port 443 -Ranges (Get-RulePorts -Rule $Rule))) { return $false }
+        $dests = Get-RuleAddrs -Rule $Rule -Single 'destinationAddressPrefix' -Plural 'destinationAddressPrefixes'
+        return ($dests -contains '*' -or $dests -contains 'Internet' -or $dests -contains 'AzureCloud')
+    }
+    function Test-RuleMatchesEastWest {
+        param([object]$Rule)
+        $dir = if ($Rule.PSObject.Properties.Name -contains 'direction') { $Rule.direction } else { '' }
+        if ($dir -ne 'Inbound') { return $false }
+        $ports = Get-RulePorts -Rule $Rule
+        if (-not ((Test-PortCovered -Port 443 -Ranges $ports) -or (Test-PortCovered -Port 10250 -Ranges $ports))) { return $false }
+        $src = Get-RuleAddrs -Rule $Rule -Single 'sourceAddressPrefix' -Plural 'sourceAddressPrefixes'
+        $dst = Get-RuleAddrs -Rule $Rule -Single 'destinationAddressPrefix' -Plural 'destinationAddressPrefixes'
+        return (($src -contains 'VirtualNetwork') -or ($dst -contains 'VirtualNetwork') -or ($src -contains '*') -or ($dst -contains '*'))
+    }
+    # Evaluate effective precedence: the highest-priority (lowest number) rule that matches the
+    # required path decides. A higher-priority deny therefore overrides a lower-priority allow.
+    function Test-Allow443Rule {
+        param([object[]]$Rules)
+        $matching = @($Rules | Where-Object { Test-RuleMatchesInternet443 -Rule $_ })
+        if (-not $matching.Count) { return $false }
+        $top = $matching | Sort-Object { Get-RulePriority -Rule $_ } | Select-Object -First 1
+        return ($top.access -eq 'Allow')
     }
     function Test-EastWestRule {
         param([object[]]$Rules)
-        foreach ($r in @($Rules)) {
-            $direction = if ($r.PSObject.Properties.Name -contains 'direction') { $r.direction } else { '' }
-            $access = if ($r.PSObject.Properties.Name -contains 'access') { $r.access } else { '' }
-            $ports = @()
-            if ($r.PSObject.Properties.Name -contains 'destinationPortRange' -and $r.destinationPortRange) { $ports += $r.destinationPortRange }
-            if ($r.PSObject.Properties.Name -contains 'destinationPortRanges' -and $r.destinationPortRanges) { $ports += @($r.destinationPortRanges) }
-            $source = if ($r.PSObject.Properties.Name -contains 'sourceAddressPrefix') { $r.sourceAddressPrefix } else { '' }
-            $dest = if ($r.PSObject.Properties.Name -contains 'destinationAddressPrefix') { $r.destinationAddressPrefix } else { '' }
-            $portOk = $ports -contains '*' -or $ports -contains '10250' -or $ports -contains '443'
-            if ($direction -eq 'Inbound' -and $access -eq 'Allow' -and $portOk -and ($source -eq 'VirtualNetwork' -or $dest -eq 'VirtualNetwork' -or $source -eq '*' -or $dest -eq '*')) { return $true }
-        }
-        return $false
+        $matching = @($Rules | Where-Object { Test-RuleMatchesEastWest -Rule $_ })
+        if (-not $matching.Count) { return $false }
+        $top = $matching | Sort-Object { Get-RulePriority -Rule $_ } | Select-Object -First 1
+        return ($top.access -eq 'Allow')
     }
     $rg = Get-NetworkResourceGroup -Config $Config
+    $profileRoles = Get-ProfileSubnetRoles -Profile $Profile
     foreach ($sn in @($Config.network.subnets)) {
         $role = $sn.role
+        if ($profileRoles -and ($role -notin $profileRoles)) { continue }
         $id = "nsg-effective-$role"
         if (Test-ConfigWaiver -Config $Config -CheckId $id) {
             $out.Add((New-CheckResult -Id $id -Name "effective NSG $role" -Status 'Waived' -Fr 'FR3.6b' -Detail 'Waived by config.'))
@@ -351,8 +409,10 @@ function Invoke-CheckEffectiveRoutes {
     $isUdr = ($outboundType -eq 'UserDefinedRouting')
     $managed = @($Config.network.subnets | Where-Object { $_.role -eq 'managedcluster' } | Select-Object -First 1)
     $managedCidr = if ($managed.Count) { $managed[0].cidr } else { '' }
+    $profileRoles = Get-ProfileSubnetRoles -Profile $Profile
     foreach ($sn in @($Config.network.subnets)) {
         $role = $sn.role
+        if ($profileRoles -and ($role -notin $profileRoles)) { continue }
         $id = "effective-routes-$role"
         if (Test-ConfigWaiver -Config $Config -CheckId $id) {
             $out.Add((New-CheckResult -Id $id -Name "effective routes $role" -Status 'Waived' -Fr 'FR3.6c' -Detail 'Waived by config.'))

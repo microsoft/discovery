@@ -94,6 +94,23 @@ function Invoke-Stage5ConnectivityCheck {
         }
         @($names | Where-Object { $_ -and $_ -like '*privatelink*' } | Sort-Object -Unique)
     }
+    function Get-WorkspaceManagedRg {
+        param([object]$Config, [string]$DeployRg)
+        $wsName = if ($Config.names -and ($Config.names.PSObject.Properties.Name -contains 'workspace') -and $Config.names.workspace) { [string]$Config.names.workspace } else { '' }
+        if (-not $wsName -or -not $DeployRg) { return @() }
+        $wsId = "/subscriptions/$($Config.subscriptionId)/resourceGroups/$DeployRg/providers/Microsoft.Discovery/workspaces/$wsName"
+        $ws = Get-AzJson -Args @('resource', 'show', '--ids', $wsId, '--api-version', '2026-06-01') -AllowFail
+        $mrg = ''
+        if ($ws -and ($ws.PSObject.Properties.Name -contains 'properties') -and $ws.properties) {
+            foreach ($p in @('managedResourceGroupId', 'managedResourceGroup')) {
+                if (($ws.properties.PSObject.Properties.Name -contains $p) -and $ws.properties.$p) { $mrg = [string]$ws.properties.$p; break }
+            }
+        }
+        if ($mrg -like '/subscriptions/*') { $mrg = ($mrg -split '/')[-1] }
+        if ($mrg) { return @($mrg) }
+        $groups = @(Get-AzJson -Args @('group', 'list', '--query', "[?starts_with(name, 'mrg-dwsp-$wsName')].name") -AllowFail)
+        return @($groups | Where-Object { $_ })
+    }
     function Find-ProbeSubnetId {
         param([object]$Config, [string]$NetRg, [string]$Vnet, [string]$Subnet)
         foreach ($role in @('spare', 'nodepool', 'managedcluster')) {
@@ -165,7 +182,8 @@ function Invoke-Stage5ConnectivityCheck {
     $ResourceGroup = if ($ResourceGroup) { $ResourceGroup } else { Get-CfgValue $cfg @('resourceGroup', 'deploymentResourceGroup') }
     $NetworkResourceGroup = if ($NetworkResourceGroup) { $NetworkResourceGroup } else { Get-CfgValue $cfg.network @('networkResourceGroup') $ResourceGroup }
     $VNetName = if ($VNetName) { $VNetName } else { Get-CfgValue $cfg.network @('vnetName', 'virtualNetworkName') }
-    $probeFqdns = Get-ConfiguredFqdns -Config $cfg -ExplicitFqdn $Fqdn -ResourceGroups @($ResourceGroup, $NetworkResourceGroup)
+    $managedRgs = Get-WorkspaceManagedRg -Config $cfg -DeployRg $ResourceGroup
+    $probeFqdns = Get-ConfiguredFqdns -Config $cfg -ExplicitFqdn $Fqdn -ResourceGroups (@($ResourceGroup, $NetworkResourceGroup) + $managedRgs)
 
     if (-not $probeFqdns.Count) {
         $results.Add((New-CheckResult -Id 'fr5-1-fqdn-input' -Name 'platform privatelink FQDN discovery' -Status 'Fail' -Fr 'FR5.1' -Detail 'No platform privatelink FQDNs found in config or private endpoints.' -Remediation 'Populate privateEndpointFqdns/privatelinkFqdns or ensure platform private endpoints exist.'))
@@ -597,7 +615,7 @@ function Invoke-Stage5AssertToolInvocation {
                 if ($resp.PSObject.Properties.Name -contains $p -and $resp.$p) { $traceEvidence = $true }
             }
             $traceEvidence = $traceEvidence -or [bool]$TracingVisible
-            $ok = $completed -and $toolCallPresent -and $traceEvidence
+            $ok = $completed -and $toolCallPresent -and $nodePoolCalled -and $traceEvidence
             $detail = "completed=$completed functionCalls=$($calls.Count) functionOutputs=$($outputs.Count) nodePoolContext=$nodePoolCalled tracingVisible=$traceEvidence calls=$($calls -join ',')"
             $results.Add((New-CheckResult -Id 'fr5-6-tool-invoked' -Name 'real tool invocation present' -Status ($ok ? 'Pass' : 'Fail') -Fr 'FR5.6' -Detail $detail -Remediation ($ok ? '' : 'Completed is not enough: require function_call/function_call_output items and Foundry tracing evidence. Confirm GetNodePoolContext is in instructions and tracing shows the run.') -Data ([pscustomobject]@{ completed = $completed; toolCallPresent = $toolCallPresent; tracingVisible = $traceEvidence; calls = $calls.ToArray(); outputCount = $outputs.Count; nodePoolContext = $nodePoolCalled; pass = $ok })))
         }
@@ -670,19 +688,21 @@ function Invoke-Stage5VerificationSummary {
     if ($cfg.PSObject.Properties.Name -contains 'bookshelf' -and $cfg.bookshelf -and $cfg.bookshelf.inScope) {
         $approved = 0
         $dns = 0
+        $qualified = 0
         foreach ($rg in @($ResourceGroup, (Get-CfgString $cfg.network 'networkResourceGroup')) | Where-Object { $_ } | Sort-Object -Unique) {
             $pes = @(Get-AzJson -Args @('network', 'private-endpoint', 'list', '-g', $rg) -AllowFail)
             foreach ($pe in $pes) {
                 $isBookshelf = "$($pe.name) $($pe.id)" -match 'bookshelf|storage'
                 if (-not $isBookshelf) { continue }
-                foreach ($conn in @($pe.privateLinkServiceConnections)) {
-                    if ($conn.privateLinkServiceConnectionState.status -eq 'Approved') { $approved++ }
-                }
-                if (@($pe.customDnsConfigs).Count -gt 0) { $dns++ }
+                $peApproved = @($pe.privateLinkServiceConnections | Where-Object { $_.privateLinkServiceConnectionState.status -eq 'Approved' }).Count -gt 0
+                $peDns = @($pe.customDnsConfigs).Count -gt 0
+                if ($peApproved) { $approved++ }
+                if ($peDns) { $dns++ }
+                if ($peApproved -and $peDns) { $qualified++ }
             }
         }
-        $ok = $approved -ge 3 -and $dns -ge 3
-        Add-Result 'fr5-7-bookshelf' 'bookshelf private endpoints' ($ok ? 'Pass' : 'Fail') "approved=$approved dns=$dns expected=3" ($ok ? '' : 'Approve the three bookshelf private endpoints and confirm custom DNS configs.')
+        $ok = $qualified -ge 3
+        Add-Result 'fr5-7-bookshelf' 'bookshelf private endpoints' ($ok ? 'Pass' : 'Fail') "qualified=$qualified approved=$approved dns=$dns expected=3" ($ok ? '' : 'Ensure at least three bookshelf private endpoints are each both Approved and have a non-empty custom DNS config.')
     } else {
         Add-Result 'fr5-7-bookshelf' 'bookshelf private endpoints' 'Skip' 'Bookshelf is out of scope for this config.'
     }
