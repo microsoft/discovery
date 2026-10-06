@@ -43,13 +43,6 @@ https://raw.githubusercontent.com/microsoft/discovery/main/docs/discovery-app/re
 It extracts `platforms.rhel-x64.sha256`, computes the SHA-256 of the supplied
 RPM, and stops before making system changes if the values do not match.
 
-Release manifests may optionally include `platforms.rhel-x64`. This entry
-requires a lowercase 64-character SHA-256 and an HTTPS `installerUrl`, or the
-exact `PLACEHOLDER_PENDING_PUBLISH` value while the download URL is pending.
-The placeholder is permitted only for RHEL and is not a download URL; continue
-to supply the RPM locally with `--rpm`. The macOS and Windows entries remain
-required and retain their fixed HTTPS download URLs.
-
 The installer also validates the RPM package name, architecture, and trusted
 signature before installation.
 
