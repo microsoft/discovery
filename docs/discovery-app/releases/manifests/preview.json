@@ -1,27 +1,27 @@
 {
   "ring": "preview",
-  "latestVersion": "0.15.17",
-  "minimumVersion": "0.15.14",
+  "latestVersion": "0.15.18",
+  "minimumVersion": "0.15.15",
   "schemaVersion": 1,
   "platforms": {
     "osx-arm64": {
       "installerUrl": "https://aka.ms/discovery/download/osx/current",
-      "sha256": "2c9937d8f4700f8f9a6e3274a0cb0d2c264cf3f905723bfb7c7b11cd8ec94cfb"
+      "sha256": "f5d3d368a1321f922b68f407475dd27044444d8ad56b83f098e419cda7ef3f2d"
     },
     "rhel-x64": {
       "installerUrl": "PLACEHOLDER_PENDING_PUBLISH",
-      "sha256": "12aa6dc7e796852bb977cfb21eb4dd8bc362a64eeca852048ede2a87f5840587"
+      "sha256": "b67e52386ff73774ba2fda77cda39e7b98daea466a62d2c38b00cce773383c2b"
     },
     "win-arm64": {
       "installerUrl": "https://aka.ms/discovery/download/arm64/current",
-      "sha256": "c35d4f3c8d04cab4074a87747da597ddaf3817a1db70dff9bd410f9f7f678004"
+      "sha256": "3dc767ab60052fc73791d9437ea311d7348387428ca8ff8c27f00aca15e464bf"
     },
     "win-x64": {
       "installerUrl": "https://aka.ms/discovery/download/current",
-      "sha256": "30063c1cd796146174cb0186c81e0cade4765a798b93bd4629d33ad03ec5d2b2"
+      "sha256": "f7a5a6fec1e4258c1756d050a80ef3ddedbae4c378b47df492a66018c8f62e57"
     }
   },
   "releaseNotesUrl": "",
   "releaseNotesSummary": "",
-  "releasedAt": "2026-09-30T09:25:20Z"
+  "releasedAt": "2026-10-06T05:10:36Z"
 }
