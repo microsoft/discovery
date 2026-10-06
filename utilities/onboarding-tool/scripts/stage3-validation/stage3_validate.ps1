@@ -205,6 +205,8 @@ function Invoke-CheckNsgEffective {
         if (-not $ResourceGroup -or -not $SubnetId) { return $null }
         $nics = @(Get-AzJson -Args @('network', 'nic', 'list', '-g', $ResourceGroup) -AllowFail)
         foreach ($nic in $nics) {
+            $isVmNic = ($nic.PSObject.Properties.Name -contains 'virtualMachine' -and $nic.virtualMachine -and $nic.virtualMachine.id)
+            if (-not $isVmNic) { continue }
             foreach ($ipcfg in @($nic.ipConfigurations)) {
                 if ($ipcfg.subnet.id -eq $SubnetId -and $nic.provisioningState -eq 'Succeeded') { return $nic }
             }
@@ -299,6 +301,8 @@ function Invoke-CheckEffectiveRoutes {
         if (-not $ResourceGroup -or -not $SubnetId) { return $null }
         $nics = @(Get-AzJson -Args @('network', 'nic', 'list', '-g', $ResourceGroup) -AllowFail)
         foreach ($nic in $nics) {
+            $isVmNic = ($nic.PSObject.Properties.Name -contains 'virtualMachine' -and $nic.virtualMachine -and $nic.virtualMachine.id)
+            if (-not $isVmNic) { continue }
             foreach ($ipcfg in @($nic.ipConfigurations)) {
                 if ($ipcfg.subnet.id -eq $SubnetId -and $ipcfg.privateIPAddress) { return $nic }
             }
@@ -343,6 +347,8 @@ function Invoke-CheckEffectiveRoutes {
     }
     $rg = Get-NetworkResourceGroup -Config $Config
     $nvaNextHop = if ($Config.network.PSObject.Properties.Name -contains 'nvaNextHop') { $Config.network.nvaNextHop } else { '' }
+    $outboundType = if (($Config.network.PSObject.Properties.Name -contains 'outboundType') -and $Config.network.outboundType) { [string]$Config.network.outboundType } else { 'UserDefinedRouting' }
+    $isUdr = ($outboundType -eq 'UserDefinedRouting')
     $managed = @($Config.network.subnets | Where-Object { $_.role -eq 'managedcluster' } | Select-Object -First 1)
     $managedCidr = if ($managed.Count) { $managed[0].cidr } else { '' }
     foreach ($sn in @($Config.network.subnets)) {
@@ -399,12 +405,16 @@ function Invoke-CheckEffectiveRoutes {
             }
         }
         $ok = if ($role -eq 'managedcluster') {
-            $nextHopType -eq 'VnetLocal'
-        } else {
+            # Managed cluster subnet keeps VnetLocal for its own CIDR regardless of egress model.
+            if ($isUdr) { $nextHopType -eq 'VnetLocal' } else { $nextHopType -in @('', 'VnetLocal') }
+        } elseif ($isUdr) {
             $nextHopType -eq 'VirtualAppliance' -and ((-not $nvaNextHop) -or $nextHopIp -eq $nvaNextHop)
+        } else {
+            # LoadBalancer egress: Azure system routes govern 0.0.0.0/0 (nextHop Internet, or no UDR at all).
+            $nextHopType -in @('', 'Internet')
         }
         $status = if ($ok -and $source -eq 'route-table-fallback') { 'Warn' } elseif ($ok) { 'Pass' } else { 'Fail' }
-        $remediation = if ($ok) { '' } elseif ($role -eq 'managedcluster') { 'Managed cluster routed via NVA, AKS NotReady -> Set managed cluster subnet to VnetLocal; delete+recreate route.' } else { 'NSG denies egress or UDR black-holes the route.' }
+        $remediation = if ($ok) { '' } elseif ($role -eq 'managedcluster') { 'Managed cluster routed via NVA, AKS NotReady -> Set managed cluster subnet to VnetLocal; delete+recreate route.' } elseif ($isUdr) { 'NSG denies egress or UDR black-holes the route.' } else { 'A user route overrides LoadBalancer egress; remove the 0.0.0.0/0 UDR or set network.outboundType=UserDefinedRouting with network.nvaNextHop.' }
         $out.Add((New-CheckResult -Id $id -Name "effective routes $role" -Status $status -Fr 'FR3.6c' `
                     -Detail "nextHopType=$nextHopType nextHopIp=$nextHopIp source=$source" -Remediation $remediation `
                     -Data ([pscustomobject]@{ role = $role; subnetId = $subnet.id; nicId = if ($nic) { $nic.id } else { $null }; nextHop = $nextHopType; nextHopIp = $nextHopIp; networkWatcher = $nwNextHop; source = $source; managedCidr = $managedCidr })))

@@ -14,6 +14,11 @@ resolution, east-west 10250). The check set is driven per profile by `dependency
 - Every failure carries an exact remediation (e.g. NSG egress, UDR black-hole, DNS zone link,
   managed-cluster route → VnetLocal).
 
+> Note: `-WithVm` in-network probing is temporarily skipped. The ephemeral probe VM and its
+> VM-based checks (DNS, TCP 443, HTTPS/artifact, PE resolution, east-west 10250, and the
+> NIC-derived effective-route lookups) are not run today; use the control-plane, read-only checks
+> above to gate deployment. Run Stage 3 without `-WithVm` until VM-based validation is re-enabled.
+
 ## Prerequisites
 
 - PowerShell 7+ (`pwsh`).
