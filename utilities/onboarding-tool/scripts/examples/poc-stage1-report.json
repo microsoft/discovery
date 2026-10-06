@@ -157,7 +157,7 @@
       "id": "name-supercomputer",
       "name": "Name 'supercomputer'",
       "status": "Pass",
-      "detail": "gsksim-sc",
+      "detail": "contoso-sc",
       "remediation": "",
       "fr": "FR1.6",
       "data": null,
@@ -167,7 +167,7 @@
       "id": "name-project",
       "name": "Name 'project'",
       "status": "Pass",
-      "detail": "gsksim-p1",
+      "detail": "contoso-p1",
       "remediation": "",
       "fr": "FR1.6",
       "data": null,
@@ -237,7 +237,7 @@
       "id": "name-workspace",
       "name": "Name 'workspace'",
       "status": "Pass",
-      "detail": "gsksim-poc-ws",
+      "detail": "contoso-poc-ws",
       "remediation": "",
       "fr": "FR1.6",
       "data": null,
@@ -257,7 +257,7 @@
       "id": "config-export",
       "name": "Config exported",
       "status": "Pass",
-      "detail": "Wrote examples\\poc-gsksim-config.json (contentHash=bb6b3b748fc7...).",
+      "detail": "Wrote examples\\poc-contoso-config.json (contentHash=bb6b3b748fc7...).",
       "remediation": "",
       "fr": "FR1.8",
       "data": null,
@@ -265,6 +265,6 @@
     }
   ],
   "extra": {
-    "outConfig": "examples\\poc-gsksim-config.json"
+    "outConfig": "examples\\poc-contoso-config.json"
   }
 }

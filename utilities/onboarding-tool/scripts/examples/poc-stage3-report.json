@@ -75,7 +75,7 @@
         "expected": "Microsoft.App/environments",
         "actual": "Microsoft.App/environments",
         "ok": true,
-        "subnetId": "/subscriptions/546ec9a3-31a2-4360-a459-7e628a08dcbb/resourceGroups/gsk-sim-rg1/providers/Microsoft.Network/virtualNetworks/vnet-gsksim-poc-ws/subnets/snet-agent-containerapp"
+        "subnetId": "/subscriptions/546ec9a3-31a2-4360-a459-7e628a08dcbb/resourceGroups/contoso-rg1/providers/Microsoft.Network/virtualNetworks/vnet-contoso-poc-ws/subnets/snet-agent-containerapp"
       },
       "timestamp": "2026-09-24T23:17:14.8620599Z"
     },
@@ -91,7 +91,7 @@
         "expected": "Microsoft.App/environments",
         "actual": "Microsoft.App/environments",
         "ok": true,
-        "subnetId": "/subscriptions/546ec9a3-31a2-4360-a459-7e628a08dcbb/resourceGroups/gsk-sim-rg1/providers/Microsoft.Network/virtualNetworks/vnet-gsksim-poc-ws/subnets/snet-workspace-containerapp"
+        "subnetId": "/subscriptions/546ec9a3-31a2-4360-a459-7e628a08dcbb/resourceGroups/contoso-rg1/providers/Microsoft.Network/virtualNetworks/vnet-contoso-poc-ws/subnets/snet-workspace-containerapp"
       },
       "timestamp": "2026-09-24T23:17:17.7241536Z"
     },
@@ -107,7 +107,7 @@
         "expected": "Microsoft.App/environments",
         "actual": "Microsoft.App/environments",
         "ok": true,
-        "subnetId": "/subscriptions/546ec9a3-31a2-4360-a459-7e628a08dcbb/resourceGroups/gsk-sim-rg1/providers/Microsoft.Network/virtualNetworks/vnet-gsksim-poc-ws/subnets/snet-search-containerapp"
+        "subnetId": "/subscriptions/546ec9a3-31a2-4360-a459-7e628a08dcbb/resourceGroups/contoso-rg1/providers/Microsoft.Network/virtualNetworks/vnet-contoso-poc-ws/subnets/snet-search-containerapp"
       },
       "timestamp": "2026-09-24T23:17:20.5179541Z"
     },
@@ -123,7 +123,7 @@
         "expected": "Microsoft.ContainerService/managedClusters",
         "actual": "Microsoft.ContainerService/managedClusters",
         "ok": true,
-        "subnetId": "/subscriptions/546ec9a3-31a2-4360-a459-7e628a08dcbb/resourceGroups/gsk-sim-rg1/providers/Microsoft.Network/virtualNetworks/vnet-gsksim-poc-ws/subnets/snet-managedcluster"
+        "subnetId": "/subscriptions/546ec9a3-31a2-4360-a459-7e628a08dcbb/resourceGroups/contoso-rg1/providers/Microsoft.Network/virtualNetworks/vnet-contoso-poc-ws/subnets/snet-managedcluster"
       },
       "timestamp": "2026-09-24T23:17:23.3520842Z"
     },
@@ -139,7 +139,7 @@
         "expected": "none",
         "actual": "none",
         "ok": true,
-        "subnetId": "/subscriptions/546ec9a3-31a2-4360-a459-7e628a08dcbb/resourceGroups/gsk-sim-rg1/providers/Microsoft.Network/virtualNetworks/vnet-gsksim-poc-ws/subnets/snet-nodepool"
+        "subnetId": "/subscriptions/546ec9a3-31a2-4360-a459-7e628a08dcbb/resourceGroups/contoso-rg1/providers/Microsoft.Network/virtualNetworks/vnet-contoso-poc-ws/subnets/snet-nodepool"
       },
       "timestamp": "2026-09-24T23:17:26.2471111Z"
     },
@@ -155,7 +155,7 @@
         "expected": "none",
         "actual": "none",
         "ok": true,
-        "subnetId": "/subscriptions/546ec9a3-31a2-4360-a459-7e628a08dcbb/resourceGroups/gsk-sim-rg1/providers/Microsoft.Network/virtualNetworks/vnet-gsksim-poc-ws/subnets/snet-private-endpoints"
+        "subnetId": "/subscriptions/546ec9a3-31a2-4360-a459-7e628a08dcbb/resourceGroups/contoso-rg1/providers/Microsoft.Network/virtualNetworks/vnet-contoso-poc-ws/subnets/snet-private-endpoints"
       },
       "timestamp": "2026-09-24T23:17:29.0534551Z"
     },
@@ -171,7 +171,7 @@
         "expected": "none",
         "actual": "none",
         "ok": true,
-        "subnetId": "/subscriptions/546ec9a3-31a2-4360-a459-7e628a08dcbb/resourceGroups/gsk-sim-rg1/providers/Microsoft.Network/virtualNetworks/vnet-gsksim-poc-ws/subnets/snet-spare"
+        "subnetId": "/subscriptions/546ec9a3-31a2-4360-a459-7e628a08dcbb/resourceGroups/contoso-rg1/providers/Microsoft.Network/virtualNetworks/vnet-contoso-poc-ws/subnets/snet-spare"
       },
       "timestamp": "2026-09-24T23:17:31.8782327Z"
     },
@@ -184,7 +184,7 @@
       "fr": "FR3.6b",
       "data": {
         "role": "agent-containerapp",
-        "subnetId": "/subscriptions/546ec9a3-31a2-4360-a459-7e628a08dcbb/resourceGroups/gsk-sim-rg1/providers/Microsoft.Network/virtualNetworks/vnet-gsksim-poc-ws/subnets/snet-agent-containerapp",
+        "subnetId": "/subscriptions/546ec9a3-31a2-4360-a459-7e628a08dcbb/resourceGroups/contoso-rg1/providers/Microsoft.Network/virtualNetworks/vnet-contoso-poc-ws/subnets/snet-agent-containerapp",
         "nicId": null,
         "missingRules": [],
         "source": "subnet-nsg-fallback"
@@ -200,7 +200,7 @@
       "fr": "FR3.6b",
       "data": {
         "role": "workspace-containerapp",
-        "subnetId": "/subscriptions/546ec9a3-31a2-4360-a459-7e628a08dcbb/resourceGroups/gsk-sim-rg1/providers/Microsoft.Network/virtualNetworks/vnet-gsksim-poc-ws/subnets/snet-workspace-containerapp",
+        "subnetId": "/subscriptions/546ec9a3-31a2-4360-a459-7e628a08dcbb/resourceGroups/contoso-rg1/providers/Microsoft.Network/virtualNetworks/vnet-contoso-poc-ws/subnets/snet-workspace-containerapp",
         "nicId": null,
         "missingRules": [],
         "source": "subnet-nsg-fallback"
@@ -216,7 +216,7 @@
       "fr": "FR3.6b",
       "data": {
         "role": "search-containerapp",
-        "subnetId": "/subscriptions/546ec9a3-31a2-4360-a459-7e628a08dcbb/resourceGroups/gsk-sim-rg1/providers/Microsoft.Network/virtualNetworks/vnet-gsksim-poc-ws/subnets/snet-search-containerapp",
+        "subnetId": "/subscriptions/546ec9a3-31a2-4360-a459-7e628a08dcbb/resourceGroups/contoso-rg1/providers/Microsoft.Network/virtualNetworks/vnet-contoso-poc-ws/subnets/snet-search-containerapp",
         "nicId": null,
         "missingRules": [],
         "source": "subnet-nsg-fallback"
@@ -232,7 +232,7 @@
       "fr": "FR3.6b",
       "data": {
         "role": "managedcluster",
-        "subnetId": "/subscriptions/546ec9a3-31a2-4360-a459-7e628a08dcbb/resourceGroups/gsk-sim-rg1/providers/Microsoft.Network/virtualNetworks/vnet-gsksim-poc-ws/subnets/snet-managedcluster",
+        "subnetId": "/subscriptions/546ec9a3-31a2-4360-a459-7e628a08dcbb/resourceGroups/contoso-rg1/providers/Microsoft.Network/virtualNetworks/vnet-contoso-poc-ws/subnets/snet-managedcluster",
         "nicId": null,
         "missingRules": [],
         "source": "subnet-nsg-fallback"
@@ -248,7 +248,7 @@
       "fr": "FR3.6b",
       "data": {
         "role": "nodepool",
-        "subnetId": "/subscriptions/546ec9a3-31a2-4360-a459-7e628a08dcbb/resourceGroups/gsk-sim-rg1/providers/Microsoft.Network/virtualNetworks/vnet-gsksim-poc-ws/subnets/snet-nodepool",
+        "subnetId": "/subscriptions/546ec9a3-31a2-4360-a459-7e628a08dcbb/resourceGroups/contoso-rg1/providers/Microsoft.Network/virtualNetworks/vnet-contoso-poc-ws/subnets/snet-nodepool",
         "nicId": null,
         "missingRules": [],
         "source": "subnet-nsg-fallback"
@@ -264,7 +264,7 @@
       "fr": "FR3.6b",
       "data": {
         "role": "private-endpoints",
-        "subnetId": "/subscriptions/546ec9a3-31a2-4360-a459-7e628a08dcbb/resourceGroups/gsk-sim-rg1/providers/Microsoft.Network/virtualNetworks/vnet-gsksim-poc-ws/subnets/snet-private-endpoints",
+        "subnetId": "/subscriptions/546ec9a3-31a2-4360-a459-7e628a08dcbb/resourceGroups/contoso-rg1/providers/Microsoft.Network/virtualNetworks/vnet-contoso-poc-ws/subnets/snet-private-endpoints",
         "nicId": null,
         "missingRules": [],
         "source": "subnet-nsg-fallback"
@@ -280,7 +280,7 @@
       "fr": "FR3.6b",
       "data": {
         "role": "spare",
-        "subnetId": "/subscriptions/546ec9a3-31a2-4360-a459-7e628a08dcbb/resourceGroups/gsk-sim-rg1/providers/Microsoft.Network/virtualNetworks/vnet-gsksim-poc-ws/subnets/snet-spare",
+        "subnetId": "/subscriptions/546ec9a3-31a2-4360-a459-7e628a08dcbb/resourceGroups/contoso-rg1/providers/Microsoft.Network/virtualNetworks/vnet-contoso-poc-ws/subnets/snet-spare",
         "nicId": null,
         "missingRules": [],
         "source": "subnet-nsg-fallback"
@@ -296,7 +296,7 @@
       "fr": "FR3.6c",
       "data": {
         "role": "agent-containerapp",
-        "subnetId": "/subscriptions/546ec9a3-31a2-4360-a459-7e628a08dcbb/resourceGroups/gsk-sim-rg1/providers/Microsoft.Network/virtualNetworks/vnet-gsksim-poc-ws/subnets/snet-agent-containerapp",
+        "subnetId": "/subscriptions/546ec9a3-31a2-4360-a459-7e628a08dcbb/resourceGroups/contoso-rg1/providers/Microsoft.Network/virtualNetworks/vnet-contoso-poc-ws/subnets/snet-agent-containerapp",
         "nicId": null,
         "nextHop": "VirtualAppliance",
         "nextHopIp": "10.100.0.4",
@@ -315,7 +315,7 @@
       "fr": "FR3.6c",
       "data": {
         "role": "workspace-containerapp",
-        "subnetId": "/subscriptions/546ec9a3-31a2-4360-a459-7e628a08dcbb/resourceGroups/gsk-sim-rg1/providers/Microsoft.Network/virtualNetworks/vnet-gsksim-poc-ws/subnets/snet-workspace-containerapp",
+        "subnetId": "/subscriptions/546ec9a3-31a2-4360-a459-7e628a08dcbb/resourceGroups/contoso-rg1/providers/Microsoft.Network/virtualNetworks/vnet-contoso-poc-ws/subnets/snet-workspace-containerapp",
         "nicId": null,
         "nextHop": "VirtualAppliance",
         "nextHopIp": "10.100.0.4",
@@ -334,7 +334,7 @@
       "fr": "FR3.6c",
       "data": {
         "role": "search-containerapp",
-        "subnetId": "/subscriptions/546ec9a3-31a2-4360-a459-7e628a08dcbb/resourceGroups/gsk-sim-rg1/providers/Microsoft.Network/virtualNetworks/vnet-gsksim-poc-ws/subnets/snet-search-containerapp",
+        "subnetId": "/subscriptions/546ec9a3-31a2-4360-a459-7e628a08dcbb/resourceGroups/contoso-rg1/providers/Microsoft.Network/virtualNetworks/vnet-contoso-poc-ws/subnets/snet-search-containerapp",
         "nicId": null,
         "nextHop": "VirtualAppliance",
         "nextHopIp": "10.100.0.4",
@@ -353,7 +353,7 @@
       "fr": "FR3.6c",
       "data": {
         "role": "managedcluster",
-        "subnetId": "/subscriptions/546ec9a3-31a2-4360-a459-7e628a08dcbb/resourceGroups/gsk-sim-rg1/providers/Microsoft.Network/virtualNetworks/vnet-gsksim-poc-ws/subnets/snet-managedcluster",
+        "subnetId": "/subscriptions/546ec9a3-31a2-4360-a459-7e628a08dcbb/resourceGroups/contoso-rg1/providers/Microsoft.Network/virtualNetworks/vnet-contoso-poc-ws/subnets/snet-managedcluster",
         "nicId": null,
         "nextHop": "VnetLocal",
         "nextHopIp": "",
@@ -372,7 +372,7 @@
       "fr": "FR3.6c",
       "data": {
         "role": "nodepool",
-        "subnetId": "/subscriptions/546ec9a3-31a2-4360-a459-7e628a08dcbb/resourceGroups/gsk-sim-rg1/providers/Microsoft.Network/virtualNetworks/vnet-gsksim-poc-ws/subnets/snet-nodepool",
+        "subnetId": "/subscriptions/546ec9a3-31a2-4360-a459-7e628a08dcbb/resourceGroups/contoso-rg1/providers/Microsoft.Network/virtualNetworks/vnet-contoso-poc-ws/subnets/snet-nodepool",
         "nicId": null,
         "nextHop": "VirtualAppliance",
         "nextHopIp": "10.100.0.4",
@@ -391,7 +391,7 @@
       "fr": "FR3.6c",
       "data": {
         "role": "private-endpoints",
-        "subnetId": "/subscriptions/546ec9a3-31a2-4360-a459-7e628a08dcbb/resourceGroups/gsk-sim-rg1/providers/Microsoft.Network/virtualNetworks/vnet-gsksim-poc-ws/subnets/snet-private-endpoints",
+        "subnetId": "/subscriptions/546ec9a3-31a2-4360-a459-7e628a08dcbb/resourceGroups/contoso-rg1/providers/Microsoft.Network/virtualNetworks/vnet-contoso-poc-ws/subnets/snet-private-endpoints",
         "nicId": null,
         "nextHop": "VirtualAppliance",
         "nextHopIp": "10.100.0.4",
@@ -410,7 +410,7 @@
       "fr": "FR3.6c",
       "data": {
         "role": "spare",
-        "subnetId": "/subscriptions/546ec9a3-31a2-4360-a459-7e628a08dcbb/resourceGroups/gsk-sim-rg1/providers/Microsoft.Network/virtualNetworks/vnet-gsksim-poc-ws/subnets/snet-spare",
+        "subnetId": "/subscriptions/546ec9a3-31a2-4360-a459-7e628a08dcbb/resourceGroups/contoso-rg1/providers/Microsoft.Network/virtualNetworks/vnet-contoso-poc-ws/subnets/snet-spare",
         "nicId": null,
         "nextHop": "VirtualAppliance",
         "nextHopIp": "10.100.0.4",
@@ -589,7 +589,7 @@
       "id": "private-endpoints-present",
       "name": "private endpoints discovered",
       "status": "Warn",
-      "detail": "No private endpoints found in: gsk-sim-rg1.",
+      "detail": "No private endpoints found in: contoso-rg1.",
       "remediation": "Fix private DNS zone links / VNet DNS.",
       "fr": "FR3.6d",
       "data": null,

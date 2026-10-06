@@ -11,7 +11,7 @@
   },
   "network": {
     "model": "byo",
-    "networkResourceGroup": "gsk-sim-rg1",
+    "networkResourceGroup": "contoso-rg1",
     "vnetCidr": "10.46.252.0/23",
     "corpDns": [],
     "nvaNextHop": "10.100.0.4",
@@ -33,9 +33,9 @@
   "projects": 2,
   "deployMode": "GlobalStandard",
   "names": {
-    "workspace": "gsksim-poc-ws",
-    "project": "gsksim-p1",
-    "supercomputer": "gsksim-sc",
+    "workspace": "contoso-poc-ws",
+    "project": "contoso-p1",
+    "supercomputer": "contoso-sc",
     "nodePool": "pool1",
     "tool": "hero-tool",
     "agent": "hero-agent",

@@ -270,8 +270,8 @@
       "timestamp": "2026-09-24T22:25:43.3354171Z"
     },
     {
-      "id": "rbac-gsk-sim-rg1-platform-administrator-35644e08-c894-4013-9b03-e7fa82689870",
-      "name": "Platform Administrator on gsk-sim-rg1",
+      "id": "rbac-contoso-rg1-platform-administrator-35644e08-c894-4013-9b03-e7fa82689870",
+      "name": "Platform Administrator on contoso-rg1",
       "status": "Pass",
       "detail": "Assigned to 35644e08-c894-4013-9b03-e7fa82689870.",
       "remediation": "",
@@ -280,14 +280,14 @@
         "role": "Platform Administrator",
         "state": "created",
         "principal": "35644e08-c894-4013-9b03-e7fa82689870",
-        "scope": "/subscriptions/546ec9a3-31a2-4360-a459-7e628a08dcbb/resourceGroups/gsk-sim-rg1",
+        "scope": "/subscriptions/546ec9a3-31a2-4360-a459-7e628a08dcbb/resourceGroups/contoso-rg1",
         "roleDefinitionId": "7a2b6e6c-472e-4b39-8878-a26eb63d75c6"
       },
       "timestamp": "2026-09-24T22:25:57.1811453Z"
     },
     {
-      "id": "rbac-gsk-sim-rg1-platform-contributor-35644e08-c894-4013-9b03-e7fa82689870",
-      "name": "Platform Contributor on gsk-sim-rg1",
+      "id": "rbac-contoso-rg1-platform-contributor-35644e08-c894-4013-9b03-e7fa82689870",
+      "name": "Platform Contributor on contoso-rg1",
       "status": "Pass",
       "detail": "Assigned to 35644e08-c894-4013-9b03-e7fa82689870.",
       "remediation": "",
@@ -296,14 +296,14 @@
         "role": "Platform Contributor",
         "state": "created",
         "principal": "35644e08-c894-4013-9b03-e7fa82689870",
-        "scope": "/subscriptions/546ec9a3-31a2-4360-a459-7e628a08dcbb/resourceGroups/gsk-sim-rg1",
+        "scope": "/subscriptions/546ec9a3-31a2-4360-a459-7e628a08dcbb/resourceGroups/contoso-rg1",
         "roleDefinitionId": "01288891-85ee-45a7-b367-9db3b752fc65"
       },
       "timestamp": "2026-09-24T22:26:05.3286244Z"
     },
     {
-      "id": "rbac-gsk-sim-rg1-platform-reader-35644e08-c894-4013-9b03-e7fa82689870",
-      "name": "Platform Reader on gsk-sim-rg1",
+      "id": "rbac-contoso-rg1-platform-reader-35644e08-c894-4013-9b03-e7fa82689870",
+      "name": "Platform Reader on contoso-rg1",
       "status": "Pass",
       "detail": "Assigned to 35644e08-c894-4013-9b03-e7fa82689870.",
       "remediation": "",
@@ -312,14 +312,14 @@
         "role": "Platform Reader",
         "state": "created",
         "principal": "35644e08-c894-4013-9b03-e7fa82689870",
-        "scope": "/subscriptions/546ec9a3-31a2-4360-a459-7e628a08dcbb/resourceGroups/gsk-sim-rg1",
+        "scope": "/subscriptions/546ec9a3-31a2-4360-a459-7e628a08dcbb/resourceGroups/contoso-rg1",
         "roleDefinitionId": "3bb7c424-af4e-436b-bfcc-8779c8934c31"
       },
       "timestamp": "2026-09-24T22:26:14.4120985Z"
     },
     {
-      "id": "rbac-gsk-sim-rg1-bookshelf-index-data-reader-35644e08-c894-4013-9b03-e7fa82689870",
-      "name": "Bookshelf Index Data Reader on gsk-sim-rg1",
+      "id": "rbac-contoso-rg1-bookshelf-index-data-reader-35644e08-c894-4013-9b03-e7fa82689870",
+      "name": "Bookshelf Index Data Reader on contoso-rg1",
       "status": "Pass",
       "detail": "Assigned to 35644e08-c894-4013-9b03-e7fa82689870.",
       "remediation": "",
@@ -328,7 +328,7 @@
         "role": "Bookshelf Index Data Reader",
         "state": "created",
         "principal": "35644e08-c894-4013-9b03-e7fa82689870",
-        "scope": "/subscriptions/546ec9a3-31a2-4360-a459-7e628a08dcbb/resourceGroups/gsk-sim-rg1",
+        "scope": "/subscriptions/546ec9a3-31a2-4360-a459-7e628a08dcbb/resourceGroups/contoso-rg1",
         "roleDefinitionId": "8ec773c5-7ce6-4b78-91d1-182f8faa536d"
       },
       "timestamp": "2026-09-24T22:26:21.9183776Z"
@@ -356,17 +356,17 @@
     },
     {
       "id": "network-vnet",
-      "name": "VNet vnet-gsksim-poc-ws",
+      "name": "VNet vnet-contoso-poc-ws",
       "status": "Pass",
       "detail": "created; cidr=10.46.252.0/23",
       "remediation": "",
       "fr": "FR2.2",
       "data": {
-        "resourceGroup": "gsk-sim-rg1",
-        "id": "/subscriptions/546ec9a3-31a2-4360-a459-7e628a08dcbb/resourceGroups/gsk-sim-rg1/providers/Microsoft.Network/virtualNetworks/vnet-gsksim-poc-ws",
+        "resourceGroup": "contoso-rg1",
+        "id": "/subscriptions/546ec9a3-31a2-4360-a459-7e628a08dcbb/resourceGroups/contoso-rg1/providers/Microsoft.Network/virtualNetworks/vnet-contoso-poc-ws",
         "state": "created",
         "cidr": "10.46.252.0/23",
-        "name": "vnet-gsksim-poc-ws"
+        "name": "vnet-contoso-poc-ws"
       },
       "timestamp": "2026-09-24T22:27:05.4495742Z"
     },
@@ -378,11 +378,11 @@
       "remediation": "If delegation cannot be set, ensure the subnet is empty or move workloads before patching.",
       "fr": "FR2.2",
       "data": {
-        "routeTableId": "/subscriptions/546ec9a3-31a2-4360-a459-7e628a08dcbb/resourceGroups/gsk-sim-rg1/providers/Microsoft.Network/routeTables/rt-agent-containerapp",
+        "routeTableId": "/subscriptions/546ec9a3-31a2-4360-a459-7e628a08dcbb/resourceGroups/contoso-rg1/providers/Microsoft.Network/routeTables/rt-agent-containerapp",
         "role": "agent-containerapp",
-        "subnetId": "/subscriptions/546ec9a3-31a2-4360-a459-7e628a08dcbb/resourceGroups/gsk-sim-rg1/providers/Microsoft.Network/virtualNetworks/vnet-gsksim-poc-ws/subnets/snet-agent-containerapp",
+        "subnetId": "/subscriptions/546ec9a3-31a2-4360-a459-7e628a08dcbb/resourceGroups/contoso-rg1/providers/Microsoft.Network/virtualNetworks/vnet-contoso-poc-ws/subnets/snet-agent-containerapp",
         "cidr": "10.46.252.0/26",
-        "nsgId": "/subscriptions/546ec9a3-31a2-4360-a459-7e628a08dcbb/resourceGroups/gsk-sim-rg1/providers/Microsoft.Network/networkSecurityGroups/nsg-agent-containerapp",
+        "nsgId": "/subscriptions/546ec9a3-31a2-4360-a459-7e628a08dcbb/resourceGroups/contoso-rg1/providers/Microsoft.Network/networkSecurityGroups/nsg-agent-containerapp",
         "delegation": "Microsoft.App/environments",
         "subnetName": "snet-agent-containerapp"
       },
@@ -396,11 +396,11 @@
       "remediation": "If delegation cannot be set, ensure the subnet is empty or move workloads before patching.",
       "fr": "FR2.2",
       "data": {
-        "routeTableId": "/subscriptions/546ec9a3-31a2-4360-a459-7e628a08dcbb/resourceGroups/gsk-sim-rg1/providers/Microsoft.Network/routeTables/rt-workspace-containerapp",
+        "routeTableId": "/subscriptions/546ec9a3-31a2-4360-a459-7e628a08dcbb/resourceGroups/contoso-rg1/providers/Microsoft.Network/routeTables/rt-workspace-containerapp",
         "role": "workspace-containerapp",
-        "subnetId": "/subscriptions/546ec9a3-31a2-4360-a459-7e628a08dcbb/resourceGroups/gsk-sim-rg1/providers/Microsoft.Network/virtualNetworks/vnet-gsksim-poc-ws/subnets/snet-workspace-containerapp",
+        "subnetId": "/subscriptions/546ec9a3-31a2-4360-a459-7e628a08dcbb/resourceGroups/contoso-rg1/providers/Microsoft.Network/virtualNetworks/vnet-contoso-poc-ws/subnets/snet-workspace-containerapp",
         "cidr": "10.46.252.64/26",
-        "nsgId": "/subscriptions/546ec9a3-31a2-4360-a459-7e628a08dcbb/resourceGroups/gsk-sim-rg1/providers/Microsoft.Network/networkSecurityGroups/nsg-workspace-containerapp",
+        "nsgId": "/subscriptions/546ec9a3-31a2-4360-a459-7e628a08dcbb/resourceGroups/contoso-rg1/providers/Microsoft.Network/networkSecurityGroups/nsg-workspace-containerapp",
         "delegation": "Microsoft.App/environments",
         "subnetName": "snet-workspace-containerapp"
       },
@@ -414,11 +414,11 @@
       "remediation": "If delegation cannot be set, ensure the subnet is empty or move workloads before patching.",
       "fr": "FR2.2",
       "data": {
-        "routeTableId": "/subscriptions/546ec9a3-31a2-4360-a459-7e628a08dcbb/resourceGroups/gsk-sim-rg1/providers/Microsoft.Network/routeTables/rt-search-containerapp",
+        "routeTableId": "/subscriptions/546ec9a3-31a2-4360-a459-7e628a08dcbb/resourceGroups/contoso-rg1/providers/Microsoft.Network/routeTables/rt-search-containerapp",
         "role": "search-containerapp",
-        "subnetId": "/subscriptions/546ec9a3-31a2-4360-a459-7e628a08dcbb/resourceGroups/gsk-sim-rg1/providers/Microsoft.Network/virtualNetworks/vnet-gsksim-poc-ws/subnets/snet-search-containerapp",
+        "subnetId": "/subscriptions/546ec9a3-31a2-4360-a459-7e628a08dcbb/resourceGroups/contoso-rg1/providers/Microsoft.Network/virtualNetworks/vnet-contoso-poc-ws/subnets/snet-search-containerapp",
         "cidr": "10.46.253.32/27",
-        "nsgId": "/subscriptions/546ec9a3-31a2-4360-a459-7e628a08dcbb/resourceGroups/gsk-sim-rg1/providers/Microsoft.Network/networkSecurityGroups/nsg-search-containerapp",
+        "nsgId": "/subscriptions/546ec9a3-31a2-4360-a459-7e628a08dcbb/resourceGroups/contoso-rg1/providers/Microsoft.Network/networkSecurityGroups/nsg-search-containerapp",
         "delegation": "Microsoft.App/environments",
         "subnetName": "snet-search-containerapp"
       },
@@ -432,11 +432,11 @@
       "remediation": "If delegation cannot be set, ensure the subnet is empty or move workloads before patching.",
       "fr": "FR2.2",
       "data": {
-        "routeTableId": "/subscriptions/546ec9a3-31a2-4360-a459-7e628a08dcbb/resourceGroups/gsk-sim-rg1/providers/Microsoft.Network/routeTables/rt-managedcluster",
+        "routeTableId": "/subscriptions/546ec9a3-31a2-4360-a459-7e628a08dcbb/resourceGroups/contoso-rg1/providers/Microsoft.Network/routeTables/rt-managedcluster",
         "role": "managedcluster",
-        "subnetId": "/subscriptions/546ec9a3-31a2-4360-a459-7e628a08dcbb/resourceGroups/gsk-sim-rg1/providers/Microsoft.Network/virtualNetworks/vnet-gsksim-poc-ws/subnets/snet-managedcluster",
+        "subnetId": "/subscriptions/546ec9a3-31a2-4360-a459-7e628a08dcbb/resourceGroups/contoso-rg1/providers/Microsoft.Network/virtualNetworks/vnet-contoso-poc-ws/subnets/snet-managedcluster",
         "cidr": "10.46.253.128/26",
-        "nsgId": "/subscriptions/546ec9a3-31a2-4360-a459-7e628a08dcbb/resourceGroups/gsk-sim-rg1/providers/Microsoft.Network/networkSecurityGroups/nsg-managedcluster",
+        "nsgId": "/subscriptions/546ec9a3-31a2-4360-a459-7e628a08dcbb/resourceGroups/contoso-rg1/providers/Microsoft.Network/networkSecurityGroups/nsg-managedcluster",
         "delegation": "Microsoft.ContainerService/managedClusters",
         "subnetName": "snet-managedcluster"
       },
@@ -450,11 +450,11 @@
       "remediation": "If delegation cannot be set, ensure the subnet is empty or move workloads before patching.",
       "fr": "FR2.2",
       "data": {
-        "routeTableId": "/subscriptions/546ec9a3-31a2-4360-a459-7e628a08dcbb/resourceGroups/gsk-sim-rg1/providers/Microsoft.Network/routeTables/rt-nodepool",
+        "routeTableId": "/subscriptions/546ec9a3-31a2-4360-a459-7e628a08dcbb/resourceGroups/contoso-rg1/providers/Microsoft.Network/routeTables/rt-nodepool",
         "role": "nodepool",
-        "subnetId": "/subscriptions/546ec9a3-31a2-4360-a459-7e628a08dcbb/resourceGroups/gsk-sim-rg1/providers/Microsoft.Network/virtualNetworks/vnet-gsksim-poc-ws/subnets/snet-nodepool",
+        "subnetId": "/subscriptions/546ec9a3-31a2-4360-a459-7e628a08dcbb/resourceGroups/contoso-rg1/providers/Microsoft.Network/virtualNetworks/vnet-contoso-poc-ws/subnets/snet-nodepool",
         "cidr": "10.46.252.128/26",
-        "nsgId": "/subscriptions/546ec9a3-31a2-4360-a459-7e628a08dcbb/resourceGroups/gsk-sim-rg1/providers/Microsoft.Network/networkSecurityGroups/nsg-nodepool",
+        "nsgId": "/subscriptions/546ec9a3-31a2-4360-a459-7e628a08dcbb/resourceGroups/contoso-rg1/providers/Microsoft.Network/networkSecurityGroups/nsg-nodepool",
         "delegation": "none",
         "subnetName": "snet-nodepool"
       },
@@ -468,11 +468,11 @@
       "remediation": "If delegation cannot be set, ensure the subnet is empty or move workloads before patching.",
       "fr": "FR2.2",
       "data": {
-        "routeTableId": "/subscriptions/546ec9a3-31a2-4360-a459-7e628a08dcbb/resourceGroups/gsk-sim-rg1/providers/Microsoft.Network/routeTables/rt-private-endpoints",
+        "routeTableId": "/subscriptions/546ec9a3-31a2-4360-a459-7e628a08dcbb/resourceGroups/contoso-rg1/providers/Microsoft.Network/routeTables/rt-private-endpoints",
         "role": "private-endpoints",
-        "subnetId": "/subscriptions/546ec9a3-31a2-4360-a459-7e628a08dcbb/resourceGroups/gsk-sim-rg1/providers/Microsoft.Network/virtualNetworks/vnet-gsksim-poc-ws/subnets/snet-private-endpoints",
+        "subnetId": "/subscriptions/546ec9a3-31a2-4360-a459-7e628a08dcbb/resourceGroups/contoso-rg1/providers/Microsoft.Network/virtualNetworks/vnet-contoso-poc-ws/subnets/snet-private-endpoints",
         "cidr": "10.46.253.0/27",
-        "nsgId": "/subscriptions/546ec9a3-31a2-4360-a459-7e628a08dcbb/resourceGroups/gsk-sim-rg1/providers/Microsoft.Network/networkSecurityGroups/nsg-private-endpoints",
+        "nsgId": "/subscriptions/546ec9a3-31a2-4360-a459-7e628a08dcbb/resourceGroups/contoso-rg1/providers/Microsoft.Network/networkSecurityGroups/nsg-private-endpoints",
         "delegation": "none",
         "subnetName": "snet-private-endpoints"
       },
@@ -486,11 +486,11 @@
       "remediation": "If delegation cannot be set, ensure the subnet is empty or move workloads before patching.",
       "fr": "FR2.2",
       "data": {
-        "routeTableId": "/subscriptions/546ec9a3-31a2-4360-a459-7e628a08dcbb/resourceGroups/gsk-sim-rg1/providers/Microsoft.Network/routeTables/rt-spare",
+        "routeTableId": "/subscriptions/546ec9a3-31a2-4360-a459-7e628a08dcbb/resourceGroups/contoso-rg1/providers/Microsoft.Network/routeTables/rt-spare",
         "role": "spare",
-        "subnetId": "/subscriptions/546ec9a3-31a2-4360-a459-7e628a08dcbb/resourceGroups/gsk-sim-rg1/providers/Microsoft.Network/virtualNetworks/vnet-gsksim-poc-ws/subnets/snet-spare",
+        "subnetId": "/subscriptions/546ec9a3-31a2-4360-a459-7e628a08dcbb/resourceGroups/contoso-rg1/providers/Microsoft.Network/virtualNetworks/vnet-contoso-poc-ws/subnets/snet-spare",
         "cidr": "10.46.253.64/27",
-        "nsgId": "/subscriptions/546ec9a3-31a2-4360-a459-7e628a08dcbb/resourceGroups/gsk-sim-rg1/providers/Microsoft.Network/networkSecurityGroups/nsg-spare",
+        "nsgId": "/subscriptions/546ec9a3-31a2-4360-a459-7e628a08dcbb/resourceGroups/contoso-rg1/providers/Microsoft.Network/networkSecurityGroups/nsg-spare",
         "delegation": "none",
         "subnetName": "snet-spare"
       },
@@ -960,14 +960,14 @@
       "id": "private-dns-privatelink-blob-core-windows-net",
       "name": "private DNS privatelink.blob.core.windows.net",
       "status": "Pass",
-      "detail": "zone=created link=created vnet=vnet-gsksim-poc-ws",
+      "detail": "zone=created link=created vnet=vnet-contoso-poc-ws",
       "remediation": "",
       "fr": "FR2.5",
       "data": {
         "zoneState": "created",
         "linkName": "link-blob-core-windows-net",
         "zone": "privatelink.blob.core.windows.net",
-        "vnetId": "/subscriptions/546ec9a3-31a2-4360-a459-7e628a08dcbb/resourceGroups/gsk-sim-rg1/providers/Microsoft.Network/virtualNetworks/vnet-gsksim-poc-ws",
+        "vnetId": "/subscriptions/546ec9a3-31a2-4360-a459-7e628a08dcbb/resourceGroups/contoso-rg1/providers/Microsoft.Network/virtualNetworks/vnet-contoso-poc-ws",
         "linkState": "created"
       },
       "timestamp": "2026-09-24T22:47:22.7872871Z"
@@ -976,14 +976,14 @@
       "id": "private-dns-privatelink-queue-core-windows-net",
       "name": "private DNS privatelink.queue.core.windows.net",
       "status": "Pass",
-      "detail": "zone=created link=created vnet=vnet-gsksim-poc-ws",
+      "detail": "zone=created link=created vnet=vnet-contoso-poc-ws",
       "remediation": "",
       "fr": "FR2.5",
       "data": {
         "zoneState": "created",
         "linkName": "link-queue-core-windows-net",
         "zone": "privatelink.queue.core.windows.net",
-        "vnetId": "/subscriptions/546ec9a3-31a2-4360-a459-7e628a08dcbb/resourceGroups/gsk-sim-rg1/providers/Microsoft.Network/virtualNetworks/vnet-gsksim-poc-ws",
+        "vnetId": "/subscriptions/546ec9a3-31a2-4360-a459-7e628a08dcbb/resourceGroups/contoso-rg1/providers/Microsoft.Network/virtualNetworks/vnet-contoso-poc-ws",
         "linkState": "created"
       },
       "timestamp": "2026-09-24T22:48:41.1002560Z"
@@ -992,14 +992,14 @@
       "id": "private-dns-privatelink-file-core-windows-net",
       "name": "private DNS privatelink.file.core.windows.net",
       "status": "Pass",
-      "detail": "zone=created link=created vnet=vnet-gsksim-poc-ws",
+      "detail": "zone=created link=created vnet=vnet-contoso-poc-ws",
       "remediation": "",
       "fr": "FR2.5",
       "data": {
         "zoneState": "created",
         "linkName": "link-file-core-windows-net",
         "zone": "privatelink.file.core.windows.net",
-        "vnetId": "/subscriptions/546ec9a3-31a2-4360-a459-7e628a08dcbb/resourceGroups/gsk-sim-rg1/providers/Microsoft.Network/virtualNetworks/vnet-gsksim-poc-ws",
+        "vnetId": "/subscriptions/546ec9a3-31a2-4360-a459-7e628a08dcbb/resourceGroups/contoso-rg1/providers/Microsoft.Network/virtualNetworks/vnet-contoso-poc-ws",
         "linkState": "created"
       },
       "timestamp": "2026-09-24T22:49:59.7867074Z"
@@ -1008,14 +1008,14 @@
       "id": "private-dns-privatelink-table-core-windows-net",
       "name": "private DNS privatelink.table.core.windows.net",
       "status": "Pass",
-      "detail": "zone=created link=created vnet=vnet-gsksim-poc-ws",
+      "detail": "zone=created link=created vnet=vnet-contoso-poc-ws",
       "remediation": "",
       "fr": "FR2.5",
       "data": {
         "zoneState": "created",
         "linkName": "link-table-core-windows-net",
         "zone": "privatelink.table.core.windows.net",
-        "vnetId": "/subscriptions/546ec9a3-31a2-4360-a459-7e628a08dcbb/resourceGroups/gsk-sim-rg1/providers/Microsoft.Network/virtualNetworks/vnet-gsksim-poc-ws",
+        "vnetId": "/subscriptions/546ec9a3-31a2-4360-a459-7e628a08dcbb/resourceGroups/contoso-rg1/providers/Microsoft.Network/virtualNetworks/vnet-contoso-poc-ws",
         "linkState": "created"
       },
       "timestamp": "2026-09-24T22:51:17.4773731Z"
@@ -1024,14 +1024,14 @@
       "id": "private-dns-privatelink-dfs-core-windows-net",
       "name": "private DNS privatelink.dfs.core.windows.net",
       "status": "Pass",
-      "detail": "zone=created link=created vnet=vnet-gsksim-poc-ws",
+      "detail": "zone=created link=created vnet=vnet-contoso-poc-ws",
       "remediation": "",
       "fr": "FR2.5",
       "data": {
         "zoneState": "created",
         "linkName": "link-dfs-core-windows-net",
         "zone": "privatelink.dfs.core.windows.net",
-        "vnetId": "/subscriptions/546ec9a3-31a2-4360-a459-7e628a08dcbb/resourceGroups/gsk-sim-rg1/providers/Microsoft.Network/virtualNetworks/vnet-gsksim-poc-ws",
+        "vnetId": "/subscriptions/546ec9a3-31a2-4360-a459-7e628a08dcbb/resourceGroups/contoso-rg1/providers/Microsoft.Network/virtualNetworks/vnet-contoso-poc-ws",
         "linkState": "created"
       },
       "timestamp": "2026-09-24T22:52:34.3324698Z"
@@ -1040,14 +1040,14 @@
       "id": "private-dns-privatelink-vaultcore-azure-net",
       "name": "private DNS privatelink.vaultcore.azure.net",
       "status": "Pass",
-      "detail": "zone=created link=created vnet=vnet-gsksim-poc-ws",
+      "detail": "zone=created link=created vnet=vnet-contoso-poc-ws",
       "remediation": "",
       "fr": "FR2.5",
       "data": {
         "zoneState": "created",
         "linkName": "link-vaultcore-azure-net",
         "zone": "privatelink.vaultcore.azure.net",
-        "vnetId": "/subscriptions/546ec9a3-31a2-4360-a459-7e628a08dcbb/resourceGroups/gsk-sim-rg1/providers/Microsoft.Network/virtualNetworks/vnet-gsksim-poc-ws",
+        "vnetId": "/subscriptions/546ec9a3-31a2-4360-a459-7e628a08dcbb/resourceGroups/contoso-rg1/providers/Microsoft.Network/virtualNetworks/vnet-contoso-poc-ws",
         "linkState": "created"
       },
       "timestamp": "2026-09-24T22:53:52.1472647Z"
@@ -1056,14 +1056,14 @@
       "id": "private-dns-privatelink-search-windows-net",
       "name": "private DNS privatelink.search.windows.net",
       "status": "Pass",
-      "detail": "zone=created link=created vnet=vnet-gsksim-poc-ws",
+      "detail": "zone=created link=created vnet=vnet-contoso-poc-ws",
       "remediation": "",
       "fr": "FR2.5",
       "data": {
         "zoneState": "created",
         "linkName": "link-search-windows-net",
         "zone": "privatelink.search.windows.net",
-        "vnetId": "/subscriptions/546ec9a3-31a2-4360-a459-7e628a08dcbb/resourceGroups/gsk-sim-rg1/providers/Microsoft.Network/virtualNetworks/vnet-gsksim-poc-ws",
+        "vnetId": "/subscriptions/546ec9a3-31a2-4360-a459-7e628a08dcbb/resourceGroups/contoso-rg1/providers/Microsoft.Network/virtualNetworks/vnet-contoso-poc-ws",
         "linkState": "created"
       },
       "timestamp": "2026-09-24T22:55:09.1583406Z"
@@ -1072,14 +1072,14 @@
       "id": "private-dns-privatelink-cognitiveservices-azure-com",
       "name": "private DNS privatelink.cognitiveservices.azure.com",
       "status": "Pass",
-      "detail": "zone=created link=created vnet=vnet-gsksim-poc-ws",
+      "detail": "zone=created link=created vnet=vnet-contoso-poc-ws",
       "remediation": "",
       "fr": "FR2.5",
       "data": {
         "zoneState": "created",
         "linkName": "link-cognitiveservices-azure-com",
         "zone": "privatelink.cognitiveservices.azure.com",
-        "vnetId": "/subscriptions/546ec9a3-31a2-4360-a459-7e628a08dcbb/resourceGroups/gsk-sim-rg1/providers/Microsoft.Network/virtualNetworks/vnet-gsksim-poc-ws",
+        "vnetId": "/subscriptions/546ec9a3-31a2-4360-a459-7e628a08dcbb/resourceGroups/contoso-rg1/providers/Microsoft.Network/virtualNetworks/vnet-contoso-poc-ws",
         "linkState": "created"
       },
       "timestamp": "2026-09-24T22:56:25.9619414Z"
@@ -1088,14 +1088,14 @@
       "id": "private-dns-privatelink-openai-azure-com",
       "name": "private DNS privatelink.openai.azure.com",
       "status": "Pass",
-      "detail": "zone=created link=created vnet=vnet-gsksim-poc-ws",
+      "detail": "zone=created link=created vnet=vnet-contoso-poc-ws",
       "remediation": "",
       "fr": "FR2.5",
       "data": {
         "zoneState": "created",
         "linkName": "link-openai-azure-com",
         "zone": "privatelink.openai.azure.com",
-        "vnetId": "/subscriptions/546ec9a3-31a2-4360-a459-7e628a08dcbb/resourceGroups/gsk-sim-rg1/providers/Microsoft.Network/virtualNetworks/vnet-gsksim-poc-ws",
+        "vnetId": "/subscriptions/546ec9a3-31a2-4360-a459-7e628a08dcbb/resourceGroups/contoso-rg1/providers/Microsoft.Network/virtualNetworks/vnet-contoso-poc-ws",
         "linkState": "created"
       },
       "timestamp": "2026-09-24T22:57:44.3183213Z"
@@ -1104,14 +1104,14 @@
       "id": "private-dns-privatelink-services-ai-azure-com",
       "name": "private DNS privatelink.services.ai.azure.com",
       "status": "Pass",
-      "detail": "zone=created link=created vnet=vnet-gsksim-poc-ws",
+      "detail": "zone=created link=created vnet=vnet-contoso-poc-ws",
       "remediation": "",
       "fr": "FR2.5",
       "data": {
         "zoneState": "created",
         "linkName": "link-services-ai-azure-com",
         "zone": "privatelink.services.ai.azure.com",
-        "vnetId": "/subscriptions/546ec9a3-31a2-4360-a459-7e628a08dcbb/resourceGroups/gsk-sim-rg1/providers/Microsoft.Network/virtualNetworks/vnet-gsksim-poc-ws",
+        "vnetId": "/subscriptions/546ec9a3-31a2-4360-a459-7e628a08dcbb/resourceGroups/contoso-rg1/providers/Microsoft.Network/virtualNetworks/vnet-contoso-poc-ws",
         "linkState": "created"
       },
       "timestamp": "2026-09-24T22:59:02.1686728Z"
@@ -1120,14 +1120,14 @@
       "id": "private-dns-privatelink-documents-azure-com",
       "name": "private DNS privatelink.documents.azure.com",
       "status": "Pass",
-      "detail": "zone=created link=created vnet=vnet-gsksim-poc-ws",
+      "detail": "zone=created link=created vnet=vnet-contoso-poc-ws",
       "remediation": "",
       "fr": "FR2.5",
       "data": {
         "zoneState": "created",
         "linkName": "link-documents-azure-com",
         "zone": "privatelink.documents.azure.com",
-        "vnetId": "/subscriptions/546ec9a3-31a2-4360-a459-7e628a08dcbb/resourceGroups/gsk-sim-rg1/providers/Microsoft.Network/virtualNetworks/vnet-gsksim-poc-ws",
+        "vnetId": "/subscriptions/546ec9a3-31a2-4360-a459-7e628a08dcbb/resourceGroups/contoso-rg1/providers/Microsoft.Network/virtualNetworks/vnet-contoso-poc-ws",
         "linkState": "created"
       },
       "timestamp": "2026-09-24T23:00:18.2887024Z"
@@ -1136,14 +1136,14 @@
       "id": "private-dns-privatelink-azurecr-io",
       "name": "private DNS privatelink.azurecr.io",
       "status": "Pass",
-      "detail": "zone=created link=created vnet=vnet-gsksim-poc-ws",
+      "detail": "zone=created link=created vnet=vnet-contoso-poc-ws",
       "remediation": "",
       "fr": "FR2.5",
       "data": {
         "zoneState": "created",
         "linkName": "link-azurecr-io",
         "zone": "privatelink.azurecr.io",
-        "vnetId": "/subscriptions/546ec9a3-31a2-4360-a459-7e628a08dcbb/resourceGroups/gsk-sim-rg1/providers/Microsoft.Network/virtualNetworks/vnet-gsksim-poc-ws",
+        "vnetId": "/subscriptions/546ec9a3-31a2-4360-a459-7e628a08dcbb/resourceGroups/contoso-rg1/providers/Microsoft.Network/virtualNetworks/vnet-contoso-poc-ws",
         "linkState": "created"
       },
       "timestamp": "2026-09-24T23:01:34.4493568Z"
@@ -1162,13 +1162,13 @@
       "id": "firewall-request-artifact",
       "name": "firewall request artifact",
       "status": "Pass",
-      "detail": "Wrote C:\\code\\misc-doc\\discovery-doc\\onboarding\\scripts\\stage2-landing-zone\\out\\firewall-request-gsksim-poc-ws.md and C:\\code\\misc-doc\\discovery-doc\\onboarding\\scripts\\stage2-landing-zone\\out\\firewall-request-gsksim-poc-ws.json using source CIDR 10.46.252.0/23.",
+      "detail": "Wrote C:\\code\\misc-doc\\discovery-doc\\onboarding\\scripts\\stage2-landing-zone\\out\\firewall-request-contoso-poc-ws.md and C:\\code\\misc-doc\\discovery-doc\\onboarding\\scripts\\stage2-landing-zone\\out\\firewall-request-contoso-poc-ws.json using source CIDR 10.46.252.0/23.",
       "remediation": "",
       "fr": "FR2.7",
       "data": {
         "sourceCidr": "10.46.252.0/23",
-        "markdownPath": "C:\\code\\misc-doc\\discovery-doc\\onboarding\\scripts\\stage2-landing-zone\\out\\firewall-request-gsksim-poc-ws.md",
-        "jsonPath": "C:\\code\\misc-doc\\discovery-doc\\onboarding\\scripts\\stage2-landing-zone\\out\\firewall-request-gsksim-poc-ws.json"
+        "markdownPath": "C:\\code\\misc-doc\\discovery-doc\\onboarding\\scripts\\stage2-landing-zone\\out\\firewall-request-contoso-poc-ws.md",
+        "jsonPath": "C:\\code\\misc-doc\\discovery-doc\\onboarding\\scripts\\stage2-landing-zone\\out\\firewall-request-contoso-poc-ws.json"
       },
       "timestamp": "2026-09-24T23:01:34.5673685Z"
     },
@@ -1176,12 +1176,12 @@
       "id": "quota-request-artifact",
       "name": "quota increase request artifact",
       "status": "Pass",
-      "detail": "Wrote C:\\code\\misc-doc\\discovery-doc\\onboarding\\scripts\\stage2-landing-zone\\out\\quota-increase-requests-gsksim-poc-ws.json and C:\\code\\misc-doc\\discovery-doc\\onboarding\\scripts\\stage2-landing-zone\\out\\quota-increase-requests-gsksim-poc-ws.md.",
+      "detail": "Wrote C:\\code\\misc-doc\\discovery-doc\\onboarding\\scripts\\stage2-landing-zone\\out\\quota-increase-requests-contoso-poc-ws.json and C:\\code\\misc-doc\\discovery-doc\\onboarding\\scripts\\stage2-landing-zone\\out\\quota-increase-requests-contoso-poc-ws.md.",
       "remediation": "",
       "fr": "FR2.8",
       "data": {
-        "markdownPath": "C:\\code\\misc-doc\\discovery-doc\\onboarding\\scripts\\stage2-landing-zone\\out\\quota-increase-requests-gsksim-poc-ws.md",
-        "jsonPath": "C:\\code\\misc-doc\\discovery-doc\\onboarding\\scripts\\stage2-landing-zone\\out\\quota-increase-requests-gsksim-poc-ws.json",
+        "markdownPath": "C:\\code\\misc-doc\\discovery-doc\\onboarding\\scripts\\stage2-landing-zone\\out\\quota-increase-requests-contoso-poc-ws.md",
+        "jsonPath": "C:\\code\\misc-doc\\discovery-doc\\onboarding\\scripts\\stage2-landing-zone\\out\\quota-increase-requests-contoso-poc-ws.json",
         "requestCount": 3
       },
       "timestamp": "2026-09-24T23:01:34.5968028Z"
@@ -1190,12 +1190,12 @@
       "id": "policy-exemption-artifact",
       "name": "policy exemption request artifact",
       "status": "Pass",
-      "detail": "Wrote C:\\code\\misc-doc\\discovery-doc\\onboarding\\scripts\\stage2-landing-zone\\out\\policy-exemption-requests-gsksim-poc-ws.json and C:\\code\\misc-doc\\discovery-doc\\onboarding\\scripts\\stage2-landing-zone\\out\\policy-exemption-requests-gsksim-poc-ws.md.",
+      "detail": "Wrote C:\\code\\misc-doc\\discovery-doc\\onboarding\\scripts\\stage2-landing-zone\\out\\policy-exemption-requests-contoso-poc-ws.json and C:\\code\\misc-doc\\discovery-doc\\onboarding\\scripts\\stage2-landing-zone\\out\\policy-exemption-requests-contoso-poc-ws.md.",
       "remediation": "",
       "fr": "FR2.8",
       "data": {
-        "markdownPath": "C:\\code\\misc-doc\\discovery-doc\\onboarding\\scripts\\stage2-landing-zone\\out\\policy-exemption-requests-gsksim-poc-ws.md",
-        "jsonPath": "C:\\code\\misc-doc\\discovery-doc\\onboarding\\scripts\\stage2-landing-zone\\out\\policy-exemption-requests-gsksim-poc-ws.json",
+        "markdownPath": "C:\\code\\misc-doc\\discovery-doc\\onboarding\\scripts\\stage2-landing-zone\\out\\policy-exemption-requests-contoso-poc-ws.md",
+        "jsonPath": "C:\\code\\misc-doc\\discovery-doc\\onboarding\\scripts\\stage2-landing-zone\\out\\policy-exemption-requests-contoso-poc-ws.json",
         "requestCount": 3
       },
       "timestamp": "2026-09-24T23:01:34.6188644Z"

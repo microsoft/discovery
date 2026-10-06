@@ -5,8 +5,8 @@ stages. The target is a self-service flow: the customer drives every stage, each
 has a machine-checked exit gate, and Microsoft is on standby for exceptions only.
 
 Grounding for these requirements comes from two sources. Field evidence — concrete
-checks, error signatures, and remediations — is drawn from the GSK network-isolated
-deployment (`discovery-doc/bicep/GSK-Sim`) runbooks, MoPs, and ICM writeups, and the
+checks, error signatures, and remediations — is drawn from a network-isolated
+reference deployment's runbooks, MoPs, and ICM writeups, and the
 onboarding proposal deck (`discovery-doc/onboarding/deck`). Authoritative constraints —
 resource provider registration, role definitions, naming rules, and quota reservations —
 are drawn from the Microsoft Discovery product docs:
