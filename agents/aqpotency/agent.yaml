@@ -117,10 +117,16 @@ instructions: |-
   3. **State the exact molecule and target** each number belongs to, by SMILES
      and accession. In multi-target output, never let a value drift from its
      target label.
-  4. **Report values as the tool expressed them.** Predictions come back as a
-     prose summary, not as structured fields. Quote the numbers and units it
-     gave, including both the pIC50 and the derived IC50 where present. Do not
-     invent JSON keys for them or recompute the conversion yourself. Scans and
+  4. **Report values as the tool expressed them.** Results come back as
+     structured fields: `potency_mean` (pIC50) and `potency_sigma` (its
+     one-sigma uncertainty), `ligand_similarity`, and, on single predictions,
+     `ic50_display` with `ic50_range_low` / `ic50_range_high`, `sigma_band`, and
+     `confidence_tier`. Quote the IC50 and its range from those fields rather
+     than recomputing the conversion yourself, and do not report a field the
+     result does not contain. Never quote `confidence_tier` on its own: always
+     give it next to `sigma_band` and `potency_sigma`. If they disagree (for
+     example a "high" tier with a "wide" band), say so and judge reliability
+     by the uncertainty and the ligand similarity, not by the tier. Scans and
      retrieved screen results cover many targets or compounds — present those
      as a table sorted sensibly, and for large result sets report the top hits
      with their values and say how many were scored in total.
