@@ -10,12 +10,11 @@ publisher:
 description: >
   Small-molecule potency agent backed by SandboxAQ AQPotency. Predicts binding
   potency with uncertainty for a molecule against a protein target, scans
-  molecules against safety and selectivity panels, checks selectivity across
-  named targets, and screens compound libraries. Reached over the SandboxAQ AI
+  molecules against predefined safety, kinome, and proteome panels, and checks
+  selectivity against named off-targets. Reached over the SandboxAQ AI
   Simulation Platform MCP endpoint.
 tags:
   - drug-discovery
   - binding-affinity
-  - virtual-screening
   - safety-screening
   - bioactivity

@@ -25,13 +25,14 @@ Discovery agent (prompt, {{CHAT-MODEL}})
         ▼
 SandboxAQ AI Simulation Platform MCP server  ({{AQ_MCP_SERVER_URL}})
         │
-        ├── aqcat            — adsorption / binding energy, surface reactivity
-        └── list_jobs / check_job_status / get_job_results
+        ├── AQCat            — adsorption / binding energy, surface reactivity
+        ├── aqcat_compare    — ranks completed AQCat jobs across surfaces
+        └── list_jobs / check_job_status / get_job_results / get_credit_balance
 ```
 
 The agent holds no compute of its own and ships no container. It is a prompt agent with a single Foundry-native MCP tool, scoped by `allowedTools` to the AQCat and job-management tools on the platform's MCP server. All calculation happens on SandboxAQ infrastructure.
 
-**Data flow.** The user's request goes in as natural language; the agent maps it to one `aqcat` job per bulk–facet–adsorbate combination, returns the job identifiers, checks status when the user asks, and retrieves results once a job completes. Nothing is persisted by the agent — job state lives on the platform and is addressable by job identifier across sessions.
+**Data flow.** The user's request goes in as natural language; the agent maps it to one `AQCat` job per bulk–facet–adsorbate combination, returns the job identifiers, checks status when the user asks, and retrieves results once a job completes. Nothing is persisted by the agent — job state lives on the platform and is addressable by job identifier across sessions.
 
 **Asynchronous by design.** AQCat submissions are jobs, not synchronous calls. The agent reports the job identifier as soon as it submits, so work is recoverable if a session ends mid-calculation. It has no way to wait between calls, so it does not poll in a loop: it checks status once each time the user asks (for example, "check status").
 
@@ -84,12 +85,14 @@ Provided by the SandboxAQ AI Simulation Platform MCP server; no container images
 
 | Tool | Purpose |
 |---|---|
-| `aqcat` | Adsorption / binding energy and surface reactivity for one bulk–facet–adsorbate combination (up to 5 placements) |
+| `AQCat` | Adsorption / binding energy and surface reactivity for one bulk–facet–adsorbate combination (up to 5 placements) |
+| `aqcat_compare` | Ranks 2–15 completed `AQCat` jobs for one adsorbate across surfaces; uses no compute |
 | `list_jobs` | Lists jobs submitted from the tenant |
 | `check_job_status` | Checks the status of a submitted job |
 | `get_job_results` | Retrieves results for a completed job |
+| `get_credit_balance` | Reports remaining credit when the user asks |
 
-For comparative questions the agent submits one `aqcat` job per candidate surface with identical adsorbate, placement count, and spin settings, then ranks the completed results, so the energies being compared were computed the same way.
+For comparative questions the agent submits one `AQCat` job per candidate surface with identical adsorbate, placement count, and convergence settings, then passes the completed job IDs to `aqcat_compare`, which ranks them against a baseline. If no facet is given, the agent proposes `1,1,1` and states it as an assumption in the plan.
 
 ## Known Limitations
 

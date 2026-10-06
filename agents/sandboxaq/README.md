@@ -22,7 +22,7 @@ Three SandboxAQ agents are published in this catalog. Choose by what you have ac
 |---|---|---|
 | **`sandboxaq`** (this one) | You have subscribed to a SandboxAQ model in Azure AI Foundry and want to prompt it directly | A SandboxAQ model subscription in Foundry |
 | [**`aqcat`**](../aqcat/README.md) | You want adsorption energies and surface reactivity for catalysis | A SandboxAQ AI Simulation Platform tenant |
-| [**`aqpotency`**](../aqpotency/README.md) | You want small-molecule potency, selectivity, or library screening | A SandboxAQ AI Simulation Platform tenant |
+| [**`aqpotency`**](../aqpotency/README.md) | You want small-molecule potency, panel scans, or selectivity | A SandboxAQ AI Simulation Platform tenant |
 
 This agent is general-purpose inference against a model deployment you control. The other two are domain agents that reach specific scientific tools on the SandboxAQ platform.
 
