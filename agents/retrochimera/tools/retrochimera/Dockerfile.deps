@@ -9,7 +9,7 @@
 #   --build-arg RETROCHIMERA_VERSION=1.2.0
 #   --build-arg SYNTHESEUS_VERSION=0.8.0
 
-FROM condaforge/mambaforge:24.3.0-0
+FROM condaforge/mambaforge:24.9.2-0
 
 ENV PYTHONUNBUFFERED=1
 ENV PYTHONDONTWRITEBYTECODE=1
