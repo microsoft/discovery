@@ -38,6 +38,9 @@
       "required": ["osx-arm64", "win-arm64", "win-x64"],
       "additionalProperties": false,
       "properties": {
+        "rhel-x64": {
+          "$ref": "#/definitions/rhelPlatformRelease"
+        },
         "osx-arm64": {
           "allOf": [
             { "$ref": "#/definitions/platformRelease" },
@@ -92,6 +95,24 @@
     }
   },
   "definitions": {
+    "rhelPlatformRelease": {
+      "description": "Optional RHEL x64 release. Only RHEL may use the exact pending-publish placeholder until its HTTPS installer URL is available.",
+      "type": "object",
+      "required": ["installerUrl", "sha256"],
+      "additionalProperties": false,
+      "properties": {
+        "installerUrl": {
+          "pattern": "^[^\\s]+$(?![\\s\\S])",
+          "anyOf": [
+            { "$ref": "#/definitions/platformRelease/properties/installerUrl" },
+            { "const": "PLACEHOLDER_PENDING_PUBLISH" }
+          ]
+        },
+        "sha256": {
+          "$ref": "#/definitions/platformRelease/properties/sha256"
+        }
+      }
+    },
     "semanticVersion": {
       "type": "string",
       "maxLength": 64,
