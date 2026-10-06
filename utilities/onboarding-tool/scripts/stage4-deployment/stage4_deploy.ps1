@@ -222,6 +222,26 @@ function New-DiscoveryId {
     return "/subscriptions/$SubscriptionId/resourceGroups/$ResourceGroup/providers/Microsoft.Discovery/$TypePath/$NamePath"
 }
 
+# Resolve the VNet name using the same precedence Stage 2 (Get-VNetName) applies, so the
+# Stage 1 -> Stage 2 -> Stage 4 flow derives identical names without a config write-back:
+# network.vnetName/virtualNetworkName -> names.vnet/virtualNetwork -> vnet-<workspace>.
+function Get-Stage4VNetName {
+    param([object]$Config)
+    $network = Get-ObjProp -Object $Config -Name 'network'
+    foreach ($n in 'vnetName', 'virtualNetworkName') {
+        $v = Get-ObjProp -Object $network -Name $n
+        if ($v) { return [string]$v }
+    }
+    $names = Get-ObjProp -Object $Config -Name 'names'
+    foreach ($n in 'vnet', 'virtualNetwork') {
+        $v = Get-ObjProp -Object $names -Name $n
+        if ($v) { return [string]$v }
+    }
+    $workspace = Get-ObjProp -Object $names -Name 'workspace'
+    if ($workspace) { return "vnet-$workspace" }
+    return ''
+}
+
 function Get-SubnetIdByRole {
     param([object]$Config, [string]$Role, [string]$ResourceGroup)
     $network = Get-ObjProp -Object $Config -Name 'network'
@@ -232,7 +252,11 @@ function Get-SubnetIdByRole {
     if ($id) { return [string]$id }
     $vnetName = Get-ObjProp -Object $subnet -Name 'vnetName'
     if (-not $vnetName) { $vnetName = Get-ObjProp -Object $network -Name 'vnetName' }
+    if (-not $vnetName) { $vnetName = Get-Stage4VNetName -Config $Config }
+    # Mirror Stage 2 (Get-SubnetName): explicit name/subnetName, else snet-<role>.
     $name = Get-ObjProp -Object $subnet -Name 'name'
+    if (-not $name) { $name = Get-ObjProp -Object $subnet -Name 'subnetName' }
+    if (-not $name) { $name = "snet-$Role" }
     if ($vnetName -and $name) {
         $subRg = Get-ObjProp -Object $subnet -Name 'resourceGroup'
         if (-not $subRg) { $subRg = Get-ObjProp -Object $network -Name 'networkResourceGroup' }
@@ -470,6 +494,21 @@ if (-not $NoBicep -and -not $Recovery -and -not $BicepPath) {
     if (Test-Path -LiteralPath $defaultBicep) {
         $BicepPath = $defaultBicep
         if (-not $ParametersPath) {
+            # The platform template requires five subnet IDs. Stage 1 records role+CIDR only and
+            # Stage 2 does not write names/IDs back to the config, so resolve each role with the
+            # same deterministic convention Stage 2 uses (vnet-<workspace> / snet-<role>). Fail fast
+            # with a clear prerequisite when any required subnet still cannot be derived.
+            $requiredRoles = @('managedcluster', 'nodepool', 'agent-containerapp', 'workspace-containerapp', 'private-endpoints')
+            $missingSubnets = @($requiredRoles | Where-Object { -not (Get-SubnetIdByRole -Config $cfg -Role $_ -ResourceGroup $resourceGroup) })
+            if ($missingSubnets.Count) {
+                $results.Add((New-CheckResult -Id 'deploy-subnet-ids' -Name 'deployment subnet ids' -Status 'Fail' -Fr 'FR4.1' `
+                            -Detail "Could not resolve required subnet id(s) for role(s): $($missingSubnets -join ', ')." `
+                            -Remediation 'Run Stage 2 to provision the landing-zone network (it names subnets vnet-<workspace>/snet-<role>), or set network.vnetName and per-subnet name/id in the config so Stage 4 can build the platform parameters.' `
+                            -Data ([pscustomobject]@{ missingRoles = $missingSubnets })))
+                if ($PassThru) { return $results.ToArray() }
+                $null = Write-OnboardingReport -Results $results.ToArray() -Title 'Stage 4 · deploy order (FR4.1-FR4.2)' -JsonPath $JsonPath
+                Complete-Stage -Results $results.ToArray()
+            }
             $generatedParamFile = New-Stage4BicepParamFile -Config $cfg -ResourceGroup $resourceGroup -Location $location
             $ParametersPath = $generatedParamFile
         }
