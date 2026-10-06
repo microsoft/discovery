@@ -1,0 +1,24 @@
+name: nvidia-alchemi
+type: agent
+version: 1.1.2
+associated_tools:
+  - agents/nvidia-alchemi/tools/nvidia-alchemi
+publisher:
+  name: Microsoft
+  contact: discovery-catalog@microsoft.com
+  support_url: https://techcommunity.microsoft.com/category/azure/discussions/microsoft-discovery-discussions
+  party: 1p
+description: >
+  Expert agent for high-throughput, GPU-first AI atomic simulation using the NVIDIA ALCHEMI Toolkit. Runs batched
+  geometry relaxation and molecular dynamics (NVE, NVT, NPT, NPH) driven by machine-learned interatomic potentials
+  (MACE, AIMNet2) composed with classical terms (Lennard-Jones, DFT-D3 dispersion, Ewald and PME electrostatics).
+  Supports multi-stage fused pipelines, inflight batching for screening campaigns, Zarr trajectory capture, MLIP
+  training and fine-tuning, and multi-GPU execution.
+tags:
+  - molecular-dynamics
+  - machine-learning
+  - materials-science
+  - computational-chemistry
+  - gpu
+  - simulation
+  - trained-model
