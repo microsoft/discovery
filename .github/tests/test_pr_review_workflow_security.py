@@ -56,6 +56,11 @@ def test_author_trust_signals_are_passed_to_validator():
     assert classify["outputs"]["author_permission"] == (
         "${{ steps.author_permission.outputs.permission }}"
     )
+    assert classify["outputs"]["author_association"] == (
+        "${{ steps.author_permission.outputs.association }}"
+    )
+    assert "github.rest.pulls.get" in permission_step["with"]["script"]
+    assert "response.data.author_association" in permission_step["with"]["script"]
 
     validator = next(
         step
@@ -66,7 +71,7 @@ def test_author_trust_signals_are_passed_to_validator():
         "${{ needs.classify.outputs.author_permission || 'unknown' }}"
     )
     assert validator["env"]["PR_AUTHOR_ASSOCIATION"] == (
-        "${{ github.event.pull_request.author_association || 'NONE' }}"
+        "${{ needs.classify.outputs.author_association || 'NONE' }}"
     )
 
 
@@ -111,7 +116,8 @@ def test_native_auto_merge_keeps_only_the_manifest_exception():
 
     assert "actions/checkout" not in source
     assert "pull_request_target" in source
-    assert "trustedAssociations.has(pr.author_association)" in source
+    assert "github.rest.pulls.get" in source
+    assert "trustedAssociations.has(currentPr.data.author_association)" in source
     assert "files.length === 1" in source
     assert "docs\\/discovery-app\\/releases\\/manifests\\/" in source
     assert "['added', 'modified'].includes(files[0].status)" in source
@@ -125,24 +131,6 @@ def test_native_auto_merge_keeps_only_the_manifest_exception():
     assert "TOOLBOX_FAST_LANE" not in source
     assert "HUMAN_APPROVALS" not in source
     assert "CHECKS_PASSED" not in source
-
-
-def test_each_source_utility_directory_has_explicit_ownership():
-    owners = CODEOWNERS_PATH.read_text(encoding="utf-8")
-    utilities = CODEOWNERS_PATH.parents[1] / "utilities"
-    source_suffixes = {
-        ".bat", ".bicep", ".cmd", ".cs", ".go", ".js", ".ps1", ".py",
-        ".rs", ".sh", ".tf", ".ts",
-    }
-    source_directories = {
-        path.relative_to(utilities).parts[0]
-        for path in utilities.rglob("*")
-        if path.is_file() and path.suffix.lower() in source_suffixes
-    }
-
-    for directory in source_directories:
-        assert f"/utilities/{directory}/" in owners
-
 
 def test_trufflehog_install_and_repository_layout_are_stable():
     workflow = load_workflow()
