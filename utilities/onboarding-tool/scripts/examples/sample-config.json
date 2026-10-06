@@ -1,6 +1,10 @@
 {
   "schemaVersion": "1.0",
   "subscriptionId": "00000000-0000-0000-0000-000000000000",
+  "resourceGroup": "rg-discovery-platform",
+  "managedIdentity": {
+    "id": "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/rg-discovery-platform/providers/Microsoft.ManagedIdentity/userAssignedIdentities/id-discovery"
+  },
   "environment": "devtest",
   "controlPlaneRegion": "eastus2",
   "workloadRegion": "eastus2",
@@ -28,7 +32,7 @@
       { "role": "nodepool",               "cidr": "10.10.1.64/26",  "requiredPrefix": "/26", "delegation": "none" }
     ]
   },
-  "storage": { "model": "managed", "access": "privateEndpoint" },
+  "storage": { "model": "managed", "access": "privateEndpoint", "accountId": "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/rg-discovery-platform/providers/Microsoft.Storage/storageAccounts/stdiscoverybookshelf" },
   "sizingTier": "Small",
   "bookshelf": { "inScope": true, "instances": 1 },
   "projects": 2,
@@ -48,5 +52,11 @@
     "Cognitive Services accounts should disable public network access",
     "Storage accounts should disable public network access"
   ],
-  "waivers": []
+  "waivers": [
+    {
+      "check": "policy-preflight",
+      "justification": "Known deny policies are handled in Stage 2 via policy exemption / private-endpoint configuration before deployment.",
+      "approvedBy": "sample"
+    }
+  ]
 }

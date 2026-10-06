@@ -26,6 +26,20 @@
     "subscriptionId": {
       "type": "string"
     },
+    "resourceGroup": {
+      "type": "string",
+      "description": "Target resource group for the Stage 4 platform deployment. Stage 1 emits this (falling back to network.networkResourceGroup when the deployment shares the network RG)."
+    },
+    "managedIdentity": {
+      "type": "object",
+      "description": "Pre-existing user-assigned managed identity consumed by Stage 4. The tool does not provision it; supply the resource id as a prerequisite.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Resource id of the user-assigned managed identity."
+        }
+      }
+    },
     "environment": {
       "type": "string",
       "enum": [
@@ -167,6 +181,10 @@
         },
         "account": {
           "type": "string"
+        },
+        "accountId": {
+          "type": "string",
+          "description": "Resource id of the storage account used for the bookshelf (consumed by Stage 4 when bookshelf is in scope)."
         },
         "access": {
           "type": "string",

@@ -428,6 +428,14 @@ $supercomputerName = Get-ConfigName -Config $cfg -Name 'supercomputer' -Default 
 $nodePoolName = Get-ConfigName -Config $cfg -Name 'nodePool' -Default ''
 $storageContainerName = Get-ConfigName -Config $cfg -Name 'storageContainer' -Default "$workspaceName-bookshelf"
 $managedIdentityId = Get-ManagedIdentityId -Config $cfg -ResourceGroup $resourceGroup
+if ([string]::IsNullOrWhiteSpace($managedIdentityId)) {
+    $results.Add((New-CheckResult -Id 'deploy-managed-identity' -Name 'deployment managed identity' -Status 'Fail' -Fr 'FR4.1' `
+                -Detail 'Config does not include managedIdentity.id; the platform template requires a pre-existing user-assigned managed identity.' `
+                -Remediation 'Pre-create a user-assigned managed identity (a prerequisite the tool does not provision) and set managedIdentity.id in the onboarding config before running Stage 4; the Bicep identity parameter is mandatory and cannot be empty.'))
+    if ($PassThru) { return $results.ToArray() }
+    $null = Write-OnboardingReport -Results $results.ToArray() -Title 'Stage 4 · deploy order (FR4.1-FR4.2)' -JsonPath $JsonPath
+    Complete-Stage -Results $results.ToArray()
+}
 
 $supercomputerId = New-DiscoveryId -SubscriptionId $subscriptionId -ResourceGroup $resourceGroup -TypePath 'supercomputers' -NamePath $supercomputerName
 $workspaceId = New-DiscoveryId -SubscriptionId $subscriptionId -ResourceGroup $resourceGroup -TypePath 'workspaces' -NamePath $workspaceName

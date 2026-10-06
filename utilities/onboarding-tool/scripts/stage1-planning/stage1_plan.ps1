@@ -181,6 +181,8 @@ function ConvertTo-ConfigModel {
     $model = [ordered]@{
         schemaVersion     = (Val 'schemaVersion' '1.0')
         subscriptionId    = (Val 'subscriptionId')
+        resourceGroup     = (Val 'resourceGroup' (Val 'network.networkResourceGroup'))
+        managedIdentity   = [ordered]@{ id = (Val 'managedIdentity.id') }
         environment       = (Val 'environment')
         controlPlaneRegion = (Val 'controlPlaneRegion')
         workloadRegion    = (Val 'workloadRegion')
@@ -203,6 +205,7 @@ function ConvertTo-ConfigModel {
         storage           = [ordered]@{
             model  = (Val 'storage.model' 'managed')
             account = (Val 'storage.account')
+            accountId = (Val 'storage.accountId')
             access = (Val 'storage.access' 'privateEndpoint')
         }
         sizingTier        = (Val 'sizingTier' 'Small')
@@ -540,9 +543,9 @@ function Invoke-Stage1Checks {
     }
     $conflicts = @($conflicts | Sort-Object policy -Unique)
     if ($conflicts.Count) {
-        $R.Add((New-CheckResult -Id 'policy-preflight' -Name 'Deny-policy pre-flight' -Status 'Warn' -Fr 'FR1.7' `
+        $R.Add((New-CheckResult -Id 'policy-preflight' -Name 'Deny-policy pre-flight' -Status 'Fail' -Fr 'FR1.7' `
                     -Detail (($conflicts | ForEach-Object { "$($_.policy) [$($_.handling)]" }) -join '; ') `
-                    -Remediation 'Plan the exemption or configuration change now (feeds Stage 2 quota_exemption_requests).' -Data $conflicts))
+                    -Remediation 'Known blocking deny policy detected. Plan the exemption or configuration change now (feeds Stage 2 quota_exemption_requests), then either remove/exempt the policy or record a WAIVER row (check=policy-preflight + justification) in the Config sheet to clear the export gate.' -Data $conflicts))
     }
     else {
         $R.Add((New-CheckResult -Id 'policy-preflight' -Name 'Deny-policy pre-flight' -Status 'Pass' -Fr 'FR1.7' -Detail 'No known blocking deny policies in the declared or live assignment set.'))
