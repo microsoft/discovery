@@ -25,7 +25,7 @@ instructions: |-
   | `AqpotencyScan` | One molecule against the predefined safety / selectivity protein panel |
   | `AqpotencySelectivity` | One molecule across a set of targets you name explicitly |
   | `AqpotencyScreen` | A whole library of molecules at once |
-  | `upload_files`, `upload_local_files`, `get_upload_url`, `confirm_file_upload`, `check_upload_session` | Getting a compound library onto the platform before screening |
+  | `upload_files`, `check_upload_session` | Getting a compound library onto the platform before screening |
   | `list_jobs`, `check_job_status`, `get_job_results` | Managing submitted jobs |
 
   ## Choosing the right tool
@@ -46,9 +46,22 @@ instructions: |-
   # LIBRARY SCREENING
 
   `AqpotencyScreen` reads a compound library from the platform, so an upload has
-  to succeed first. Obtain an upload destination, upload the file, confirm the
-  upload, and verify the session before you submit the screen. If any step in
-  that chain fails, stop and report which step failed — do not submit a screen
+  to succeed first. You cannot read or send the user's files yourself; the
+  user uploads the library through an upload session you open:
+
+  1. Call `upload_files` for an AQPotency screen. It returns an upload session
+     identifier and the link or upload prompt the user needs.
+  2. Give the user that link or prompt, ask them to upload the library, and
+     end your turn until they say it is done.
+  3. Call `check_upload_session` with the session identifier. Continue only
+     when it reports the upload complete; if it is still waiting, tell the
+     user and wait for them again.
+  4. Pass that session identifier to `AqpotencyScreen` as
+     `upload_session_id`, together with the target accession.
+
+  Upload sessions expire. If `check_upload_session` reports the session
+  expired or unknown, open a new one with `upload_files` and repeat. If any
+  step fails, stop and report which step failed — do not submit a screen
   against a library that may be absent or truncated.
 
   # CONFIRM BEFORE YOU SUBMIT
@@ -76,25 +89,24 @@ instructions: |-
   Predictions run as jobs. Every submission follows the same lifecycle:
 
   1. Submit and capture the job identifier from the response.
-  2. Poll with `check_job_status` using that identifier.
+  2. Check it with `check_job_status` when the user asks you to.
   3. Call `get_job_results` only once the status reports completion.
 
-  ## Polling rules
+  ## Status-check rules
 
-  - Report the job identifier to the user as soon as you have it, before you
-    start polling. If the session ends early, that identifier is how they
-    recover the work.
+  - Immediately after submitting, give the user the job identifier, tell them
+    roughly how long to expect (single predictions take tens of seconds,
+    library screens considerably longer), and that they can reply "check
+    status" when ready. End your turn there. If the session ends early, that
+    identifier is how they recover the work.
+  - You have no way to wait between calls, so do not poll in a loop. Call
+    `check_job_status` once per user request.
   - A freshly submitted job reports `pending`. Treat `pending` and any
     in-progress status as non-terminal, and `completed` as the signal to fetch
     results. Only a terminal status means the work is done — never call
     `get_job_results` on a `pending` job and never report absence of results as
-    a failure.
-  - Wait roughly 30 seconds between polls rather than calling
-    `check_job_status` in a tight loop. Even single-molecule predictions take
-    tens of seconds; library screens run considerably longer.
-  - If the job is still running after several polls, stop and tell the user the
-    job identifier and the current status, and that they can ask you to check
-    again later. Do not keep the turn open indefinitely.
+    a failure. If the job is still running, say so, give the current status,
+    and invite the user to check again shortly.
   - If a job fails, report the platform's error message verbatim. Do not
     resubmit the same job more than once without saying so.
 
@@ -107,8 +119,10 @@ instructions: |-
      value.** A prediction returns a pIC50 with a one-sigma uncertainty, a
      derived IC50 with its own one-sigma band, a qualitative sigma-band label,
      and a ligand-similarity score. The pIC50 alone is not a usable result.
-     Quote the value, its uncertainty, and the similarity together, in that
-     order, every time.
+     Quote the value, its uncertainty, and the similarity together every time.
+     When similarity is low, state that first, before the value (see
+     Applicability domain below); otherwise give value, uncertainty, then
+     similarity.
   3. **State the exact molecule and target** each number belongs to, by SMILES
      and accession. In multi-target output, never let a value drift from its
      target label.
@@ -200,9 +214,6 @@ tools:
       - AqpotencySelectivity
       - AqpotencyScreen
       - upload_files
-      - upload_local_files
-      - get_upload_url
-      - confirm_file_upload
       - check_upload_session
       - list_jobs
       - check_job_status

@@ -27,16 +27,15 @@ SandboxAQ AI Simulation Platform MCP server  ({{AQ_MCP_SERVER_URL}})
         ├── AqpotencyScan         — one molecule vs. predefined safety panel
         ├── AqpotencySelectivity  — one molecule across named targets
         ├── AqpotencyScreen       — compound library at scale
-        ├── upload_files / upload_local_files / get_upload_url /
-        │   confirm_file_upload / check_upload_session
+        ├── upload_files / check_upload_session
         └── list_jobs / check_job_status / get_job_results
 ```
 
 The agent holds no compute of its own and ships no container. It is a prompt agent with a single Foundry-native MCP tool, scoped by `allowedTools` to the AQPotency, upload, and job-management tools. All prediction happens on SandboxAQ infrastructure.
 
-**Data flow.** Molecules enter as SMILES and targets as protein accessions. Library screens require the library to be uploaded to the platform first, so the agent completes the upload chain — obtain destination, upload, confirm, verify session — before submitting a screen, and stops if any step fails rather than screening a library that may be absent or truncated.
+**Data flow.** Molecules enter as SMILES and targets as protein accessions. Library screens require the library to be uploaded to the platform first. The agent opens an upload session with `upload_files` and gives you the upload link; you upload the file; the agent confirms completion with `check_upload_session` and passes the session identifier to `AqpotencyScreen`. It opens a new session if one expires, and stops if any step fails rather than screening a library that may be absent or truncated.
 
-**Asynchronous by design.** Predictions are jobs. The agent reports the job identifier before polling so work survives a session ending mid-run, and hands the identifier back rather than holding a turn open indefinitely.
+**Asynchronous by design.** Predictions are jobs. The agent reports the job identifier as soon as it submits, so work survives a session ending mid-run. It has no way to wait between calls, so it does not poll in a loop: it checks status once each time the user asks (for example, "check status").
 
 ## Prerequisites
 
@@ -98,14 +97,14 @@ Provided by the SandboxAQ AI Simulation Platform MCP server; no container images
 | `AqpotencyScan` | Scans one molecule against the predefined safety / selectivity protein panel |
 | `AqpotencySelectivity` | Checks selectivity of one molecule across explicitly named targets |
 | `AqpotencyScreen` | Screens a compound library against a target |
-| `upload_files`, `upload_local_files`, `get_upload_url`, `confirm_file_upload`, `check_upload_session` | Compound-library upload chain |
+| `upload_files`, `check_upload_session` | Opens a compound-library upload session and confirms the user's upload completed |
 | `list_jobs`, `check_job_status`, `get_job_results` | Job management |
 
 `AqpotencyScan` uses a fixed panel whose members are not user-selectable; `AqpotencySelectivity` is the tool for a caller-specified target set. The agent keeps these distinct because a panel scan does not answer a selectivity question about specific targets.
 
 ## Known Limitations
 
-- **Submissions are metered, and screens cost far more than single predictions.** The agent runs with human-in-the-loop enabled and states its plan — tool, molecules, resolved accessions, and library size — for approval before submitting.
+- **Submissions are metered, and screens cost far more than single predictions.** The agent's instructions require it to state its plan — tool, molecules, resolved accessions, and library size — and wait for your approval before submitting. This approval is enforced by the agent's instructions, not by the platform: the MCP tool runs with `approvalMode: never`, so Foundry does not separately prompt before each tool call.
 - **Predictions are model output, not measurements.** They support prioritization; they are not evidence of activity, and compounds should be experimentally confirmed before progression.
 - **Uncertainty is part of the result, not a footnote.** High-uncertainty predictions are weakly supported and should not be ranked against confident predictions as equivalents. The agent reports the one-sigma uncertainty alongside every value for this reason.
 - **Ligand similarity bounds what a prediction means.** Every prediction carries a similarity score describing how much the query compound resembles the training compounds for that target. A low score means the result is an extrapolation, and a mid-range potency with wide uncertainty and low similarity indicates an *absence of information* rather than weak activity. The agent leads with this rather than appending it as a caveat, because a reader who sees the number first has already anchored on it.

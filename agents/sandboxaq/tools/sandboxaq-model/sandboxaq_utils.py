@@ -25,6 +25,43 @@ def required_env(name):
     return value
 
 
+def build_request(deployment):
+    """Return the chat-completions URL and auth headers for the configured endpoint.
+
+    FOUNDRY_API_STYLE selects the request shape:
+      - `azure-openai` (default): {endpoint}/deployments/{deployment}/chat/completions
+        with an `api-key` header. The endpoint includes the `/openai` API base.
+      - `serverless`: {endpoint}/chat/completions with a Bearer token, for
+        Foundry serverless / Foundry Models endpoints. The deployment, when
+        set, is sent as the `model` field.
+    """
+    endpoint = required_env("FOUNDRY_ENDPOINT").rstrip("/")
+    api_key = required_env("FOUNDRY_API_KEY")
+    style = (os.environ.get("FOUNDRY_API_STYLE") or "azure-openai").strip().lower()
+    if style == "azure-openai":
+        if not deployment:
+            raise RuntimeError(
+                "Required environment variable is not set: FOUNDRY_DEPLOYMENT"
+            )
+        api_version = os.environ.get("FOUNDRY_API_VERSION") or DEFAULT_API_VERSION
+        url = (
+            f"{endpoint}/deployments/{deployment}/chat/completions"
+            f"?api-version={api_version}"
+        )
+        auth = {"api-key": api_key}
+    elif style == "serverless":
+        api_version = os.environ.get("FOUNDRY_API_VERSION")
+        url = f"{endpoint}/chat/completions"
+        if api_version:
+            url += f"?api-version={api_version}"
+        auth = {"Authorization": f"Bearer {api_key}"}
+    else:
+        raise RuntimeError(
+            "FOUNDRY_API_STYLE must be 'azure-openai' or 'serverless'"
+        )
+    return url, {**auth, "Content-Type": "application/json"}
+
+
 def invoke_model(
     prompt,
     system_prompt="",
@@ -34,40 +71,48 @@ def invoke_model(
 ):
     """Send a prompt to the configured SandboxAQ deployment.
 
-    Returns a dict with `model`, `content`, `usage`, and `raw_response`.
-    Raises RuntimeError if the deployment is not configured or returns no
-    choices, and requests.RequestException on transport/HTTP failures.
+    Returns a dict with `model`, `content`, `finish_reason`, `usage`, and
+    `raw_response`. `content` is an empty string when the endpoint returns no
+    text (for example a `content_filter` finish reason). Raises RuntimeError on
+    missing configuration, transport or HTTP failures, and empty responses;
+    error messages never include the endpoint URL or credential.
     """
-    endpoint = required_env("FOUNDRY_ENDPOINT").rstrip("/")
-    deployment = required_env("FOUNDRY_DEPLOYMENT")
-    api_key = required_env("FOUNDRY_API_KEY")
-    api_version = os.environ.get("FOUNDRY_API_VERSION", DEFAULT_API_VERSION)
-    url = (
-        f"{endpoint}/deployments/{deployment}/chat/completions"
-        f"?api-version={api_version}"
-    )
+    deployment = os.environ.get("FOUNDRY_DEPLOYMENT", "")
+    url, headers = build_request(deployment)
     messages = []
     if system_prompt:
         messages.append({"role": "system", "content": system_prompt})
     messages.append({"role": "user", "content": prompt})
-    response = requests.post(
-        url,
-        headers={"api-key": api_key, "Content-Type": "application/json"},
-        json={
-            "messages": messages,
-            "temperature": temperature,
-            "max_tokens": max_tokens,
-        },
-        timeout=timeout,
-    )
-    response.raise_for_status()
+    body = {
+        "messages": messages,
+        "temperature": temperature,
+        "max_tokens": max_tokens,
+    }
+    if deployment and "Authorization" in headers:
+        body["model"] = deployment
+    try:
+        response = requests.post(url, headers=headers, json=body, timeout=timeout)
+    except requests.RequestException as error:
+        # requests embeds the URL in its messages; report only the error type.
+        raise RuntimeError(
+            f"Could not reach the SandboxAQ deployment ({type(error).__name__})"
+        ) from None
+    if not response.ok:
+        detail = response.text[:500] if response.text else ""
+        raise RuntimeError(
+            f"SandboxAQ deployment returned HTTP {response.status_code} "
+            f"{response.reason}: {detail}"
+        )
     payload = response.json()
     choices = payload.get("choices")
     if not choices:
         raise RuntimeError("Foundry response did not contain any choices")
+    choice = choices[0] or {}
+    message = choice.get("message") or {}
     return {
-        "model": payload.get("model", deployment),
-        "content": choices[0].get("message", {}).get("content", ""),
+        "model": payload.get("model") or deployment,
+        "content": message.get("content") or "",
+        "finish_reason": choice.get("finish_reason"),
         "usage": payload.get("usage"),
         "raw_response": payload,
     }

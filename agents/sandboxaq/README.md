@@ -122,7 +122,8 @@ This agent operates as a `kind: prompt` agent within Discovery Studio.
 The tool exposes a Python code environment rather than a fixed action. The
 agent writes a script that imports `sandboxaq_utils` and calls
 `invoke_model(prompt, system_prompt=..., temperature=..., max_tokens=...)`,
-which returns a dict with `model`, `content`, `usage`, and `raw_response`.
+which returns a dict with `model`, `content`, `finish_reason`, `usage`, and
+`raw_response`.
 
 Prompts therefore travel as Python string literals and are never interpolated
 into a shell command, so text containing apostrophes, double quotes, `$`, or
@@ -134,18 +135,31 @@ newlines reaches the deployment unmodified.
 |---|---|---|
 | `{{CHAT-MODEL}}` | Azure AI Foundry model deployment name for the agent | `gpt-4o` |
 
-Configure these values on the deployed tool; do not commit them to the catalog:
+The tool reads its endpoint and credential from runtime environment
+variables. They are deliberately absent from `tool.yaml`: the tool schema only
+supports static, committed values, and the credential must never be committed.
+Set them in your deployment's environment-variable configuration (for
+example a `sandboxaq-model-EnvVars.json` file), as the PubMed agent does:
+
+```json
+{
+    "FOUNDRY_ENDPOINT": "https://<your-resource>.openai.azure.com/openai",
+    "FOUNDRY_API_KEY": "<your-key>",
+    "FOUNDRY_DEPLOYMENT": "<your-sandboxaq-deployment>"
+}
+```
 
 | Environment variable | Required | Description |
 |---|---:|---|
-| `FOUNDRY_ENDPOINT` | Yes | Azure AI Foundry endpoint, including the `/openai` API base |
+| `FOUNDRY_ENDPOINT` | Yes | Endpoint base URL. For `azure-openai`, include the `/openai` API base; for `serverless`, the URL that `/chat/completions` is appended to |
 | `FOUNDRY_API_KEY` | Yes | Secret for the subscribed deployment |
-| `FOUNDRY_DEPLOYMENT` | Yes | SandboxAQ model deployment name |
-| `FOUNDRY_API_VERSION` | No | API version; defaults to `2024-10-21` |
+| `FOUNDRY_DEPLOYMENT` | `azure-openai`: Yes; `serverless`: No | SandboxAQ model deployment name. Sent as the `model` field for `serverless` |
+| `FOUNDRY_API_STYLE` | No | `azure-openai` (default): `/deployments/{name}/chat/completions` with an `api-key` header. `serverless`: `/chat/completions` with a Bearer token, for Foundry serverless and Foundry Models endpoints |
+| `FOUNDRY_API_VERSION` | No | API version. Defaults to `2024-10-21` for `azure-openai`; omitted for `serverless` unless set |
 
-The endpoint must be reachable from the Discovery tool container. Use the
-Foundry deployment's supported API version and authentication method if it
-differs from this default.
+The endpoint must be reachable from the Discovery tool container. Error
+messages from the tool report the HTTP status and response body but never the
+endpoint URL or credential.
 
 ## Support
 

@@ -25,16 +25,15 @@ Discovery agent (prompt, {{CHAT-MODEL}})
         ▼
 SandboxAQ AI Simulation Platform MCP server  ({{AQ_MCP_SERVER_URL}})
         │
-        ├── AQCat            — adsorption / binding energy, surface reactivity
-        ├── aqcat_compare    — cross-surface binding ranking
+        ├── aqcat            — adsorption / binding energy, surface reactivity
         └── list_jobs / check_job_status / get_job_results
 ```
 
 The agent holds no compute of its own and ships no container. It is a prompt agent with a single Foundry-native MCP tool, scoped by `allowedTools` to the AQCat and job-management tools on the platform's MCP server. All calculation happens on SandboxAQ infrastructure.
 
-**Data flow.** The user's request goes in as natural language; the agent maps it to a tool call, receives a job identifier, polls until the job completes, and retrieves results. Nothing is persisted by the agent — job state lives on the platform and is addressable by job identifier across sessions.
+**Data flow.** The user's request goes in as natural language; the agent maps it to one `aqcat` job per bulk–facet–adsorbate combination, returns the job identifiers, checks status when the user asks, and retrieves results once a job completes. Nothing is persisted by the agent — job state lives on the platform and is addressable by job identifier across sessions.
 
-**Asynchronous by design.** AQCat submissions are jobs, not synchronous calls. The agent reports the job identifier before it starts polling so work is recoverable if a session ends mid-calculation, and it stops polling and hands the identifier back rather than holding a turn open indefinitely.
+**Asynchronous by design.** AQCat submissions are jobs, not synchronous calls. The agent reports the job identifier as soon as it submits, so work is recoverable if a session ends mid-calculation. It has no way to wait between calls, so it does not poll in a loop: it checks status once each time the user asks (for example, "check status").
 
 ## Prerequisites
 
@@ -85,17 +84,17 @@ Provided by the SandboxAQ AI Simulation Platform MCP server; no container images
 
 | Tool | Purpose |
 |---|---|
-| `AQCat` | Adsorption / binding energy and surface reactivity for an adsorbate on a surface |
-| `aqcat_compare` | Ranks adsorbate binding strength across multiple candidate surfaces |
+| `aqcat` | Adsorption / binding energy and surface reactivity for one bulk–facet–adsorbate combination (up to 5 placements) |
 | `list_jobs` | Lists jobs submitted from the tenant |
-| `check_job_status` | Polls a submitted job |
+| `check_job_status` | Checks the status of a submitted job |
 | `get_job_results` | Retrieves results for a completed job |
 
-The agent prefers `aqcat_compare` for comparative questions rather than assembling its own comparison from separate `AQCat` runs, which are not guaranteed to be commensurable.
+For comparative questions the agent submits one `aqcat` job per candidate surface with identical adsorbate, placement count, and spin settings, then ranks the completed results, so the energies being compared were computed the same way.
 
 ## Known Limitations
 
-- **Calculations are metered.** Each submission consumes Relaxation Units on your SandboxAQ account. The agent runs with human-in-the-loop enabled and states the resolved plan and estimated cost for approval before submitting, so a misread request costs a conversation turn rather than compute.
+- **Calculations are metered.** Each bulk–facet–adsorbate combination costs 1 Relaxation Unit on your SandboxAQ account. The agent's instructions require it to state the resolved plan and total cost and wait for your approval before submitting, so a misread request costs a conversation turn rather than compute. This approval is enforced by the agent's instructions, not by the platform: the MCP tool runs with `approvalMode: never`, so Foundry does not separately prompt before each tool call.
+- **At most 5 placements per job.** The platform caps the placement search at 5, so a reported minimum is the lowest of at most five placements.
 - **Alloy requests are inherently ambiguous.** "Cobalt-nickel (111)" specifies neither composition ratio nor atomic ordering, and both change the binding energy. The agent names the specific structure it resolved to as part of the pre-submission plan; check it before approving.
 - **Predictions are from a machine-learned potential, not DFT.** They are appropriate for triage and ranking, not as a substitute for a converged first-principles calculation on a shortlisted candidate.
 - **Applicability is bounded by training data.** Unusual elements, heavily distorted cells, and exotic oxidation states may produce confident-looking numbers with no basis. The agent flags these where it can recognize them, but the boundary is not sharply defined and the check is not exhaustive.

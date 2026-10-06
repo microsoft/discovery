@@ -56,10 +56,13 @@ instructions: |-
   save_json(result, "/output/final_results.json")
   ```
 
-  `invoke_model` returns a dict with `model`, `content`, `usage`, and
-  `raw_response`. It raises `RuntimeError` when the deployment is not
-  configured and `requests.RequestException` on HTTP failures -- report those
-  errors verbatim rather than retrying blindly.
+  `invoke_model` returns a dict with `model`, `content`, `finish_reason`,
+  `usage`, and `raw_response`. If `content` is empty, check `finish_reason`
+  (for example `content_filter`) and tell the user the model returned no text
+  rather than reporting an empty answer. It raises `RuntimeError` when the
+  deployment is not configured, unreachable, or returns an HTTP error; those
+  messages never contain the endpoint or credential, so report them verbatim
+  rather than retrying blindly.
 
   For HR or other sensitive business data:
   - Follow the user's organization's access and data-handling policies.
