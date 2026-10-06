@@ -506,10 +506,24 @@ function Get-SubnetName {
     if (-not $name) { $name = "snet-$($Subnet.role)" }
     return $name
 }
+function Get-StorageAccountId {
+    return Get-ConfigValue $cfg.storage @('accountId', 'id')
+}
 function Get-StorageAccountName {
     $name = Get-ConfigValue $cfg.storage @('account', 'accountName', 'name')
     if (-not $name) { $name = Get-ConfigValue $cfg.names @('storageAccount') }
+    # Stage 1 emits storage.accountId (full resource id); Stage 4 also consumes accountId. Derive
+    # the account name from it so the Stage 1 -> Stage 2 contract matches without a separate field.
+    if (-not $name) {
+        $id = Get-StorageAccountId
+        if ($id -and $id -match '/storageAccounts/([^/]+)') { $name = $Matches[1] }
+    }
     return $name
+}
+function Get-StorageResourceGroupFromId {
+    $id = Get-StorageAccountId
+    if ($id -and $id -match '/resourceGroups/([^/]+)') { return $Matches[1] }
+    return $null
 }
 
 if (-not $cfg.storage -or $cfg.storage.model -ne 'byo') {
@@ -519,6 +533,7 @@ if (-not $cfg.storage -or $cfg.storage.model -ne 'byo') {
 else {
     $networkRg = Get-ConfigValue $cfg.network @('networkResourceGroup', 'resourceGroup', 'rg')
     $storageRg = Get-ConfigValue $cfg.storage @('resourceGroup', 'resourceGroupName')
+    if (-not $storageRg) { $storageRg = Get-StorageResourceGroupFromId }
     if (-not $storageRg) { $storageRg = $networkRg }
     $account = Get-StorageAccountName
     $access = Get-ConfigValue $cfg.storage @('access')
@@ -529,7 +544,7 @@ else {
 
     if (-not $account) {
         $results.Add((New-CheckResult -Id 'byo-storage-account-name' -Name 'BYO storage account name' -Status 'Fail' -Fr 'FR2.6' `
-                    -Detail 'config.storage.account is missing.' -Remediation 'Set config.storage.account to the customer-owned storage account name.'))
+                    -Detail 'config.storage.account/accountId is missing.' -Remediation 'Set config.storage.accountId (full resource id, as Stage 1 emits) or config.storage.account to the customer-owned storage account.'))
     }
     else {
         try {

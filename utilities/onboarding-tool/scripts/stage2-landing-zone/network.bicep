@@ -74,7 +74,10 @@ var spokeRtName = 'rt-spoke-${vnetName}'
 var mcRtName = 'rt-managedcluster-${vnetName}'
 var mcMatches = filter(subnets, s => s.role == 'managedcluster')
 var managedClusterCidr = length(mcMatches) > 0 ? mcMatches[0].cidr : ''
-var dnsDestinations = empty(corpDns) ? [ '*' ] : corpDns
+// When no corporate DNS is supplied, allow DNS egress to any destination. The '*' wildcard is
+// only valid in the singular destinationAddressPrefix; it is rejected inside the plural
+// destinationAddressPrefixes array, so the DNS rule selects the field accordingly below.
+var hasCorpDns = !empty(corpDns)
 
 // Shared NSG — FR2.3 allow-list applied to every subnet.
 resource nsg 'Microsoft.Network/networkSecurityGroups@2023-11-01' = {
@@ -136,7 +139,8 @@ resource nsg 'Microsoft.Network/networkSecurityGroups@2023-11-01' = {
             vnetCidr
             podCidr
           ]
-          destinationAddressPrefixes: dnsDestinations
+          destinationAddressPrefix: hasCorpDns ? null : '*'
+          destinationAddressPrefixes: hasCorpDns ? corpDns : null
           sourcePortRange: '*'
           destinationPortRange: '53'
         }
@@ -286,6 +290,9 @@ resource vnet 'Microsoft.Network/virtualNetworks@2023-11-01' = {
       name: sn.name
       properties: {
         addressPrefix: sn.cidr
+        // SFI-NS2.6.1 ("Subnets should be private"): disable implicit default outbound
+        // internet access; egress is via the configured outboundType (LoadBalancer/UDR).
+        defaultOutboundAccess: false
         networkSecurityGroup: {
           id: nsg.id
         }
