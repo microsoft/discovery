@@ -75,6 +75,22 @@ Supporting files: `lib/OnboardingCommon.psm1` (shared module),
 Each command exits `0` only when every check passed (or was waived); non-zero otherwise, so the
 stages chain in a pipeline.
 
+## TODO / known gaps
+
+Tracked work not yet implemented in the scripts:
+
+- Stage 3 — test VM connectivity harness (`-WithVm`). The ephemeral probe VM and its in-network
+  probes (DNS, TCP 443, HTTPS/artifact, PE resolution, east-west 10250) plus the NIC-derived
+  effective-NSG/route lookups are temporarily disabled; `az vm create` trips an empty-arg binding
+  issue (`--public-ip-address ''` / `--nsg ''`). Re-enable once that call is fixed; until then
+  run Stage 3 without `-WithVm` and rely on the control-plane checks.
+- Stage 4 — bookshelf content. Stage 4 creates the bookshelf storage container
+  (`Microsoft.Discovery/storageContainers`) but does not create or ingest the storage asset
+  (`names.storageAsset`). Add asset creation / knowledge-base content load.
+- Stage 5 — scenario validation. Stage 5 asserts a real tool invocation and checks the bookshelf
+  private endpoints, but does not validate end-to-end bookshelf retrieval (that the ingested asset
+  is queryable by the agent). Add that retrieval assertion.
+
 ## FR traceability
 
 Each script header names its FR mapping and its spec file. Read a stage's requirements and
