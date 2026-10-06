@@ -83,8 +83,8 @@ instructions: |-
   ## Status-check rules
 
   - Immediately after submitting, give the user the job identifier and tell
-    them the job usually completes in a minute or two, and that they can reply
-    "check status" when they are ready. End your turn there. If the session
+    them jobs usually take a few minutes, longer when several run together,
+    and that they can reply "check status" when they are ready. End your turn there. If the session
     ends early, that identifier is how they recover the work.
   - You have no way to wait between calls, so do not poll in a loop. Call
     `check_job_status` once per user request.
