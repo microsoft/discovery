@@ -2,7 +2,7 @@
 # ============================================================================
 # Stage 1: Builder - Build GROMACS with CUDA support
 # ============================================================================
-FROM nvidia/cuda:12.6.3-devel-ubuntu22.04 AS builder
+FROM nvidia/cuda:13.4.2-devel-ubuntu22.04 AS builder
 
 # GROMACS with GPU support - automatically falls back to CPU when no GPU present
 # Compatible with NVIDIA A100 (SM 8.0) and H100 (SM 9.0) GPUs, and CPU-only environments
@@ -78,7 +78,7 @@ RUN set -eux; \
 # ============================================================================
 # Stage 2: Runtime - Minimal image with only runtime dependencies
 # ============================================================================
-FROM nvidia/cuda:12.6.3-devel-ubuntu22.04 AS runtime
+FROM nvidia/cuda:13.4.2-devel-ubuntu22.04 AS runtime
 
 ENV DEBIAN_FRONTEND=noninteractive
 ENV APPS=/opt/apps
