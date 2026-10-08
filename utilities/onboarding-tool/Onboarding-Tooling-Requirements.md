@@ -568,7 +568,7 @@ FR5.2 [P0] Create a tool via ARM PUT
 `code_environments[].infra_node` matching an `infra[].name`.
 
 FR5.3 [P0] Create the agent and bind the tool via
-`PUT ${BASE}/projects/${PROJECT}:upsertAgent`. `tools[]` is top-level with the tool ARM id;
+`POST ${BASE}/projects/${PROJECT}:upsertAgent`. `tools[]` is top-level with the tool ARM id;
 `humanInTheLoop:"Disabled"`, `confirmation:"Disabled"`; `foundryDetails.definition.kind =
 "prompt"` with `model` = chat-model deployment name. Agent instructions must call
 `GetNodePoolContext` first, or the model may answer from memory and never touch the
@@ -582,15 +582,15 @@ FR5.4 [P0] Create investigation, then conversation:
 
 FR5.5 [P0] Send the hero prompt and poll:
 
-- `POST ${BASE}/conversations/${CONV}/openai/responses`
-- `GET ${BASE}/conversations/${CONV}/openai/responses/${RID}`
+- `POST ${BASE}/conversations/${CONV}/openai/v1/responses`
+- `GET ${BASE}/conversations/${CONV}/openai/v1/responses/${RID}`
 
 FR5.6 [P0] Hard pass/fail on real tool invocation. `status: completed` is not sufficient; the
 response `output` must contain a `function_call` / `function_call_output` item, and the run
 must be visible in Foundry tracing. Absence of a tool-call item is a FAIL.
 
 FR5.7 [P1] Per-service verification summary: supercomputer/workspace/Foundry/project/chat-model
-all `Succeeded`; bookshelf (if in scope) 3 PEs approved with DNS; tool created; agent created;
+all `Succeeded`; bookshelf (if in scope) BYO storage private endpoint approved with DNS; tool created; agent created;
 tool bound; conversation completed; tool actually invoked.
 
 ### Acceptance criteria

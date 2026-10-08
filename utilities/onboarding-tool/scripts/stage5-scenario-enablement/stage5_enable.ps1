@@ -95,7 +95,7 @@ function Invoke-Stage5CreateAgent {
             }
         }
         $url = "$base/projects/$Project`:upsertAgent?api-version=$api"
-        $upsert = Invoke-DiscoveryJson -Method 'PUT' -Uri $url -Body $body -ReturnHeaders
+        $upsert = Invoke-DiscoveryJson -Method 'POST' -Uri $url -Body $body -ReturnHeaders
         $op = @($upsert.Headers['Operation-Location'] + $upsert.Headers['operation-location'] + $upsert.Headers['Azure-AsyncOperation'] + $upsert.Headers['azure-asyncoperation'] | Where-Object { $_ } | Select-Object -First 1)
         $opStatus = ''
         if ($op) {
@@ -156,10 +156,19 @@ function Invoke-Stage5CreateInvestigationConversation {
         $invOk = $inv.StatusCode -in @(200, 201, 202)
         Add-Result 'fr5-4-investigation' 'investigation created' ($invOk ? 'Pass' : 'Fail') "investigationName=$invPath statusCode=$($inv.StatusCode)" ($invOk ? '' : 'Create the investigation before creating the conversation.')
         if ($invOk) {
-            $conv = Invoke-DiscoveryJson -Method 'POST' -Uri "$base/conversations?api-version=$api" -Body @{ displayName = 'stage5-hero-conversation'; investigationName = $invPath; projectName = $Project }
+            # A just-created investigation can return 5xx for a few seconds; retry before failing.
+            $conv = $null
+            for ($i = 0; $i -lt 6; $i++) {
+                $conv = Invoke-DiscoveryJson -Method 'POST' -Uri "$base/conversations?api-version=$api" -Body @{ displayName = 'stage5-hero-conversation'; investigationName = $invPath; projectName = $Project }
+                if ($conv.StatusCode -lt 500) { break }
+                Start-Sleep -Seconds 10
+            }
             $convId = if ($conv.Body -and $conv.Body.name) { [string]$conv.Body.name } elseif ($conv.Body -and $conv.Body.id) { [string]$conv.Body.id } else { '' }
             $ok = $conv.StatusCode -in @(200, 201, 202) -and $convId
-            Add-Result 'fr5-4-conversation' 'conversation created' ($ok ? 'Pass' : 'Fail') "conversationId=$convId statusCode=$($conv.StatusCode)" ($ok ? '' : 'Use full investigationName path /projects/{project}/investigations/{investigation}.') ([pscustomobject]@{ investigationName = $invPath; conversationId = $convId; projectName = $Project })
+            $convDetail = "conversationId=$convId statusCode=$($conv.StatusCode) attempts=$($i + [int]($i -lt 6))"
+            if (-not $ok -and $conv.Body) { $b = ($conv.Body | ConvertTo-Json -Depth 5 -Compress); $convDetail += " body=$($b.Substring(0, [Math]::Min(300, $b.Length)))" }
+            $convFix = if ($conv.StatusCode -ge 500) { 'The service returned a server error after retries. Re-run Stage 5; if it persists, open a support case with the response body.' } else { 'Use full investigationName path /projects/{project}/investigations/{investigation}.' }
+            Add-Result 'fr5-4-conversation' 'conversation created' ($ok ? 'Pass' : 'Fail') $convDetail ($ok ? '' : $convFix) ([pscustomobject]@{ investigationName = $invPath; conversationId = $convId; projectName = $Project })
         }
     }
 
@@ -218,7 +227,7 @@ function Invoke-Stage5SendPromptPoll {
                 })
             agent = @{ type = 'agent_reference'; name = $Agent }
         }
-        $send = Invoke-DiscoveryJson -Method 'POST' -Uri "$base/conversations/$ConversationId/openai/responses" -Body $sendBody
+        $send = Invoke-DiscoveryJson -Method 'POST' -Uri "$base/conversations/$ConversationId/openai/v1/responses" -Body $sendBody
         $rid = if ($send.Body -and $send.Body.id) { [string]$send.Body.id } else { '' }
         $sent = $send.StatusCode -in @(200, 201, 202) -and $rid
         Add-Result 'fr5-5-response-started' 'agent response started' ($sent ? 'Pass' : 'Fail') "responseId=$rid statusCode=$($send.StatusCode)" ($sent ? '' : 'Send content as an array of parts and do not add api-version to the responses route.') ([pscustomobject]@{ responseId = $rid; conversationId = $ConversationId })
@@ -228,7 +237,7 @@ function Invoke-Stage5SendPromptPoll {
             $status = ''
             while ((Get-Date) -lt $deadline) {
                 Start-Sleep -Seconds $PollSeconds
-                $poll = Invoke-DiscoveryJson -Method 'GET' -Uri "$base/conversations/$ConversationId/openai/responses/$rid"
+                $poll = Invoke-DiscoveryJson -Method 'GET' -Uri "$base/conversations/$ConversationId/openai/v1/responses/$rid"
                 $final = $poll.Body
                 $status = if ($final -and $final.status) { [string]$final.status } else { '' }
                 if ($status -in @('completed', 'failed', 'cancelled', 'expired', 'incomplete')) { break }
@@ -360,23 +369,29 @@ function Invoke-Stage5VerificationSummary {
     }
 
     if ($cfg.PSObject.Properties.Name -contains 'bookshelf' -and $cfg.bookshelf -and $cfg.bookshelf.inScope) {
+        # Bookshelf here is the BYO storage account behind the storage container; Stage 2 creates its blob PE.
+        $stAccount = Get-CfgString $cfg.storage 'account'
+        if (-not $stAccount) { $stAccount = ((Get-CfgString $cfg.storage 'accountId') -split '/')[-1] }
         $approved = 0
         $dns = 0
         $qualified = 0
+        $found = 0
         foreach ($rg in @($ResourceGroup, (Get-CfgString $cfg.network 'networkResourceGroup')) | Where-Object { $_ } | Sort-Object -Unique) {
             $pes = @(Get-AzJson -Args @('network', 'private-endpoint', 'list', '-g', $rg) -AllowFail)
             foreach ($pe in $pes) {
-                $isBookshelf = "$($pe.name) $($pe.id)" -match 'bookshelf|storage'
-                if (-not $isBookshelf) { continue }
-                $peApproved = @($pe.privateLinkServiceConnections | Where-Object { $_.privateLinkServiceConnectionState.status -eq 'Approved' }).Count -gt 0
+                $conns = @(@($pe.privateLinkServiceConnections) + @($pe.manualPrivateLinkServiceConnections) | Where-Object { $_ -and $stAccount -and "$($_.privateLinkServiceId)" -match "/storageAccounts/$([regex]::Escape($stAccount))$" })
+                if (-not $conns.Count) { continue }
+                $found++
+                $peApproved = @($conns | Where-Object { $_.privateLinkServiceConnectionState.status -eq 'Approved' }).Count -gt 0
                 $peDns = @($pe.customDnsConfigs).Count -gt 0
                 if ($peApproved) { $approved++ }
                 if ($peDns) { $dns++ }
                 if ($peApproved -and $peDns) { $qualified++ }
             }
         }
-        $ok = $qualified -ge 3
-        Add-Result 'fr5-7-bookshelf' 'bookshelf private endpoints' ($ok ? 'Pass' : 'Fail') "qualified=$qualified approved=$approved dns=$dns expected=3" ($ok ? '' : 'Ensure at least three bookshelf private endpoints are each both Approved and have a non-empty custom DNS config.')
+        $ok = $qualified -ge 1
+        $detail = if ($stAccount) { "storageAccount=$stAccount privateEndpoints=$found approved=$approved dns=$dns" } else { 'storage.account/accountId is not set in config.' }
+        Add-Result 'fr5-7-bookshelf' 'bookshelf private endpoints' ($ok ? 'Pass' : 'Fail') $detail ($ok ? '' : 'Re-run Stage 2 to create the Bookshelf storage private endpoint, and approve it if it is Pending.')
     } else {
         Add-Result 'fr5-7-bookshelf' 'bookshelf private endpoints' 'Skip' 'Bookshelf is out of scope for this config.'
     }
