@@ -277,7 +277,7 @@ $script:NameRules = @{
 $script:KnownDenyPolicies = @(
     @{ Match = 'Cognitive Services'; Handling = 'exemption'; Note = 'Cognitive Services public network access deny blocks Foundry provisioning.' }
     @{ Match = 'Log Analytics';      Handling = 'exemption'; Note = 'Log Analytics public access deny blocks workspace diagnostics.' }
-    @{ Match = 'Storage account';    Handling = 'configuration'; Note = 'Storage public access deny requires private-endpoint config.' }
+    @{ Match = 'Storage account.*(public|network access)'; Handling = 'configuration'; Note = 'Storage public access deny requires private-endpoint config.' }
     @{ Match = 'network security perimeter'; Handling = 'exemption'; Note = 'NSP association policy must allow the Discovery perimeter.' }
 )
 $script:CapacityLimitedRegions = @('eastus2')  # AKSCapacityHeavyUsage observed
@@ -328,7 +328,14 @@ function Get-LivePolicyAssignments {
                 if (-not $effect) {
                     if (($def.PSObject.Properties.Name -contains 'policyRule') -and $def.policyRule.then) {
                         $rawEffect = [string]$def.policyRule.then.effect
-                        if ($rawEffect -and $rawEffect -notmatch '^\[') { $effect = $rawEffect }
+                        if ($rawEffect -match "^\[parameters\('([^']+)'\)\]$") {
+                            # Parameterized effect: the assignment value wins, else the definition default.
+                            $pName = $Matches[1]
+                            $aVal = if ($a.parameters -is [psobject] -and ($a.parameters.PSObject.Properties.Name -contains $pName)) { $a.parameters.$pName.value }
+                            $dDef = if ($def.parameters -is [psobject] -and ($def.parameters.PSObject.Properties.Name -contains $pName)) { $def.parameters.$pName.defaultValue }
+                            if ($aVal) { $effect = [string]$aVal } elseif ($dDef) { $effect = [string]$dDef }
+                        }
+                        elseif ($rawEffect -and $rawEffect -notmatch '^\[') { $effect = $rawEffect }
                     }
                     elseif ($defId -match '/policySetDefinitions/') { $effect = 'initiative' }
                 }
@@ -744,8 +751,10 @@ function Invoke-Stage1Checks {
     $conflicts = @()
     foreach ($p in $candidateNames) {
         foreach ($known in $script:KnownDenyPolicies) {
-            if ($p -match [regex]::Escape($known.Match)) {
+            if ($p -match $known.Match) {
                 $liveMatch = if ($live) { @($live | Where-Object { $_.displayName -eq $p -or $_.name -eq $p }) | Select-Object -First 1 } else { $null }
+                # Audit/Disabled assignments can't block a deployment; only deny-type or unresolved effects count.
+                if ($liveMatch -and @('audit', 'auditIfNotExists', 'disabled') -contains $liveMatch.effect) { continue }
                 $conflicts += [pscustomobject]@{
                     policy         = $p
                     handling       = $known.Handling
