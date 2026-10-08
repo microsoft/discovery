@@ -260,10 +260,22 @@ investigation/conversation used for the test. No tool is created.
   advance.
 - **Per-check rows:** every check shows Pass / Fail / Warn / Skip. **Every failure carries an exact
   remediation string** — read it; it tells you what to change.
-- **JSON reports:** `./out/stage1.json … stage5.json` are the machine-readable equivalents, good for
-  records or pipeline gating.
+- **Reports:** every stage writes its `-JsonPath` report plus a markdown report with the same name
+  (`./out/stage1.md`, …). Open the `.md` first; the `.json` is for records or pipeline gating.
 - **Artifacts:** Stage 2 writes firewall-request / quota-exemption / policy-exemption markdown under
   `./out/` for the teams that own those approvals.
+
+### What to check in `./out` after each stage
+
+All files land in the folder of `-JsonPath` (`./out/` in the examples above).
+
+| Stage | Files | What to check |
+|---|---|---|
+| 1 | `stage1.md`, `stage1.json`, `config.json` (from `-OutConfig`) | Verdict is GO and `config.json` exists. Read the remediation on any Fail; a Warn must not hide a real gap (quota, region, policy). Review `config.json` names, subnets, and identity before Stage 2. |
+| 2 | `stage2.md`, `stage2.json`, `firewall-request-<workspace>.md/.json`, `quota-increase-requests-<workspace>.md/.json`, `policy-exemption-requests-<workspace>.md/.json` | Verdict is GO. Hand each request file to the owning team (network, quota, governance) and wait for approval before Stage 3. A request file with an empty list means nothing needs approval. |
+| 3 | `stage3-supercomputer.md/.json`, `stage3-workspace.md/.json` | Both reports are GO. Check subnet delegation, NSG, and route rows; Skip rows must give a reason. Stage 4 reads these `.json` files through `-ReadinessReport`. |
+| 4 | `stage4.md`, `stage4.json` | Verdict is GO and every resource (supercomputer, node pool, workspace, chat model, project, Bookshelf if in scope) shows Succeeded with its resource id. On failure, the report includes the ARM error, correlation id, and remediation. |
+| 5 | `stage5.md`, `stage5.json`, `stage5-response-<timestamp>.json`, `stage5-state-<timestamp>.json` | Verdict is GO. The response file holds the agent's answer; confirm it is `completed` and the text answers the prompt. The state file records the agent, investigation, and conversation used by the test. |
 
 ---
 

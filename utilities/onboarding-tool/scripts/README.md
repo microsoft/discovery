@@ -78,18 +78,21 @@ cd utilities/onboarding-tool/scripts   # all commands are relative to this direc
 # Stage 2 — prepare the landing zone (writes resources, idempotent).
 ./stage2-landing-zone/stage2_prepare.ps1 -ConfigPath ./config.json -JsonPath ./out/stage2.json
 
-# Stage 3 — validate readiness (read-only; -WithVm adds the disposable connectivity test VM).
-./stage3-validation/stage3_validate.ps1 -ConfigPath ./config.json -Profile workspace -WithVm -JsonPath ./out/stage3.json
+# Stage 3 — validate readiness (read-only). Run both profiles; leave -WithVm off (temporarily disabled).
+./stage3-validation/stage3_validate.ps1 -ConfigPath ./config.json -Profile supercomputer -JsonPath ./out/stage3-supercomputer.json
+./stage3-validation/stage3_validate.ps1 -ConfigPath ./config.json -Profile workspace -JsonPath ./out/stage3-workspace.json
 
-# Stage 4 — deploy the platform in dependency order with error-to-remediation.
-./stage4-deployment/stage4_deploy.ps1 -ConfigPath ./config.json -JsonPath ./out/stage4.json
+# Stage 4 — deploy the platform in dependency order, gated on the Stage 3 GO reports.
+./stage4-deployment/stage4_deploy.ps1 -ConfigPath ./config.json -ReadinessReport ./out/stage3-supercomputer.json,./out/stage3-workspace.json -JsonPath ./out/stage4.json
 
 # Stage 5 — scenario enablement: create a Q&A agent and verify it answers a prompt.
 ./stage5-scenario-enablement/stage5_enable.ps1 -ConfigPath ./config.json -JsonPath ./out/stage5.json
 ```
 
 Each command exits `0` only when every check passed (or was waived); non-zero otherwise, so the
-stages chain in a pipeline.
+stages chain in a pipeline. Each stage also writes a markdown report next to its `-JsonPath`
+(`./out/stage1.md`, …); see the [user guide](USER-GUIDE.md#what-to-check-in-out-after-each-stage)
+for what to check in `./out` after each stage.
 
 ## Stage details
 

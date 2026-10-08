@@ -406,7 +406,7 @@ $ChatModel = if ($ChatModel) { $ChatModel } else { Get-CfgString $cfg.names 'cha
 $agentName = Get-CfgString $cfg.names 'qnaAgent' 'scientistQnAAgent'
 $investigation = Get-CfgString $cfg.names 'investigation' 'hero-inv'
 
-$outDir = Join-Path $PSScriptRoot 'out'
+$outDir = if ($JsonPath) { Split-Path -Parent ($ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath($JsonPath)) } else { Join-Path (Split-Path -Parent $PSScriptRoot) 'out' }
 if (-not (Test-Path -LiteralPath $outDir)) { New-Item -ItemType Directory -Force -Path $outDir | Out-Null }
 $stamp = Get-Date -Format 'yyyyMMdd-HHmmss'
 $statePath = Join-Path $outDir "stage5-state-$stamp.json"
