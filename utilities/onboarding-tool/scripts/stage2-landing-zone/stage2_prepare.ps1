@@ -1,4 +1,4 @@
-#Requires -Version 7.0
+﻿#Requires -Version 7.0
 <#
 .SYNOPSIS  Stage 2 / FR2.1-FR2.9 — prepare the Discovery landing zone.
 .DESCRIPTION
@@ -705,7 +705,8 @@ function Invoke-FirewallRequestArtifact {
     $cfg = $Config
     $results = [System.Collections.Generic.List[object]]::new()
 
-$outDir = Join-Path $PSScriptRoot 'out'
+$outDir = if ($script:JsonPath) { Split-Path -Parent ($ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath($script:JsonPath)) } else { Join-Path (Split-Path -Parent $PSScriptRoot) 'out' }
+if (-not (Test-Path -LiteralPath $outDir)) { New-Item -ItemType Directory -Path $outDir -Force | Out-Null }
 if (-not $OutFile) { $OutFile = Join-Path $outDir "firewall-request-$($cfg.names.workspace).md" }
 $jsonArtifact = [System.IO.Path]::ChangeExtension($OutFile, '.json')
 
@@ -835,7 +836,7 @@ function Invoke-QuotaExemptionRequests {
     $cfg = $Config
     $results = [System.Collections.Generic.List[object]]::new()
 
-if (-not $OutDir) { $OutDir = Join-Path $PSScriptRoot 'out' }
+if (-not $OutDir) { $OutDir = if ($script:JsonPath) { Split-Path -Parent ($ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath($script:JsonPath)) } else { Join-Path (Split-Path -Parent $PSScriptRoot) 'out' } }
 
 function Get-ConfigValue {
     param([object]$Object, [string[]]$Names)

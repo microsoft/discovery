@@ -1,16 +1,16 @@
 # stage5_enable — Stage 5 scenario enablement (consolidated)
 
-Stage 5 · single consolidated PowerShell 7 + Az CLI script · FR mapping: FR5.1–FR5.7
+Stage 5 · single consolidated PowerShell 7 + Az CLI script · FR mapping: FR5.2–FR5.7
 Script: `../../scripts/stage5-scenario-enablement/stage5_enable.ps1`
 
 ## Purpose
-Prove the platform works: connectivity, then a real agent run that genuinely invokes a tool on the supercomputer. A completed run alone does not certify anything.
+Prove the platform works: a real agent run that genuinely invokes a tool on the supercomputer. A completed run alone does not certify anything. In-network connectivity probing (formerly FR5.1) moves to Stage 3.
 
 ## Inputs
 - `--config <config.json>`; workspace, project, and chat-model deployment names.
 
 ## Behavior
-- Run connectivity, then create tool, create agent + bind tool, create investigation + conversation, send prompt + poll, assert tool invocation.
+- Create tool, create agent + bind tool, create investigation + conversation, send prompt + poll, assert tool invocation.
 - Emit the per-service verification summary and a certification verdict.
 
 ## Output
@@ -23,10 +23,6 @@ Prove the platform works: connectivity, then a real agent run that genuinely inv
 
 ## Folded steps
 Each step ran as a separate sub-script before consolidation; the logic now lives in `stage5_enable.ps1`.
-
-### connectivity_check — FR5.1
-Resolve each platform privatelink FQDN to a private IP from inside the VNet and confirm reachability (reuse the Stage 3 harness).
-- Unreachable/public IP: fix private DNS links / PE approval before certifying.
 
 ### create_tool — FR5.2
 `PUT https://management.azure.com${TOOL_ARM_ID}?api-version=2026-06-01`; verify `provisioningState=Succeeded` and `definitionContent` present. Tool JSON must carry version, definitionContent (name/description/version/category/infra[]), and code_environments[].infra_node matching an infra[].name.

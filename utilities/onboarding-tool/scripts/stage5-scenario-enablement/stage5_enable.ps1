@@ -1,7 +1,7 @@
 #Requires -Version 7.0
 <#
-.SYNOPSIS  Stage 5 / FR5.1-FR5.7 — run agent Q&A certification end to end.
-.DESCRIPTION Orchestrates connectivity, agent creation (no tool), investigation/conversation, prompt polling, response verification, and summary. Spec: ../../script-specs/stage5-scenario-enablement/stage5_enable.md
+.SYNOPSIS  Stage 5 / FR5.3-FR5.7 — run agent Q&A certification end to end.
+.DESCRIPTION Orchestrates agent creation (no tool), investigation/conversation, prompt polling, response verification, and summary. Spec: ../../script-specs/stage5-scenario-enablement/stage5_enable.md
 #>
 [CmdletBinding()]
 param(
@@ -30,187 +30,6 @@ function Write-State {
     $dir = Split-Path -Parent $Path
     if ($dir -and -not (Test-Path -LiteralPath $dir)) { New-Item -ItemType Directory -Force -Path $dir | Out-Null }
     [pscustomobject]$State | ConvertTo-Json -Depth 20 | Set-Content -LiteralPath $Path -Encoding utf8
-}
-
-<#
-.SYNOPSIS  Stage 5 / FR5.1 — validate platform private endpoint DNS and 443 reachability.
-.DESCRIPTION Creates an ephemeral Linux VM in the onboarding VNet, probes platform privatelink FQDNs, then removes the VM. Spec: ../../script-specs/stage5-scenario-enablement/stage5_enable.md
-#>
-function Invoke-Stage5ConnectivityCheck {
-    [CmdletBinding()]
-    param(
-        [Parameter(Mandatory)][string]$ConfigPath,
-        [string]$JsonPath,
-        [switch]$PassThru,
-        [string]$ResourceGroup,
-        [string]$NetworkResourceGroup,
-        [string]$VNetName,
-        [string]$SubnetName,
-        [string[]]$Fqdn,
-        [switch]$CurrentHostOnly
-    )
-    $cfg = Get-OnboardingConfig -Path $ConfigPath
-    $results = [System.Collections.Generic.List[object]]::new()
-
-    function Get-CfgValue {
-        param([object]$Object, [string[]]$Names, [string]$Default = '')
-        foreach ($n in $Names) {
-            if ($Object -and $Object.PSObject.Properties.Name -contains $n -and $Object.$n) { return [string]$Object.$n }
-        }
-        return $Default
-    }
-    function Test-PrivateIp {
-        param([string]$Ip)
-        if (-not $Ip) { return $false }
-        try {
-            $u = ConvertTo-UInt32Ip $Ip
-            return (Test-CidrContains -Outer '10.0.0.0/8' -Inner "$Ip/32") -or
-                (Test-CidrContains -Outer '172.16.0.0/12' -Inner "$Ip/32") -or
-                (Test-CidrContains -Outer '192.168.0.0/16' -Inner "$Ip/32") -or
-                ($u -ge (ConvertTo-UInt32Ip '100.64.0.0') -and $u -le (ConvertTo-UInt32Ip '100.127.255.255'))
-        } catch { return $false }
-    }
-    function Get-ConfiguredFqdns {
-        param([object]$Config, [string[]]$ExplicitFqdn, [string[]]$ResourceGroups)
-        $names = @()
-        if ($ExplicitFqdn) { $names += $ExplicitFqdn }
-        foreach ($p in @('privateEndpointFqdns', 'privateEndpointFQDNs', 'privatelinkFqdns')) {
-            if ($Config.PSObject.Properties.Name -contains $p -and $Config.$p) { $names += @($Config.$p) }
-            if ($Config.network.PSObject.Properties.Name -contains $p -and $Config.network.$p) { $names += @($Config.network.$p) }
-        }
-        if ($Config.PSObject.Properties.Name -contains 'privateEndpoints' -and $Config.privateEndpoints) {
-            foreach ($pe in @($Config.privateEndpoints)) {
-                if ($pe.PSObject.Properties.Name -contains 'fqdn' -and $pe.fqdn) { $names += $pe.fqdn }
-                if ($pe.PSObject.Properties.Name -contains 'fqdns' -and $pe.fqdns) { $names += @($pe.fqdns) }
-            }
-        }
-        foreach ($rg in @($ResourceGroups | Where-Object { $_ } | Sort-Object -Unique)) {
-            $pes = @(Get-AzJson -Args @('network', 'private-endpoint', 'list', '-g', $rg) -AllowFail)
-            foreach ($pe in $pes) {
-                foreach ($cfgItem in @($pe.customDnsConfigs)) {
-                    if ($cfgItem.fqdn) { $names += $cfgItem.fqdn }
-                }
-            }
-        }
-        @($names | Where-Object { $_ -and $_ -like '*privatelink*' } | Sort-Object -Unique)
-    }
-    function Get-WorkspaceManagedRg {
-        param([object]$Config, [string]$DeployRg)
-        $wsName = if ($Config.names -and ($Config.names.PSObject.Properties.Name -contains 'workspace') -and $Config.names.workspace) { [string]$Config.names.workspace } else { '' }
-        if (-not $wsName -or -not $DeployRg) { return @() }
-        $wsId = "/subscriptions/$($Config.subscriptionId)/resourceGroups/$DeployRg/providers/Microsoft.Discovery/workspaces/$wsName"
-        $ws = Get-AzJson -Args @('resource', 'show', '--ids', $wsId, '--api-version', '2026-06-01') -AllowFail
-        $mrg = ''
-        if ($ws -and ($ws.PSObject.Properties.Name -contains 'properties') -and $ws.properties) {
-            foreach ($p in @('managedResourceGroupId', 'managedResourceGroup')) {
-                if (($ws.properties.PSObject.Properties.Name -contains $p) -and $ws.properties.$p) { $mrg = [string]$ws.properties.$p; break }
-            }
-        }
-        if ($mrg -like '/subscriptions/*') { $mrg = ($mrg -split '/')[-1] }
-        if ($mrg) { return @($mrg) }
-        $groups = @(Get-AzJson -Args @('group', 'list', '--query', "[?starts_with(name, 'mrg-dwsp-$wsName')].name") -AllowFail)
-        return @($groups | Where-Object { $_ })
-    }
-    function Find-ProbeSubnetId {
-        param([object]$Config, [string]$NetRg, [string]$Vnet, [string]$Subnet)
-        foreach ($role in @('spare', 'nodepool', 'managedcluster')) {
-            foreach ($sn in @($Config.network.subnets)) {
-                if ($sn.role -ne $role) { continue }
-                if ($sn.PSObject.Properties.Name -contains 'id' -and $sn.id) { return [string]$sn.id }
-                if (-not $Subnet -and $sn.PSObject.Properties.Name -contains 'name' -and $sn.name) { $Subnet = [string]$sn.name }
-            }
-            if ($Subnet) { break }
-        }
-        if ($NetRg -and $Vnet -and $Subnet) {
-            $s = Get-AzJson -Args @('network', 'vnet', 'subnet', 'show', '-g', $NetRg, '--vnet-name', $Vnet, '-n', $Subnet) -AllowFail
-            if ($s -and $s.id) { return [string]$s.id }
-        }
-        if ($NetRg) {
-            $vnets = @(Get-AzJson -Args @('network', 'vnet', 'list', '-g', $NetRg) -AllowFail)
-            foreach ($vnetObj in $vnets) {
-                foreach ($sn in @($vnetObj.subnets)) {
-                    foreach ($cfgSn in @($Config.network.subnets | Where-Object { $_.role -in @('spare', 'nodepool', 'managedcluster') })) {
-                        $prefixes = @($sn.addressPrefix) + @($sn.addressPrefixes)
-                        if ($prefixes -contains $cfgSn.cidr) { return [string]$sn.id }
-                    }
-                }
-            }
-        }
-        return ''
-    }
-    function Invoke-LocalProbe {
-        param([string[]]$Names)
-        foreach ($name in $Names) {
-            $ips = @()
-            try { $ips = @([System.Net.Dns]::GetHostAddresses($name) | ForEach-Object { $_.IPAddressToString }) } catch {}
-            $reachable = $false
-            try { $reachable = (Test-NetConnection -ComputerName $name -Port 443 -InformationLevel Quiet) } catch {}
-            [pscustomobject]@{ fqdn = $name; ips = $ips; tcp443 = [bool]$reachable }
-        }
-    }
-    function Invoke-VmProbe {
-        param([string]$Rg, [string]$SubnetId, [string[]]$Names)
-        $suffix = (Get-Random -Maximum 999999).ToString('000000')
-        $vm = "stg5probe$suffix"
-        $tag = "stage5probe=$vm"
-        $script = @"
-    set -e
-    for h in $($Names -join ' '); do
-      ips=`$(getent ahostsv4 "`$h" | awk '{print `$1}' | sort -u | xargs)
-      if [ -z "`$ips" ]; then ips=""; fi
-      if timeout 5 bash -lc ":</dev/tcp/`$h/443" >/dev/null 2>&1; then tcp=OPEN; else tcp=BLOCKED; fi
-      echo "PE `$h `$ips `$tcp"
-    done
-"@
-        try {
-            $null = Invoke-Az -Args @('vm', 'create', '-g', $Rg, '-n', $vm, '--image', 'Ubuntu2204', '--size', 'Standard_B1s', '--subnet', $SubnetId, '--public-ip-address', '', '--admin-username', 'azureuser', '--generate-ssh-keys', '--tags', $tag, '-o', 'none')
-            $out = Invoke-Az -Args @('vm', 'run-command', 'invoke', '-g', $Rg, '-n', $vm, '--command-id', 'RunShellScript', '--scripts', $script, '--query', 'value[0].message', '-o', 'tsv') -AllowFail
-            foreach ($line in ($out -split "`r?`n")) {
-                $m = [regex]::Match($line.Trim(), '^PE\s+(\S+)\s+(.*?)\s+(OPEN|BLOCKED)$')
-                if ($m.Success) {
-                    $ips = @($m.Groups[2].Value -split '\s+' | Where-Object { $_ })
-                    [pscustomobject]@{ fqdn = $m.Groups[1].Value; ips = $ips; tcp443 = ($m.Groups[3].Value -eq 'OPEN') }
-                }
-            }
-        }
-        finally {
-            $ids = @(Get-AzJson -Args @('resource', 'list', '-g', $Rg, '--tag', $tag, '--query', '[].id') -AllowFail)
-            foreach ($id in $ids) { if ($id) { Invoke-Az -Args @('resource', 'delete', '--ids', [string]$id) -AllowFail | Out-Null } }
-        }
-    }
-
-    $ResourceGroup = if ($ResourceGroup) { $ResourceGroup } else { Get-CfgValue $cfg @('resourceGroup', 'deploymentResourceGroup') }
-    $NetworkResourceGroup = if ($NetworkResourceGroup) { $NetworkResourceGroup } else { Get-CfgValue $cfg.network @('networkResourceGroup') $ResourceGroup }
-    $VNetName = if ($VNetName) { $VNetName } else { Get-CfgValue $cfg.network @('vnetName', 'virtualNetworkName') }
-    $managedRgs = Get-WorkspaceManagedRg -Config $cfg -DeployRg $ResourceGroup
-    $probeFqdns = Get-ConfiguredFqdns -Config $cfg -ExplicitFqdn $Fqdn -ResourceGroups (@($ResourceGroup, $NetworkResourceGroup) + $managedRgs)
-
-    if (-not $probeFqdns.Count) {
-        $results.Add((New-CheckResult -Id 'fr5-1-fqdn-input' -Name 'platform privatelink FQDN discovery' -Status 'Fail' -Fr 'FR5.1' -Detail 'No platform privatelink FQDNs found in config or private endpoints.' -Remediation 'Populate privateEndpointFqdns/privatelinkFqdns or ensure platform private endpoints exist.'))
-    } else {
-        $probe = @()
-        if ($CurrentHostOnly) {
-            $probe = @(Invoke-LocalProbe -Names $probeFqdns)
-        } else {
-            $subnetId = Find-ProbeSubnetId -Config $cfg -NetRg $NetworkResourceGroup -Vnet $VNetName -Subnet $SubnetName
-            if (-not $ResourceGroup -or -not $subnetId) {
-                $results.Add((New-CheckResult -Id 'fr5-1-probe-vm-input' -Name 'ephemeral probe VM placement' -Status 'Fail' -Fr 'FR5.1' -Detail 'Resource group or probe subnet could not be resolved.' -Remediation 'Pass -ResourceGroup and either subnet id/name in config or -VNetName/-SubnetName.'))
-            } else {
-                $probe = @(Invoke-VmProbe -Rg $ResourceGroup -SubnetId $subnetId -Names $probeFqdns)
-            }
-        }
-        foreach ($name in $probeFqdns) {
-            $p = $probe | Where-Object { $_.fqdn -eq $name } | Select-Object -First 1
-            $ips = if ($p) { @($p.ips) } else { @() }
-            $private = @($ips | Where-Object { Test-PrivateIp $_ })
-            $ok = $ips.Count -gt 0 -and $private.Count -eq $ips.Count -and $p.tcp443
-            $results.Add((New-CheckResult -Id "fr5-1-$name" -Name "private endpoint $name" -Status ($ok ? 'Pass' : 'Fail') -Fr 'FR5.1' -Detail "ips=$($ips -join ',') tcp443=$($p.tcp443)" -Remediation ($ok ? '' : 'Fix private DNS links, private endpoint approval, NSG, or route tables before certifying.') -Data ([pscustomobject]@{ fqdn = $name; ips = $ips; allPrivate = ($ips.Count -gt 0 -and $private.Count -eq $ips.Count); tcp443 = if ($p) { $p.tcp443 } else { $false } })))
-        }
-    }
-
-    if ($PassThru) { return $results.ToArray() }
-    $null = Write-OnboardingReport -Results $results.ToArray() -Title 'Stage 5 · connectivity (FR5.1)' -JsonPath $JsonPath
-    Complete-Stage -Results $results.ToArray()
 }
 
 <#
@@ -596,20 +415,14 @@ $statePath = Join-Path $outDir "stage5-state-$stamp.json"
 $responsePath = Join-Path $outDir "stage5-response-$stamp.json"
 $state = @{
     workspace = $Workspace; project = $Project; chatModel = $ChatModel
-    connectivity = $false; agentCreated = $false
+    agentCreated = $false
     investigationCreated = $false; conversationCompleted = $false; responseReceived = $false
 }
 
-$step = Invoke-Stage5ConnectivityCheck -ConfigPath $ConfigPath -ResourceGroup $ResourceGroup -PassThru
+$step = Invoke-Stage5CreateAgent -ConfigPath $ConfigPath -Workspace $Workspace -Project $Project -ChatModel $ChatModel -Agent $agentName -PassThru
 Add-Many $step
-$state.connectivity = -not (Has-Fail $step)
+$state.agentCreated = @($step | Where-Object { $_.id -eq 'fr5-3-agent-created' -and $_.status -eq 'Pass' }).Count -gt 0
 Write-State -Path $statePath -State $state
-if ($state.connectivity) {
-    $step = Invoke-Stage5CreateAgent -ConfigPath $ConfigPath -Workspace $Workspace -Project $Project -ChatModel $ChatModel -Agent $agentName -PassThru
-    Add-Many $step
-    $state.agentCreated = @($step | Where-Object { $_.id -eq 'fr5-3-agent-created' -and $_.status -eq 'Pass' }).Count -gt 0
-    Write-State -Path $statePath -State $state
-}
 if ($state.agentCreated) {
     $step = Invoke-Stage5CreateInvestigationConversation -ConfigPath $ConfigPath -Workspace $Workspace -Project $Project -Investigation $investigation -PassThru
     Add-Many $step
@@ -636,9 +449,9 @@ if ($state.conversationCompleted) {
 $summary = Invoke-Stage5VerificationSummary -ConfigPath $ConfigPath -StateFile $statePath -ResourceGroup $ResourceGroup -Workspace $Workspace -Project $Project -ChatModel $ChatModel -PassThru
 Add-Many $summary
 $certified = -not (Has-Fail $results.ToArray()) -and [bool]$state.responseReceived
-$results.Add((New-CheckResult -Id 'fr5-certification-verdict' -Name 'Stage 5 certification verdict' -Status ($certified ? 'Pass' : 'Fail') -Fr 'FR5.1-FR5.7' -Detail ($certified ? 'CERTIFIED' : 'NOT CERTIFIED') -Remediation ($certified ? '' : 'Any failed check blocks certification; a run without an agent answer is not certified.') -Data ([pscustomobject]@{ verdict = ($certified ? 'CERTIFIED' : 'NOT CERTIFIED'); stateFile = $statePath; responsePath = $responsePath })))
+$results.Add((New-CheckResult -Id 'fr5-certification-verdict' -Name 'Stage 5 certification verdict' -Status ($certified ? 'Pass' : 'Fail') -Fr 'FR5.3-FR5.7' -Detail ($certified ? 'CERTIFIED' : 'NOT CERTIFIED') -Remediation ($certified ? '' : 'Any failed check blocks certification; a run without an agent answer is not certified.') -Data ([pscustomobject]@{ verdict = ($certified ? 'CERTIFIED' : 'NOT CERTIFIED'); stateFile = $statePath; responsePath = $responsePath })))
 
 $extra = [pscustomobject]@{ verdict = ($certified ? 'CERTIFIED' : 'NOT CERTIFIED'); stateFile = $statePath; responsePath = $responsePath }
-$null = Write-OnboardingReport -Results $results.ToArray() -Title 'Stage 5 · agent Q&A certification (FR5.1-FR5.7)' -JsonPath $JsonPath -Extra $extra
+$null = Write-OnboardingReport -Results $results.ToArray() -Title 'Stage 5 · agent Q&A certification (FR5.3-FR5.7)' -JsonPath $JsonPath -Extra $extra
 Complete-Stage -Results $results.ToArray()
 

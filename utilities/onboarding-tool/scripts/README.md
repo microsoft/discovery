@@ -47,7 +47,7 @@ Per-stage parameters, prerequisites, and dependencies are documented in
 | 2 Landing zone | [`stage2-landing-zone/stage2_prepare.ps1`](stage2-landing-zone/stage2_prepare.ps1) | rp_register, rbac_assign, nsp_perimeter_joiner_role, network_provision, nsg_rules, route_tables, private_dns, byo_storage, firewall_request_artifact, quota_exemption_requests |
 | 3 Validation | [`stage3-validation/stage3_validate.ps1`](stage3-validation/stage3_validate.ps1) | check_subnet_delegation, check_nsg_effective, check_effective_routes, check_dns_and_pe, testvm_lifecycle, probe_dns, probe_tcp443, probe_https, probe_artifacts, probe_pe_resolution, probe_eastwest, dependency_spec |
 | 4 Deployment | [`stage4-deployment/stage4_deploy.ps1`](stage4-deployment/stage4_deploy.ps1) | deploy_order, true_state_detection, error_remediation_engine, recovery_reput |
-| 5 Scenario enablement | [`stage5-scenario-enablement/stage5_enable.ps1`](stage5-scenario-enablement/stage5_enable.ps1) | connectivity_check, create_agent, create_investigation_conversation, send_prompt_poll, verify_response, verification_summary |
+| 5 Scenario enablement | [`stage5-scenario-enablement/stage5_enable.ps1`](stage5-scenario-enablement/stage5_enable.ps1) | create_agent, create_investigation_conversation, send_prompt_poll, verify_response, verification_summary |
 
 Supporting files: `lib/OnboardingCommon.psm1` (shared module), two planning forms —
 `stage1-planning/discovery-resource-planning-form-managed-vnet.xlsx` (tool provisions the VNet) and
@@ -177,13 +177,12 @@ platform resources — run against the intended subscription only.**
 
 ### Stage 5 — Scenario enablement (`stage5-scenario-enablement/stage5_enable.ps1`)
 
-End-to-end certification of a Q&A agent (FR5.1). Verifies platform private-endpoint DNS
-and 443 reachability, creates a Discovery agent named `scientistQnAAgent` with **no** Discovery
-tool bound, opens an investigation + conversation, sends a scientific prompt, and verifies the
-agent answered with assistant text (passes only when the response completes with a non-empty
-answer, not just an HTTP 200). Requires a green Stage 1 `config.json`, a successful Stage 4
-deployment (workspace + project + chatModel live), and a network path to the platform private
-endpoint (run inside the VNet or a peered/allowed network).
+End-to-end certification of a Q&A agent (FR5.3–FR5.7). Creates a Discovery agent named
+`scientistQnAAgent` with **no** Discovery tool bound, opens an investigation + conversation,
+sends a scientific prompt, and verifies the agent answered with assistant text (passes only when
+the response completes with a non-empty answer, not just an HTTP 200). Requires a green Stage 1
+`config.json` and a successful Stage 4 deployment (workspace + project + chatModel live).
+In-network connectivity probing is not part of Stage 5; it belongs to Stage 3.
 
 | Parameter | Required | Description |
 |---|---|---|

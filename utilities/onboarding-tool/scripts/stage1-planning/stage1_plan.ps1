@@ -195,6 +195,7 @@ function ConvertTo-ConfigModel {
         network           = [ordered]@{
             model                = (Val 'network.model' 'byo')
             networkResourceGroup = (Val 'network.networkResourceGroup')
+            vnetName             = (Val 'network.vnetName')
             vnetCidr             = (Val 'network.vnetCidr')
             corpDns              = (CsvList 'network.corpDns')
             nvaNextHop           = (Val 'network.nvaNextHop')
@@ -250,11 +251,15 @@ $script:DelegationByRole = @{
     'agent-containerapp'     = 'Microsoft.App/environments'
     'workspace-containerapp' = 'Microsoft.App/environments'
     'search-containerapp'    = 'Microsoft.App/environments'
-    'managedcluster'         = 'Microsoft.ContainerService/managedClusters'
+    # The supercomputer system nodes join the managedcluster subnet, so it must NOT be delegated.
+    # Only the management (API-server VNet-integration) subnet carries the managedClusters
+    # delegation; it maps to the 'spare' role and is required only for UserDefinedRouting.
+    'managedcluster'         = 'none'
     'nodepool'               = 'none'
     'private-endpoints'      = 'none'
     'spare'                  = 'none'
 }
+$script:ManagementSubnetDelegation = 'Microsoft.ContainerService/managedClusters'
 $script:NameRules = @{
     workspace        = @{ Min = 3; Max = 24 }
     project          = @{ Min = 3; Max = 12 }
@@ -357,9 +362,17 @@ function Invoke-Stage1Checks {
         if ($azKnown) {
             if ($rawPrincipal -match '@') {
                 $resolvedOid = [string](Invoke-Az -Args @('ad', 'user', 'show', '--id', $rawPrincipal, '--query', 'id', '-o', 'tsv') -AllowFail)
-                if ($resolvedOid.Trim()) { $resolvedVia = 'user (UPN/email)' }
+                if ($resolvedOid.Trim()) { $resolvedVia = 'user (UPN)' }
+                else {
+                    # Guest (B2B) users have a UPN like alias_contoso.com#EXT#@tenant.onmicrosoft.com,
+                    # so their email is not a valid --id. Fall back to a mail/otherMails lookup.
+                    $odataMail = $rawPrincipal.Replace("'", "''")
+                    $mailHits = @(Get-AzJson -Args @('ad', 'user', 'list', '--filter', "mail eq '$odataMail' or otherMails/any(m:m eq '$odataMail')", '--query', '[].id') -AllowFail)
+                    if ($mailHits.Count -eq 1) { $resolvedOid = [string]$mailHits[0]; $resolvedVia = 'user (email / guest account)' }
+                    elseif ($mailHits.Count -gt 1) { $resolvedVia = "ambiguous: $($mailHits.Count) users share this email" }
+                }
             }
-            if (-not $resolvedOid.Trim()) {
+            if (-not $resolvedOid.Trim() -and $resolvedVia -notlike 'ambiguous*') {
                 $resolvedOid = [string](Invoke-Az -Args @('ad', 'sp', 'show', '--id', $rawPrincipal, '--query', 'id', '-o', 'tsv') -AllowFail)
                 if ($resolvedOid.Trim()) { $resolvedVia = 'service principal (appId/displayName)' }
             }
@@ -377,9 +390,15 @@ function Invoke-Stage1Checks {
                         -Remediation "Run 'az login' to the target tenant and re-run, or enter the Entra objectId (GUID) directly. Find your own objectId with: az ad signed-in-user show --query id -o tsv." `
                         -Data @{ input = $rawPrincipal }))
         }
+        elseif ($resolvedVia -like 'ambiguous*') {
+            $R.Add((New-CheckResult -Id 'identity-resolve' -Name 'Deploying identity resolved' -Status 'Fail' -Fr 'FR1.1' `
+                        -Detail "deployingIdentity.objectId '$rawPrincipal' is not a GUID and matches more than one user ($resolvedVia), so it cannot be resolved unambiguously." `
+                        -Remediation "Enter the user's UPN or the Entra objectId (GUID) instead. Find your own objectId with: az ad signed-in-user show --query id -o tsv." `
+                        -Data @{ input = $rawPrincipal }))
+        }
         else {
             $R.Add((New-CheckResult -Id 'identity-resolve' -Name 'Deploying identity resolved' -Status 'Fail' -Fr 'FR1.1' `
-                        -Detail "deployingIdentity.objectId '$rawPrincipal' is not a GUID and could not be resolved to a user or service principal in the signed-in tenant." `
+                        -Detail "deployingIdentity.objectId '$rawPrincipal' is not a GUID and could not be resolved to a user (by UPN, mail or otherMails) or service principal in the signed-in tenant." `
                         -Remediation "Enter a valid email/UPN of a user in the target tenant, an app registration's appId/display name, or the Entra objectId (GUID) directly. Find your own objectId with: az ad signed-in-user show --query id -o tsv." `
                         -Data @{ input = $rawPrincipal }))
         }
@@ -443,7 +462,20 @@ function Invoke-Stage1Checks {
         $reqPrefix = if ($script:RequiredPrefixByRole.ContainsKey($canonRole)) { $script:RequiredPrefixByRole[$canonRole] } else { $null }
         if ($info -and $reqPrefix -and $info.Prefix -gt $reqPrefix) { $issues += "prefix /$($info.Prefix) smaller than required /$reqPrefix" }
         $expDel = if ($script:DelegationByRole.ContainsKey($canonRole)) { $script:DelegationByRole[$canonRole] } else { $null }
-        if ($expDel -and ([string]$sn.delegation) -ne $expDel) { $issues += "delegation '$($sn.delegation)' should be '$expDel'" }
+        $actDel = if ([string]::IsNullOrWhiteSpace([string]$sn.delegation)) { 'none' } else { [string]$sn.delegation }
+        if ($canonRole -eq 'spare') {
+            # Management subnet: delegated for UserDefinedRouting; either value is fine for LoadBalancer (unused).
+            if ([string]$Cfg.network.outboundType -eq 'UserDefinedRouting') { $expDel = $script:ManagementSubnetDelegation }
+            elseif ($actDel -eq $script:ManagementSubnetDelegation) { $expDel = $null }
+        }
+        if ($expDel -and $actDel -ne $expDel) {
+            $why = switch ($canonRole) {
+                'managedcluster' { ' (supercomputer system nodes run in this subnet; a managedClusters delegation makes the supercomputer fail with InternalServerError)' }
+                'spare' { ' (UserDefinedRouting places the AKS API server in the management subnet, which needs this delegation)' }
+                default { '' }
+            }
+            $issues += "delegation '$actDel' should be '$expDel'$why"
+        }
         if ($issues.Count) {
             $R.Add((New-CheckResult -Id "subnet-$role" -Name "Subnet $role sizing/delegation" -Status 'Fail' -Fr 'FR1.2' `
                         -Detail ($issues -join '; ') -Remediation 'Resize to the required prefix and set the correct delegation in the Config sheet.'))
@@ -486,6 +518,38 @@ function Invoke-Stage1Checks {
     }
     else {
         $R.Add((New-CheckResult -Id 'network-model' -Name 'Network model (network.model)' -Status 'Pass' -Fr 'FR1.2' -Detail "model=$netModel"))
+    }
+
+    # byo-existing: the tool never creates the VNet, so it must already exist where the config points.
+    if ($netModel -eq 'byo-existing') {
+        $byoVnet = if (Test-Field $Cfg.network.vnetName) { [string]$Cfg.network.vnetName } else { "vnet-$($Cfg.names.workspace)" }
+        $byoRg = [string]$Cfg.network.networkResourceGroup
+        if (-not (Test-Field $byoRg)) {
+            $R.Add((New-CheckResult -Id 'byo-vnet' -Name 'Existing VNet (byo-existing)' -Status 'Fail' -Fr 'FR1.2' `
+                        -Detail 'network.model=byo-existing but network.networkResourceGroup is blank.' `
+                        -Remediation 'Set network.networkResourceGroup to the resource group that holds your existing VNet, and network.vnetName to its name.'))
+        }
+        elseif (-not $loggedIn) {
+            $R.Add((New-CheckResult -Id 'byo-vnet' -Name 'Existing VNet (byo-existing)' -Status 'Skip' -Fr 'FR1.2' `
+                        -Detail "az not logged in; existence of VNet '$byoVnet' in '$byoRg' not checked." -Remediation "Run 'az login' and re-run."))
+        }
+        else {
+            $existing = Get-AzJson -Args @('network', 'vnet', 'show', '-g', $byoRg, '-n', $byoVnet, '--subscription', $Cfg.subscriptionId) -AllowFail
+            if ($existing) {
+                $loc = [string]$existing.location
+                $status = if ($loc -and $Cfg.controlPlaneRegion -and $loc -ne $Cfg.controlPlaneRegion) { 'Fail' } else { 'Pass' }
+                $R.Add((New-CheckResult -Id 'byo-vnet' -Name 'Existing VNet (byo-existing)' -Status $status -Fr 'FR1.2' `
+                            -Detail "VNet '$byoVnet' found in '$byoRg' (location=$loc, address space=$(@($existing.addressSpace.addressPrefixes) -join ','))." `
+                            -Remediation ($status -eq 'Fail' ? "Set controlPlaneRegion/workloadRegion to '$loc' (the VNet's region) or use a VNet in '$($Cfg.controlPlaneRegion)'." : '') `
+                            -Data @{ vnetId = $existing.id; location = $loc }))
+            }
+            else {
+                $hint = if (Test-Field $Cfg.network.vnetName) { '' } else { " network.vnetName is blank, so the tool assumed 'vnet-<names.workspace>'." }
+                $R.Add((New-CheckResult -Id 'byo-vnet' -Name 'Existing VNet (byo-existing)' -Status 'Fail' -Fr 'FR1.2' `
+                            -Detail "VNet '$byoVnet' was not found in resource group '$byoRg'.$hint" `
+                            -Remediation 'Set network.vnetName to the exact name of your existing VNet and network.networkResourceGroup to its resource group (az network vnet list -o table).'))
+            }
+        }
     }
 
     # ---- FR1.3 address-space conflict ------------------------------------
@@ -546,6 +610,49 @@ function Invoke-Stage1Checks {
         else {
             $R.Add((New-CheckResult -Id 'sku-region' -Name 'VM SKU availability' -Status 'Warn' -Fr 'FR1.5' -Detail 'Could not enumerate VM SKUs.' -Remediation 'Verify vm list-skus access for the workload region.'))
         }
+
+        # Compute quota for the supercomputer pools Stage 4 deploys: the service-default system pool
+        # (3 x Standard_D4s_v6) is validated at submit time, so a shortfall rejects the deployment
+        # ("Insufficient quota ... Total Regional vCPUs"). The node pool (min 0, max 3 x Standard_D4ds_v6)
+        # only needs headroom when it autoscales.
+        $sysNeed = 12; $npNeed = 12
+        $usage = Get-AzJson -Args @('vm', 'list-usage', '--location', $Cfg.workloadRegion) -AllowFail
+        if (-not $usage) {
+            $R.Add((New-CheckResult -Id 'vcpu-quota' -Name 'Compute vCPU quota' -Status 'Warn' -Fr 'FR1.5' `
+                        -Detail "Could not read compute usage/quota for $($Cfg.workloadRegion) (az vm list-usage failed), so the supercomputer's $sysNeed-vCPU system pool requirement was not verified." `
+                        -Remediation "Confirm in the portal (Subscriptions > Usage + quotas) that '$($Cfg.workloadRegion)' has at least $sysNeed free Total Regional vCPUs and $sysNeed free Standard DSv6 Family vCPUs (plus $npNeed DDSv6 for node-pool autoscale)."))
+        }
+        else {
+            $avail = @{}
+            foreach ($u in @($usage)) { $avail[[string]$u.name.value] = [int]$u.limit - [int]$u.currentValue }
+            $needs = @(
+                [pscustomobject]@{ quota = 'cores'; label = 'Total Regional vCPUs'; hard = $sysNeed; soft = $sysNeed + $npNeed }
+                [pscustomobject]@{ quota = 'StandardDsv6Family'; label = 'Standard DSv6 Family vCPUs (system pool)'; hard = $sysNeed; soft = $sysNeed }
+                [pscustomobject]@{ quota = 'StandardDdsv6Family'; label = 'Standard DDSv6 Family vCPUs (node pool autoscale)'; hard = 0; soft = $npNeed }
+            )
+            $short = @(foreach ($n in $needs) {
+                    $a = if ($avail.ContainsKey($n.quota)) { $avail[$n.quota] } else { 0 }
+                    if ($a -lt $n.soft) {
+                        [pscustomobject]@{ service = "Microsoft.Compute/$($n.quota)"; label = $n.label; region = $Cfg.workloadRegion; available = $a; required = $n.soft; blocking = ($a -lt $n.hard) }
+                    }
+                })
+            $summary = ($short | ForEach-Object { "$($_.label): available $($_.available), need $($_.required)" }) -join '; '
+            $fix = "Request a quota increase for $($Cfg.workloadRegion) (Subscriptions > Usage + quotas, or: az quota update --resource-name <quota> --scope /subscriptions/$($Cfg.subscriptionId)/providers/Microsoft.Compute/locations/$($Cfg.workloadRegion) --limit-object value=<new-limit> --resource-type dedicated), then re-run Stage 1."
+            if (@($short | Where-Object blocking).Count) {
+                $R.Add((New-CheckResult -Id 'vcpu-quota' -Name 'Compute vCPU quota' -Status 'Fail' -Fr 'FR1.5' `
+                            -Detail "Not enough compute quota for the supercomputer system pool (3 x Standard_D4s_v6 = $sysNeed vCPUs). Stage 4 would be rejected with 'Insufficient quota'. $summary." `
+                            -Remediation "$fix Or record a WAIVER row (check=vcpu-quota + justification) if the increase is already in flight." -Data $short))
+            }
+            elseif ($short.Count) {
+                $R.Add((New-CheckResult -Id 'vcpu-quota' -Name 'Compute vCPU quota' -Status 'Warn' -Fr 'FR1.5' `
+                            -Detail "Enough quota to deploy the supercomputer system pool ($sysNeed vCPUs), but not for the node pool to autoscale to 3 x Standard_D4ds_v6 ($npNeed vCPUs); jobs that need the node pool to scale out will stay pending. $summary." `
+                            -Remediation $fix -Data $short))
+            }
+            else {
+                $R.Add((New-CheckResult -Id 'vcpu-quota' -Name 'Compute vCPU quota' -Status 'Pass' -Fr 'FR1.5' `
+                            -Detail "$($Cfg.workloadRegion) has room for the system pool ($sysNeed vCPUs DSv6) and node-pool autoscale ($npNeed vCPUs DDSv6); Total Regional vCPUs available: $($avail['cores'])."))
+            }
+        }
     }
     else {
         $R.Add((New-CheckResult -Id 'sku-region' -Name 'VM SKU availability' -Status 'Skip' -Fr 'FR1.5' -Detail 'az not logged in; SKU-in-region not checked. Note: Standard_D4s_v6 is not offered in eastus/eastus2 (use Standard_D4ds_v6).'))
@@ -561,7 +668,16 @@ function Invoke-Stage1Checks {
         $rule = $script:NameRules[$k]
         $issues = @()
         if (-not (Test-Field $name)) {
-            $R.Add((New-CheckResult -Id "name-$k" -Name "Name '$k'" -Status 'Warn' -Fr 'FR1.6' -Detail 'Not provided.' -Remediation "Provide names.$k (length $($rule.Min)-$($rule.Max))."))
+            # Optional names that a later stage defaults on its own are expected to be blank.
+            $defaultFor = @{ investigation = 'hero-inv (Stage 5 default)' }
+            if ($defaultFor.ContainsKey($k)) {
+                $R.Add((New-CheckResult -Id "name-$k" -Name "Name '$k'" -Status 'Pass' -Fr 'FR1.6' -Detail "Not provided (optional); will use $($defaultFor[$k])."))
+            }
+            else {
+                $R.Add((New-CheckResult -Id "name-$k" -Name "Name '$k'" -Status 'Warn' -Fr 'FR1.6' `
+                            -Detail "names.$k is blank, so the stage that creates this resource has no name to use and may fail or skip it." `
+                            -Remediation "Provide names.$k (length $($rule.Min)-$($rule.Max), lowercase alphanumeric + single hyphens)."))
+            }
             continue
         }
         if ($name.Length -lt $rule.Min -or $name.Length -gt $rule.Max) { $issues += "length $($name.Length) outside $($rule.Min)-$($rule.Max)" }
@@ -745,6 +861,13 @@ if (-not $OutConfig) { $OutConfig = Join-Path (Split-Path -Parent (Resolve-Path 
 
 if ($blocked.Count -eq 0) {
     $cfgModel.schemaVersion = '1.0'
+    # Export canonical subnet roles (e.g. planning-form alias 'aksSubnet' -> 'managedcluster'):
+    # later stages match roles by their canonical names.
+    foreach ($sn in @($cfgModel.network.subnets)) {
+        if ($sn -and ($sn.PSObject.Properties.Name -contains 'role') -and (Test-CanonicalSubnetRole ([string]$sn.role))) {
+            $sn.role = Resolve-SubnetRole ([string]$sn.role)
+        }
+    }
     if ($cfgModel.PSObject.Properties.Name -contains 'contentHash') { $cfgModel.PSObject.Properties.Remove('contentHash') }
     $hash = Get-ContentHash -Object $cfgModel
     $ordered = [ordered]@{ schemaVersion = '1.0'; contentHash = $hash }

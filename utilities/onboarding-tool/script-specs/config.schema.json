@@ -99,6 +99,10 @@
         "networkResourceGroup": {
           "type": "string"
         },
+        "vnetName": {
+          "type": "string",
+          "description": "Name of the VNet in networkResourceGroup. Required for byo-existing when the VNet is not named vnet-<names.workspace>; optional otherwise (Stage 2 names the VNet it builds vnet-<names.workspace>)."
+        },
         "vnetCidr": {
           "type": "string"
         },

@@ -28,7 +28,7 @@
       { "role": "search-containerapp",    "cidr": "10.10.0.128/27", "requiredPrefix": "/27", "delegation": "Microsoft.App/environments" },
       { "role": "private-endpoints",      "cidr": "10.10.0.160/27", "requiredPrefix": "/27", "delegation": "none" },
       { "role": "spare",                  "cidr": "10.10.0.192/27", "requiredPrefix": "/27", "delegation": "none" },
-      { "role": "managedcluster",         "cidr": "10.10.1.0/26",   "requiredPrefix": "/26", "delegation": "Microsoft.ContainerService/managedClusters" },
+      { "role": "managedcluster",         "cidr": "10.10.1.0/26",   "requiredPrefix": "/26", "delegation": "none" },
       { "role": "nodepool",               "cidr": "10.10.1.64/26",  "requiredPrefix": "/26", "delegation": "none" }
     ]
   },

@@ -62,7 +62,7 @@
           "role": "managedcluster",
           "cidr": "10.46.253.128/26",
           "requiredPrefix": "/26",
-          "delegation": "Microsoft.ContainerService/managedClusters"
+          "delegation": "none"
         },
         {
           "role": "nodepool",
@@ -156,7 +156,7 @@
           "role": "managedcluster",
           "cidr": "10.46.253.128/26",
           "requiredPrefix": "/26",
-          "delegation": "Microsoft.ContainerService/managedClusters"
+          "delegation": "none"
         },
         {
           "role": "nodepool",

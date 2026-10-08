@@ -156,11 +156,16 @@ function Invoke-CheckSubnetDelegation {
         'agent-containerapp'     = 'Microsoft.App/environments'
         'workspace-containerapp' = 'Microsoft.App/environments'
         'search-containerapp'    = 'Microsoft.App/environments'
-        'managedcluster'         = 'Microsoft.ContainerService/managedClusters'
+        'managedcluster'         = 'none'
         'nodepool'               = 'none'
         'private-endpoints'      = 'none'
         'spare'                  = 'none'
     }
+    # Management (API-server) subnet is delegated only when UserDefinedRouting needs it; for
+    # LoadBalancer it is unused, so either value is acceptable.
+    $mgmtDelegation = 'Microsoft.ContainerService/managedClusters'
+    $isUdr = [string]$Config.network.outboundType -eq 'UserDefinedRouting'
+    if ($isUdr) { $expected['spare'] = $mgmtDelegation }
     function Find-Subnet {
         param([object]$Config, [object]$Subnet)
         if ($Subnet.PSObject.Properties.Name -contains 'id' -and $Subnet.id) {
@@ -195,9 +200,12 @@ function Invoke-CheckSubnetDelegation {
         $actualDelegations = @($actualSubnet.delegations | ForEach-Object { $_.serviceName } | Where-Object { $_ })
         $actual = if ($actualDelegations.Count) { $actualDelegations -join ',' } else { 'none' }
         $ok = $actual -eq $expected[$role]
+        if (-not $ok -and $role -eq 'spare' -and -not $isUdr -and $actual -eq $mgmtDelegation) { $ok = $true }
+        $fix = 'Wrong delegation: set the required delegation (Stage 2 network_provision).'
+        if (-not $ok -and $role -eq 'managedcluster') { $fix = "Remove the delegation from subnet $($actualSubnet.name): the supercomputer system nodes run there and a managedClusters delegation makes supercomputer creation fail with InternalServerError (target=internalMetadata). Run: az network vnet subnet update --ids $($actualSubnet.id) --remove delegations" }
         $out.Add((New-CheckResult -Id $id -Name "subnet delegation $role" -Status ($ok ? 'Pass' : 'Fail') -Fr 'FR3.6a' `
                     -Detail "expected=$($expected[$role]) actual=$actual subnet=$($actualSubnet.name)" `
-                    -Remediation ($ok ? '' : 'Wrong delegation: set the required delegation (Stage 2 network_provision).') `
+                    -Remediation ($ok ? '' : $fix) `
                     -Data ([pscustomobject]@{ role = $role; expected = $expected[$role]; actual = $actual; ok = $ok; subnetId = $actualSubnet.id })))
     }
     return $out.ToArray()
@@ -328,8 +336,9 @@ function Invoke-CheckNsgEffective {
         $missing = @()
         if (-not $allow443) { $missing += 'Allow-Internet-Out-443' }
         if (-not $eastWest) { $missing += 'East-West-Discovery' }
-        $status = if ($missing.Count) { 'Fail' } elseif ($source -eq 'subnet-nsg-fallback') { 'Warn' } else { 'Pass' }
-        $detail = if ($missing.Count) { "missing=$($missing -join ',') source=$source" } else { "required allow paths present source=$source" }
+        $status = if ($missing.Count) { 'Fail' } else { 'Pass' }
+        $sourceNote = if ($source -eq 'subnet-nsg-fallback') { 'checked the subnet NSG rules (no NIC in the subnet yet — expected before Stage 4 deploys into it — so the NIC effective-NSG view is not available)' } elseif ($nic) { 'checked the effective NSG on a NIC in the subnet' } else { 'no NSG is attached to the subnet and no NIC exists yet' }
+        $detail = if ($missing.Count) { "missing=$($missing -join ',') source=$source; $sourceNote" } else { "required allow paths present (443 out, east-west); $sourceNote" }
         $out.Add((New-CheckResult -Id $id -Name "effective NSG $role" -Status $status -Fr 'FR3.6b' `
                     -Detail $detail -Remediation ($missing.Count ? 'NSG denies egress or UDR black-holes the route.' : '') `
                     -Data ([pscustomobject]@{ role = $role; subnetId = $subnet.id; nicId = if ($nic) { $nic.id } else { $null }; missingRules = $missing; source = $source })))
@@ -474,10 +483,13 @@ function Invoke-CheckEffectiveRoutes {
             # LoadBalancer egress: Azure system routes govern 0.0.0.0/0 (nextHop Internet, or no UDR at all).
             $nextHopType -in @('', 'Internet')
         }
-        $status = if ($ok -and $source -eq 'route-table-fallback') { 'Warn' } elseif ($ok) { 'Pass' } else { 'Fail' }
+        $status = if ($ok) { 'Pass' } else { 'Fail' }
+        $hopText = if ($nextHopType) { "nextHopType=$nextHopType$(if ($nextHopIp) { " nextHopIp=$nextHopIp" })" } elseif ($role -eq 'managedcluster') { 'no user route for the managed-cluster CIDR (system VnetLocal route applies)' } else { 'no user 0.0.0.0/0 route (Azure system route to Internet applies)' }
+        $sourceNote = if ($source -eq 'route-table-fallback') { 'checked the subnet route table (no NIC in the subnet yet — expected before Stage 4 deploys into it — so the effective-route view is not available)' } else { 'checked the effective routes on a NIC in the subnet' }
+        $detail = "$hopText; outboundType=$outboundType; $sourceNote"
         $remediation = if ($ok) { '' } elseif ($role -eq 'managedcluster') { 'Managed cluster routed via NVA, AKS NotReady -> Set managed cluster subnet to VnetLocal; delete+recreate route.' } elseif ($isUdr) { 'NSG denies egress or UDR black-holes the route.' } else { 'A user route overrides LoadBalancer egress; remove the 0.0.0.0/0 UDR or set network.outboundType=UserDefinedRouting with network.nvaNextHop.' }
         $out.Add((New-CheckResult -Id $id -Name "effective routes $role" -Status $status -Fr 'FR3.6c' `
-                    -Detail "nextHopType=$nextHopType nextHopIp=$nextHopIp source=$source" -Remediation $remediation `
+                    -Detail $detail -Remediation $remediation `
                     -Data ([pscustomobject]@{ role = $role; subnetId = $subnet.id; nicId = if ($nic) { $nic.id } else { $null }; nextHop = $nextHopType; nextHopIp = $nextHopIp; networkWatcher = $nwNextHop; source = $source; managedCidr = $managedCidr })))
     }
     return $out.ToArray()

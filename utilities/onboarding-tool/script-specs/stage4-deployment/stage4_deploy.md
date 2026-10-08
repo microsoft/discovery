@@ -13,7 +13,7 @@ Deploy the platform in dependency order and, when a step fails, surface the true
 ## Deploy method
 Deploy via a Bicep template (`discovery-platform.bicep`) by default, with parameters generated from the config (subnet ids by role, managed identity, storage account, names, regions, bookshelf scope, and `network.outboundType`). The per-resource ARM PUT sequence is retained behind `--no-bicep` and is also used to gate each resource on Succeeded and to drive true-state detection and remediation after the deployment.
 
-The supercomputer `outboundType` comes from the Stage 1 planning decision `network.outboundType` (default `UserDefinedRouting`); it is passed straight through to the `outboundType` template parameter. `UserDefinedRouting` (forced tunneling) requires the managedcluster subnet to carry the `Microsoft.ContainerService/managedClusters` delegation and egress to route through the customer firewall/NVA.
+The supercomputer `outboundType` comes from the Stage 1 planning decision `network.outboundType` (default `UserDefinedRouting`); it is passed straight through to the `outboundType` template parameter. `UserDefinedRouting` (forced tunneling) requires egress to route through the customer firewall/NVA and a separate management subnet (spare role / `managementSubnet`, delegated to `Microsoft.ContainerService/managedClusters`) passed as `managementSubnetId` for AKS API-server VNet integration. With `LoadBalancer`, `managementSubnetId` is omitted. The managedcluster subnet itself must never be delegated; the `deploy-subnet-topology` pre-flight enforces both rules before submit.
 
 ## Behavior
 - Deploy in order, gating each on Succeeded, then run true-state detection and, on failure, the error-remediation engine.
