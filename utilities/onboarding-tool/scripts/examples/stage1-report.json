@@ -256,8 +256,8 @@
         },
         {
           "policy": "Storage accounts should disable public network access",
-          "handling": "configuration",
-          "note": "Storage public access deny requires private-endpoint config."
+          "handling": "exemption",
+          "note": "Discovery creates managed-RG storage accounts with public network access Enabled (NSP enforced); a deny blocks workspace and Bookshelf provisioning."
         }
       ],
       "timestamp": "2026-09-24T20:21:07.4021892Z"

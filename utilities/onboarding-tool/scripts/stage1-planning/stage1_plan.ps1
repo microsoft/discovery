@@ -277,7 +277,7 @@ $script:NameRules = @{
 $script:KnownDenyPolicies = @(
     @{ Match = 'Cognitive Services'; Handling = 'exemption'; Note = 'Cognitive Services public network access deny blocks Foundry provisioning.' }
     @{ Match = 'Log Analytics';      Handling = 'exemption'; Note = 'Log Analytics public access deny blocks workspace diagnostics.' }
-    @{ Match = 'Storage account.*(public|network access)'; Handling = 'configuration'; Note = 'Storage public access deny requires private-endpoint config.' }
+    @{ Match = 'Storage account.*(public|network access)'; Handling = 'exemption'; Note = 'Discovery creates managed-RG storage accounts with public network access Enabled (NSP enforced); a deny blocks workspace and Bookshelf provisioning.' }
     @{ Match = 'network security perimeter'; Handling = 'exemption'; Note = 'NSP association policy must allow the Discovery perimeter.' }
 )
 $script:CapacityLimitedRegions = @('eastus2')  # AKSCapacityHeavyUsage observed

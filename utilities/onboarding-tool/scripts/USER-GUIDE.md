@@ -163,6 +163,14 @@ quota/SKU, policy pre-flight). Its only output is `config.json` plus the JSON re
 **If it fails:** read the remediation on each red row, fix the yellow cell in the form (or add a
 `WAIVER`/`POLICY` row where appropriate), and re-run. Do not continue until you get `config.json`.
 
+A `policy-preflight` failure means a deny policy will block Discovery provisioning. To proceed:
+
+1. Clear the Stage 1 gate with a row in the Config sheet: column A `WAIVER`, B `policy-preflight`,
+   C the justification (required), D the approver.
+2. Before Stage 4, create the Azure policy exemption. Stage 2 writes the exact
+   `az policy exemption create` command per assignment to `./out/policy-exemption-requests-<workspace>.md`.
+   The WAIVER row only clears the tool's gate; without the exemption, Stage 4 still fails.
+
 ### Stage 2 — Prepare the landing zone (writes resources)
 
 **Scope:** **writes to Azure.** Registers resource providers, assigns RBAC roles, and provisions
