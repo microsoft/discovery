@@ -460,8 +460,91 @@ function Test-CanonicalSubnetRole {
     $script:CanonicalSubnetRoles -contains (Resolve-SubnetRole $Role)
 }
 
+function Get-VcpuQuotaResult {
+    <#
+    .SYNOPSIS Check compute quota for the supercomputer pools Stage 4 deploys (check id vcpu-quota).
+    .DESCRIPTION The service-default system pool (3 x Standard_D4s_v6) is validated at submit time, so
+    a shortfall rejects the deployment ("Insufficient quota ... Total Regional vCPUs"). The node pool
+    (min 0, max 3 x Standard_D4ds_v6) only needs headroom when it autoscales. Quota is shared across
+    the subscription, so Stage 1 checks it at planning time and Stage 3 re-checks it before deploy.
+    #>
+    param(
+        [Parameter(Mandatory)][object]$Config,
+        [Parameter(Mandatory)][string]$Fr,
+        [string]$RerunStage = 'this stage'
+    )
+    $region = $Config.workloadRegion
+    $sysNeed = 12; $npNeed = 12
+    $usage = Get-AzJson -Args @('vm', 'list-usage', '--location', $region) -AllowFail
+    if (-not $usage) {
+        return New-CheckResult -Id 'vcpu-quota' -Name 'Compute vCPU quota' -Status 'Warn' -Fr $Fr `
+            -Detail "Could not read compute usage/quota for $region (az vm list-usage failed), so the supercomputer's $sysNeed-vCPU system pool requirement was not verified." `
+            -Remediation "Confirm in the portal (Subscriptions > Usage + quotas) that '$region' has at least $sysNeed free Total Regional vCPUs and $sysNeed free Standard DSv6 Family vCPUs (plus $npNeed DDSv6 for node-pool autoscale)."
+    }
+    $avail = @{}
+    foreach ($u in @($usage)) { $avail[[string]$u.name.value] = [int]$u.limit - [int]$u.currentValue }
+    $needs = @(
+        [pscustomobject]@{ quota = 'cores'; label = 'Total Regional vCPUs'; hard = $sysNeed; soft = $sysNeed + $npNeed }
+        [pscustomobject]@{ quota = 'StandardDsv6Family'; label = 'Standard DSv6 Family vCPUs (system pool)'; hard = $sysNeed; soft = $sysNeed }
+        [pscustomobject]@{ quota = 'StandardDdsv6Family'; label = 'Standard DDSv6 Family vCPUs (node pool autoscale)'; hard = 0; soft = $npNeed }
+    )
+    $short = @(foreach ($n in $needs) {
+            $a = if ($avail.ContainsKey($n.quota)) { $avail[$n.quota] } else { 0 }
+            if ($a -lt $n.soft) {
+                [pscustomobject]@{ service = "Microsoft.Compute/$($n.quota)"; label = $n.label; region = $region; available = $a; required = $n.soft; blocking = ($a -lt $n.hard) }
+            }
+        })
+    $summary = ($short | ForEach-Object { "$($_.label): available $($_.available), need $($_.required)" }) -join '; '
+    $fix = "Request a quota increase for $region (Subscriptions > Usage + quotas, or: az quota update --resource-name <quota> --scope /subscriptions/$($Config.subscriptionId)/providers/Microsoft.Compute/locations/$region --limit-object value=<new-limit> --resource-type dedicated), then re-run $RerunStage."
+    if (@($short | Where-Object blocking).Count) {
+        return New-CheckResult -Id 'vcpu-quota' -Name 'Compute vCPU quota' -Status 'Fail' -Fr $Fr `
+            -Detail "Not enough compute quota for the supercomputer system pool (3 x Standard_D4s_v6 = $sysNeed vCPUs). Stage 4 would be rejected with 'Insufficient quota'. $summary." `
+            -Remediation "$fix Or record a WAIVER row (check=vcpu-quota + justification) if the increase is already in flight." -Data $short
+    }
+    if ($short.Count) {
+        return New-CheckResult -Id 'vcpu-quota' -Name 'Compute vCPU quota' -Status 'Warn' -Fr $Fr `
+            -Detail "Enough quota to deploy the supercomputer system pool ($sysNeed vCPUs), but not for the node pool to autoscale to 3 x Standard_D4ds_v6 ($npNeed vCPUs); jobs that need the node pool to scale out will stay pending. $summary." `
+            -Remediation $fix -Data $short
+    }
+    New-CheckResult -Id 'vcpu-quota' -Name 'Compute vCPU quota' -Status 'Pass' -Fr $Fr `
+        -Detail "$region has room for the system pool ($sysNeed vCPUs DSv6) and node-pool autoscale ($npNeed vCPUs DDSv6); Total Regional vCPUs available: $($avail['cores'])."
+}
+
+function Get-ModelQuotaResult {
+    <#
+    .SYNOPSIS Check gpt-5.4 GlobalStandard TPM quota for the workspace (check id model-quota).
+    .DESCRIPTION The workspace creates gpt-5.4 (250K TPM) in its managed Foundry account and Stage 4
+    adds chat model gpt-5-4 (200K TPM). A shortfall fails the workspace ~20 min into Stage 4 with a
+    generic InternalServerError. Soft-deleted Foundry accounts keep their quota until purged.
+    #>
+    param(
+        [Parameter(Mandatory)][object]$Config,
+        [Parameter(Mandatory)][string]$Fr,
+        [string]$RerunStage = 'this stage'
+    )
+    $region = $Config.workloadRegion
+    $tpmNeed = 450
+    $quotaName = 'OpenAI.GlobalStandard.gpt-5.4'
+    $usage = @(Get-AzJson -Args @('cognitiveservices', 'usage', 'list', '-l', $region) -AllowFail)
+    $q = @($usage | Where-Object { $_ -and $_.name.value -eq $quotaName }) | Select-Object -First 1
+    if (-not $q) {
+        return New-CheckResult -Id 'model-quota' -Name 'Model TPM quota' -Status 'Warn' -Fr $Fr `
+            -Detail "Could not read $quotaName usage in $region (az cognitiveservices usage list returned nothing), so the ${tpmNeed}K TPM the workspace and chat model need was not verified." `
+            -Remediation "Confirm in the Foundry portal (Quotas) that $region has at least ${tpmNeed}K free GlobalStandard gpt-5.4 TPM."
+    }
+    $free = [int]$q.limit - [int]$q.currentValue
+    $data = [pscustomobject]@{ quota = $quotaName; region = $region; used = [int]$q.currentValue; limit = [int]$q.limit; available = $free; required = $tpmNeed }
+    if ($free -lt $tpmNeed) {
+        return New-CheckResult -Id 'model-quota' -Name 'Model TPM quota' -Status 'Fail' -Fr $Fr `
+            -Detail "$quotaName in ${region}: ${free}K TPM free ($($q.currentValue)/$($q.limit) used), need ${tpmNeed}K (workspace gpt-5.4 250K + chat model gpt-5-4 200K). Stage 4 would fail the workspace with InsufficientQuota." `
+            -Remediation "Free TPM by deleting unused gpt-5.4 deployments or purging soft-deleted Foundry accounts (az cognitiveservices account list-deleted, then account purge), or request more quota in the Foundry portal, then re-run $RerunStage. Or record a WAIVER row (check=model-quota + justification) if the increase is in flight." -Data $data
+    }
+    New-CheckResult -Id 'model-quota' -Name 'Model TPM quota' -Status 'Pass' -Fr $Fr `
+        -Detail "$quotaName in ${region}: ${free}K TPM free, need ${tpmNeed}K." -Data $data
+}
+
 Export-ModuleMember -Function `
     New-CheckResult, Test-AnyFailure, Get-OnboardingConfig, Test-ConfigWaiver, `
     Invoke-Az, Get-AzJson, Assert-AzLogin, Write-OnboardingReport, Complete-Stage, `
     ConvertTo-UInt32Ip, Get-CidrInfo, Test-CidrContains, Test-CidrOverlap, `
-    Resolve-SubnetRole, Test-CanonicalSubnetRole
+    Resolve-SubnetRole, Test-CanonicalSubnetRole, Get-VcpuQuotaResult, Get-ModelQuotaResult

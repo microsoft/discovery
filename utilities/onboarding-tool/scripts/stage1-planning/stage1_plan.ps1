@@ -565,6 +565,29 @@ function Invoke-Stage1Checks {
                             -Detail "VNet '$byoVnet' found in '$byoRg' (location=$loc, address space=$(@($existing.addressSpace.addressPrefixes) -join ','))." `
                             -Remediation ($status -eq 'Fail' ? "Set controlPlaneRegion/workloadRegion to '$loc' (the VNet's region) or use a VNet in '$($Cfg.controlPlaneRegion)'." : '') `
                             -Data @{ vnetId = $existing.id; location = $loc }))
+                # Customer subnets keep their own names; later stages default to snet-<role>, so
+                # record each existing subnet's real name, matched by the planned CIDR.
+                $mapped = @(); $missing = @()
+                foreach ($sn in @($Cfg.network.subnets)) {
+                    $match = @($existing.subnets) | Where-Object {
+                        $p = $_.PSObject.Properties
+                        (@($p['addressPrefix'] ? $p['addressPrefix'].Value : $null) + @($p['addressPrefixes'] ? $p['addressPrefixes'].Value : $null)) -contains [string]$sn.cidr
+                    } | Select-Object -First 1
+                    if ($match) {
+                        $sn | Add-Member -NotePropertyName name -NotePropertyValue ([string]$match.name) -Force
+                        $mapped += "$($sn.role)=$($match.name)"
+                    }
+                    else { $missing += "$($sn.role) ($($sn.cidr))" }
+                }
+                if ($missing.Count) {
+                    $R.Add((New-CheckResult -Id 'byo-subnets' -Name 'Existing subnets (byo-existing)' -Status 'Fail' -Fr 'FR1.2' `
+                                -Detail "No subnet in '$byoVnet' has the planned CIDR for: $($missing -join ', ')." `
+                                -Remediation "Set each SUBNET row's CIDR to the address prefix of the matching subnet in your VNet, or create the missing subnets (az network vnet subnet list -g $byoRg --vnet-name $byoVnet -o table)."))
+                }
+                else {
+                    $R.Add((New-CheckResult -Id 'byo-subnets' -Name 'Existing subnets (byo-existing)' -Status 'Pass' -Fr 'FR1.2' `
+                                -Detail "Matched by CIDR: $($mapped -join ', ')."))
+                }
             }
             else {
                 $hint = if (Test-Field $Cfg.network.vnetName) { '' } else { " network.vnetName is blank, so the tool assumed 'vnet-<names.workspace>'." }
@@ -650,54 +673,18 @@ function Invoke-Stage1Checks {
             $R.Add((New-CheckResult -Id 'sku-region' -Name 'VM SKU availability' -Status 'Warn' -Fr 'FR1.5' -Detail 'Could not enumerate VM SKUs.' -Remediation 'Verify vm list-skus access for the workload region.'))
         }
 
-        # Compute quota for the supercomputer pools Stage 4 deploys: the service-default system pool
-        # (3 x Standard_D4s_v6) is validated at submit time, so a shortfall rejects the deployment
-        # ("Insufficient quota ... Total Regional vCPUs"). The node pool (min 0, max 3 x Standard_D4ds_v6)
-        # only needs headroom when it autoscales.
-        $sysNeed = 12; $npNeed = 12
-        $usage = Get-AzJson -Args @('vm', 'list-usage', '--location', $Cfg.workloadRegion) -AllowFail
-        if (-not $usage) {
-            $R.Add((New-CheckResult -Id 'vcpu-quota' -Name 'Compute vCPU quota' -Status 'Warn' -Fr 'FR1.5' `
-                        -Detail "Could not read compute usage/quota for $($Cfg.workloadRegion) (az vm list-usage failed), so the supercomputer's $sysNeed-vCPU system pool requirement was not verified." `
-                        -Remediation "Confirm in the portal (Subscriptions > Usage + quotas) that '$($Cfg.workloadRegion)' has at least $sysNeed free Total Regional vCPUs and $sysNeed free Standard DSv6 Family vCPUs (plus $npNeed DDSv6 for node-pool autoscale)."))
-        }
-        else {
-            $avail = @{}
-            foreach ($u in @($usage)) { $avail[[string]$u.name.value] = [int]$u.limit - [int]$u.currentValue }
-            $needs = @(
-                [pscustomobject]@{ quota = 'cores'; label = 'Total Regional vCPUs'; hard = $sysNeed; soft = $sysNeed + $npNeed }
-                [pscustomobject]@{ quota = 'StandardDsv6Family'; label = 'Standard DSv6 Family vCPUs (system pool)'; hard = $sysNeed; soft = $sysNeed }
-                [pscustomobject]@{ quota = 'StandardDdsv6Family'; label = 'Standard DDSv6 Family vCPUs (node pool autoscale)'; hard = 0; soft = $npNeed }
-            )
-            $short = @(foreach ($n in $needs) {
-                    $a = if ($avail.ContainsKey($n.quota)) { $avail[$n.quota] } else { 0 }
-                    if ($a -lt $n.soft) {
-                        [pscustomobject]@{ service = "Microsoft.Compute/$($n.quota)"; label = $n.label; region = $Cfg.workloadRegion; available = $a; required = $n.soft; blocking = ($a -lt $n.hard) }
-                    }
-                })
-            $summary = ($short | ForEach-Object { "$($_.label): available $($_.available), need $($_.required)" }) -join '; '
-            $fix = "Request a quota increase for $($Cfg.workloadRegion) (Subscriptions > Usage + quotas, or: az quota update --resource-name <quota> --scope /subscriptions/$($Cfg.subscriptionId)/providers/Microsoft.Compute/locations/$($Cfg.workloadRegion) --limit-object value=<new-limit> --resource-type dedicated), then re-run Stage 1."
-            if (@($short | Where-Object blocking).Count) {
-                $R.Add((New-CheckResult -Id 'vcpu-quota' -Name 'Compute vCPU quota' -Status 'Fail' -Fr 'FR1.5' `
-                            -Detail "Not enough compute quota for the supercomputer system pool (3 x Standard_D4s_v6 = $sysNeed vCPUs). Stage 4 would be rejected with 'Insufficient quota'. $summary." `
-                            -Remediation "$fix Or record a WAIVER row (check=vcpu-quota + justification) if the increase is already in flight." -Data $short))
-            }
-            elseif ($short.Count) {
-                $R.Add((New-CheckResult -Id 'vcpu-quota' -Name 'Compute vCPU quota' -Status 'Warn' -Fr 'FR1.5' `
-                            -Detail "Enough quota to deploy the supercomputer system pool ($sysNeed vCPUs), but not for the node pool to autoscale to 3 x Standard_D4ds_v6 ($npNeed vCPUs); jobs that need the node pool to scale out will stay pending. $summary." `
-                            -Remediation $fix -Data $short))
-            }
-            else {
-                $R.Add((New-CheckResult -Id 'vcpu-quota' -Name 'Compute vCPU quota' -Status 'Pass' -Fr 'FR1.5' `
-                            -Detail "$($Cfg.workloadRegion) has room for the system pool ($sysNeed vCPUs DSv6) and node-pool autoscale ($npNeed vCPUs DDSv6); Total Regional vCPUs available: $($avail['cores'])."))
-            }
-        }
+        $R.Add((Get-VcpuQuotaResult -Config $Cfg -Fr 'FR1.5' -RerunStage 'Stage 1'))
     }
     else {
         $R.Add((New-CheckResult -Id 'sku-region' -Name 'VM SKU availability' -Status 'Skip' -Fr 'FR1.5' -Detail 'az not logged in; SKU-in-region not checked. Note: Standard_D4s_v6 is not offered in eastus/eastus2 (use Standard_D4ds_v6).'))
     }
     if ($Cfg.deployMode -eq 'DataZoneStandard') {
         $R.Add((New-CheckResult -Id 'deploy-mode' -Name 'Deploy mode' -Status 'Warn' -Fr 'FR1.5' -Detail 'DataZoneStandard selected for data residency; confirm model availability in the data zone.'))
+    }
+
+    # Model TPM quota (shared with the Stage 3 re-check).
+    if ($loggedIn -and (Test-Field $Cfg.workloadRegion)) {
+        $R.Add((Get-ModelQuotaResult -Config $Cfg -Fr 'FR1.5' -RerunStage 'Stage 1'))
     }
 
     # ---- FR1.6 naming rules ----------------------------------------------

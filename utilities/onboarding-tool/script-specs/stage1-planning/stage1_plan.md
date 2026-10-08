@@ -61,6 +61,10 @@ Detect any Discovery subnet overlapping an existing subnet and confirm the full 
 - Overlap: relocate the Discovery subnet to a free range.
 - Insufficient space: widen the VNet or reduce non-Discovery usage.
 
+### byo_subnets — FR1.3
+For `network.model=byo-existing`, match each planned subnet to an existing subnet in the VNet by CIDR and record its name in the exported config. Stages 2 and 4 use that name instead of `snet-<role>`.
+- Unmatched role/CIDR: correct the SUBNET row CIDR, or create the subnet in the VNet.
+
 ### region_availability — FR1.4
 Confirm the workload region offers required features, and distinguish capacity from quota. Flag AKS API Server VNet Integration capacity (`AKSCapacityHeavyUsage` seen in eastus2) and AI Search regional capacity; recommend the workload/control-plane split where a region is capacity-limited.
 - Capacity-limited region: split control plane and workload, or choose a region with capacity and global-peer to the firewall.
@@ -74,7 +78,7 @@ Expand the sizing tier (Small|Medium|Large) into concrete resource counts and re
 - Global Standard vs Data Zone Standard where the config requires data residency.
 - Quota gap: file the increase (feeds Stage 2 quota_exemption_requests).
 - SKU not in region: switch to the in-region SKU.
-- TPM shortfall: raise the deployment TPM or free existing capacity.
+- TPM shortfall: raise the deployment TPM or free existing capacity. Check `model-quota` reads `OpenAI.GlobalStandard.gpt-5.4` usage in the workload region and fails when less than 450K is free (workspace 250K + chat model 200K). Soft-deleted Foundry accounts keep their quota until purged.
 
 ### naming_validation — FR1.6
 Enforce per-type naming rules (lowercase alphanumeric + hyphens, start with a letter, no consecutive separators) and length limits (workspace 3–24, project 3–12, supercomputer 3–24, node pool 3–12, tool 3–24, agent 3–63, storage container 3–24, storage asset 3–24, investigation 1–20). Reserve MRG names (`mrg-dwsp-<workspace>-<6char>`, `mrg-dscmp-<supercomputer>-<6char>`, `mrg-dbksf-<bookshelf>-<6char>`) and call `Microsoft.Discovery/checkNameAvailability` for workspace uniqueness (the workspace name is the endpoint subdomain).

@@ -333,11 +333,16 @@ function Invoke-CheckNsgEffective {
         }
         $allow443 = Test-Allow443Rule -Rules $rules
         $eastWest = Test-EastWestRule -Rules $rules
+        $hasSubnetNsg = $subnet.PSObject.Properties.Name -contains 'networkSecurityGroup' -and $subnet.networkSecurityGroup -and $subnet.networkSecurityGroup.id
+        $noNsg = (-not $nic) -and (-not $hasSubnetNsg)
+        # No NSG on the subnet means Azure's implicit defaults apply, which allow outbound
+        # Internet 443 and VNet-to-VNet traffic; nothing in the subnet can block these paths.
+        if ($noNsg) { $allow443 = $true; $eastWest = $true; $source = 'no-nsg' }
         $missing = @()
         if (-not $allow443) { $missing += 'Allow-Internet-Out-443' }
         if (-not $eastWest) { $missing += 'East-West-Discovery' }
         $status = if ($missing.Count) { 'Fail' } else { 'Pass' }
-        $sourceNote = if ($source -eq 'subnet-nsg-fallback') { 'checked the subnet NSG rules (no NIC in the subnet yet — expected before Stage 4 deploys into it — so the NIC effective-NSG view is not available)' } elseif ($nic) { 'checked the effective NSG on a NIC in the subnet' } else { 'no NSG is attached to the subnet and no NIC exists yet' }
+        $sourceNote = if ($source -eq 'subnet-nsg-fallback') { 'checked the subnet NSG rules (no NIC in the subnet yet — expected before Stage 4 deploys into it — so the NIC effective-NSG view is not available)' } elseif ($nic) { 'checked the effective NSG on a NIC in the subnet' } else { 'no NSG is attached to the subnet, so Azure default rules allow these paths' }
         $detail = if ($missing.Count) { "missing=$($missing -join ',') source=$source; $sourceNote" } else { "required allow paths present (443 out, east-west); $sourceNote" }
         $out.Add((New-CheckResult -Id $id -Name "effective NSG $role" -Status $status -Fr 'FR3.6b' `
                     -Detail $detail -Remediation ($missing.Count ? 'NSG denies egress or UDR black-holes the route.' : '') `
@@ -568,8 +573,10 @@ function Invoke-CheckDnsAndPe {
         }
         $zone = if ($rg) { Get-AzJson -Args @('network', 'private-dns', 'zone', 'show', '-g', $rg, '-n', $zoneName) -AllowFail } else { $null }
         if (-not $zone) {
+            $vnetRef = if ($vnetId) { $vnetId } else { '<vnet-resource-id>' }
+            $fix = "Create the zone and link it to the VNet: az network private-dns zone create -g $rg -n $zoneName; az network private-dns link vnet create -g $rg -z $zoneName -n link-discovery --virtual-network $vnetRef --registration-enabled false"
             $out.Add((New-CheckResult -Id $id -Name "private DNS $zoneName" -Status 'Fail' -Fr 'FR3.6d' `
-                        -Detail "Zone not found in resource group '$rg'." -Remediation 'Fix private DNS zone links / VNet DNS.' `
+                        -Detail "Zone not found in resource group '$rg'." -Remediation $fix `
                         -Data ([pscustomobject]@{ zone = $zoneName; linked = $false; exists = $false })))
             continue
         }
@@ -577,7 +584,7 @@ function Invoke-CheckDnsAndPe {
         $linked = if ($vnetId) { [bool]($links | Where-Object { $_.PSObject.Properties.Name -contains 'virtualNetwork' -and $_.virtualNetwork -and $_.virtualNetwork.id -eq $vnetId }) } else { @($links).Count -gt 0 }
         $out.Add((New-CheckResult -Id $id -Name "private DNS $zoneName" -Status ($linked ? 'Pass' : 'Fail') -Fr 'FR3.6d' `
                     -Detail ($linked ? "linked to VNet" : "zone exists but no matching VNet link for $vnetId") `
-                    -Remediation ($linked ? '' : 'Fix private DNS zone links / VNet DNS.') `
+                    -Remediation ($linked ? '' : "Link the zone to the VNet: az network private-dns link vnet create -g $rg -z $zoneName -n link-discovery --virtual-network $(if ($vnetId) { $vnetId } else { '<vnet-resource-id>' }) --registration-enabled false") `
                     -Data ([pscustomobject]@{ zone = $zoneName; linked = $linked; exists = $true; linkCount = @($links).Count })))
     }
     $peGroups = Get-PrivateEndpointsResourceGroups -Config $Config -DefaultRg $rg
@@ -975,6 +982,38 @@ done
     }
     return $out.ToArray()
 }
+function Invoke-CheckQuota {
+    <#
+    .SYNOPSIS FR3.6e re-check the quota Stage 4 consumes, right before deploy.
+    .DESCRIPTION Quota is shared across the subscription and can drop between Stage 1 and Stage 4.
+    supercomputer profile -> vcpu-quota; workspace profile -> model-quota. A resource that already
+    exists in Succeeded state holds its quota, so the check is skipped for it.
+    #>
+    param([object]$Config, [string]$Profile)
+    $out = [System.Collections.Generic.List[object]]::new()
+    $targets = switch ($Profile) {
+        'supercomputer' { @([pscustomobject]@{ id = 'vcpu-quota'; type = 'supercomputers'; name = $Config.names.supercomputer; fn = 'Get-VcpuQuotaResult' }) }
+        'workspace' { @([pscustomobject]@{ id = 'model-quota'; type = 'workspaces'; name = $Config.names.workspace; fn = 'Get-ModelQuotaResult' }) }
+        default { @() }
+    }
+    foreach ($t in $targets) {
+        if ($t.name) {
+            $rid = "/subscriptions/$($Config.subscriptionId)/resourceGroups/$($Config.resourceGroup)/providers/Microsoft.Discovery/$($t.type)/$($t.name)"
+            $state = Invoke-Az -Args @('resource', 'show', '--ids', $rid, '--api-version', '2026-06-01', '--query', 'properties.provisioningState', '-o', 'tsv') -AllowFail
+            if ("$state".Trim() -eq 'Succeeded') {
+                $out.Add((New-CheckResult -Id $t.id -Name ($t.id -eq 'vcpu-quota' ? 'Compute vCPU quota' : 'Model TPM quota') -Status 'Skip' -Fr 'FR3.6e' `
+                            -Detail "$($t.type.TrimEnd('s')) '$($t.name)' already exists (Succeeded) and holds its quota, so no new quota is needed."))
+                continue
+            }
+        }
+        $r = & $t.fn -Config $Config -Fr 'FR3.6e' -RerunStage 'Stage 3'
+        if ($r.Status -eq 'Fail' -and (Test-ConfigWaiver -Config $Config -CheckId $t.id)) {
+            $r = New-CheckResult -Id $t.id -Name $r.Name -Status 'Waived' -Fr 'FR3.6e' -Detail "$($r.Detail) [waived by config]" -Data $r.Data
+        }
+        $out.Add($r)
+    }
+    return $out.ToArray()
+}
 
 # ---------------------------------------------------------------------------
 # Main
@@ -991,6 +1030,7 @@ $checkDispatch = @{
     'check_nsg_effective'     = { param($c, $p) Invoke-CheckNsgEffective -Config $c -Profile $p }
     'check_effective_routes'  = { param($c, $p) Invoke-CheckEffectiveRoutes -Config $c -Profile $p }
     'check_dns_and_pe'        = { param($c, $p) Invoke-CheckDnsAndPe -Config $c -Profile $p }
+    'check_quota'             = { param($c, $p) Invoke-CheckQuota -Config $c -Profile $p }
 }
 
 foreach ($check in $checkNames) {

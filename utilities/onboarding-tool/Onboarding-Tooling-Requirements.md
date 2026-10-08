@@ -398,7 +398,8 @@ FR3.6 [P1] Every failed check carries its remediation string (see the failure ca
 FR3.6a [P0] Subnet delegations match FR1.2.
 
 FR3.6b [P0] NSG effective rules include the FR2.3 set; confirm `Allow-Internet-Out` 443 and the
-east-west path exist. Use `az network nic list-effective-nsg`.
+east-west path exist. Use `az network nic list-effective-nsg`. A subnet with no NSG passes, since
+the Azure default rules allow both paths.
 
 FR3.6c [P0] Effective routes correct: managed cluster subnet resolves to `VnetLocal`, others to
 the NVA. Use `az network nic show-effective-route-table` and `az network watcher
@@ -406,6 +407,11 @@ show-next-hop`.
 
 FR3.6d [P0] Private DNS zones from FR2.5 exist and are linked; private endpoints are `Approved`
 with non-empty DNS (Bookshelf expects 3 PEs approved, Foundry endpoint carries 2 zones).
+
+FR3.6e [P0] Re-check the FR1.5 quota right before deploy, because subscription quota can drop
+between Stage 1 and Stage 4. The supercomputer profile checks vCPU quota and the workspace profile
+checks gpt-5.4 GlobalStandard TPM (450K). A shortfall blocks Stage 4 unless waived; a target
+resource that already exists in `Succeeded` state is skipped because it already holds its quota.
 
 ### Test-VM connectivity harness (the core requirement)
 
@@ -506,7 +512,8 @@ earlier tools-only `2026-02-01-preview` is superseded — do not use it.
 
 FR4.3 [P0] True-state detection. ARM resource-list can show `Succeeded` while a Foundry account is
 still `Creating`; confirm with `az cognitiveservices account show` and enforce a timeout that
-converts a stuck `Accepted`/`Creating` into a terminal, actionable failure.
+converts a stuck `Accepted`/`Creating` into a terminal, actionable failure. Pass only when both
+states are `Succeeded`; a `Failed` ARM state is never overridden by the Foundry state.
 
 FR4.4 [P1] Error-to-remediation engine. Match the ARM error signature and emit the remediation:
 

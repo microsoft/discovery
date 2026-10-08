@@ -35,8 +35,8 @@ Read each Discovery subnet and compare its delegation to the FR1.2 requirement (
 - Wrong delegation: set the required delegation (Stage 2 network_provision).
 
 ### check_nsg_effective — FR3.6b
-Use `az network nic list-effective-nsg` to confirm the effective rules include the FR2.3 set, especially Allow-Internet-Out 443 and the east-west path (read-only).
-- Missing rule: add it in Stage 2 nsg_rules and re-validate.
+Use `az network nic list-effective-nsg` to confirm the effective rules include the FR2.3 set, especially Allow-Internet-Out 443 and the east-west path (read-only). Before a NIC exists, check the subnet NSG rules. A subnet with no NSG passes, because the Azure defaults allow both paths.
+- Missing rule: add it in Stage 2 nsg_rules (or your own NSG for byo-existing) and re-validate.
 
 ### check_effective_routes — FR3.6c
 Use `az network nic show-effective-route-table` and `az network watcher show-next-hop` to assert the managed cluster subnet resolves to VnetLocal and other subnets to the NVA (read-only).
@@ -44,8 +44,12 @@ Use `az network nic show-effective-route-table` and `az network watcher show-nex
 
 ### check_dns_and_pe — FR3.6d
 Confirm each FR2.5 privatelink zone exists and is linked, and private endpoints are Approved with non-empty DNS (Bookshelf expects 3 PEs approved; the Foundry endpoint carries 2 zones) — read-only.
-- Zone unlinked or PE not Approved: fix the link / approve the PE (Stage 2 private_dns; Stage 4 PE approval).
+- Zone unlinked or PE not Approved: fix the link / approve the PE (Stage 2 private_dns; Stage 4 PE approval). For byo-existing the customer owns the zones; the remediation prints the `az network private-dns zone create` and `link vnet create` commands.
 
+### check_quota — FR3.6e
+Re-run the Stage 1 quota checks (shared `Get-VcpuQuotaResult` / `Get-ModelQuotaResult` in `lib/OnboardingCommon.psm1`) as a blocking gate. The supercomputer profile emits `vcpu-quota`; the workspace profile emits `model-quota` (gpt-5.4 GlobalStandard, 450K TPM). Skipped when the target supercomputer or workspace already exists and is Succeeded. Waivable with the same check id.
+- TPM shortfall: delete unused gpt-5.4 deployments, purge soft-deleted Foundry accounts, or request more quota.
+- vCPU shortfall: request a regional/family quota increase.
 ### testvm_lifecycle — FR3.7, FR3.7g
 Provision a disposable VM in the target subnet (no public IP, no NSG override, generated SSH keys), run `conntest.sh` via `az vm run-command invoke RunShellScript`, then always delete the VM, NIC, and disk on exit. This is the only write the toolbox performs.
 - VM create fails on SKU: pick a region-allowed SKU (see quota_sku).

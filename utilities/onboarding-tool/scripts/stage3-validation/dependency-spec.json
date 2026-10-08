@@ -4,7 +4,7 @@
   "maxAgeDays": 180,
   "profiles": {
     "supercomputer": {
-      "checks": ["check_subnet_delegation", "check_nsg_effective", "check_effective_routes", "check_dns_and_pe"],
+      "checks": ["check_subnet_delegation", "check_nsg_effective", "check_effective_routes", "check_dns_and_pe", "check_quota"],
       "probeChecks": ["probe_dns", "probe_tcp443", "probe_https", "probe_artifacts", "probe_pe_resolution", "probe_eastwest"],
       "subnetRoles": ["agent-containerapp", "workspace-containerapp", "search-containerapp", "managedcluster", "nodepool", "private-endpoints"],
       "privateDnsZones": [
@@ -24,7 +24,7 @@
       "foundryEndpointZoneCount": 2
     },
     "workspace": {
-      "checks": ["check_subnet_delegation", "check_nsg_effective", "check_effective_routes", "check_dns_and_pe"],
+      "checks": ["check_subnet_delegation", "check_nsg_effective", "check_effective_routes", "check_dns_and_pe", "check_quota"],
       "probeChecks": ["probe_dns", "probe_tcp443", "probe_https", "probe_artifacts", "probe_pe_resolution"],
       "subnetRoles": ["agent-containerapp", "workspace-containerapp", "search-containerapp", "private-endpoints"],
       "privateDnsZones": [
