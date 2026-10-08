@@ -545,7 +545,43 @@ if ([string]::IsNullOrWhiteSpace($managedIdentityId)) {
     Complete-Stage -Results $results.ToArray()
 }
 
-$supercomputerId = New-DiscoveryId -SubscriptionId $subscriptionId -ResourceGroup $resourceGroup -TypePath 'supercomputers' -NamePath $supercomputerName
+# UAMI pre-flight: the id is set, so verify it resolves to a real identity and surface its
+# role coverage. The tool does not create the UAMI or assign its roles (prerequisites), so a
+# missing identity is a hard Fail while missing/unreadable roles are a Warn (deploy can submit,
+# but AKS/workspace may fail at runtime without the right roles).
+$uami = Get-AzJson -Args @('identity', 'show', '--ids', $managedIdentityId) -AllowFail
+$uamiPrincipalId = if ($uami) { [string]$uami.principalId } else { '' }
+if (-not $uami -or [string]::IsNullOrWhiteSpace($uamiPrincipalId)) {
+    $results.Add((New-CheckResult -Id 'deploy-managed-identity-exists' -Name 'managed identity exists' -Status 'Fail' -Fr 'FR4.1' `
+                -Detail "managedIdentity.id does not resolve to an existing user-assigned managed identity: $managedIdentityId" `
+                -Remediation 'Create the user-assigned managed identity (az identity create) so the resource id in managedIdentity.id exists, or correct the id in the config. The platform identity parameter must reference an existing UAMI.' `
+                -Data ([pscustomobject]@{ managedIdentityId = $managedIdentityId; resolved = $false })))
+    if ($PassThru) { return $results.ToArray() }
+    $null = Write-OnboardingReport -Results $results.ToArray() -Title 'Stage 4 · deploy order (FR4.1-FR4.2)' -JsonPath $JsonPath
+    Complete-Stage -Results $results.ToArray()
+}
+$results.Add((New-CheckResult -Id 'deploy-managed-identity-exists' -Name 'managed identity exists' -Status 'Pass' -Fr 'FR4.1' `
+            -Detail "UAMI resolves (principalId=$uamiPrincipalId)." `
+            -Data ([pscustomobject]@{ managedIdentityId = $managedIdentityId; principalId = $uamiPrincipalId; resolved = $true })))
+$uamiRoles = Get-AzJson -Args @('role', 'assignment', 'list', '--assignee', $uamiPrincipalId, '--all') -AllowFail
+if ($null -eq $uamiRoles) {
+    $results.Add((New-CheckResult -Id 'deploy-managed-identity-roles' -Name 'managed identity role assignments' -Status 'Warn' -Fr 'FR4.1' `
+                -Detail 'Could not read role assignments for the UAMI (insufficient permission to list role assignments, or a transient error); UAMI role coverage was not verified.' `
+                -Remediation 'Verify manually that the UAMI has the roles the platform needs (for a BYO/managed VNet, AKS typically needs Network Contributor on the VNet/route table for egress), then proceed.' `
+                -Data ([pscustomobject]@{ principalId = $uamiPrincipalId; verified = $false })))
+}
+elseif (@($uamiRoles).Count -eq 0) {
+    $results.Add((New-CheckResult -Id 'deploy-managed-identity-roles' -Name 'managed identity role assignments' -Status 'Warn' -Fr 'FR4.1' `
+                -Detail 'The UAMI has no role assignments at any scope. The supercomputer (AKS cluster/kubelet/workload identities) and the workspace all use this identity; with a BYO/managed VNet it typically needs Network Contributor on the VNet/route table, plus any Discovery data-plane roles.' `
+                -Remediation 'Assign the UAMI the roles the platform requires before (or immediately after) deployment; the deployment will submit, but AKS/workspace provisioning can fail at runtime without them.' `
+                -Data ([pscustomobject]@{ principalId = $uamiPrincipalId; roleAssignmentCount = 0 })))
+}
+else {
+    $roleSummary = @($uamiRoles | ForEach-Object { [pscustomobject]@{ role = $_.roleDefinitionName; scope = $_.scope } })
+    $results.Add((New-CheckResult -Id 'deploy-managed-identity-roles' -Name 'managed identity role assignments' -Status 'Pass' -Fr 'FR4.1' `
+                -Detail "UAMI has $(@($uamiRoles).Count) role assignment(s); confirm they cover the platform's needs (AKS egress / data-plane)." `
+                -Data ([pscustomobject]@{ principalId = $uamiPrincipalId; roleAssignments = $roleSummary })))
+}
 $workspaceId = New-DiscoveryId -SubscriptionId $subscriptionId -ResourceGroup $resourceGroup -TypePath 'workspaces' -NamePath $workspaceName
 $chatModelId = "$workspaceId/chatModelDeployments/gpt-5-4"
 $storageContainerId = New-DiscoveryId -SubscriptionId $subscriptionId -ResourceGroup $resourceGroup -TypePath 'storageContainers' -NamePath $storageContainerName

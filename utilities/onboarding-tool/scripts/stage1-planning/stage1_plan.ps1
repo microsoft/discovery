@@ -343,11 +343,54 @@ function Invoke-Stage1Checks {
     param([Parameter(Mandatory)][object]$Cfg)
     $R = [System.Collections.Generic.List[object]]::new()
 
+    # ---- FR1.1 resolve deploying identity (email/UPN -> objectId) ---------
+    # Operators often don't know their Entra objectId (GUID). Accept an email/UPN (user) or an
+    # appId/displayName (service principal) in deployingIdentity.objectId and resolve it to the
+    # objectId via Microsoft Graph (az ad), so the persisted config always carries a GUID for
+    # Stage 2 role assignments. A value that already looks like a GUID is kept verbatim.
+    $rawPrincipal = [string]$Cfg.deployingIdentity.objectId
+    $guidPattern = '^[0-9a-fA-F]{8}-([0-9a-fA-F]{4}-){3}[0-9a-fA-F]{12}$'
+    if ($rawPrincipal -and $rawPrincipal -notmatch $guidPattern) {
+        $azKnown = [bool](Get-AzJson -Args @('account', 'show') -AllowFail)
+        $resolvedOid = ''
+        $resolvedVia = ''
+        if ($azKnown) {
+            if ($rawPrincipal -match '@') {
+                $resolvedOid = [string](Invoke-Az -Args @('ad', 'user', 'show', '--id', $rawPrincipal, '--query', 'id', '-o', 'tsv') -AllowFail)
+                if ($resolvedOid.Trim()) { $resolvedVia = 'user (UPN/email)' }
+            }
+            if (-not $resolvedOid.Trim()) {
+                $resolvedOid = [string](Invoke-Az -Args @('ad', 'sp', 'show', '--id', $rawPrincipal, '--query', 'id', '-o', 'tsv') -AllowFail)
+                if ($resolvedOid.Trim()) { $resolvedVia = 'service principal (appId/displayName)' }
+            }
+        }
+        $resolvedOid = $resolvedOid.Trim()
+        if ($resolvedOid -match $guidPattern) {
+            $Cfg.deployingIdentity.objectId = $resolvedOid
+            $R.Add((New-CheckResult -Id 'identity-resolve' -Name 'Deploying identity resolved' -Status 'Pass' -Fr 'FR1.1' `
+                        -Detail "Resolved deployingIdentity.objectId '$rawPrincipal' to objectId $resolvedOid ($resolvedVia)." `
+                        -Data @{ input = $rawPrincipal; objectId = $resolvedOid; via = $resolvedVia }))
+        }
+        elseif (-not $azKnown) {
+            $R.Add((New-CheckResult -Id 'identity-resolve' -Name 'Deploying identity resolved' -Status 'Fail' -Fr 'FR1.1' `
+                        -Detail "deployingIdentity.objectId '$rawPrincipal' is not a GUID and az is not logged in, so it could not be resolved to an objectId." `
+                        -Remediation "Run 'az login' to the target tenant and re-run, or enter the Entra objectId (GUID) directly. Find your own objectId with: az ad signed-in-user show --query id -o tsv." `
+                        -Data @{ input = $rawPrincipal }))
+        }
+        else {
+            $R.Add((New-CheckResult -Id 'identity-resolve' -Name 'Deploying identity resolved' -Status 'Fail' -Fr 'FR1.1' `
+                        -Detail "deployingIdentity.objectId '$rawPrincipal' is not a GUID and could not be resolved to a user or service principal in the signed-in tenant." `
+                        -Remediation "Enter a valid email/UPN of a user in the target tenant, an app registration's appId/display name, or the Entra objectId (GUID) directly. Find your own objectId with: az ad signed-in-user show --query id -o tsv." `
+                        -Data @{ input = $rawPrincipal }))
+        }
+    }
+
     # ---- FR1.1 capture/normalization -------------------------------------
     $missing = @()
     foreach ($f in @('subscriptionId', 'controlPlaneRegion', 'workloadRegion', 'sizingTier')) { if (-not (Test-Field $Cfg.$f)) { $missing += $f } }
     if (-not (Test-Field $Cfg.network.vnetCidr)) { $missing += 'network.vnetCidr' }
     if (-not (Test-Field $Cfg.deployingIdentity.objectId)) { $missing += 'deployingIdentity.objectId' }
+    if (-not (Test-Field $Cfg.managedIdentity.id)) { $missing += 'managedIdentity.id' }
     if (@($Cfg.network.subnets).Count -eq 0) { $missing += 'network.subnets' }
     if ($missing.Count) {
         $R.Add((New-CheckResult -Id 'capture' -Name 'Required fields captured' -Status 'Fail' -Fr 'FR1.1' `

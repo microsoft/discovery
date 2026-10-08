@@ -77,6 +77,7 @@ Notes next to each field explain what to enter. A few that trip people up:
 | Field | What to enter |
 |---|---|
 | `subscriptionId` | The subscription you ran `az account set` against. |
+| `deployingIdentity.objectId` | The identity that will deploy (Stage 2 grants it the platform roles). Enter the Entra **objectId (GUID)**, or — if you don't know it — an **email/UPN** of a user in the target tenant (or an app registration's appId/display name). Stage 1 resolves a non-GUID value to the objectId via `az` (run `az login` first). Find your own objectId with `az ad signed-in-user show --query id -o tsv`. |
 | `resourceGroup` | The platform resource group from step 2.4. |
 | `managedIdentity.id` | The UAMI resource id from step 2.5 (used by Stage 4). |
 | `controlPlaneRegion` / `workloadRegion` | The Azure region(s) to deploy into. Use a region known to support `Microsoft.Discovery/supercomputers` — **`eastus`** is confirmed; some regions (e.g. `eastus2`, `uksouth`) have rejected supercomputer creation. |
