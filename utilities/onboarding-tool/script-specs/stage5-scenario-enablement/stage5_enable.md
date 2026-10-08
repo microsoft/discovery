@@ -31,7 +31,7 @@ Read the workspace `publicNetworkAccess` from ARM and `GET ${BASE}/projects/${PR
 - Enabled and unreachable: confirm the workspace is Succeeded and the caller has data-plane access.
 
 ### create_agent — FR5.3
-`PUT ${BASE}/projects/${PROJECT}:upsertAgent?api-version=2026-06-01` for `scientistQnAAgent` with `tools = []`, humanInTheLoop=Disabled, and foundryDetails.definition.kind=prompt with model = chat-model deployment name. Poll the operation location until terminal.
+`POST ${BASE}/projects/${PROJECT}:upsertAgent?api-version=2026-06-01` for `scientistQnAAgent` with `tools = []`, humanInTheLoop=Disabled, and foundryDetails.definition.kind=prompt with model = chat-model deployment name. Poll the operation location until terminal.
 - Upsert fails: confirm the workspace data-plane endpoint, chat-model deployment name, and agent schema.
 
 ### create_investigation_conversation — FR5.4
@@ -39,7 +39,7 @@ Read the workspace `publicNetworkAccess` from ARM and `GET ${BASE}/projects/${PR
 - InvalidRequest on conversation: use the full investigationName path, not the short name.
 
 ### send_prompt_poll — FR5.5
-`POST ${BASE}/conversations/${CONV}/openai/responses` with message content as an array of parts, an `agent_reference` to the agent, and no `?api-version`, then `GET .../responses/${RID}` until terminal.
+`POST ${BASE}/conversations/${CONV}/openai/v1/responses` with message content as an array of parts, an `agent_reference` to the agent, and no `?api-version`, then `GET .../responses/${RID}` until terminal.
 - 'api-version not allowed': drop the query param.
 - 'requires an element of type Array': send content as an array of parts.
 
@@ -48,5 +48,5 @@ Hard pass/fail: the response must be `completed` and contain non-empty assistant
 - Completed with no text, or not completed: inspect error / last_error / incomplete_details and confirm the chat-model deployment is healthy.
 
 ### verification_summary — FR5.7
-Confirm supercomputer/workspace/project/chat-model are all Succeeded; Bookshelf (if in scope) has 3 PEs approved with DNS; and agent created, conversation completed, agent answered.
+Confirm supercomputer/workspace/project/chat-model are all Succeeded; Bookshelf (if in scope) has an Approved private endpoint with DNS to the configured BYO storage account (Stage 2 creates it); and agent created, conversation completed, agent answered.
 - Any item red: platform is not certified; resolve the named item.
