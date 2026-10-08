@@ -212,6 +212,7 @@ function ConvertTo-ConfigModel {
         }
         workspace         = [ordered]@{
             publicNetworkAccess = (Val 'workspace.publicNetworkAccess' 'Enabled')
+            networkIsolation    = (Bool 'workspace.networkIsolation' $true)
         }
         sizingTier        = (Val 'sizingTier' 'Small')
         bookshelf           = [ordered]@{
@@ -443,9 +444,9 @@ function Invoke-Stage1Checks {
                         -Detail "Microsoft.Discovery registrationState=$regState (Stage 2 performs registration)." -Data @{ registrationState = $regState }))
         }
         else {
-            $R.Add((New-CheckResult -Id 'sub-prereq' -Name 'Subscription enabled for Discovery' -Status 'Warn' -Fr 'FR1.0' `
-                        -Detail 'Could not read Microsoft.Discovery provider (may be allowlist-gated or access-limited).' `
-                        -Remediation 'Confirm the subscription is allowlisted for Discovery by the Microsoft Discovery team.'))
+            $R.Add((New-CheckResult -Id 'sub-prereq' -Name 'Subscription enabled for Discovery' -Status 'Fail' -Fr 'FR1.0' `
+                        -Detail 'Microsoft.Discovery is not visible in the target subscription. The subscription may not be allowlisted, or the caller may lack permission to read providers.' `
+                        -Remediation 'Confirm the subscription is allowlisted for Microsoft Discovery with your Microsoft account representative and grant the deploying identity permission to read/register resource providers.'))
         }
     }
     if (-not $Cfg.deployingIdentity.canRegisterProviders) {
@@ -523,6 +524,16 @@ function Invoke-Stage1Checks {
         $note = if ($pna -eq 'Disabled') { 'data plane reachable only from inside the VNet; run Stage 5 from a runner with private network access' } else { 'data plane reachable from any authenticated runner' }
         $R.Add((New-CheckResult -Id 'workspace-public-access' -Name 'Workspace public network access' -Status 'Pass' -Fr 'FR1.2' -Detail "publicNetworkAccess=$pna; $note"))
     }
+
+    $networkIsolation = if ($Cfg.workspace -and $null -ne $Cfg.workspace.networkIsolation) { [bool]$Cfg.workspace.networkIsolation } else { $true }
+    $isolationNote = if ($networkIsolation) {
+        'Workbench access requires VPN or ExpressRoute connectivity to the workspace VNet; publicNetworkAccess controls the workspace data plane separately.'
+    }
+    else {
+        'Workbench is publicly reachable for authenticated users; workspace data-plane reachability still follows publicNetworkAccess.'
+    }
+    $R.Add((New-CheckResult -Id 'workspace-network-isolation' -Name 'Workspace network isolation' -Status 'Pass' -Fr 'FR1.2' `
+                -Detail "networkIsolation=$($networkIsolation.ToString().ToLowerInvariant()); $isolationNote"))
 
     # ---- FR1.2 network model intent --------------------------------------
     $netModel = [string]$Cfg.network.model
@@ -640,20 +651,16 @@ function Invoke-Stage1Checks {
         $R.Add((New-CheckResult -Id 'region-capacity' -Name 'Region capacity' -Status 'Pass' -Fr 'FR1.4' -Detail "No known capacity flag for '$($Cfg.workloadRegion)'."))
     }
 
-    # ---- Bookshelf storage: a Discovery storage container needs a customer storage account ----
-    $bsInScope = $Cfg.bookshelf -and [bool]$Cfg.bookshelf.inScope
+    # ---- Project storage: every Discovery project needs a storage container ----
     $stModel = if ($Cfg.storage -and $Cfg.storage.model) { [string]$Cfg.storage.model } else { 'managed' }
     $stAccount = if ($Cfg.storage) { @($Cfg.storage.account, $Cfg.storage.accountId) | Where-Object { Test-Field $_ } | Select-Object -First 1 } else { $null }
-    if (-not $bsInScope) {
-        $R.Add((New-CheckResult -Id 'bookshelf-storage' -Name 'Bookshelf storage account' -Status 'Pass' -Fr 'FR1.1' `
-                    -Detail 'bookshelf.inScope=false; no storage account needed.'))
-    } elseif ($stModel -ne 'byo' -or -not $stAccount) {
-        $R.Add((New-CheckResult -Id 'bookshelf-storage' -Name 'Bookshelf storage account' -Status 'Fail' -Fr 'FR1.1' `
-                    -Detail "bookshelf.inScope=true but storage.model=$stModel and storage.account/accountId=$(if ($stAccount) { $stAccount } else { 'empty' }). The Bookshelf storage container must point at a customer storage account, so Stage 4 cannot deploy it." `
-                    -Remediation 'Set storage.model=byo and storage.account (Stage 2 creates the account and its private endpoint if missing) or storage.accountId (existing account), or set bookshelf.inScope=false.'))
+    if ($stModel -ne 'byo' -or -not $stAccount) {
+        $R.Add((New-CheckResult -Id 'project-storage' -Name 'Project storage account' -Status 'Fail' -Fr 'FR1.1' `
+                    -Detail "storage.model=$stModel and storage.account/accountId=$(if ($stAccount) { $stAccount } else { 'empty' }). Every Discovery project requires a storage container backed by a customer storage account." `
+                    -Remediation 'Set storage.model=byo and storage.account (Stage 2 creates the account, CORS rules, and private endpoint if missing) or storage.accountId (existing account).'))
     } else {
-        $R.Add((New-CheckResult -Id 'bookshelf-storage' -Name 'Bookshelf storage account' -Status 'Pass' -Fr 'FR1.1' `
-                    -Detail "bookshelf.inScope=true; storage.model=byo; account=$stAccount."))
+        $R.Add((New-CheckResult -Id 'project-storage' -Name 'Project storage account' -Status 'Pass' -Fr 'FR1.1' `
+                    -Detail "storage.model=byo; account=$stAccount; project storage is required independently of bookshelf.inScope."))
     }
 
     # ---- FR1.5 quota / SKU / TPM / Cosmos --------------------------------

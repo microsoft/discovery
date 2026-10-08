@@ -33,6 +33,15 @@ function Get-WorkspacePublicNetworkAccess {
     return 'Enabled'
 }
 
+function Get-WorkspaceNetworkIsolation {
+    param([object]$Config)
+    $ws = if ($Config -and $Config.PSObject.Properties.Name -contains 'workspace') { $Config.workspace } else { $null }
+    if ($ws -and $ws.PSObject.Properties.Name -contains 'networkIsolation' -and $null -ne $ws.networkIsolation) {
+        return [bool]$ws.networkIsolation
+    }
+    return $true
+}
+
 function Resolve-DiscoveryError {
     [CmdletBinding()]
     param([Parameter(Mandatory)][AllowEmptyString()][string]$ErrorText)
@@ -538,10 +547,6 @@ function New-Stage4BicepParamFile {
     param([object]$Config, [string]$ResourceGroup, [string]$Location)
 
     $names = Get-ObjProp -Object $Config -Name 'names'
-    $bookshelf = Get-ObjProp -Object $Config -Name 'bookshelf'
-    $inScope = Get-ObjProp -Object $bookshelf -Name 'inScope'
-    $bookshelfInScope = if ($null -ne $inScope) { [bool]$inScope } else { $true }
-
     $p = [ordered]@{
         location                = $Location
         workloadRegion          = [string]$Config.workloadRegion
@@ -559,8 +564,8 @@ function New-Stage4BicepParamFile {
         workspaceSubnetId       = Get-SubnetIdByRole -Config $Config -Role 'workspace-containerapp' -ResourceGroup $ResourceGroup
         privateEndpointSubnetId = Get-SubnetIdByRole -Config $Config -Role 'private-endpoints' -ResourceGroup $ResourceGroup
         storageAccountId        = Get-StorageAccountId -Config $Config -ResourceGroup $ResourceGroup
-        bookshelfInScope        = $bookshelfInScope
         publicNetworkAccess     = Get-WorkspacePublicNetworkAccess -Config $Config
+        networkIsolation        = Get-WorkspaceNetworkIsolation -Config $Config
     }
     foreach ($opt in 'systemSku', 'nodePoolVmSize', 'nodePoolScaleSetPriority') {
         $v = Get-ObjProp -Object $Config -Name $opt
@@ -906,7 +911,7 @@ if ($scStateBeforeWorkspace -eq 'Failed') {
                     'discovery.workbench.enableGhcpAiFeatures'   = 'true'
                     'discovery.workbench.enableExtensions'       = 'true'
                     'discovery.overridemrgregion'                = [string]$cfg.workloadRegion
-                    NetworkIsolation                             = 'true'
+                    NetworkIsolation                             = (Get-WorkspaceNetworkIsolation -Config $cfg).ToString().ToLowerInvariant()
                     SkipAssociateKeyVaultToNsp                  = 'true'
                     SkipAssociateCosmosDBToNsp                  = 'true'
                     SkipAssociateStorageAccountsToNsp           = 'true'
@@ -970,15 +975,28 @@ if (@($results | Where-Object { $_.id -eq 'deploy-chat-model-gpt-5-4' -and $_.st
     Complete-Stage -Results $results.ToArray()
 }
 
-$bookshelfInScope = $true
-$bookshelf = Get-ObjProp -Object $cfg -Name 'bookshelf'
-$configuredInScope = Get-ObjProp -Object $bookshelf -Name 'inScope'
-if ($null -ne $configuredInScope) { $bookshelfInScope = [bool]$configuredInScope }
 $storageAccountId = Get-StorageAccountId -Config $cfg -ResourceGroup $resourceGroup
-$projectProps = @{}
-$preExistingStorageState = if ($bookshelfInScope) { Get-ArmState -ResourceId $storageContainerId } else { 'Skipped' }
-if ($bookshelfInScope -and $preExistingStorageState -eq 'Succeeded') { $projectProps.storageContainerIds = @($storageContainerId) }
-$projectBody = @{ location = $location; properties = $projectProps }
+if ($storageAccountId) {
+    $storageBody = @{ location = $location; properties = @{ storageStore = @{ kind = 'AzureStorageBlob'; storageAccountId = $storageAccountId } } }
+    $storagePut = Invoke-ArmPut -ResourceId $storageContainerId -Body $storageBody
+    $storageGate = Wait-DiscoveryGate -ResourceId $storageContainerId
+    $storageState = $storageGate.trueState -replace '^TimedOut:', ''
+    $results.Add((New-StepResult -Id 'deploy-project-storage' -Name 'project storage container' -ResourceId $storageContainerId -State $storageState -Fr 'FR4.1' -ErrorText $storagePut.error -Extra $storageGate))
+}
+else {
+    $results.Add((New-CheckResult -Id 'deploy-project-storage' -Name 'project storage container' -Status 'Fail' -Fr 'FR4.1' `
+                -Detail "resource=$storageContainerId provisioningState=NotSubmitted missing=storage.accountId or storage.account" `
+                -Remediation 'Supply the storage account id/name required for every Discovery project storage container.' `
+                -Data ([pscustomobject]@{ resource = $storageContainerId; provisioningState = 'NotSubmitted' })))
+}
+
+if (@($results | Where-Object { $_.id -eq 'deploy-project-storage' -and $_.status -eq 'Fail' }).Count) {
+    if ($PassThru) { return $results.ToArray() }
+    $null = Write-OnboardingReport -Results $results.ToArray() -Title 'Stage 4 · deploy order (FR4.1-FR4.2)' -JsonPath $JsonPath
+    Complete-Stage -Results $results.ToArray()
+}
+
+$projectBody = @{ location = $location; properties = @{ storageContainerIds = @($storageContainerId) } }
 $projectPut = Invoke-ArmPut -ResourceId $projectId -Body $projectBody
 $projectGate = Wait-DiscoveryGate -ResourceId $projectId
 $projectState = $projectGate.trueState -replace '^TimedOut:', ''
@@ -988,32 +1006,6 @@ if (@($results | Where-Object { $_.id -eq 'deploy-project' -and $_.status -eq 'F
     if ($PassThru) { return $results.ToArray() }
     $null = Write-OnboardingReport -Results $results.ToArray() -Title 'Stage 4 · deploy order (FR4.1-FR4.2)' -JsonPath $JsonPath
     Complete-Stage -Results $results.ToArray()
-}
-
-if ($bookshelfInScope -and $storageAccountId) {
-    $storageBody = @{ location = $location; properties = @{ storageStore = @{ kind = 'AzureStorageBlob'; storageAccountId = $storageAccountId } } }
-    $storagePut = Invoke-ArmPut -ResourceId $storageContainerId -Body $storageBody
-    $storageGate = Wait-DiscoveryGate -ResourceId $storageContainerId
-    $storageState = $storageGate.trueState -replace '^TimedOut:', ''
-    $results.Add((New-StepResult -Id 'deploy-bookshelf' -Name 'bookshelf storage container' -ResourceId $storageContainerId -State $storageState -Fr 'FR4.1' -ErrorText $storagePut.error -Extra $storageGate))
-
-    # The project was created before the bookshelf container, so on a first run
-    # storageContainerIds was omitted. Re-link it now that the container has Succeeded.
-    if ($storageState -eq 'Succeeded' -and ($projectProps.Keys -notcontains 'storageContainerIds')) {
-        $linkBody = @{ location = $location; properties = @{ storageContainerIds = @($storageContainerId) } }
-        $linkPut = Invoke-ArmPut -ResourceId $projectId -Body $linkBody
-        $linkGate = Wait-DiscoveryGate -ResourceId $projectId
-        $linkState = $linkGate.trueState -replace '^TimedOut:', ''
-        $results.Add((New-StepResult -Id 'link-bookshelf-project' -Name 'link bookshelf container to project' -ResourceId $projectId -State $linkState -Fr 'FR4.1' -ErrorText $linkPut.error -Extra $linkGate))
-    }
-} elseif ($bookshelfInScope) {
-    $results.Add((New-CheckResult -Id 'deploy-bookshelf' -Name 'bookshelf storage container' -Status 'Fail' -Fr 'FR4.1' `
-                -Detail "resource=$storageContainerId provisioningState=NotSubmitted missing=storage.accountId or storage.account" `
-                -Remediation 'Supply the storage account id/name used by the Discovery storage container.' `
-                -Data ([pscustomobject]@{ resource = $storageContainerId; provisioningState = 'NotSubmitted' })))
-} else {
-    $results.Add((New-CheckResult -Id 'deploy-bookshelf' -Name 'bookshelf storage container' -Status 'Skip' -Fr 'FR4.1' `
-                -Detail 'bookshelf.inScope=false' -Data ([pscustomobject]@{ resource = $storageContainerId; provisioningState = 'Skipped' })))
 }
 
 if ($PassThru) { return $results.ToArray() }
@@ -1188,14 +1180,19 @@ if (-not @($results | Where-Object { $_.status -eq 'Fail' }).Count) {
     $storageContainerName = Get-ConfigName -Config $cfg -Name 'storageContainer' -Default "$Workspace-bookshelf"
     $storageContainerId = "/subscriptions/$Subscription/resourceGroups/$ResourceGroup/providers/Microsoft.Discovery/storageContainers/$storageContainerName"
     $storageState = Get-ArmState -ResourceId $storageContainerId
-    $projectProps = @{}
-    if ($storageState -eq 'Succeeded') { $projectProps.storageContainerIds = @($storageContainerId) }
-    $projectId = "$workspaceId/projects/$projectName"
-    $projectBody = @{ location = [string]$workspaceObj.location; properties = $projectProps }
-    $projectPut = Invoke-ArmPut -ResourceId $projectId -Body $projectBody
-    $projectGate = Wait-DiscoveryGate -ResourceId $projectId
-    $projectState = $projectGate.trueState -replace '^TimedOut:', ''
-    $results.Add((New-StepResult -Id 'recovery-project' -Name 'post-recovery project' -ResourceId $projectId -State $projectState -Fr 'FR4.5' -ErrorText $projectPut.error -Extra ([pscustomobject]@{ trueState = $projectGate; storageContainerState = $storageState })))
+    if ($storageState -ne 'Succeeded') {
+        $results.Add((New-CheckResult -Id 'recovery-project-storage' -Name 'post-recovery project storage' -Status 'Fail' -Fr 'FR4.5' `
+                    -Detail "Storage container $storageContainerId is $storageState; a project cannot be recovered without storage." `
+                    -Remediation 'Deploy or recover the project storage container, then rerun recovery.'))
+    }
+    else {
+        $projectId = "$workspaceId/projects/$projectName"
+        $projectBody = @{ location = [string]$workspaceObj.location; properties = @{ storageContainerIds = @($storageContainerId) } }
+        $projectPut = Invoke-ArmPut -ResourceId $projectId -Body $projectBody
+        $projectGate = Wait-DiscoveryGate -ResourceId $projectId
+        $projectState = $projectGate.trueState -replace '^TimedOut:', ''
+        $results.Add((New-StepResult -Id 'recovery-project' -Name 'post-recovery project' -ResourceId $projectId -State $projectState -Fr 'FR4.5' -ErrorText $projectPut.error -Extra ([pscustomobject]@{ trueState = $projectGate; storageContainerState = $storageState })))
+    }
 }
 
 if ($PassThru) { return $results.ToArray() }

@@ -1,6 +1,6 @@
 // Stage 4 — Discovery platform baseline template.
 // Deploys the platform in one RG-scoped deployment: supercomputer (+ node pool),
-// bookshelf storage container, workspace, validation chat model, and project.
+// project storage container, workspace, validation chat model, and project.
 // Parameters are generated from the Stage 1 config by stage4_deploy.ps1
 // (New-Stage4BicepParamFile); do not hand-edit values — change config.json and re-run.
 
@@ -36,11 +36,8 @@ param workspaceSubnetId string
 @description('private-endpoints-role subnet id.')
 param privateEndpointSubnetId string
 
-@description('Storage account id backing the bookshelf container.')
+@description('Storage account id backing the project storage container.')
 param storageAccountId string = ''
-@description('Whether the bookshelf storage container is in scope.')
-param bookshelfInScope bool = true
-
 @description('AKS egress model, decided at planning (Stage 1). UserDefinedRouting = forced tunneling via the customer firewall/NVA; LoadBalancer = Azure-managed egress.')
 @allowed([
   'UserDefinedRouting'
@@ -58,6 +55,7 @@ param nodePoolScaleSetPriority string = 'Regular'
   'Disabled'
 ])
 param publicNetworkAccess string = 'Enabled'
+param networkIsolation bool = true
 
 #disable-next-line BCP081
 resource supercomputer 'Microsoft.Discovery/supercomputers@2026-06-01' = {
@@ -97,7 +95,7 @@ resource nodePool 'Microsoft.Discovery/supercomputers/nodePools@2026-06-01' = {
 }
 
 #disable-next-line BCP081
-resource storageContainer 'Microsoft.Discovery/storageContainers@2026-06-01' = if (bookshelfInScope && !empty(storageAccountId)) {
+resource storageContainer 'Microsoft.Discovery/storageContainers@2026-06-01' = {
   name: storageContainerName
   location: location
   properties: {
@@ -117,7 +115,7 @@ resource workspace 'Microsoft.Discovery/workspaces@2026-06-01' = {
     'discovery.workbench.enableGhcpAiFeatures': 'true'
     'discovery.workbench.enableExtensions': 'true'
     'discovery.overridemrgregion': workloadRegion
-    NetworkIsolation: 'true'
+    NetworkIsolation: string(networkIsolation)
     SkipAssociateKeyVaultToNsp: 'true'
     SkipAssociateCosmosDBToNsp: 'true'
     SkipAssociateStorageAccountsToNsp: 'true'
@@ -150,7 +148,7 @@ resource project 'Microsoft.Discovery/workspaces/projects@2026-06-01' = {
   name: projectName
   location: location
   properties: {
-    storageContainerIds: (bookshelfInScope && !empty(storageAccountId)) ? [ storageContainer.id ] : []
+    storageContainerIds: [ storageContainer.id ]
   }
   dependsOn: [ chatModel ]
 }

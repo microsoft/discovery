@@ -4,8 +4,8 @@
   "metadata": {
     "_generator": {
       "name": "bicep",
-      "version": "0.39.26.7824",
-      "templateHash": "808327707704316604"
+      "version": "0.41.2.15936",
+      "templateHash": "3453505155457192370"
     }
   },
   "parameters": {
@@ -92,14 +92,7 @@
       "type": "string",
       "defaultValue": "",
       "metadata": {
-        "description": "Storage account id backing the bookshelf container."
-      }
-    },
-    "bookshelfInScope": {
-      "type": "bool",
-      "defaultValue": true,
-      "metadata": {
-        "description": "Whether the bookshelf storage container is in scope."
+        "description": "Storage account id backing the project storage container."
       }
     },
     "outboundType": {
@@ -140,6 +133,10 @@
         "Enabled",
         "Disabled"
       ]
+    },
+    "networkIsolation": {
+      "type": "bool",
+      "defaultValue": true
     }
   },
   "resources": [
@@ -187,7 +184,6 @@
       ]
     },
     {
-      "condition": "[and(parameters('bookshelfInScope'), not(empty(parameters('storageAccountId'))))]",
       "type": "Microsoft.Discovery/storageContainers",
       "apiVersion": "2026-06-01",
       "name": "[parameters('storageContainerName')]",
@@ -209,7 +205,7 @@
         "discovery.workbench.enableGhcpAiFeatures": "true",
         "discovery.workbench.enableExtensions": "true",
         "discovery.overridemrgregion": "[parameters('workloadRegion')]",
-        "NetworkIsolation": "true",
+        "NetworkIsolation": "[string(parameters('networkIsolation'))]",
         "SkipAssociateKeyVaultToNsp": "true",
         "SkipAssociateCosmosDBToNsp": "true",
         "SkipAssociateStorageAccountsToNsp": "true"
@@ -250,7 +246,9 @@
       "name": "[format('{0}/{1}', parameters('workspaceName'), parameters('projectName'))]",
       "location": "[parameters('location')]",
       "properties": {
-        "storageContainerIds": "[if(and(parameters('bookshelfInScope'), not(empty(parameters('storageAccountId')))), createArray(resourceId('Microsoft.Discovery/storageContainers', parameters('storageContainerName'))), createArray())]"
+        "storageContainerIds": [
+          "[resourceId('Microsoft.Discovery/storageContainers', parameters('storageContainerName'))]"
+        ]
       },
       "dependsOn": [
         "[resourceId('Microsoft.Discovery/workspaces/chatModelDeployments', parameters('workspaceName'), parameters('chatModelDeploymentName'))]",

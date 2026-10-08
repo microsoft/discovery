@@ -120,7 +120,8 @@ in, so the parser and local checks run offline. `.xlsx` forms are read natively 
 ### Stage 2 — Landing zone (`stage2-landing-zone/stage2_prepare.ps1`)
 
 Turns the signed `config.json` into a deployed landing zone (FR2.1–FR2.9): RP registration, RBAC,
-the one-time NSP Perimeter Joiner custom role, network provisioning via `network.bicep` (VNet,
+the one-time NSP Perimeter Joiner custom role plus Reader access for the Discovery control-plane
+service principal, network provisioning via `network.bicep` (VNet,
 subnets with FR1.2 delegations, shared NSG allow-list, UDR route tables, privatelink DNS zones +
 links), BYO storage, and the firewall-request / quota-increase-request / policy-exemption-request
 files next to `-JsonPath`. Builds the
@@ -159,7 +160,7 @@ subnet.
 ### Stage 4 — Deployment (`stage4-deployment/stage4_deploy.ps1`)
 
 Deploys the Discovery platform in dependency order (supercomputer → workspace → chatModel →
-project → bookshelf storage container; Microsoft.Discovery api-version `2026-06-01`) and turns
+project storage container → project; Microsoft.Discovery api-version `2026-06-01`) and turns
 every failure into an actionable remediation (`Resolve-DiscoveryError`). Detects true resource
 state before each step so re-runs resume from the first incomplete resource. Deploys via
 `discovery-platform.bicep` by default (params generated from the Stage 1 config); `-NoBicep` uses
@@ -205,9 +206,9 @@ Tracked work not yet implemented in the scripts:
   effective-NSG/route lookups are temporarily disabled; `az vm create` trips an empty-arg binding
   issue (`--public-ip-address ''` / `--nsg ''`). Re-enable once that call is fixed; until then
   run Stage 3 without `-WithVm` and rely on the control-plane checks.
-- Stage 4 — bookshelf content. Stage 4 creates the bookshelf storage container
-  (`Microsoft.Discovery/storageContainers`) but does not create or ingest the storage asset
-  (`names.storageAsset`). Add asset creation / knowledge-base content load.
+- Stage 4 — Bookshelf content. Stage 4 creates the project storage container
+  (`Microsoft.Discovery/storageContainers`) but does not create or ingest a Bookshelf storage
+  asset (`names.storageAsset`). Add asset creation / knowledge-base content load.
 - Stage 5 — scenario validation. Stage 5 creates a Q&A agent (no tool) and checks the bookshelf
   private endpoints, but does not validate end-to-end bookshelf retrieval (that an ingested asset
   is queryable by the agent). Add that retrieval assertion.

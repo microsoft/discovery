@@ -38,11 +38,12 @@ Capture and normalize control-plane region, workload region, VNet CIDR, per-serv
 - Missing field: complete the corresponding cell in the planning sheet.
 
 ### bookshelf_storage — FR1.1
-When `bookshelf.inScope=true`, require `storage.model=byo` with `storage.account` or `storage.accountId`. The Bookshelf storage container must point at a customer storage account, so Stage 4 cannot deploy it otherwise. Stage 2 creates a named account (with its private endpoint) if it does not exist.
-- Bookshelf in scope without a BYO account: set `storage.model=byo` and `storage.account`, or set `bookshelf.inScope=false`.
+Require `storage.model=byo` with `storage.account` or `storage.accountId` for every deployment. Every project requires a Discovery storage container backed by a customer storage account, independently of whether Bookshelf is in scope. Stage 2 creates a named account, required CORS rules, and its private endpoint if it does not exist.
+- Missing project storage: set `storage.model=byo` and `storage.account` or `storage.accountId`.
 
 ### workspace_public_access — FR1.2
 Validate `workspace.publicNetworkAccess` is `Enabled` (default) or `Disabled`. Stage 4 applies it to the workspace. `Disabled` is valid and reported as Pass, with a note that Stage 5 must run from inside the VNet.
+Capture `workspace.networkIsolation` as a boolean (default `true`). Stage 4 maps it to the immutable `NetworkIsolation` workspace tag. When enabled, Workbench access requires VPN or ExpressRoute even if `workspace.publicNetworkAccess=Enabled`.
 - Invalid value: set `Enabled` or `Disabled`.
 
 ### subnet_sizing — FR1.2
