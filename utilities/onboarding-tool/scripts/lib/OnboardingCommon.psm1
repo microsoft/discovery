@@ -537,7 +537,7 @@ function Get-ModelQuotaResult {
     if ($free -lt $tpmNeed) {
         return New-CheckResult -Id 'model-quota' -Name 'Model TPM quota' -Status 'Fail' -Fr $Fr `
             -Detail "$quotaName in ${region}: ${free}K TPM free ($($q.currentValue)/$($q.limit) used), need ${tpmNeed}K (workspace gpt-5.4 250K + chat model gpt-5-4 200K). Stage 4 would fail the workspace with InsufficientQuota." `
-            -Remediation "Free TPM by deleting unused gpt-5.4 deployments or purging soft-deleted Foundry accounts (az cognitiveservices account list-deleted, then account purge), or request more quota in the Foundry portal, then re-run $RerunStage. Or record a WAIVER row (check=model-quota + justification) if the increase is in flight." -Data $data
+            -Remediation "GlobalStandard quota is reported the same in every region, so deployments in other regions count against it too. List them with: az cognitiveservices account list, then account deployment list per account. Free TPM by deleting unused gpt-5.4 deployments or purging soft-deleted Foundry accounts (az cognitiveservices account list-deleted, then account purge), or request more quota in the Foundry portal, then re-run $RerunStage. Or record a WAIVER row (check=model-quota + justification) if the increase is in flight." -Data $data
     }
     New-CheckResult -Id 'model-quota' -Name 'Model TPM quota' -Status 'Pass' -Fr $Fr `
         -Detail "$quotaName in ${region}: ${free}K TPM free, need ${tpmNeed}K." -Data $data
