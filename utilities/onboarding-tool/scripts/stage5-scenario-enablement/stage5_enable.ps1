@@ -1,7 +1,7 @@
 #Requires -Version 7.0
 <#
-.SYNOPSIS  Stage 5 / FR5.1-FR5.7 — run hero use-case certification end to end.
-.DESCRIPTION Orchestrates connectivity, tool creation, agent binding, investigation/conversation, prompt polling, tool-call assertion, and summary. Spec: ../../script-specs/stage5-scenario-enablement/stage5_enable.md
+.SYNOPSIS  Stage 5 / FR5.1-FR5.7 — run agent Q&A certification end to end.
+.DESCRIPTION Orchestrates connectivity, agent creation (no tool), investigation/conversation, prompt polling, response verification, and summary. Spec: ../../script-specs/stage5-scenario-enablement/stage5_enable.md
 #>
 [CmdletBinding()]
 param(
@@ -214,126 +214,10 @@ function Invoke-Stage5ConnectivityCheck {
 }
 
 <#
-.SYNOPSIS  Stage 5 / FR5.2 — create and verify the Discovery tool resource.
-.DESCRIPTION Creates a Discovery tool with ARM PUT and validates Succeeded plus definitionContent. Spec: ../../script-specs/stage5-scenario-enablement/stage5_enable.md
+.SYNOPSIS  Stage 5 / FR5.3 — create a Discovery agent (no tool bound).
+.DESCRIPTION Upserts the data-plane Q&A agent with an empty tools[] and scientist instructions. Spec: ../../script-specs/stage5-scenario-enablement/stage5_enable.md
 #>
-function Invoke-Stage5CreateTool {
-    [CmdletBinding()]
-    param(
-        [Parameter(Mandatory)][string]$ConfigPath,
-        [string]$JsonPath,
-        [switch]$PassThru,
-        [string]$ResourceGroup,
-        [string]$Workspace,
-        [string]$ToolArmId,
-        [string]$Tool,
-        [string]$Supercomputer,
-        [string]$NodePool,
-        [string]$Image = 'mddemoacr.azurecr.io/corepython:latest',
-        [string]$RecommendedSku = 'Standard_D4s_v3'
-    )
-    $cfg = Get-OnboardingConfig -Path $ConfigPath
-    $results = [System.Collections.Generic.List[object]]::new()
-    $api = '2026-06-01'
-
-    function Get-CfgString {
-        param([object]$Object, [string]$Name, [string]$Default = '')
-        if ($Object -and $Object.PSObject.Properties.Name -contains $Name -and $Object.$Name) { return [string]$Object.$Name }
-        return $Default
-    }
-    function Add-Result {
-        param([string]$Id, [string]$Name, [string]$Status, [string]$Detail, [string]$Remediation = '', [object]$Data = $null)
-        $results.Add((New-CheckResult -Id $Id -Name $Name -Status $Status -Fr 'FR5.2' -Detail $Detail -Remediation $Remediation -Data $Data))
-    }
-
-    $ResourceGroup = if ($ResourceGroup) { $ResourceGroup } else { Get-CfgString $cfg 'resourceGroup' (Get-CfgString $cfg 'deploymentResourceGroup') }
-    $Workspace = if ($Workspace) { $Workspace } else { Get-CfgString $cfg.names 'workspace' }
-    $Tool = if ($Tool) { $Tool } else { Get-CfgString $cfg.names 'tool' 'hero-tool' }
-    $Supercomputer = if ($Supercomputer) { $Supercomputer } else { Get-CfgString $cfg.names 'supercomputer' }
-    $NodePool = if ($NodePool) { $NodePool } else { Get-CfgString $cfg.names 'nodePool' }
-    if (-not $ToolArmId -and $ResourceGroup) {
-        $ToolArmId = "/subscriptions/$($cfg.subscriptionId)/resourceGroups/$ResourceGroup/providers/Microsoft.Discovery/tools/$Tool"
-    }
-
-    if (-not $ToolArmId) {
-        Add-Result 'fr5-2-tool-id' 'tool ARM id resolved' 'Fail' 'ToolArmId could not be resolved.' 'Pass -ToolArmId or set resourceGroup in config.'
-    } else {
-        if ($ResourceGroup -and $Supercomputer -and $NodePool) {
-            $npId = "/subscriptions/$($cfg.subscriptionId)/resourceGroups/$ResourceGroup/providers/Microsoft.Discovery/supercomputers/$Supercomputer/nodePools/$NodePool"
-            $np = Get-AzJson -Args @('resource', 'show', '--ids', $npId, '--api-version', $api) -AllowFail
-            if ($np -and $np.properties -and $np.properties.vmSize) { $RecommendedSku = [string]$np.properties.vmSize }
-        }
-        $infraName = 'corepython-container'
-        $toolBody = [ordered]@{
-            location   = $cfg.workloadRegion
-            tags       = @{ category = 'Scientific Computing'; stage = 'stage5-scenario-enablement' }
-            properties = [ordered]@{
-                version           = '1.0.0'
-                definitionContent = [ordered]@{
-                    name              = $Tool
-                    description       = "Hero certification Python execution tool. The agent must call GetNodePoolContext before using this tool so execution is pinned to the $Supercomputer/$NodePool supercomputer node pool."
-                    version           = '1.0.0'
-                    category          = 'scientific-computing'
-                    license           = 'MIT'
-                    infra             = @([ordered]@{
-                            name       = $infraName
-                            infra_type = 'container'
-                            image      = @{ acr = $Image }
-                            compute    = [ordered]@{
-                                min_resources  = @{ cpu = 1; ram = '8Gi'; storage = '8Gi'; gpu = 0 }
-                                max_resources  = @{ cpu = 2; ram = '16Gi'; storage = '32Gi'; gpu = 0 }
-                                infiniband     = $false
-                                recommended_sku = @($RecommendedSku)
-                                pool_type      = 'static'
-                                pool_size      = 1
-                            }
-                        })
-                    code_environments = @([ordered]@{
-                            language    = 'python'
-                            command     = 'python "/{{scriptName}}"'
-                            description = 'Python code environment on the hero certification container image.'
-                            infra_node  = $infraName
-                        })
-                }
-            }
-        }
-        $infraNodes = @($toolBody.properties.definitionContent.infra | ForEach-Object { $_.name })
-        $envNodes = @($toolBody.properties.definitionContent.code_environments | ForEach-Object { $_.infra_node })
-        $mismatch = @($envNodes | Where-Object { $infraNodes -notcontains $_ })
-        if ($mismatch.Count) {
-            Add-Result 'fr5-2-tool-shape' 'tool definition shape' 'Fail' "infra_node mismatch: $($mismatch -join ',')" 'Align code_environments[].infra_node with an infra[].name.'
-        } else {
-            Add-Result 'fr5-2-tool-shape' 'tool definition shape' 'Pass' "infra_node=$($envNodes -join ',') recommended_sku=$RecommendedSku"
-            $bodyPath = Join-Path ([System.IO.Path]::GetTempPath()) "stage5-tool-$([guid]::NewGuid().ToString('N')).json"
-            try {
-                $toolBody | ConvertTo-Json -Depth 30 | Set-Content -LiteralPath $bodyPath -Encoding utf8
-                $put = Get-AzJson -Args @('rest', '--method', 'put', '--url', "https://management.azure.com$ToolArmId`?api-version=$api", '--body', "@$bodyPath") -AllowFail
-                $prov = if ($put -and $put.properties) { [string]$put.properties.provisioningState } else { '' }
-                for ($i = 0; $i -lt 36 -and $prov -notin @('Succeeded', 'Failed', 'Canceled'); $i++) {
-                    Start-Sleep -Seconds 5
-                    $put = Get-AzJson -Args @('resource', 'show', '--ids', $ToolArmId, '--api-version', $api) -AllowFail
-                    $prov = if ($put -and $put.properties) { [string]$put.properties.provisioningState } else { '' }
-                }
-                $hasDefinition = [bool]($put -and $put.properties -and $put.properties.definitionContent)
-                $ok = $prov -eq 'Succeeded' -and $hasDefinition
-                Add-Result 'fr5-2-tool-created' 'Discovery tool created' ($ok ? 'Pass' : 'Fail') "toolId=$ToolArmId provisioningState=$prov hasDefinition=$hasDefinition" ($ok ? '' : 'Retry after fixing tool body validation errors and confirm the RP returns properties.definitionContent.') ([pscustomobject]@{ toolId = $ToolArmId; provisioningState = $prov; hasDefinition = $hasDefinition; definitionName = if ($hasDefinition) { $put.properties.definitionContent.name } else { $null } })
-            }
-            finally {
-                if (Test-Path -LiteralPath $bodyPath) { Remove-Item -LiteralPath $bodyPath -Force }
-            }
-        }
-    }
-
-    if ($PassThru) { return $results.ToArray() }
-    $null = Write-OnboardingReport -Results $results.ToArray() -Title 'Stage 5 · create tool (FR5.2)' -JsonPath $JsonPath
-    Complete-Stage -Results $results.ToArray()
-}
-
-<#
-.SYNOPSIS  Stage 5 / FR5.3 — create a Discovery agent and bind the tool.
-.DESCRIPTION Upserts the data-plane agent with top-level tools[] and instructions that require GetNodePoolContext first. Spec: ../../script-specs/stage5-scenario-enablement/stage5_enable.md
-#>
-function Invoke-Stage5CreateAgentBindTool {
+function Invoke-Stage5CreateAgent {
     [CmdletBinding()]
     param(
         [Parameter(Mandatory)][string]$ConfigPath,
@@ -342,9 +226,7 @@ function Invoke-Stage5CreateAgentBindTool {
         [string]$Workspace,
         [string]$Project,
         [string]$ChatModel,
-        [string]$Agent,
-        [string]$ToolArmId,
-        [string]$ResourceGroup
+        [string]$Agent
     )
     $cfg = Get-OnboardingConfig -Path $ConfigPath
     $results = [System.Collections.Generic.List[object]]::new()
@@ -366,36 +248,27 @@ function Invoke-Stage5CreateAgentBindTool {
 
     $Workspace = if ($Workspace) { $Workspace } else { Get-CfgString $cfg.names 'workspace' }
     $Project = if ($Project) { $Project } else { Get-CfgString $cfg.names 'project' }
-    $Agent = if ($Agent) { $Agent } else { Get-CfgString $cfg.names 'agent' 'hero-agent' }
+    $Agent = if ($Agent) { $Agent } else { Get-CfgString $cfg.names 'qnaAgent' 'scientistQnAAgent' }
     $ChatModel = if ($ChatModel) { $ChatModel } else { Get-CfgString $cfg.names 'chatModel' (Get-CfgString $cfg.names 'chatModelDeployment' 'gpt-5-4') }
-    $ResourceGroup = if ($ResourceGroup) { $ResourceGroup } else { Get-CfgString $cfg 'resourceGroup' (Get-CfgString $cfg 'deploymentResourceGroup') }
-    if (-not $ToolArmId -and $ResourceGroup) {
-        $tool = Get-CfgString $cfg.names 'tool' 'hero-tool'
-        $ToolArmId = "/subscriptions/$($cfg.subscriptionId)/resourceGroups/$ResourceGroup/providers/Microsoft.Discovery/tools/$tool"
-    }
 
-    if (-not $Workspace -or -not $Project -or -not $ToolArmId) {
-        Add-Result 'fr5-3-inputs' 'agent upsert inputs' 'Fail' 'Workspace, Project, or ToolArmId is missing.' 'Pass -Workspace, -Project, and -ToolArmId or set config names/resourceGroup.'
+    if (-not $Workspace -or -not $Project) {
+        Add-Result 'fr5-3-inputs' 'agent upsert inputs' 'Fail' 'Workspace or Project is missing.' 'Pass -Workspace and -Project or set config names.'
     } else {
         $base = "https://$Workspace.workspace.discovery.azure.com"
         $instructions = @"
-    You are a hero use-case certification agent for Microsoft Discovery.
-
-    # CRITICAL: TOOL CALLING RULE
-    You MUST call only ONE tool at a time. Always wait for the result of the current tool call before making the next one.
-
-    ## REQUIRED FIRST STEP
-    - Use GetNodePoolContext tool to get node pool ARM resource ID before executing script
+    You are $Agent, a scientific question-answering assistant for Microsoft Discovery.
 
     ## RULE
-    When the user asks for any computed result, script execution, or platform validation, you MUST execute Python using the bound tool rather than answering from memory. Always show the Python script you ran and its complete stdout.
+    Answer the user's scientific questions directly and concisely from your own knowledge.
+    You have no external tools bound, so do not claim to run code or call tools. If a question
+    is outside your knowledge, say so plainly rather than inventing an answer.
 "@
         $body = [ordered]@{
             name           = $Agent
             humanInTheLoop = 'Disabled'
-            tools          = @(@{ toolId = $ToolArmId; confirmation = 'Disabled' })
+            tools          = @()
             foundryDetails = [ordered]@{
-                description = 'Stage 5 hero certification agent with a Discovery tool attached.'
+                description = 'Stage 5 scientist Q&A agent (no Discovery tool bound).'
                 definition  = [ordered]@{
                     kind         = 'prompt'
                     model        = $ChatModel
@@ -415,17 +288,11 @@ function Invoke-Stage5CreateAgentBindTool {
             }
         }
         $created = $upsert.StatusCode -in @(200, 201, 202) -and (-not $op -or $opStatus -eq 'Succeeded')
-        Add-Result 'fr5-3-agent-created' 'Discovery agent upserted' ($created ? 'Pass' : 'Fail') "agent=$Agent statusCode=$($upsert.StatusCode) operationStatus=$opStatus" ($created ? '' : 'Confirm the workspace data-plane endpoint, model deployment name, and agent schema.')
-        $agentUrl = "$base/projects/$Project/agents/$Agent`?api-version=$api"
-        $agentGet = Invoke-DiscoveryJson -Method 'GET' -Uri $agentUrl
-        $bound = @()
-        if ($agentGet.Body -and $agentGet.Body.tools) { $bound = @($agentGet.Body.tools | ForEach-Object { $_.toolId }) }
-        $toolBound = @($bound | Where-Object { $_ -and $_.ToLowerInvariant() -eq $ToolArmId.ToLowerInvariant() }).Count -gt 0
-        Add-Result 'fr5-3-tool-bound' 'tool bound to agent' ($toolBound ? 'Pass' : 'Fail') "agent=$Agent toolBound=$toolBound tools=$($bound -join ',')" ($toolBound ? '' : 'Ensure tools[] is top-level and contains the tool ARM id.') ([pscustomobject]@{ agentId = $Agent; toolBound = $toolBound; tools = $bound; toolId = $ToolArmId; model = $ChatModel })
+        Add-Result 'fr5-3-agent-created' 'Discovery agent upserted' ($created ? 'Pass' : 'Fail') "agent=$Agent statusCode=$($upsert.StatusCode) operationStatus=$opStatus" ($created ? '' : 'Confirm the workspace data-plane endpoint, model deployment name, and agent schema.') ([pscustomobject]@{ agentId = $Agent; model = $ChatModel })
     }
 
     if ($PassThru) { return $results.ToArray() }
-    $null = Write-OnboardingReport -Results $results.ToArray() -Title 'Stage 5 · create agent and bind tool (FR5.3)' -JsonPath $JsonPath
+    $null = Write-OnboardingReport -Results $results.ToArray() -Title 'Stage 5 · create agent (FR5.3)' -JsonPath $JsonPath
     Complete-Stage -Results $results.ToArray()
 }
 
@@ -484,7 +351,7 @@ function Invoke-Stage5CreateInvestigationConversation {
 }
 
 <#
-.SYNOPSIS  Stage 5 / FR5.5 — send the hero prompt and poll the response.
+.SYNOPSIS  Stage 5 / FR5.5 — send the Q&A prompt and poll the response.
 .DESCRIPTION Calls the Discovery responses route with array message content and no api-version on the responses URL. Spec: ../../script-specs/stage5-scenario-enablement/stage5_enable.md
 #>
 function Invoke-Stage5SendPromptPoll {
@@ -517,10 +384,9 @@ function Invoke-Stage5SendPromptPoll {
     function Add-Result { param([string]$Id, [string]$Name, [string]$Status, [string]$Detail, [string]$Remediation = '', [object]$Data = $null) $results.Add((New-CheckResult -Id $Id -Name $Name -Status $Status -Fr 'FR5.5' -Detail $Detail -Remediation $Remediation -Data $Data)) }
 
     $Workspace = if ($Workspace) { $Workspace } else { Get-CfgString $cfg.names 'workspace' }
-    $Agent = if ($Agent) { $Agent } else { Get-CfgString $cfg.names 'agent' 'hero-agent' }
+    $Agent = if ($Agent) { $Agent } else { Get-CfgString $cfg.names 'qnaAgent' 'scientistQnAAgent' }
     if (-not $Prompt) {
-        $tool = Get-CfgString $cfg.names 'tool' 'hero-tool'
-        $Prompt = "Using the $tool tool, run Python to generate a deterministic 12-row table of SHA256 hashes for the strings stage5-hero-1 through stage5-hero-12. Show the Python script you ran and its complete stdout."
+        $Prompt = 'In two or three sentences, explain what CRISPR-Cas9 is and why it is significant for gene editing.'
     }
     if (-not $Workspace -or -not $ConversationId -or -not $Agent) {
         Add-Result 'fr5-5-inputs' 'response inputs' 'Fail' 'Workspace, ConversationId, or Agent is missing.' 'Pass -ConversationId from create_investigation_conversation.ps1 and configure workspace/agent names.'
@@ -537,7 +403,7 @@ function Invoke-Stage5SendPromptPoll {
         $send = Invoke-DiscoveryJson -Method 'POST' -Uri "$base/conversations/$ConversationId/openai/responses" -Body $sendBody
         $rid = if ($send.Body -and $send.Body.id) { [string]$send.Body.id } else { '' }
         $sent = $send.StatusCode -in @(200, 201, 202) -and $rid
-        Add-Result 'fr5-5-response-started' 'hero response started' ($sent ? 'Pass' : 'Fail') "responseId=$rid statusCode=$($send.StatusCode)" ($sent ? '' : 'Send content as an array of parts and do not add api-version to the responses route.') ([pscustomobject]@{ responseId = $rid; conversationId = $ConversationId })
+        Add-Result 'fr5-5-response-started' 'agent response started' ($sent ? 'Pass' : 'Fail') "responseId=$rid statusCode=$($send.StatusCode)" ($sent ? '' : 'Send content as an array of parts and do not add api-version to the responses route.') ([pscustomobject]@{ responseId = $rid; conversationId = $ConversationId })
         if ($sent) {
             $deadline = (Get-Date).AddSeconds($TimeoutSeconds)
             $final = $null
@@ -555,7 +421,7 @@ function Invoke-Stage5SendPromptPoll {
                 $final | ConvertTo-Json -Depth 50 | Set-Content -LiteralPath $ResponsePath -Encoding utf8
             }
             $ok = $status -eq 'completed'
-            Add-Result 'fr5-5-response-completed' 'hero response completed' ($ok ? 'Pass' : 'Fail') "responseId=$rid status=$status" ($ok ? '' : 'Inspect response error/last_error/incomplete_details; first tool runs may take several minutes.') ([pscustomobject]@{ responseId = $rid; conversationId = $ConversationId; status = $status; responsePath = $ResponsePath; response = $final })
+            Add-Result 'fr5-5-response-completed' 'agent response completed' ($ok ? 'Pass' : 'Fail') "responseId=$rid status=$status" ($ok ? '' : 'Inspect response error/last_error/incomplete_details; the first response may take a minute.') ([pscustomobject]@{ responseId = $rid; conversationId = $ConversationId; status = $status; responsePath = $ResponsePath; response = $final })
         }
     }
 
@@ -565,10 +431,10 @@ function Invoke-Stage5SendPromptPoll {
 }
 
 <#
-.SYNOPSIS  Stage 5 / FR5.6 — assert the response contains a real tool invocation.
-.DESCRIPTION Fails completed responses that lack function_call/function_call_output evidence and Foundry tracing evidence. Spec: ../../script-specs/stage5-scenario-enablement/stage5_enable.md
+.SYNOPSIS  Stage 5 / FR5.6 — verify the agent answered the prompt.
+.DESCRIPTION Fails responses that did not complete or returned no assistant text. Spec: ../../script-specs/stage5-scenario-enablement/stage5_enable.md
 #>
-function Invoke-Stage5AssertToolInvocation {
+function Invoke-Stage5AssertResponse {
     [CmdletBinding()]
     param(
         [Parameter(Mandatory)][string]$ConfigPath,
@@ -594,33 +460,26 @@ function Invoke-Stage5AssertToolInvocation {
             $results.Add((New-CheckResult -Id 'fr5-6-response-input' -Name 'response object supplied' -Status 'Fail' -Fr 'FR5.6' -Detail 'No response object or -ResponsePath was supplied.' -Remediation 'Pass the final response JSON from send_prompt_poll.ps1.'))
         } else {
             $resp = $script:responseObject
-            $calls = [System.Collections.Generic.List[string]]::new()
-            $outputs = [System.Collections.Generic.List[string]]::new()
+            $texts = [System.Collections.Generic.List[string]]::new()
             foreach ($item in @($resp.output)) {
                 if (-not $item -or -not ($item.PSObject.Properties.Name -contains 'type')) { continue }
-                if ($item.type -eq 'function_call') {
-                    $name = if ($item.PSObject.Properties.Name -contains 'name') { [string]$item.name } else { '' }
-                    $calls.Add($name)
-                } elseif ($item.type -eq 'function_call_output') {
-                    $out = if ($item.PSObject.Properties.Name -contains 'output') { [string]$item.output } else { '' }
-                    $outputs.Add($out)
+                if ($item.type -eq 'message') {
+                    foreach ($part in @($item.content)) {
+                        $t = if ($part -and $part.PSObject.Properties.Name -contains 'text') { [string]$part.text } else { '' }
+                        if ($t) { $texts.Add($t) }
+                    }
                 }
             }
             $completed = ($resp.PSObject.Properties.Name -contains 'status' -and $resp.status -eq 'completed')
-            $toolCallPresent = $calls.Count -gt 0 -and $outputs.Count -gt 0
-            $nodePoolCalled = @($calls | Where-Object { $_ -match 'GetNodePoolContext' }).Count -gt 0
-            $traceProps = @('traceId', 'foundryTraceId', 'runId', 'tracingVisible')
-            $traceEvidence = $false
-            foreach ($p in $traceProps) {
-                if ($resp.PSObject.Properties.Name -contains $p -and $resp.$p) { $traceEvidence = $true }
-            }
-            $traceEvidence = $traceEvidence -or [bool]$TracingVisible
-            $ok = $completed -and $toolCallPresent -and $nodePoolCalled -and $traceEvidence
-            $detail = "completed=$completed functionCalls=$($calls.Count) functionOutputs=$($outputs.Count) nodePoolContext=$nodePoolCalled tracingVisible=$traceEvidence calls=$($calls -join ',')"
-            $results.Add((New-CheckResult -Id 'fr5-6-tool-invoked' -Name 'real tool invocation present' -Status ($ok ? 'Pass' : 'Fail') -Fr 'FR5.6' -Detail $detail -Remediation ($ok ? '' : 'Completed is not enough: require function_call/function_call_output items and Foundry tracing evidence. Confirm GetNodePoolContext is in instructions and tracing shows the run.') -Data ([pscustomobject]@{ completed = $completed; toolCallPresent = $toolCallPresent; tracingVisible = $traceEvidence; calls = $calls.ToArray(); outputCount = $outputs.Count; nodePoolContext = $nodePoolCalled; pass = $ok })))
+            $answer = ($texts -join "`n").Trim()
+            $hasText = $answer.Length -gt 0
+            $ok = $completed -and $hasText
+            $preview = if ($answer.Length -gt 160) { $answer.Substring(0, 160) + '...' } else { $answer }
+            $detail = "completed=$completed textParts=$($texts.Count) chars=$($answer.Length) preview=$preview"
+            $results.Add((New-CheckResult -Id 'fr5-6-response-content' -Name 'agent answered prompt' -Status ($ok ? 'Pass' : 'Fail') -Fr 'FR5.6' -Detail $detail -Remediation ($ok ? '' : 'Response did not complete with assistant text. Inspect response error/last_error/incomplete_details and confirm the chat model deployment is healthy.') -Data ([pscustomobject]@{ completed = $completed; hasText = $hasText; chars = $answer.Length; answer = $answer; pass = $ok })))
         }
         if ($PassThru) { return $results.ToArray() }
-        $null = Write-OnboardingReport -Results $results.ToArray() -Title 'Stage 5 · assert tool invocation (FR5.6)' -JsonPath $JsonPath
+        $null = Write-OnboardingReport -Results $results.ToArray() -Title 'Stage 5 · verify agent response (FR5.6)' -JsonPath $JsonPath
         Complete-Stage -Results $results.ToArray()
     }
 }
@@ -667,7 +526,6 @@ function Invoke-Stage5VerificationSummary {
     $Project = if ($Project) { $Project } else { Get-CfgString $cfg.names 'project' }
     $ChatModel = if ($ChatModel) { $ChatModel } else { Get-CfgString $cfg.names 'chatModel' (Get-CfgString $cfg.names 'chatModelDeployment' 'gpt-5-4') }
     $Supercomputer = if ($Supercomputer) { $Supercomputer } else { Get-CfgString $cfg.names 'supercomputer' }
-    if (-not $ToolArmId -and $ResourceGroup) { $ToolArmId = "/subscriptions/$($cfg.subscriptionId)/resourceGroups/$ResourceGroup/providers/Microsoft.Discovery/tools/$(Get-CfgString $cfg.names 'tool' 'hero-tool')" }
 
     if (-not $ResourceGroup) {
         Add-Result 'fr5-7-resource-group' 'resource group resolved' 'Fail' 'Resource group is missing.' 'Pass -ResourceGroup or set resourceGroup in config.'
@@ -677,8 +535,7 @@ function Invoke-Stage5VerificationSummary {
                 @{ Name = 'supercomputer'; Id = "$baseId/supercomputers/$Supercomputer" },
                 @{ Name = 'workspace'; Id = "$baseId/workspaces/$Workspace" },
                 @{ Name = 'project'; Id = "$baseId/workspaces/$Workspace/projects/$Project" },
-                @{ Name = 'chat-model'; Id = "$baseId/workspaces/$Workspace/chatModelDeployments/$ChatModel" },
-                @{ Name = 'tool'; Id = $ToolArmId }
+                @{ Name = 'chat-model'; Id = "$baseId/workspaces/$Workspace/chatModelDeployments/$ChatModel" }
             )) {
             $arm = Test-ArmSucceeded -Id $svc.Id
             Add-Result "fr5-7-$($svc.Name)" "$($svc.Name) ARM state" ($arm.ok ? 'Pass' : 'Fail') "state=$($arm.state) id=$($arm.id)" ($arm.ok ? '' : 'Resource must be Succeeded before certification.') $arm
@@ -708,11 +565,9 @@ function Invoke-Stage5VerificationSummary {
     }
 
     foreach ($item in @(
-            @{ Id = 'tool-created'; Name = 'tool created'; Key = 'toolCreated' },
             @{ Id = 'agent-created'; Name = 'agent created'; Key = 'agentCreated' },
-            @{ Id = 'tool-bound'; Name = 'tool bound'; Key = 'toolBound' },
             @{ Id = 'conversation-completed'; Name = 'conversation completed'; Key = 'conversationCompleted' },
-            @{ Id = 'tool-invoked'; Name = 'tool actually invoked'; Key = 'toolInvoked' }
+            @{ Id = 'response-received'; Name = 'agent answered prompt'; Key = 'responseReceived' }
         )) {
         $ok = Get-StateBool -State $state -Name $item.Key
         Add-Result "fr5-7-$($item.Id)" $item.Name ($ok ? 'Pass' : 'Fail') "$($item.Key)=$ok" ($ok ? '' : 'Re-run the corresponding Stage 5 step and provide the orchestrator state file.')
@@ -731,10 +586,8 @@ $ResourceGroup = if ($ResourceGroup) { $ResourceGroup } else { Get-CfgString $cf
 $Workspace = if ($Workspace) { $Workspace } else { Get-CfgString $cfg.names 'workspace' }
 $Project = if ($Project) { $Project } else { Get-CfgString $cfg.names 'project' }
 $ChatModel = if ($ChatModel) { $ChatModel } else { Get-CfgString $cfg.names 'chatModel' (Get-CfgString $cfg.names 'chatModelDeployment' 'gpt-5-4') }
-$toolName = Get-CfgString $cfg.names 'tool' 'hero-tool'
-$agentName = Get-CfgString $cfg.names 'agent' 'hero-agent'
+$agentName = Get-CfgString $cfg.names 'qnaAgent' 'scientistQnAAgent'
 $investigation = Get-CfgString $cfg.names 'investigation' 'hero-inv'
-if (-not $ToolArmId -and $ResourceGroup) { $ToolArmId = "/subscriptions/$($cfg.subscriptionId)/resourceGroups/$ResourceGroup/providers/Microsoft.Discovery/tools/$toolName" }
 
 $outDir = Join-Path $PSScriptRoot 'out'
 if (-not (Test-Path -LiteralPath $outDir)) { New-Item -ItemType Directory -Force -Path $outDir | Out-Null }
@@ -742,9 +595,9 @@ $stamp = Get-Date -Format 'yyyyMMdd-HHmmss'
 $statePath = Join-Path $outDir "stage5-state-$stamp.json"
 $responsePath = Join-Path $outDir "stage5-response-$stamp.json"
 $state = @{
-    workspace = $Workspace; project = $Project; chatModel = $ChatModel; toolArmId = $ToolArmId
-    connectivity = $false; toolCreated = $false; agentCreated = $false; toolBound = $false
-    investigationCreated = $false; conversationCompleted = $false; toolInvoked = $false
+    workspace = $Workspace; project = $Project; chatModel = $ChatModel
+    connectivity = $false; agentCreated = $false
+    investigationCreated = $false; conversationCompleted = $false; responseReceived = $false
 }
 
 $step = Invoke-Stage5ConnectivityCheck -ConfigPath $ConfigPath -ResourceGroup $ResourceGroup -PassThru
@@ -752,21 +605,12 @@ Add-Many $step
 $state.connectivity = -not (Has-Fail $step)
 Write-State -Path $statePath -State $state
 if ($state.connectivity) {
-    $step = Invoke-Stage5CreateTool -ConfigPath $ConfigPath -ResourceGroup $ResourceGroup -Workspace $Workspace -ToolArmId $ToolArmId -Tool $toolName -PassThru
-    Add-Many $step
-    $state.toolCreated = -not (Has-Fail $step)
-    $toolData = Last-DataById -Items $step -Id 'fr5-2-tool-created'
-    if ($toolData -and $toolData.toolId) { $ToolArmId = [string]$toolData.toolId; $state.toolArmId = $ToolArmId }
-    Write-State -Path $statePath -State $state
-}
-if ($state.toolCreated) {
-    $step = Invoke-Stage5CreateAgentBindTool -ConfigPath $ConfigPath -ResourceGroup $ResourceGroup -Workspace $Workspace -Project $Project -ChatModel $ChatModel -Agent $agentName -ToolArmId $ToolArmId -PassThru
+    $step = Invoke-Stage5CreateAgent -ConfigPath $ConfigPath -Workspace $Workspace -Project $Project -ChatModel $ChatModel -Agent $agentName -PassThru
     Add-Many $step
     $state.agentCreated = @($step | Where-Object { $_.id -eq 'fr5-3-agent-created' -and $_.status -eq 'Pass' }).Count -gt 0
-    $state.toolBound = @($step | Where-Object { $_.id -eq 'fr5-3-tool-bound' -and $_.status -eq 'Pass' }).Count -gt 0
     Write-State -Path $statePath -State $state
 }
-if ($state.agentCreated -and $state.toolBound) {
+if ($state.agentCreated) {
     $step = Invoke-Stage5CreateInvestigationConversation -ConfigPath $ConfigPath -Workspace $Workspace -Project $Project -Investigation $investigation -PassThru
     Add-Many $step
     $convData = Last-DataById -Items $step -Id 'fr5-4-conversation'
@@ -783,18 +627,18 @@ if ($state.conversationId) {
     Write-State -Path $statePath -State $state
 }
 if ($state.conversationCompleted) {
-    $step = Invoke-Stage5AssertToolInvocation -ConfigPath $ConfigPath -ResponsePath $responsePath -PassThru
+    $step = Invoke-Stage5AssertResponse -ConfigPath $ConfigPath -ResponsePath $responsePath -PassThru
     Add-Many $step
-    $state.toolInvoked = @($step | Where-Object { $_.id -eq 'fr5-6-tool-invoked' -and $_.status -eq 'Pass' }).Count -gt 0
+    $state.responseReceived = @($step | Where-Object { $_.id -eq 'fr5-6-response-content' -and $_.status -eq 'Pass' }).Count -gt 0
     Write-State -Path $statePath -State $state
 }
 
-$summary = Invoke-Stage5VerificationSummary -ConfigPath $ConfigPath -StateFile $statePath -ResourceGroup $ResourceGroup -Workspace $Workspace -Project $Project -ChatModel $ChatModel -ToolArmId $ToolArmId -PassThru
+$summary = Invoke-Stage5VerificationSummary -ConfigPath $ConfigPath -StateFile $statePath -ResourceGroup $ResourceGroup -Workspace $Workspace -Project $Project -ChatModel $ChatModel -PassThru
 Add-Many $summary
-$certified = -not (Has-Fail $results.ToArray()) -and [bool]$state.toolInvoked
-$results.Add((New-CheckResult -Id 'fr5-certification-verdict' -Name 'Stage 5 certification verdict' -Status ($certified ? 'Pass' : 'Fail') -Fr 'FR5.1-FR5.7' -Detail ($certified ? 'CERTIFIED' : 'NOT CERTIFIED') -Remediation ($certified ? '' : 'Any failed check blocks certification; a run without a function_call item is not certified.') -Data ([pscustomobject]@{ verdict = ($certified ? 'CERTIFIED' : 'NOT CERTIFIED'); stateFile = $statePath; responsePath = $responsePath })))
+$certified = -not (Has-Fail $results.ToArray()) -and [bool]$state.responseReceived
+$results.Add((New-CheckResult -Id 'fr5-certification-verdict' -Name 'Stage 5 certification verdict' -Status ($certified ? 'Pass' : 'Fail') -Fr 'FR5.1-FR5.7' -Detail ($certified ? 'CERTIFIED' : 'NOT CERTIFIED') -Remediation ($certified ? '' : 'Any failed check blocks certification; a run without an agent answer is not certified.') -Data ([pscustomobject]@{ verdict = ($certified ? 'CERTIFIED' : 'NOT CERTIFIED'); stateFile = $statePath; responsePath = $responsePath })))
 
 $extra = [pscustomobject]@{ verdict = ($certified ? 'CERTIFIED' : 'NOT CERTIFIED'); stateFile = $statePath; responsePath = $responsePath }
-$null = Write-OnboardingReport -Results $results.ToArray() -Title 'Stage 5 · hero use-case certification (FR5.1-FR5.7)' -JsonPath $JsonPath -Extra $extra
+$null = Write-OnboardingReport -Results $results.ToArray() -Title 'Stage 5 · agent Q&A certification (FR5.1-FR5.7)' -JsonPath $JsonPath -Extra $extra
 Complete-Stage -Results $results.ToArray()
 

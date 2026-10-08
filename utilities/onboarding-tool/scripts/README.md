@@ -47,7 +47,7 @@ Per-stage parameters, prerequisites, and dependencies are documented in
 | 2 Landing zone | [`stage2-landing-zone/stage2_prepare.ps1`](stage2-landing-zone/stage2_prepare.ps1) | rp_register, rbac_assign, nsp_perimeter_joiner_role, network_provision, nsg_rules, route_tables, private_dns, byo_storage, firewall_request_artifact, quota_exemption_requests |
 | 3 Validation | [`stage3-validation/stage3_validate.ps1`](stage3-validation/stage3_validate.ps1) | check_subnet_delegation, check_nsg_effective, check_effective_routes, check_dns_and_pe, testvm_lifecycle, probe_dns, probe_tcp443, probe_https, probe_artifacts, probe_pe_resolution, probe_eastwest, dependency_spec |
 | 4 Deployment | [`stage4-deployment/stage4_deploy.ps1`](stage4-deployment/stage4_deploy.ps1) | deploy_order, true_state_detection, error_remediation_engine, recovery_reput |
-| 5 Scenario enablement | [`stage5-scenario-enablement/stage5_enable.ps1`](stage5-scenario-enablement/stage5_enable.ps1) | connectivity_check, create_tool, create_agent_bind_tool, create_investigation_conversation, send_prompt_poll, assert_tool_invocation, verification_summary |
+| 5 Scenario enablement | [`stage5-scenario-enablement/stage5_enable.ps1`](stage5-scenario-enablement/stage5_enable.ps1) | connectivity_check, create_agent, create_investigation_conversation, send_prompt_poll, verify_response, verification_summary |
 
 Supporting files: `lib/OnboardingCommon.psm1` (shared module), two planning forms —
 `stage1-planning/discovery-resource-planning-form-managed-vnet.xlsx` (tool provisions the VNet) and
@@ -84,7 +84,7 @@ cd utilities/onboarding-tool/scripts   # all commands are relative to this direc
 # Stage 4 — deploy the platform in dependency order with error-to-remediation.
 ./stage4-deployment/stage4_deploy.ps1 -ConfigPath ./config.json -JsonPath ./out/stage4.json
 
-# Stage 5 — scenario enablement with the hero use case (fails unless a tool is really invoked).
+# Stage 5 — scenario enablement: create a Q&A agent and verify it answers a prompt.
 ./stage5-scenario-enablement/stage5_enable.ps1 -ConfigPath ./config.json -JsonPath ./out/stage5.json
 ```
 
@@ -177,20 +177,20 @@ platform resources — run against the intended subscription only.**
 
 ### Stage 5 — Scenario enablement (`stage5-scenario-enablement/stage5_enable.ps1`)
 
-End-to-end certification with the hero use case (FR5.1). Verifies platform private-endpoint DNS
-and 443 reachability, creates a tool, binds it to an agent, opens an investigation + conversation,
-sends a prompt, and asserts the tool was actually invoked (passes only on a real tool invocation,
-not just an HTTP 200). Requires a green Stage 1 `config.json`, a successful Stage 4 deployment
-(workspace + project + chatModel live), and a network path to the platform private endpoint (run
-inside the VNet or a peered/allowed network).
+End-to-end certification of a Q&A agent (FR5.1). Verifies platform private-endpoint DNS
+and 443 reachability, creates a Discovery agent named `scientistQnAAgent` with **no** Discovery
+tool bound, opens an investigation + conversation, sends a scientific prompt, and verifies the
+agent answered with assistant text (passes only when the response completes with a non-empty
+answer, not just an HTTP 200). Requires a green Stage 1 `config.json`, a successful Stage 4
+deployment (workspace + project + chatModel live), and a network path to the platform private
+endpoint (run inside the VNet or a peered/allowed network).
 
 | Parameter | Required | Description |
 |---|---|---|
 | `-ConfigPath` | yes | Stage 1 `config.json`. |
 | `-ResourceGroup` / `-Workspace` / `-Project` | no | Override the config-derived targets. |
 | `-ChatModel` | no | Chat model deployment to use (defaults to the deployed one). |
-| `-ToolArmId` | no | Reuse an existing tool ARM id instead of creating one. |
-| `-Prompt` | no | Override the hero-use-case prompt. |
+| `-Prompt` | no | Override the default scientific Q&A prompt. |
 | `-JsonPath` | no | Write the machine-readable certification report here. |
 
 ## TODO / known gaps
@@ -205,8 +205,8 @@ Tracked work not yet implemented in the scripts:
 - Stage 4 — bookshelf content. Stage 4 creates the bookshelf storage container
   (`Microsoft.Discovery/storageContainers`) but does not create or ingest the storage asset
   (`names.storageAsset`). Add asset creation / knowledge-base content load.
-- Stage 5 — scenario validation. Stage 5 asserts a real tool invocation and checks the bookshelf
-  private endpoints, but does not validate end-to-end bookshelf retrieval (that the ingested asset
+- Stage 5 — scenario validation. Stage 5 creates a Q&A agent (no tool) and checks the bookshelf
+  private endpoints, but does not validate end-to-end bookshelf retrieval (that an ingested asset
   is queryable by the agent). Add that retrieval assertion.
 
 ## FR traceability
