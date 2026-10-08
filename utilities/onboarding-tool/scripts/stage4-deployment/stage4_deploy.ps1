@@ -40,6 +40,12 @@ function Resolve-DiscoveryError {
     $text = $ErrorText
     $rules = @(
         [pscustomobject]@{
+            Signature   = 'Insufficient model TPM quota (InsufficientQuota on Cognitive Services deployment)'
+            RootCause   = 'the workspace provisions its own model deployment (gpt-5.4 GlobalStandard, 250K TPM) in its managed Foundry account, and the subscription does not have that much free TPM quota in the workload region'
+            Remediation = 'free or request TPM quota for the model named in the error in the workload region (Foundry portal > Quotas, or delete unused deployments), then re-run Stage 4 to re-PUT the workspace; if it stays Failed, delete the workspace and re-run with a new workspace name. Stage 1 check model-quota reports the shortfall up front'
+            Match       = { param($t) $t -match '(?is)InsufficientQuota|Tokens Per Minute' }
+        }
+        [pscustomobject]@{
             Signature   = 'Insufficient VM quota (VmSkuQuota)'
             RootCause   = 'the subscription does not have enough vCPU quota in the region for the supercomputer system pool (3 nodes of the system SKU) that the service validates at submit time'
             Remediation = 'request a quota increase for the quota named in the error (Total Regional vCPUs and/or the VM family) in the deployment region via Subscriptions > Usage + quotas or az quota update, wait for it to be approved, then re-run Stage 4; Stage 1 check vcpu-quota reports the shortfall up front'
@@ -170,6 +176,26 @@ function Get-FailedDeploymentError {
     return ($parts | Select-Object -Unique) -join ' | '
 }
 
+function Get-ManagedRgFailureText {
+    <#
+    .SYNOPSIS Return distinct failed-operation errors from a Discovery resource's managed RG.
+    .DESCRIPTION The workspace RP reports a generic InternalServerError; the actionable cause
+    (e.g. InsufficientQuota on the model deployment) is only in the managed RG activity log.
+    #>
+    param([string]$ResourceId)
+    if (-not $ResourceId) { return '' }
+    $mrg = Invoke-Az -Args @('resource', 'show', '--ids', $ResourceId, '--api-version', $script:DiscoveryApiVersion, '--query', 'properties.managedResourceGroup', '-o', 'tsv') -AllowFail
+    if ([string]::IsNullOrWhiteSpace($mrg)) { return '' }
+    $events = Get-AzJson -Args @('monitor', 'activity-log', 'list', '-g', $mrg.Trim(), '--offset', '6h', '--status', 'Failed') -AllowFail
+    $lines = foreach ($e in @($events)) {
+        $msg = "$($e.properties.statusMessage)".Trim()
+        if (-not $msg) { continue }
+        $res = "$($e.resourceId)".Split('/')[-1]
+        "[$($e.operationName.value) $res] $msg"
+    }
+    return (@($lines | Select-Object -Unique) -join ' | ')
+}
+
 function Get-DiscoveryArmState {
     [CmdletBinding()]
     param([Parameter(Mandatory)][string]$ResourceId)
@@ -205,18 +231,26 @@ function Test-DiscoveryTrueState {
 
     $deadline = (Get-Date).AddMinutes($TimeoutMinutes)
     $transient = @('Accepted', 'Creating', 'Running', 'Updating', 'Provisioning')
-    $terminal = @('Succeeded', 'Failed', 'Canceled', 'Cancelled', 'NotFound')
+    $failed = @('Failed', 'Canceled', 'Cancelled', 'NotFound')
     $listState = if ($ResourceId) { Get-DiscoveryArmState -ResourceId $ResourceId } else { 'NotChecked' }
     $trueState = $listState
     $source = 'arm'
 
     while ($true) {
         if ($AccountName -and $ResourceGroup) {
+            # FR4.3: the Foundry account only tightens the gate (catches a false ARM Succeeded);
+            # it never overrides a failed or still-provisioning ARM state.
             $source = 'cognitiveservices'
-            $trueState = Get-FoundryAccountState -ResourceGroup $ResourceGroup -AccountName $AccountName
+            $foundryState = Get-FoundryAccountState -ResourceGroup $ResourceGroup -AccountName $AccountName
+            $states = @(@($listState, $foundryState) | Where-Object { $_ -ne 'NotChecked' })
+            $bad = @($states | Where-Object { $failed -contains $_ })
+            $busy = @($states | Where-Object { $transient -contains $_ })
+            $other = @($states | Where-Object { $_ -ne 'Succeeded' })
+            $trueState = 'Succeeded'
+            if ($bad.Count) { $trueState = $bad[0] } elseif ($busy.Count) { $trueState = $busy[0] } elseif ($other.Count) { $trueState = $other[0] }
         }
 
-        if ($terminal -contains $trueState -or -not ($transient -contains $trueState)) { break }
+        if (-not ($transient -contains $trueState)) { break }
         if ((Get-Date) -ge $deadline) { break }
         Start-Sleep -Seconds $PollSeconds
         if ($ResourceId) {
@@ -226,7 +260,7 @@ function Test-DiscoveryTrueState {
     }
 
     $timedOut = ($transient -contains $trueState) -and (Get-Date) -ge $deadline
-    $verdict = if ($timedOut) { 'Fail' } elseif ($trueState -eq 'Succeeded' -and ($listState -eq 'Succeeded' -or $listState -eq 'NotChecked')) { 'Pass' } elseif ($trueState -eq 'Succeeded') { 'Warn' } else { 'Fail' }
+    $verdict = if ($timedOut) { 'Fail' } elseif ($trueState -eq 'Succeeded') { 'Pass' } else { 'Fail' }
     [pscustomobject]@{
         resource   = $ResourceId
         account    = $AccountName
@@ -908,7 +942,12 @@ if ($scStateBeforeWorkspace -eq 'Failed') {
                         -Remediation 'Set foundry.accountName and foundry.resourceGroup (the managed AI Foundry/CognitiveServices account) so FR4.3 can verify the workspace dependency true-state.' `
                         -Data $gate))
         } else {
-            $results.Add((New-StepResult -Id 'deploy-workspace' -Name 'workspace deployment' -ResourceId $workspaceId -State $state -Fr 'FR4.1,FR4.3' -ErrorText $put.error -Extra $gate))
+            $wsError = $put.error
+            if ($state -ne 'Succeeded') {
+                $mrgErr = Get-ManagedRgFailureText -ResourceId $workspaceId
+                if ($mrgErr) { $wsError = (@("managedRG: $mrgErr", $wsError) | Where-Object { $_ }) -join ' | ' }
+            }
+            $results.Add((New-StepResult -Id 'deploy-workspace' -Name 'workspace deployment' -ResourceId $workspaceId -State $state -Fr 'FR4.1,FR4.3' -ErrorText $wsError -Extra $gate))
         }
     }
 }

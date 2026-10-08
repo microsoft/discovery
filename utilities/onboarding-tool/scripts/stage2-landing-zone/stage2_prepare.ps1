@@ -626,7 +626,7 @@ else {
                 $accessData.vnet = $vnet
             }
             elseif ($access -eq 'privateEndpoint') {
-                $peSubnet = @($cfg.network.subnets | Where-Object { (Resolve-SubnetRole $_.role) -eq 'private-endpoints' } | Select-Object -First 1)
+                $peSubnet = $cfg.network.subnets | Where-Object { (Resolve-SubnetRole $_.role) -eq 'private-endpoints' } | Select-Object -First 1
                 if ($peSubnet) {
                     $vnet = Get-VNetName
                     $subnetName = Get-SubnetName $peSubnet

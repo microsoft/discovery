@@ -42,11 +42,13 @@ Region co-location (pre-flight): the supercomputer `location` (from `controlPlan
 - Creation not supported in region: the region is not Discovery-creatable for this resource type; place the BYO VNet and set controlPlaneRegion to a creatable region (eastus confirmed; eastus2 rejected despite being advertised).
 
 ### true_state_detection — FR4.3
-Catch the case where the ARM resource list shows Succeeded while a Foundry account is still Creating: confirm Foundry state with `az cognitiveservices account show`, and enforce a timeout that converts a stuck Accepted/Creating into a terminal failure.
+Catch the case where the ARM resource list shows Succeeded while a Foundry account is still Creating: confirm Foundry state with `az cognitiveservices account show`, and enforce a timeout that converts a stuck Accepted/Creating into a terminal failure. The Foundry state only tightens the gate: the step passes when both the ARM state and the Foundry state are Succeeded, and a Failed ARM state is never overridden by a Succeeded Foundry account.
 - Stuck Creating past timeout: treat as failed; purge/retry per the error-remediation mapping.
+- Workspace Failed: the RP returns a generic InternalServerError, so read the failed operations from the workspace managed RG activity log and match those against the remediation engine.
 
 ### error_remediation_engine — FR4.4
 Match the ARM error signature and emit the specific remediation:
+- `InsufficientQuota` (Tokens Per Minute) on a managed-RG model deployment → not enough free gpt-5.4 GlobalStandard TPM in the workload region (workspace needs 250K, the chat model 200K) → free or request quota, then re-run (Stage 1 `model-quota` catches this up front).
 - `Creation of new X resources is not supported in region` → the target region is not Discovery-creatable for that resource type (ARM advertises more locations than the service allows) → deploy into a creatable region (eastus confirmed; eastus2 rejected) and place the BYO VNet there so the supercomputer stays co-regional with its node pool subnet.
 - `RegionMismatch` on supercomputer/nodePool `SubnetId` → supercomputer location differs from the BYO VNet/subnet region → set controlPlaneRegion to the VNet region so the supercomputer is co-regional with its subnets, delete the failed supercomputer, and re-run (region is immutable).
 - `AKSCapacityHeavyUsage` / `InternalServerError` on AKS create → region capacity for API Server VNet Integration → retry, or deploy workload in a region with capacity and global-peer to the firewall.

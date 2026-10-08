@@ -120,6 +120,17 @@ Notes:
   policies in the form. Add a `POLICY` row only to declare or override one.
 - For the **BYO** form, `controlPlaneRegion` must equal the region of the existing VNet that holds
   the `managedcluster` / `nodepool` subnets.
+- For the BYO form, the tool doesn't change your VNet. Before Stage 3, make sure that:
+  - Each SUBNET row's CIDR matches an existing subnet. Stage 1 maps rows to subnet names by CIDR
+    and fails `byo-subnets` on a mismatch.
+  - The workspace, agent and search subnets are delegated to `Microsoft.App/environments`, and the
+    management subnet to `Microsoft.ContainerService/managedClusters`.
+  - The `privatelink.*` zones listed under `privateDnsZones` in
+    `stage3-validation/dependency-spec.json` exist in `network.dnsResourceGroup` (or the network
+    RG) and are linked to the VNet. Stage 2 creates only the blob zone, for the Bookshelf private
+    endpoint. Stage 3 prints the create and link commands for any missing zone.
+  - Any NSG you attach allows outbound 443 to Internet and traffic within the VNet. A subnet
+    without an NSG passes, because the Azure default rules allow both.
 
 ---
 
