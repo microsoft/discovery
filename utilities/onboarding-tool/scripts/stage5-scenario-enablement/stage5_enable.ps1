@@ -11,7 +11,6 @@ param(
     [string]$Workspace,
     [string]$Project,
     [string]$ChatModel,
-    [string]$ToolArmId,
     [string]$Prompt
 )
 Import-Module (Join-Path $PSScriptRoot '..\lib\OnboardingCommon.psm1') -Force
@@ -318,8 +317,7 @@ function Invoke-Stage5VerificationSummary {
         [string]$Workspace,
         [string]$Project,
         [string]$ChatModel,
-        [string]$Supercomputer,
-        [string]$ToolArmId
+        [string]$Supercomputer
     )
     $cfg = Get-OnboardingConfig -Path $ConfigPath
     $results = [System.Collections.Generic.List[object]]::new()
