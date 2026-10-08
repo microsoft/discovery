@@ -597,9 +597,15 @@ function Invoke-CheckDnsAndPe {
                     -Data ([pscustomobject]@{ name = $pe.name; approved = $approved; dnsCount = $dnsCount; id = $pe.id })))
     }
     if (-not @($pes).Count) {
-        $out.Add((New-CheckResult -Id 'private-endpoints-present' -Name 'private endpoints discovered' -Status 'Warn' -Fr 'FR3.6d' `
-                    -Detail "No private endpoints found in: $($peGroups -join ', ')." `
-                    -Remediation 'Fix private DNS zone links / VNet DNS.'))
+        if ($expectedPeCount -gt 0) {
+            $out.Add((New-CheckResult -Id 'private-endpoints-present' -Name 'private endpoints discovered' -Status 'Fail' -Fr 'FR3.6d' `
+                        -Detail "No private endpoints found in: $($peGroups -join ', '); profile '$Profile' expects $expectedPeCount." `
+                        -Remediation 'Fix private DNS zone links / VNet DNS.'))
+        }
+        else {
+            $out.Add((New-CheckResult -Id 'private-endpoints-present' -Name 'private endpoints discovered' -Status 'Skip' -Fr 'FR3.6d' `
+                        -Detail "No private endpoints found in: $($peGroups -join ', '). Not expected for profile '$Profile'; the platform provisions its private endpoints during Stage 4 deployment."))
+        }
     }
     return $out.ToArray()
 }

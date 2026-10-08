@@ -179,15 +179,109 @@ function Assert-AzLogin {
 # Report emission + exit convention
 # ---------------------------------------------------------------------------
 
+function ConvertTo-OnboardingMarkdown {
+    <#
+    .SYNOPSIS Render a stage summary object as a human-readable Markdown report.
+    #>
+    param([Parameter(Mandatory)][object]$Summary)
+
+    $emoji = @{ 'Pass' = '✅'; 'Fail' = '❌'; 'Warn' = '⚠️'; 'Skip' = '⏭️'; 'Waived' = '🟡' }
+    $verdictLine = if ($Summary.verdict -eq 'GO') { '✅ **GO** — all checks passed (or were waived).' }
+    else { '❌ **NO-GO** — resolve the failed checks below, then re-run this stage.' }
+
+    $sb = [System.Text.StringBuilder]::new()
+    [void]$sb.AppendLine("# $($Summary.title)")
+    [void]$sb.AppendLine()
+    [void]$sb.AppendLine($verdictLine)
+    [void]$sb.AppendLine()
+    [void]$sb.AppendLine("_Generated $($Summary.generated)_")
+    [void]$sb.AppendLine()
+    [void]$sb.AppendLine('## Summary')
+    [void]$sb.AppendLine()
+    [void]$sb.AppendLine('| Result | Count |')
+    [void]$sb.AppendLine('|---|---|')
+    [void]$sb.AppendLine("| ✅ Pass | $($Summary.pass) |")
+    [void]$sb.AppendLine("| ❌ Fail | $($Summary.fail) |")
+    [void]$sb.AppendLine("| ⚠️ Warn | $($Summary.warn) |")
+    [void]$sb.AppendLine("| ⏭️ Skip | $($Summary.skip) |")
+    [void]$sb.AppendLine("| 🟡 Waived | $($Summary.waived) |")
+    [void]$sb.AppendLine("| **Total** | **$($Summary.total)** |")
+    [void]$sb.AppendLine()
+
+    # Render the full analysis (reason, underlying error, fix) for one flagged check.
+    $renderFlag = {
+        param($item, [string]$reasonLabel, [string]$fixLabel)
+        [void]$sb.AppendLine("### $($emoji[[string]$item.status]) $($item.name) ($($item.fr))")
+        [void]$sb.AppendLine()
+        $reason = if ($item.detail) { [string]$item.detail } else { 'No additional detail was reported by the check.' }
+        [void]$sb.AppendLine("- **$reasonLabel** $reason")
+        $err = $null
+        if ($item.PSObject.Properties.Name -contains 'data' -and $null -ne $item.data) {
+            $err = ($item.data | ConvertTo-Json -Depth 8 -Compress)
+        }
+        if ($err -and $err -ne '{}' -and $err -ne 'null') {
+            [void]$sb.AppendLine("- **Error / evidence:**")
+            [void]$sb.AppendLine()
+            [void]$sb.AppendLine('  ```json')
+            foreach ($line in ($err -split "`n")) { [void]$sb.AppendLine("  $line") }
+            [void]$sb.AppendLine('  ```')
+        }
+        if ($item.remediation) { [void]$sb.AppendLine("- **$fixLabel** $($item.remediation)") }
+        [void]$sb.AppendLine()
+    }
+
+    $fails = @($Summary.results | Where-Object status -eq 'Fail')
+    if ($fails.Count) {
+        [void]$sb.AppendLine('## ❌ What to fix next')
+        [void]$sb.AppendLine()
+        [void]$sb.AppendLine("These checks failed and block a GO verdict. Resolve each one, then re-run this stage.")
+        [void]$sb.AppendLine()
+        foreach ($f in $fails) { & $renderFlag $f 'Why it failed:' 'Fix:' }
+    }
+
+    $warns = @($Summary.results | Where-Object status -eq 'Warn')
+    if ($warns.Count) {
+        [void]$sb.AppendLine('## ⚠️ Warnings (review, not blocking)')
+        [void]$sb.AppendLine()
+        [void]$sb.AppendLine("These did not block the stage but should be reviewed — they often indicate risk or a manual follow-up.")
+        [void]$sb.AppendLine()
+        foreach ($w in $warns) { & $renderFlag $w 'Why it was flagged:' 'Recommended action:' }
+    }
+
+    $waived = @($Summary.results | Where-Object status -eq 'Waived')
+    if ($waived.Count) {
+        [void]$sb.AppendLine('## 🟡 Waived (accepted exceptions)')
+        [void]$sb.AppendLine()
+        [void]$sb.AppendLine("A waiver was recorded for each of these, so they do not block the stage. Confirm the waiver is still valid.")
+        [void]$sb.AppendLine()
+        foreach ($wv in $waived) { & $renderFlag $wv 'What was waived:' 'Waiver note:' }
+    }
+
+    [void]$sb.AppendLine('## All checks')
+    [void]$sb.AppendLine()
+    [void]$sb.AppendLine('| Status | FR | Check | Detail |')
+    [void]$sb.AppendLine('|---|---|---|---|')
+    foreach ($r in $Summary.results) {
+        $g = $emoji[[string]$r.status]
+        $detail = ([string]$r.detail) -replace '\r?\n', ' ' -replace '\|', '\|'
+        [void]$sb.AppendLine("| $g $($r.status) | $($r.fr) | $($r.name) | $detail |")
+    }
+    [void]$sb.AppendLine()
+    return $sb.ToString()
+}
+
 function Write-OnboardingReport {
     <#
-    .SYNOPSIS Emit machine JSON (to -JsonPath and/or stdout) and a human table.
+    .SYNOPSIS Emit machine JSON (-JsonPath), a Markdown report, and a human console table.
+    .DESCRIPTION Writes JSON to -JsonPath, a sibling .md report (or -ReportPath), and prints a
+    console table with a clear verdict and an actionable "Next steps" footer for any failures.
     #>
     [CmdletBinding()]
     param(
         [Parameter(Mandatory)][object[]]$Results,
         [Parameter(Mandatory)][string]$Title,
         [string]$JsonPath,
+        [string]$ReportPath,
         [object]$Extra
     )
     $summary = [ordered]@{
@@ -203,12 +297,23 @@ function Write-OnboardingReport {
         results   = $Results
     }
     if ($Extra) { $summary['extra'] = $Extra }
+    $summaryObj = [pscustomobject]$summary
 
-    $json = ([pscustomobject]$summary | ConvertTo-Json -Depth 12)
+    $json = ($summaryObj | ConvertTo-Json -Depth 12)
     if ($JsonPath) {
         $dir = Split-Path -Parent $JsonPath
         if ($dir -and -not (Test-Path $dir)) { New-Item -ItemType Directory -Force -Path $dir | Out-Null }
         $json | Set-Content -LiteralPath $JsonPath -Encoding utf8
+    }
+
+    # Human-readable Markdown report: sibling of the JSON unless -ReportPath is given.
+    if (-not $ReportPath -and $JsonPath) {
+        $ReportPath = [System.IO.Path]::ChangeExtension($JsonPath, '.md')
+    }
+    if ($ReportPath) {
+        $dir = Split-Path -Parent $ReportPath
+        if ($dir -and -not (Test-Path $dir)) { New-Item -ItemType Directory -Force -Path $dir | Out-Null }
+        (ConvertTo-OnboardingMarkdown -Summary $summaryObj) | Set-Content -LiteralPath $ReportPath -Encoding utf8
     }
 
     Write-Host ''
@@ -225,7 +330,21 @@ function Write-OnboardingReport {
     Write-Host ''
     Write-Host ("Verdict: {0}  (pass={1} fail={2} warn={3} skip={4} waived={5})" -f `
             $summary.verdict, $summary.pass, $summary.fail, $summary.warn, $summary.skip, $summary.waived)
-    return [pscustomobject]$summary
+
+    # Actionable footer so a human operator knows exactly what to do next.
+    $fails = @($Results | Where-Object status -eq 'Fail')
+    if ($fails.Count) {
+        Write-Host ''
+        Write-Host 'Next steps — resolve these before re-running:'
+        $i = 1
+        foreach ($f in $fails) {
+            $fix = if ($f.remediation) { $f.remediation } else { 'See detail above.' }
+            Write-Host ("  {0}. {1} -> {2}" -f $i, $f.name, $fix)
+            $i++
+        }
+    }
+    if ($ReportPath) { Write-Host ''; Write-Host ("Report: {0}" -f $ReportPath) }
+    return $summaryObj
 }
 
 function Complete-Stage {
