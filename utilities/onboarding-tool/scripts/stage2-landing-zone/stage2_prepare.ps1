@@ -583,7 +583,7 @@ else {
             Invoke-Az -Args @('group', 'create', '--name', $storageRg, '--location', $cfg.workloadRegion) | Out-Null
             $st = Get-AzJson -Args @('storage', 'account', 'show', '-g', $storageRg, '-n', $account) -AllowFail
             if (-not $st) {
-                Invoke-Az -Args @('storage', 'account', 'create', '-g', $storageRg, '-n', $account, '-l', $cfg.workloadRegion, '--sku', 'Standard_LRS', '--kind', 'StorageV2', '--https-only', 'true', '--min-tls-version', 'TLS1_2', '--allow-blob-public-access', 'false') | Out-Null
+                Invoke-Az -Args @('storage', 'account', 'create', '-g', $storageRg, '-n', $account, '-l', $cfg.workloadRegion, '--sku', 'Standard_LRS', '--kind', 'StorageV2', '--https-only', 'true', '--min-tls-version', 'TLS1_2', '--allow-blob-public-access', 'false', '--allow-shared-key-access', 'false') | Out-Null
                 $state = 'created'
             }
             else { $state = 'exists' }
@@ -597,9 +597,10 @@ else {
             $peFailures = @()
             foreach ($container in $containers) {
                 $cname = [string]$container
-                $existsBefore = Get-AzJson -Args @('storage', 'container', 'exists', '--account-name', $account, '--name', $cname, '--auth-mode', 'login') -AllowFail
-                Invoke-Az -Args @('storage', 'container', 'create', '--account-name', $account, '--name', $cname, '--auth-mode', 'login') -AllowFail | Out-Null
-                $existsAfter = Get-AzJson -Args @('storage', 'container', 'exists', '--account-name', $account, '--name', $cname, '--auth-mode', 'login') -AllowFail
+                # Use the ARM control plane: the account firewall (default-action Deny) blocks data-plane calls.
+                $existsBefore = Get-AzJson -Args @('storage', 'container-rm', 'exists', '--storage-account', $account, '-g', $storageRg, '-n', $cname) -AllowFail
+                Invoke-Az -Args @('storage', 'container-rm', 'create', '--storage-account', $account, '-g', $storageRg, '-n', $cname, '--public-access', 'off') -AllowFail | Out-Null
+                $existsAfter = Get-AzJson -Args @('storage', 'container-rm', 'exists', '--storage-account', $account, '-g', $storageRg, '-n', $cname) -AllowFail
                 if ($existsAfter -and $existsAfter.exists) {
                     $cstate = if ($existsBefore -and $existsBefore.exists) { 'exists' } else { 'created' }
                 }

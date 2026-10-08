@@ -417,7 +417,20 @@ $state = @{
     investigationCreated = $false; conversationCompleted = $false; responseReceived = $false
 }
 
-$step = Invoke-Stage5CreateAgent -ConfigPath $ConfigPath -Workspace $Workspace -Project $Project -ChatModel $ChatModel -Agent $agentName -PassThru
+$wsArmId = "/subscriptions/$($cfg.subscriptionId)/resourceGroups/$ResourceGroup/providers/Microsoft.Discovery/workspaces/$Workspace"
+$pna = ([string](Invoke-Az -AllowFail -Args @('resource', 'show', '--ids', $wsArmId, '--api-version', '2026-06-01', '--query', 'properties.publicNetworkAccess', '-o', 'tsv'))).Trim()
+$probeCode = 0; $probeErr = ''
+try {
+    $tok = ([string](Invoke-Az -Args @('account', 'get-access-token', '--resource', 'https://discovery.azure.com', '--query', 'accessToken', '-o', 'tsv'))).Trim()
+    $probe = Invoke-WebRequest -Method GET -Uri "https://$Workspace.workspace.discovery.azure.com/projects/$Project/agents?api-version=2026-06-01" -Headers @{ Authorization = "Bearer $tok" } -SkipHttpErrorCheck -TimeoutSec 60
+    $probeCode = [int]$probe.StatusCode
+} catch { $probeErr = $_.Exception.Message }
+$dataPlaneOk = $probeCode -ge 200 -and $probeCode -lt 300
+$probeDetail = "publicNetworkAccess=$(if ($pna) { $pna } else { 'unknown' }); data-plane probe $(if ($probeCode) { "HTTP $probeCode" } else { "error: $probeErr" })"
+$probeFix = if ($dataPlaneOk) { '' } elseif ($pna -eq 'Disabled') { 'The workspace data plane is private. Run Stage 5 from a runner inside the VNet (or peered/VPN), or set workspace.publicNetworkAccess=Enabled and re-run Stage 4.' } else { 'Confirm the workspace exists and Succeeded, and that the caller has data-plane access to the project.' }
+$results.Add((New-CheckResult -Id 'fr5-data-plane-reachable' -Name 'workspace data plane reachable from this runner' -Status ($dataPlaneOk ? 'Pass' : 'Fail') -Fr 'FR5.3' -Detail $probeDetail -Remediation $probeFix -Data ([pscustomobject]@{ publicNetworkAccess = $pna; statusCode = $probeCode })))
+
+$step = if ($dataPlaneOk) { Invoke-Stage5CreateAgent -ConfigPath $ConfigPath -Workspace $Workspace -Project $Project -ChatModel $ChatModel -Agent $agentName -PassThru } else { @() }
 Add-Many $step
 $state.agentCreated = @($step | Where-Object { $_.id -eq 'fr5-3-agent-created' -and $_.status -eq 'Pass' }).Count -gt 0
 Write-State -Path $statePath -State $state

@@ -210,8 +210,11 @@ function ConvertTo-ConfigModel {
             accountId = (Val 'storage.accountId')
             access = (Val 'storage.access' 'privateEndpoint')
         }
+        workspace         = [ordered]@{
+            publicNetworkAccess = (Val 'workspace.publicNetworkAccess' 'Enabled')
+        }
         sizingTier        = (Val 'sizingTier' 'Small')
-        bookshelf         = [ordered]@{
+        bookshelf           = [ordered]@{
             inScope   = (Bool 'bookshelf.inScope' $false)
             instances = [int](Val 'bookshelf.instances' '0')
         }
@@ -274,7 +277,7 @@ $script:NameRules = @{
 $script:KnownDenyPolicies = @(
     @{ Match = 'Cognitive Services'; Handling = 'exemption'; Note = 'Cognitive Services public network access deny blocks Foundry provisioning.' }
     @{ Match = 'Log Analytics';      Handling = 'exemption'; Note = 'Log Analytics public access deny blocks workspace diagnostics.' }
-    @{ Match = 'Storage account';    Handling = 'configuration'; Note = 'Storage public access deny requires private-endpoint config.' }
+    @{ Match = 'Storage account.*(public|network access)'; Handling = 'exemption'; Note = 'Discovery creates managed-RG storage accounts with public network access Enabled (NSP enforced); a deny blocks workspace and Bookshelf provisioning.' }
     @{ Match = 'network security perimeter'; Handling = 'exemption'; Note = 'NSP association policy must allow the Discovery perimeter.' }
 )
 $script:CapacityLimitedRegions = @('eastus2')  # AKSCapacityHeavyUsage observed
@@ -325,7 +328,14 @@ function Get-LivePolicyAssignments {
                 if (-not $effect) {
                     if (($def.PSObject.Properties.Name -contains 'policyRule') -and $def.policyRule.then) {
                         $rawEffect = [string]$def.policyRule.then.effect
-                        if ($rawEffect -and $rawEffect -notmatch '^\[') { $effect = $rawEffect }
+                        if ($rawEffect -match "^\[parameters\('([^']+)'\)\]$") {
+                            # Parameterized effect: the assignment value wins, else the definition default.
+                            $pName = $Matches[1]
+                            $aVal = if ($a.parameters -is [psobject] -and ($a.parameters.PSObject.Properties.Name -contains $pName)) { $a.parameters.$pName.value }
+                            $dDef = if ($def.parameters -is [psobject] -and ($def.parameters.PSObject.Properties.Name -contains $pName)) { $def.parameters.$pName.defaultValue }
+                            if ($aVal) { $effect = [string]$aVal } elseif ($dDef) { $effect = [string]$dDef }
+                        }
+                        elseif ($rawEffect -and $rawEffect -notmatch '^\[') { $effect = $rawEffect }
                     }
                     elseif ($defId -match '/policySetDefinitions/') { $effect = 'initiative' }
                 }
@@ -501,6 +511,19 @@ function Invoke-Stage1Checks {
         $R.Add((New-CheckResult -Id 'egress-model' -Name 'Egress model (network.outboundType)' -Status 'Pass' -Fr 'FR1.2' -Detail "outboundType=$outbound"))
     }
 
+    # ---- FR1.2 workspace public network access ----------------------------
+    $pna = [string]$Cfg.workspace.publicNetworkAccess
+    if ([string]::IsNullOrWhiteSpace($pna)) { $pna = 'Enabled' }
+    if ($pna -notin @('Enabled', 'Disabled')) {
+        $R.Add((New-CheckResult -Id 'workspace-public-access' -Name 'Workspace public network access' -Status 'Fail' -Fr 'FR1.2' `
+                    -Detail "workspace.publicNetworkAccess='$pna' is not valid." `
+                    -Remediation "Set workspace.publicNetworkAccess to 'Enabled' or 'Disabled'."))
+    }
+    else {
+        $note = if ($pna -eq 'Disabled') { 'data plane reachable only from inside the VNet; run Stage 5 from a runner with private network access' } else { 'data plane reachable from any authenticated runner' }
+        $R.Add((New-CheckResult -Id 'workspace-public-access' -Name 'Workspace public network access' -Status 'Pass' -Fr 'FR1.2' -Detail "publicNetworkAccess=$pna; $note"))
+    }
+
     # ---- FR1.2 network model intent --------------------------------------
     $netModel = [string]$Cfg.network.model
     if ([string]::IsNullOrWhiteSpace($netModel)) { $netModel = 'byo-spoke' }
@@ -592,6 +615,22 @@ function Invoke-Stage1Checks {
     }
     else {
         $R.Add((New-CheckResult -Id 'region-capacity' -Name 'Region capacity' -Status 'Pass' -Fr 'FR1.4' -Detail "No known capacity flag for '$($Cfg.workloadRegion)'."))
+    }
+
+    # ---- Bookshelf storage: a Discovery storage container needs a customer storage account ----
+    $bsInScope = $Cfg.bookshelf -and [bool]$Cfg.bookshelf.inScope
+    $stModel = if ($Cfg.storage -and $Cfg.storage.model) { [string]$Cfg.storage.model } else { 'managed' }
+    $stAccount = if ($Cfg.storage) { @($Cfg.storage.account, $Cfg.storage.accountId) | Where-Object { Test-Field $_ } | Select-Object -First 1 } else { $null }
+    if (-not $bsInScope) {
+        $R.Add((New-CheckResult -Id 'bookshelf-storage' -Name 'Bookshelf storage account' -Status 'Pass' -Fr 'FR1.1' `
+                    -Detail 'bookshelf.inScope=false; no storage account needed.'))
+    } elseif ($stModel -ne 'byo' -or -not $stAccount) {
+        $R.Add((New-CheckResult -Id 'bookshelf-storage' -Name 'Bookshelf storage account' -Status 'Fail' -Fr 'FR1.1' `
+                    -Detail "bookshelf.inScope=true but storage.model=$stModel and storage.account/accountId=$(if ($stAccount) { $stAccount } else { 'empty' }). The Bookshelf storage container must point at a customer storage account, so Stage 4 cannot deploy it." `
+                    -Remediation 'Set storage.model=byo and storage.account (Stage 2 creates the account and its private endpoint if missing) or storage.accountId (existing account), or set bookshelf.inScope=false.'))
+    } else {
+        $R.Add((New-CheckResult -Id 'bookshelf-storage' -Name 'Bookshelf storage account' -Status 'Pass' -Fr 'FR1.1' `
+                    -Detail "bookshelf.inScope=true; storage.model=byo; account=$stAccount."))
     }
 
     # ---- FR1.5 quota / SKU / TPM / Cosmos --------------------------------
@@ -712,8 +751,10 @@ function Invoke-Stage1Checks {
     $conflicts = @()
     foreach ($p in $candidateNames) {
         foreach ($known in $script:KnownDenyPolicies) {
-            if ($p -match [regex]::Escape($known.Match)) {
+            if ($p -match $known.Match) {
                 $liveMatch = if ($live) { @($live | Where-Object { $_.displayName -eq $p -or $_.name -eq $p }) | Select-Object -First 1 } else { $null }
+                # Audit/Disabled assignments can't block a deployment; only deny-type or unresolved effects count.
+                if ($liveMatch -and @('audit', 'auditIfNotExists', 'disabled') -contains $liveMatch.effect) { continue }
                 $conflicts += [pscustomobject]@{
                     policy         = $p
                     handling       = $known.Handling

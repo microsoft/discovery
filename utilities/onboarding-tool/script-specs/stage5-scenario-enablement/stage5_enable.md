@@ -11,7 +11,7 @@ Prove the platform works end to end: a Discovery Q&A agent (no Discovery tool bo
 - Optional `-Prompt` to replace the default scientific question.
 
 ## Behavior
-- Create agent, create investigation + conversation, send prompt + poll, verify the agent answered.
+- Probe the workspace data plane, then create agent, create investigation + conversation, send prompt + poll, verify the agent answered.
 - Emit the per-service verification summary and a certification verdict.
 
 ## Output
@@ -24,6 +24,11 @@ Prove the platform works end to end: a Discovery Q&A agent (no Discovery tool bo
 
 ## Folded steps
 Each step ran as a separate sub-script before consolidation; the logic now lives in `stage5_enable.ps1`.
+
+### data_plane_reachable — FR5.3
+Read the workspace `publicNetworkAccess` from ARM and `GET ${BASE}/projects/${PROJECT}/agents` from the runner. A non-2xx result fails the check and skips the remaining steps.
+- Disabled and unreachable: run Stage 5 from inside the VNet, or set `workspace.publicNetworkAccess=Enabled` and re-run Stage 4.
+- Enabled and unreachable: confirm the workspace is Succeeded and the caller has data-plane access.
 
 ### create_agent — FR5.3
 `PUT ${BASE}/projects/${PROJECT}:upsertAgent?api-version=2026-06-01` for `scientistQnAAgent` with `tools = []`, humanInTheLoop=Disabled, and foundryDetails.definition.kind=prompt with model = chat-model deployment name. Poll the operation location until terminal.

@@ -181,10 +181,12 @@
           "enum": [
             "byo",
             "managed"
-          ]
+          ],
+          "description": "byo when bookshelf.inScope=true: the Bookshelf storage container needs a customer storage account (Stage 1 check bookshelf-storage)."
         },
         "account": {
-          "type": "string"
+          "type": "string",
+          "description": "Storage account name for Bookshelf (byo). Stage 2 creates it in the network resource group if it does not exist."
         },
         "accountId": {
           "type": "string",
@@ -196,6 +198,20 @@
             "privateEndpoint",
             "serviceEndpoint"
           ]
+        }
+      }
+    },
+    "workspace": {
+      "type": "object",
+      "properties": {
+        "publicNetworkAccess": {
+          "type": "string",
+          "enum": [
+            "Enabled",
+            "Disabled"
+          ],
+          "default": "Enabled",
+          "description": "Workspace data-plane public network access. Disabled limits agent, investigation and conversation calls (Stage 5) to runners inside the VNet."
         }
       }
     },

@@ -112,6 +112,8 @@ Notes next to each field explain what to enter. A few that trip people up:
 | `network.vnetName` | **Managed form:** optional — leave blank and the tool names the VNet `vnet-<names.workspace>`. **BYO form:** the name of your **existing** VNet in `network.networkResourceGroup` (Stage 1 checks it exists and is in `controlPlaneRegion`). |
 | `controlPlaneRegion` / `workloadRegion` | The Azure region(s) to deploy into. Use a region known to support `Microsoft.Discovery/supercomputers` — **`eastus`** is confirmed; some regions (e.g. `eastus2`, `uksouth`) have rejected supercomputer creation. |
 | `names.*` | The resource names (workspace, project, supercomputer, node pool, etc.). Keep them unique in the subscription. |
+| `storage.account` | Needed when `bookshelf.inScope=true` (the default). A globally unique storage account name; Stage 2 creates it in `network.networkResourceGroup` with a private endpoint if it does not exist. Keep `storage.model=byo`, or set `bookshelf.inScope=false` to skip Bookshelf. |
+| `workspace.publicNetworkAccess` | `Enabled` (default) or `Disabled`. With `Disabled`, the workspace data plane (agents, investigations, conversations) answers only from inside the VNet, so Stage 5 must run from a runner with private network access. |
 
 Notes:
 - **Policies are collected live** from the subscription at runtime — you do not list deny/audit
@@ -160,6 +162,14 @@ quota/SKU, policy pre-flight). Its only output is `config.json` plus the JSON re
 
 **If it fails:** read the remediation on each red row, fix the yellow cell in the form (or add a
 `WAIVER`/`POLICY` row where appropriate), and re-run. Do not continue until you get `config.json`.
+
+A `policy-preflight` failure means a deny policy will block Discovery provisioning. To proceed:
+
+1. Clear the Stage 1 gate with a row in the Config sheet: column A `WAIVER`, B `policy-preflight`,
+   C the justification (required), D the approver.
+2. Before Stage 4, create the Azure policy exemption. Stage 2 writes the exact
+   `az policy exemption create` command per assignment to `./out/policy-exemption-requests-<workspace>.md`.
+   The WAIVER row only clears the tool's gate; without the exemption, Stage 4 still fails.
 
 ### Stage 2 — Prepare the landing zone (writes resources)
 
@@ -250,6 +260,10 @@ investigation/conversation used for the test. No tool is created.
   non-empty answer**.
 - In-network connectivity (private DNS and 443 reachability from inside the VNet) is not checked
   here; it belongs to Stage 3.
+- Stage 5 first probes the workspace data plane from your machine. If
+  `workspace.publicNetworkAccess=Disabled` and you are outside the VNet, the probe fails and the
+  remaining steps are skipped. Run from inside the VNet, or set the field to `Enabled` and re-run
+  Stage 4.
 - Override the prompt with `-Prompt "<your question>"` if you want to test a different question.
 
 ---

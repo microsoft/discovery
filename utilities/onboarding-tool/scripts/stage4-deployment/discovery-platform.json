@@ -135,7 +135,11 @@
     },
     "publicNetworkAccess": {
       "type": "string",
-      "defaultValue": "Disabled"
+      "defaultValue": "Enabled",
+      "allowedValues": [
+        "Enabled",
+        "Disabled"
+      ]
     }
   },
   "resources": [
