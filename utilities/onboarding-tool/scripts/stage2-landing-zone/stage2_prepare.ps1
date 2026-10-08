@@ -597,9 +597,10 @@ else {
             $peFailures = @()
             foreach ($container in $containers) {
                 $cname = [string]$container
-                $existsBefore = Get-AzJson -Args @('storage', 'container', 'exists', '--account-name', $account, '--name', $cname, '--auth-mode', 'login') -AllowFail
-                Invoke-Az -Args @('storage', 'container', 'create', '--account-name', $account, '--name', $cname, '--auth-mode', 'login') -AllowFail | Out-Null
-                $existsAfter = Get-AzJson -Args @('storage', 'container', 'exists', '--account-name', $account, '--name', $cname, '--auth-mode', 'login') -AllowFail
+                # Use the ARM control plane: the account firewall (default-action Deny) blocks data-plane calls.
+                $existsBefore = Get-AzJson -Args @('storage', 'container-rm', 'exists', '--storage-account', $account, '-g', $storageRg, '-n', $cname) -AllowFail
+                Invoke-Az -Args @('storage', 'container-rm', 'create', '--storage-account', $account, '-g', $storageRg, '-n', $cname, '--public-access', 'off') -AllowFail | Out-Null
+                $existsAfter = Get-AzJson -Args @('storage', 'container-rm', 'exists', '--storage-account', $account, '-g', $storageRg, '-n', $cname) -AllowFail
                 if ($existsAfter -and $existsAfter.exists) {
                     $cstate = if ($existsBefore -and $existsBefore.exists) { 'exists' } else { 'created' }
                 }

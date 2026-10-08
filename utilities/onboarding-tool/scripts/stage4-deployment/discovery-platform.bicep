@@ -53,7 +53,11 @@ param nodePoolVmSize string = 'Standard_D4ds_v6'
 param nodePoolMinNodeCount int = 0
 param nodePoolMaxNodeCount int = 3
 param nodePoolScaleSetPriority string = 'Regular'
-param publicNetworkAccess string = 'Disabled'
+@allowed([
+  'Enabled'
+  'Disabled'
+])
+param publicNetworkAccess string = 'Enabled'
 
 #disable-next-line BCP081
 resource supercomputer 'Microsoft.Discovery/supercomputers@2026-06-01' = {

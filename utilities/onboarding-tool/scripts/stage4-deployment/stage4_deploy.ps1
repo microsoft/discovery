@@ -25,6 +25,14 @@ param(
 Import-Module (Join-Path $PSScriptRoot '..\lib\OnboardingCommon.psm1') -Force
 $script:DiscoveryApiVersion = '2026-06-01'
 
+function Get-WorkspacePublicNetworkAccess {
+    param([object]$Config)
+    $ws = if ($Config -and $Config.PSObject.Properties.Name -contains 'workspace') { $Config.workspace } else { $null }
+    $v = if ($ws -and $ws.PSObject.Properties.Name -contains 'publicNetworkAccess') { [string]$ws.publicNetworkAccess } else { '' }
+    if ($v -in @('Enabled', 'Disabled')) { return $v }
+    return 'Enabled'
+}
+
 function Resolve-DiscoveryError {
     [CmdletBinding()]
     param([Parameter(Mandatory)][AllowEmptyString()][string]$ErrorText)
@@ -211,7 +219,10 @@ function Test-DiscoveryTrueState {
         if ($terminal -contains $trueState -or -not ($transient -contains $trueState)) { break }
         if ((Get-Date) -ge $deadline) { break }
         Start-Sleep -Seconds $PollSeconds
-        if ($ResourceId) { $listState = Get-DiscoveryArmState -ResourceId $ResourceId }
+        if ($ResourceId) {
+            $listState = Get-DiscoveryArmState -ResourceId $ResourceId
+            if (-not ($AccountName -and $ResourceGroup)) { $trueState = $listState }
+        }
     }
 
     $timedOut = ($transient -contains $trueState) -and (Get-Date) -ge $deadline
@@ -515,6 +526,7 @@ function New-Stage4BicepParamFile {
         privateEndpointSubnetId = Get-SubnetIdByRole -Config $Config -Role 'private-endpoints' -ResourceGroup $ResourceGroup
         storageAccountId        = Get-StorageAccountId -Config $Config -ResourceGroup $ResourceGroup
         bookshelfInScope        = $bookshelfInScope
+        publicNetworkAccess     = Get-WorkspacePublicNetworkAccess -Config $Config
     }
     foreach ($opt in 'systemSku', 'nodePoolVmSize', 'nodePoolScaleSetPriority') {
         $v = Get-ObjProp -Object $Config -Name $opt
@@ -871,7 +883,7 @@ if ($scStateBeforeWorkspace -eq 'Failed') {
                     agentSubnetId          = $agentSubnet
                     privateEndpointSubnetId = $peSubnet
                     workspaceSubnetId      = $workspaceSubnet
-                    publicNetworkAccess    = 'Disabled'
+                    publicNetworkAccess    = Get-WorkspacePublicNetworkAccess -Config $cfg
                 }
             }
             $put = Invoke-ArmPut -ResourceId $workspaceId -Body $wsBody
@@ -1108,7 +1120,7 @@ if (-not $workspaceObj) {
                 $value = Get-ObjProp -Object $props -Name $key
                 if ($value) { $bodyProps[$key] = $value }
             }
-            $bodyProps.publicNetworkAccess = 'Disabled'
+            $bodyProps.publicNetworkAccess = Get-WorkspacePublicNetworkAccess -Config $cfg
             $body = [ordered]@{
                 location   = $workspaceObj.location
                 tags       = $workspaceObj.tags

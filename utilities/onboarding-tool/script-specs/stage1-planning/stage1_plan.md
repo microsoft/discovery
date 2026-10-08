@@ -37,6 +37,14 @@ Confirm the subscription is allowlisted for Discovery, record the RP-registratio
 Capture and normalize control-plane region, workload region, VNet CIDR, per-service subnet CIDRs, BYO storage model, deploying identity, and policy set. Normalize regions to Azure short names and CIDRs to canonical form; flag any required field left blank.
 - Missing field: complete the corresponding cell in the planning sheet.
 
+### bookshelf_storage — FR1.1
+When `bookshelf.inScope=true`, require `storage.model=byo` with `storage.account` or `storage.accountId`. The Bookshelf storage container must point at a customer storage account, so Stage 4 cannot deploy it otherwise. Stage 2 creates a named account (with its private endpoint) if it does not exist.
+- Bookshelf in scope without a BYO account: set `storage.model=byo` and `storage.account`, or set `bookshelf.inScope=false`.
+
+### workspace_public_access — FR1.2
+Validate `workspace.publicNetworkAccess` is `Enabled` (default) or `Disabled`. Stage 4 applies it to the workspace. `Disabled` is valid and reported as Pass, with a note that Stage 5 must run from inside the VNet.
+- Invalid value: set `Enabled` or `Disabled`.
+
 ### subnet_sizing — FR1.2
 Check each Discovery subnet meets its required prefix (agent /26, workspace /26, search /27, AKS managed cluster /26, AKS node pool /26 ×2, private endpoints /27, spare /27) and delegation (container-app subnets → `Microsoft.App/environments`; managed cluster → none, because the supercomputer system nodes run there; spare/management → `Microsoft.ContainerService/managedClusters` when `outboundType=UserDefinedRouting`, otherwise either; others none). Confirm the packed layout fits a /23; offer the /24 agent-subnet fallback where a region rejects the packed layout.
 - Prefix too small: resize the subnet to the required prefix.
