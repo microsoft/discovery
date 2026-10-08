@@ -122,7 +122,8 @@ in, so the parser and local checks run offline. `.xlsx` forms are read natively 
 Turns the signed `config.json` into a deployed landing zone (FR2.1–FR2.9): RP registration, RBAC,
 the one-time NSP Perimeter Joiner custom role, network provisioning via `network.bicep` (VNet,
 subnets with FR1.2 delegations, shared NSG allow-list, UDR route tables, privatelink DNS zones +
-links), BYO storage, and the firewall-request / quota-exemption artifacts under `out/`. Builds the
+links), BYO storage, and the firewall-request / quota-increase-request / policy-exemption-request
+files next to `-JsonPath`. Builds the
 network only when `network.model` is byo/byo-spoke/greenfield; byo-existing and managed skip
 provisioning. Idempotent; stops on the first hard failure with its remediation. **Writes platform
 resources — run against the intended subscription only.** Requires rights to create role

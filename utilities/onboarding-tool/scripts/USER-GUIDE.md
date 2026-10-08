@@ -173,8 +173,8 @@ networking in the target subscription / resource group. Run against the intended
 - Registers resource providers, assigns RBAC, creates the one-time NSP Perimeter Joiner role, and
   (for managed / byo-spoke / greenfield network models) provisions the VNet, subnets with the
   required delegations, shared NSG allow-list, route tables, and private DNS zones.
-- Also emits firewall-request and quota-exemption artifacts under `./out/` (hand these to your
-  network/governance team if required).
+- Also emits firewall-request, quota-increase-request, and policy-exemption-request files next to
+  `-JsonPath` (`./out/`); hand these to your network/governance team if required.
 - **Idempotent** — safe to re-run; it stops on the first hard failure with its remediation.
 
 > This stage writes to Azure. Make sure you are pointed at the intended subscription
@@ -262,19 +262,21 @@ investigation/conversation used for the test. No tool is created.
   remediation string** — read it; it tells you what to change.
 - **Reports:** every stage writes its `-JsonPath` report plus a markdown report with the same name
   (`./out/stage1.md`, …). Open the `.md` first; the `.json` is for records or pipeline gating.
-- **Artifacts:** Stage 2 writes firewall-request / quota-exemption / policy-exemption markdown under
-  `./out/` for the teams that own those approvals.
+- **Artifacts:** Stage 2 writes firewall-request, quota-increase-request, and policy-exemption-request
+  files (markdown plus JSON) under `./out/` for the teams that own those approvals.
 
 ### What to check in `./out` after each stage
 
-All files land in the folder of `-JsonPath` (`./out/` in the examples above).
+Report names follow `-JsonPath`: `-JsonPath ./out/stage1.json` produces `./out/stage1.json` and
+`./out/stage1.md`. Other files are written to the same folder. The table uses the names from the
+commands above; `<workspace>` is the workspace name from `config.json`.
 
 | Stage | Files | What to check |
 |---|---|---|
-| 1 | `stage1.md`, `stage1.json`, `config.json` (from `-OutConfig`) | Verdict is GO and `config.json` exists. Read the remediation on any Fail; a Warn must not hide a real gap (quota, region, policy). Review `config.json` names, subnets, and identity before Stage 2. |
+| 1 | `stage1.md`, `stage1.json`; `config.json` is written to the `-OutConfig` path (`./config.json`), not `./out` | Verdict is GO and `config.json` exists. Read the remediation on any Fail; a Warn must not hide a real gap (quota, region, policy). Review `config.json` names, subnets, and identity before Stage 2. |
 | 2 | `stage2.md`, `stage2.json`, `firewall-request-<workspace>.md/.json`, `quota-increase-requests-<workspace>.md/.json`, `policy-exemption-requests-<workspace>.md/.json` | Verdict is GO. Hand each request file to the owning team (network, quota, governance) and wait for approval before Stage 3. A request file with an empty list means nothing needs approval. |
 | 3 | `stage3-supercomputer.md/.json`, `stage3-workspace.md/.json` | Both reports are GO. Check subnet delegation, NSG, and route rows; Skip rows must give a reason. Stage 4 reads these `.json` files through `-ReadinessReport`. |
-| 4 | `stage4.md`, `stage4.json` | Verdict is GO and every resource (supercomputer, node pool, workspace, chat model, project, Bookshelf if in scope) shows Succeeded with its resource id. On failure, the report includes the ARM error, correlation id, and remediation. |
+| 4 | `stage4.md`, `stage4.json` | Verdict is GO and every resource (supercomputer, node pool, workspace, chat model, project, Bookshelf if in scope) shows Succeeded with its resource id. On failure, the report includes the ARM error and remediation. |
 | 5 | `stage5.md`, `stage5.json`, `stage5-response-<timestamp>.json`, `stage5-state-<timestamp>.json` | Verdict is GO. The response file holds the agent's answer; confirm it is `completed` and the text answers the prompt. The state file records the agent, investigation, and conversation used by the test. |
 
 ---
