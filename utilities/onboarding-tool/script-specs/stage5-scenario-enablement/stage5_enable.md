@@ -1,16 +1,17 @@
 # stage5_enable — Stage 5 scenario enablement (consolidated)
 
-Stage 5 · single consolidated PowerShell 7 + Az CLI script · FR mapping: FR5.1–FR5.7
+Stage 5 · single consolidated PowerShell 7 + Az CLI script · FR mapping: FR5.3–FR5.7
 Script: `../../scripts/stage5-scenario-enablement/stage5_enable.ps1`
 
 ## Purpose
-Prove the platform works: connectivity, then a real agent run that genuinely invokes a tool on the supercomputer. A completed run alone does not certify anything.
+Prove the platform works end to end: a Discovery Q&A agent (no Discovery tool bound) answers a scientific prompt. A completed run with no assistant text does not certify anything. In-network connectivity probing (formerly FR5.1) moves to Stage 3; tool creation and binding (formerly FR5.2) are out of scope.
 
 ## Inputs
-- `--config <config.json>`; workspace, project, and chat-model deployment names.
+- `-ConfigPath <config.json>`; workspace, project, and chat-model deployment names (overridable with `-Workspace`, `-Project`, `-ChatModel`).
+- Optional `-Prompt` to replace the default scientific question.
 
 ## Behavior
-- Run connectivity, then create tool, create agent + bind tool, create investigation + conversation, send prompt + poll, assert tool invocation.
+- Create agent, create investigation + conversation, send prompt + poll, verify the agent answered.
 - Emit the per-service verification summary and a certification verdict.
 
 ## Output
@@ -24,31 +25,23 @@ Prove the platform works: connectivity, then a real agent run that genuinely inv
 ## Folded steps
 Each step ran as a separate sub-script before consolidation; the logic now lives in `stage5_enable.ps1`.
 
-### connectivity_check — FR5.1
-Resolve each platform privatelink FQDN to a private IP from inside the VNet and confirm reachability (reuse the Stage 3 harness).
-- Unreachable/public IP: fix private DNS links / PE approval before certifying.
-
-### create_tool — FR5.2
-`PUT https://management.azure.com${TOOL_ARM_ID}?api-version=2026-06-01`; verify `provisioningState=Succeeded` and `definitionContent` present. Tool JSON must carry version, definitionContent (name/description/version/category/infra[]), and code_environments[].infra_node matching an infra[].name.
-- infra_node mismatch: align code_environments[].infra_node with an infra[].name.
-
-### create_agent_bind_tool — FR5.3
-`PUT ${BASE}/projects/${PROJECT}:upsertAgent` with top-level `tools[]` carrying the tool ARM id, humanInTheLoop=Disabled, confirmation=Disabled, and foundryDetails.definition.kind=prompt with model = chat-model deployment name. Agent instructions must call GetNodePoolContext first, or the model may answer from memory and never touch the supercomputer.
-- No tool call at run time: confirm instructions call GetNodePoolContext first.
+### create_agent — FR5.3
+`PUT ${BASE}/projects/${PROJECT}:upsertAgent?api-version=2026-06-01` for `scientistQnAAgent` with `tools = []`, humanInTheLoop=Disabled, and foundryDetails.definition.kind=prompt with model = chat-model deployment name. Poll the operation location until terminal.
+- Upsert fails: confirm the workspace data-plane endpoint, chat-model deployment name, and agent schema.
 
 ### create_investigation_conversation — FR5.4
 `PUT ${BASE}/projects/${PROJECT}/investigations/${INV}`, then `POST ${BASE}/conversations` with `investigationName = /projects/${PROJECT}/investigations/${INV}` (full path) and projectName.
 - InvalidRequest on conversation: use the full investigationName path, not the short name.
 
 ### send_prompt_poll — FR5.5
-`POST ${BASE}/conversations/${CONV}/openai/responses` with message content as an array of parts and no `?api-version` on the /v1/ path, then `GET .../responses/${RID}` until terminal.
-- 'api-version not allowed' on /v1/: drop the query param.
+`POST ${BASE}/conversations/${CONV}/openai/responses` with message content as an array of parts, an `agent_reference` to the agent, and no `?api-version`, then `GET .../responses/${RID}` until terminal.
+- 'api-version not allowed': drop the query param.
 - 'requires an element of type Array': send content as an array of parts.
 
-### assert_tool_invocation — FR5.6
-Hard pass/fail: require the response output to contain a function_call / function_call_output item and confirm the run is visible in Foundry tracing. Absence of a tool-call item is a FAIL.
-- Completed but no tool call: agent answered from memory; fix instructions (GetNodePoolContext first) and re-run.
+### verify_response — FR5.6
+Hard pass/fail: the response must be `completed` and contain non-empty assistant message text. An HTTP 200 alone is not a pass.
+- Completed with no text, or not completed: inspect error / last_error / incomplete_details and confirm the chat-model deployment is healthy.
 
 ### verification_summary — FR5.7
-Confirm supercomputer/workspace/Foundry/project/chat-model all Succeeded; Bookshelf (if in scope) has 3 PEs approved with DNS; and tool created, agent created, tool bound, conversation completed, tool actually invoked.
+Confirm supercomputer/workspace/project/chat-model are all Succeeded; Bookshelf (if in scope) has 3 PEs approved with DNS; and agent created, conversation completed, agent answered.
 - Any item red: platform is not certified; resolve the named item.

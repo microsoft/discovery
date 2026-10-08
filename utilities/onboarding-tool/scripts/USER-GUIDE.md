@@ -57,6 +57,34 @@ Install and sign in once:
    ```
    Copy the printed resource id; you will put it in the planning form / config.
 
+   **Assign the UAMI its roles before Stage 4** (needs Owner / User Access Administrator). The
+   supercomputer's AKS identities and the workspace all run as this UAMI:
+
+   | Role | Scope |
+   |---|---|
+   | Microsoft Discovery Platform Contributor (Preview) | your platform resource group |
+   | Storage Blob Data Contributor | your platform resource group |
+   | AcrPull | your platform resource group |
+   | Network Contributor | the network resource group (or the VNet, or both the `managedcluster` and `nodepool` subnets) |
+
+   ```powershell
+   $p  = az identity show -g <your-rg> -n <your-uami-name> --query principalId -o tsv
+   $rg = az group show -n <your-rg> --query id -o tsv
+   $net = az group show -n <network-rg> --query id -o tsv
+   foreach ($r in 'Microsoft Discovery Platform Contributor','Storage Blob Data Contributor','AcrPull') {
+     az role assignment create --assignee-object-id $p --assignee-principal-type ServicePrincipal --role $r --scope $rg
+   }
+   az role assignment create --assignee-object-id $p --assignee-principal-type ServicePrincipal --role 'Network Contributor' --scope $net
+   ```
+   With a **managed VNet**, the network resource group must exist first (create it, or assign this
+   last role after Stage 2). Allow 5–10 minutes for role propagation. Stage 4 checks every role and
+   stops **before** deploying if any is missing, printing the exact `az` commands to fix it.
+6. **Compute quota** in the deployment region. The supercomputer's system pool runs 3 ×
+   `Standard_D4s_v6` (12 vCPUs) and is checked when you submit, so you need at least **12 free Total
+   Regional vCPUs and 12 free Standard DSv6 Family vCPUs**. The node pool can scale out to 3 ×
+   `Standard_D4ds_v6` (12 more vCPUs, DDSv6 Family). Check with
+   `az vm list-usage -l <region> -o table`. Stage 1 check `vcpu-quota` reports any shortfall.
+
 > `ImportExcel` is **not** required. Stage 1 reads `.xlsx` forms natively.
 
 ---
@@ -77,8 +105,11 @@ Notes next to each field explain what to enter. A few that trip people up:
 | Field | What to enter |
 |---|---|
 | `subscriptionId` | The subscription you ran `az account set` against. |
+| `deployingIdentity.objectId` | The identity that will deploy (Stage 2 grants it the platform roles). Enter the Entra **objectId (GUID)**, or — if you don't know it — an **email/UPN** of a user in the target tenant (or an app registration's appId/display name). Stage 1 resolves a non-GUID value to the objectId via `az` (run `az login` first). Find your own objectId with `az ad signed-in-user show --query id -o tsv`. |
 | `resourceGroup` | The platform resource group from step 2.4. |
 | `managedIdentity.id` | The UAMI resource id from step 2.5 (used by Stage 4). |
+| `network.networkResourceGroup` | The resource group that holds (managed: will hold) the VNet. Can be the platform RG or a separate network RG; it must exist before Stage 2. |
+| `network.vnetName` | **Managed form:** optional — leave blank and the tool names the VNet `vnet-<names.workspace>`. **BYO form:** the name of your **existing** VNet in `network.networkResourceGroup` (Stage 1 checks it exists and is in `controlPlaneRegion`). |
 | `controlPlaneRegion` / `workloadRegion` | The Azure region(s) to deploy into. Use a region known to support `Microsoft.Discovery/supercomputers` — **`eastus`** is confirmed; some regions (e.g. `eastus2`, `uksouth`) have rejected supercomputer creation. |
 | `names.*` | The resource names (workspace, project, supercomputer, node pool, etc.). Keep them unique in the subscription. |
 
@@ -142,8 +173,8 @@ networking in the target subscription / resource group. Run against the intended
 - Registers resource providers, assigns RBAC, creates the one-time NSP Perimeter Joiner role, and
   (for managed / byo-spoke / greenfield network models) provisions the VNet, subnets with the
   required delegations, shared NSG allow-list, route tables, and private DNS zones.
-- Also emits firewall-request and quota-exemption artifacts under `./out/` (hand these to your
-  network/governance team if required).
+- Also emits firewall-request, quota-increase-request, and policy-exemption-request files next to
+  `-JsonPath` (`./out/`); hand these to your network/governance team if required.
 - **Idempotent** — safe to re-run; it stops on the first hard failure with its remediation.
 
 > This stage writes to Azure. Make sure you are pointed at the intended subscription
@@ -156,12 +187,16 @@ probe VM, which is always torn down — and that option is currently disabled (s
 run writes nothing.
 
 ```powershell
-./stage3-validation/stage3_validate.ps1 -ConfigPath ./config.json -Profile workspace -JsonPath ./out/stage3.json
+./stage3-validation/stage3_validate.ps1 -ConfigPath ./config.json -Profile supercomputer -JsonPath ./out/stage3-supercomputer.json
+./stage3-validation/stage3_validate.ps1 -ConfigPath ./config.json -Profile workspace     -JsonPath ./out/stage3-workspace.json
 ```
 
 - Read-only gate before deployment: subnet delegation, effective NSG rules, effective routes, DNS
   and private-endpoint resolution.
-- `-Profile` selects the check set: `supercomputer` (default), `workspace`, or `bookshelf`.
+- `-Profile` selects the check set: `supercomputer` (default), `workspace`, or `bookshelf`. Run
+  **both `supercomputer` and `workspace`**: Stage 4 deploys both, and each profile checks only its
+  own subnets (supercomputer: managedcluster, nodepool, spare; workspace: container-app and
+  private-endpoint subnets).
 - **Leave `-WithVm` off.** The in-network probe VM is temporarily disabled: `az vm create` trips an
   empty-arg binding issue (`--public-ip-address ''` / `--nsg ''`), so the ephemeral VM and its
   in-network probes (DNS, TCP 443, HTTPS/artifact, PE resolution, east-west 10250) are skipped. The
@@ -173,9 +208,12 @@ run writes nothing.
 group. Re-runnable: it detects real resource state and resumes from the first incomplete resource.
 
 ```powershell
-./stage4-deployment/stage4_deploy.ps1 -ConfigPath ./config.json -JsonPath ./out/stage4.json
+./stage4-deployment/stage4_deploy.ps1 -ConfigPath ./config.json -ReadinessReport ./out/stage3-supercomputer.json,./out/stage3-workspace.json -JsonPath ./out/stage4.json
 ```
 
+- `-ReadinessReport` takes one or more Stage 3 reports (comma-separated); Stage 4 refuses to write
+  unless every one is `GO`, and warns if none covers the `supercomputer` profile.
+  Without it, Stage 4 still runs but flags the missing gate as a warning.
 - Deploys in dependency order: **supercomputer → workspace → chatModel → project → bookshelf
   storage container** (Discovery api-version `2026-06-01`), via `discovery-platform.bicep`.
 - Detects real resource state before each step, so a re-run **resumes** from the first incomplete
@@ -184,26 +222,34 @@ group. Re-runnable: it detects real resource state and resumes from the first in
 - Requires the Stage 4 config fields: `resourceGroup`, `managedIdentity.id` (your pre-created UAMI),
   and `storage`.
 
-**Region caveat:** if the supercomputer deployment returns an `InternalServerError` with a
-correlation id, the region likely does not support supercomputer creation. Re-run against a
-confirmed region such as **`eastus`** (update `controlPlaneRegion`/`workloadRegion` in the form,
-re-run Stage 1 to regenerate `config.json`, then Stage 4).
+**`InternalServerError` caveat:** if the supercomputer fails a few minutes after submit with
+`InternalServerError (target=internalMetadata)` and its managed resource group stays empty, check:
+
+1. **Subnet topology:** Stage 4's `supercomputer subnet topology` check must pass. The `aksSubnet`
+   (managedcluster) subnet must have **no delegation**, because the supercomputer system nodes run
+   there. A `Microsoft.ContainerService/managedClusters` delegation belongs only on the separate
+   `managementSubnet`, which is used only with `UserDefinedRouting`.
+2. **UAMI roles:** Stage 4's `managed identity role assignments` check must pass (step 2.5).
+
+Then delete the Failed supercomputer
+(`az resource delete --ids <supercomputer id> --api-version 2026-06-01`) and re-run Stage 4. If
+both checks pass and it still fails, open a support case with the correlation id from the report,
+or try a confirmed region such as **`eastus`**.
 
 ### Stage 5 — Enable and certify a scenario (creates one agent)
 
 **Scope:** **writes to Azure** — one Discovery agent (`scientistQnAAgent`) plus a throw-away
-investigation/conversation used for the test. No tool is created. Must run from a network that can
-reach the platform private endpoint.
+investigation/conversation used for the test. No tool is created.
 
 ```powershell
 ./stage5-scenario-enablement/stage5_enable.ps1 -ConfigPath ./config.json -JsonPath ./out/stage5.json
 ```
 
-- Confirms platform private-endpoint DNS + 443 reachability, then creates a Discovery agent named
-  **`scientistQnAAgent`** (no tool bound), opens an investigation + conversation, sends a scientific
-  Q&A prompt, and verifies the agent returns a **completed, non-empty answer**.
-- **Must run from a network that can reach the platform private endpoint** — inside the VNet, or a
-  peered/allowed network. From an unconnected machine the connectivity check fails first (by design).
+- Creates a Discovery agent named **`scientistQnAAgent`** (no tool bound), opens an investigation +
+  conversation, sends a scientific Q&A prompt, and verifies the agent returns a **completed,
+  non-empty answer**.
+- In-network connectivity (private DNS and 443 reachability from inside the VNet) is not checked
+  here; it belongs to Stage 3.
 - Override the prompt with `-Prompt "<your question>"` if you want to test a different question.
 
 ---
@@ -214,10 +260,24 @@ reach the platform private endpoint.
   advance.
 - **Per-check rows:** every check shows Pass / Fail / Warn / Skip. **Every failure carries an exact
   remediation string** — read it; it tells you what to change.
-- **JSON reports:** `./out/stage1.json … stage5.json` are the machine-readable equivalents, good for
-  records or pipeline gating.
-- **Artifacts:** Stage 2 writes firewall-request / quota-exemption / policy-exemption markdown under
-  `./out/` for the teams that own those approvals.
+- **Reports:** every stage writes its `-JsonPath` report plus a markdown report with the same name
+  (`./out/stage1.md`, …). Open the `.md` first; the `.json` is for records or pipeline gating.
+- **Artifacts:** Stage 2 writes firewall-request, quota-increase-request, and policy-exemption-request
+  files (markdown plus JSON) under `./out/` for the teams that own those approvals.
+
+### What to check in `./out` after each stage
+
+Report names follow `-JsonPath`: `-JsonPath ./out/stage1.json` produces `./out/stage1.json` and
+`./out/stage1.md`. Other files are written to the same folder. The table uses the names from the
+commands above; `<workspace>` is the workspace name from `config.json`.
+
+| Stage | Files | What to check |
+|---|---|---|
+| 1 | `stage1.md`, `stage1.json`; `config.json` is written to the `-OutConfig` path (`./config.json`), not `./out` | Verdict is GO and `config.json` exists. Read the remediation on any Fail; a Warn must not hide a real gap (quota, region, policy). Review `config.json` names, subnets, and identity before Stage 2. |
+| 2 | `stage2.md`, `stage2.json`, `firewall-request-<workspace>.md/.json`, `quota-increase-requests-<workspace>.md/.json`, `policy-exemption-requests-<workspace>.md/.json` | Verdict is GO. Hand each request file to the owning team (network, quota, governance) and wait for approval before Stage 3. A request file with an empty list means nothing needs approval. |
+| 3 | `stage3-supercomputer.md/.json`, `stage3-workspace.md/.json` | Both reports are GO. Check subnet delegation, NSG, and route rows; Skip rows must give a reason. Stage 4 reads these `.json` files through `-ReadinessReport`. |
+| 4 | `stage4.md`, `stage4.json` | Verdict is GO and every resource (supercomputer, node pool, workspace, chat model, project, Bookshelf if in scope) shows Succeeded with its resource id. On failure, the report includes the ARM error and remediation. |
+| 5 | `stage5.md`, `stage5.json`, `stage5-response-<timestamp>.json`, `stage5-state-<timestamp>.json` | Verdict is GO. The response file holds the agent's answer; confirm it is `completed` and the text answers the prompt. The state file records the agent, investigation, and conversation used by the test. |
 
 ---
 
@@ -229,9 +289,11 @@ reach the platform private endpoint.
 | "Not logged in" / Az checks skipped | `az login` and `az account set --subscription <id>`, then re-run. |
 | Stage 2 RBAC failure | You lack role-assignment rights. Get **Owner / User Access Administrator / RBAC Administrator** at the scope. |
 | Stage 4 fails on `managedIdentity` | `managedIdentity.id` is missing or wrong. Pre-create the UAMI (step 2.5) and set its resource id in the form, re-run Stage 1, then Stage 4. |
-| Stage 4 supercomputer `InternalServerError` | Region likely unsupported for supercomputers. Switch to **`eastus`** (or another confirmed region), re-run Stage 1, then Stage 4. |
+| Stage 4 fails `managed identity role assignments` | The UAMI is missing a required role. Run the `az role assignment create` commands printed in the report, wait 5–10 minutes, then re-run Stage 4. |
+| Stage 4 fails `supercomputer subnet topology` | The `aksSubnet` is delegated, or `UserDefinedRouting` has no delegated `managementSubnet`. Run the `az network vnet subnet update` command printed in the report, re-run Stage 3, then Stage 4. |
+| Stage 4 supercomputer `InternalServerError` | Check the subnet-topology and UAMI-role checks first (see the Stage 4 caveat). Delete the Failed supercomputer, then re-run. If both pass, open a support case with the correlation id. |
+| Stage 4 `Insufficient quota for VM size` | Not enough vCPU quota for the supercomputer system pool. Raise the named quota (Subscriptions > Usage + quotas, or `az quota update`), then re-run Stage 4. |
 | Stage 4 partial / stranded resource | Re-run (state is detected and resumed); use `-Recovery` to re-PUT the stranded resource. |
-| Stage 5 connectivity check fails | You are not on a network that can reach the platform private endpoint. Run from inside the VNet or a peered/allowed network. |
 
 ---
 
@@ -246,9 +308,10 @@ az login; az account set --subscription <id>
 # 2. Landing zone
 ./stage2-landing-zone/stage2_prepare.ps1 -ConfigPath ./config.json -JsonPath ./out/stage2.json
 # 3. Validate
-./stage3-validation/stage3_validate.ps1 -ConfigPath ./config.json -Profile workspace -JsonPath ./out/stage3.json
-# 4. Deploy (15–30 min for the supercomputer)
-./stage4-deployment/stage4_deploy.ps1 -ConfigPath ./config.json -JsonPath ./out/stage4.json
+./stage3-validation/stage3_validate.ps1 -ConfigPath ./config.json -Profile supercomputer -JsonPath ./out/stage3-supercomputer.json
+./stage3-validation/stage3_validate.ps1 -ConfigPath ./config.json -Profile workspace -JsonPath ./out/stage3-workspace.json
+# 4. Deploy (15–30 min for the supercomputer); gated on the Stage 3 GO reports
+./stage4-deployment/stage4_deploy.ps1 -ConfigPath ./config.json -ReadinessReport ./out/stage3-supercomputer.json,./out/stage3-workspace.json -JsonPath ./out/stage4.json
 # 5. Certify a Q&A agent
 ./stage5-scenario-enablement/stage5_enable.ps1 -ConfigPath ./config.json -JsonPath ./out/stage5.json
 ```

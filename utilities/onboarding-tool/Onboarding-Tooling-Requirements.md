@@ -137,10 +137,10 @@ required prefix and confirm all fit inside the provided VNet without overlap:
 | agent container app | /26 | `Microsoft.App/environments` |
 | workspace container app | /26 | `Microsoft.App/environments` |
 | search container app | /27 | `Microsoft.App/environments` |
-| AKS managed cluster | /26 | `Microsoft.ContainerService/managedClusters` |
+| AKS managed cluster (system nodes) | /26 | none |
 | AKS node pool (×2) | /26 each | none |
 | private endpoints | /27 | none |
-| spare/internal | /27 | none |
+| spare / management (AKS API-server VNet integration) | /27 | `Microsoft.ContainerService/managedClusters` when `outboundType=UserDefinedRouting`; otherwise unused |
 
 The reference layout (agent /26, workspace /26, search /27, PE /27, AKS /26, nodepool /26)
 fits inside a single /23. Provide the /24 agent-subnet fallback when a region rejects the

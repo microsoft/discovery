@@ -47,7 +47,7 @@ Per-stage parameters, prerequisites, and dependencies are documented in
 | 2 Landing zone | [`stage2-landing-zone/stage2_prepare.ps1`](stage2-landing-zone/stage2_prepare.ps1) | rp_register, rbac_assign, nsp_perimeter_joiner_role, network_provision, nsg_rules, route_tables, private_dns, byo_storage, firewall_request_artifact, quota_exemption_requests |
 | 3 Validation | [`stage3-validation/stage3_validate.ps1`](stage3-validation/stage3_validate.ps1) | check_subnet_delegation, check_nsg_effective, check_effective_routes, check_dns_and_pe, testvm_lifecycle, probe_dns, probe_tcp443, probe_https, probe_artifacts, probe_pe_resolution, probe_eastwest, dependency_spec |
 | 4 Deployment | [`stage4-deployment/stage4_deploy.ps1`](stage4-deployment/stage4_deploy.ps1) | deploy_order, true_state_detection, error_remediation_engine, recovery_reput |
-| 5 Scenario enablement | [`stage5-scenario-enablement/stage5_enable.ps1`](stage5-scenario-enablement/stage5_enable.ps1) | connectivity_check, create_agent, create_investigation_conversation, send_prompt_poll, verify_response, verification_summary |
+| 5 Scenario enablement | [`stage5-scenario-enablement/stage5_enable.ps1`](stage5-scenario-enablement/stage5_enable.ps1) | create_agent, create_investigation_conversation, send_prompt_poll, verify_response, verification_summary |
 
 Supporting files: `lib/OnboardingCommon.psm1` (shared module), two planning forms —
 `stage1-planning/discovery-resource-planning-form-managed-vnet.xlsx` (tool provisions the VNet) and
@@ -78,18 +78,21 @@ cd utilities/onboarding-tool/scripts   # all commands are relative to this direc
 # Stage 2 — prepare the landing zone (writes resources, idempotent).
 ./stage2-landing-zone/stage2_prepare.ps1 -ConfigPath ./config.json -JsonPath ./out/stage2.json
 
-# Stage 3 — validate readiness (read-only; -WithVm adds the disposable connectivity test VM).
-./stage3-validation/stage3_validate.ps1 -ConfigPath ./config.json -Profile workspace -WithVm -JsonPath ./out/stage3.json
+# Stage 3 — validate readiness (read-only). Run both profiles; leave -WithVm off (temporarily disabled).
+./stage3-validation/stage3_validate.ps1 -ConfigPath ./config.json -Profile supercomputer -JsonPath ./out/stage3-supercomputer.json
+./stage3-validation/stage3_validate.ps1 -ConfigPath ./config.json -Profile workspace -JsonPath ./out/stage3-workspace.json
 
-# Stage 4 — deploy the platform in dependency order with error-to-remediation.
-./stage4-deployment/stage4_deploy.ps1 -ConfigPath ./config.json -JsonPath ./out/stage4.json
+# Stage 4 — deploy the platform in dependency order, gated on the Stage 3 GO reports.
+./stage4-deployment/stage4_deploy.ps1 -ConfigPath ./config.json -ReadinessReport ./out/stage3-supercomputer.json,./out/stage3-workspace.json -JsonPath ./out/stage4.json
 
 # Stage 5 — scenario enablement: create a Q&A agent and verify it answers a prompt.
 ./stage5-scenario-enablement/stage5_enable.ps1 -ConfigPath ./config.json -JsonPath ./out/stage5.json
 ```
 
 Each command exits `0` only when every check passed (or was waived); non-zero otherwise, so the
-stages chain in a pipeline.
+stages chain in a pipeline. Each stage also writes a markdown report next to its `-JsonPath`
+(`./out/stage1.md`, …); see the [user guide](USER-GUIDE.md#what-to-check-in-out-after-each-stage)
+for what to check in `./out` after each stage.
 
 ## Stage details
 
@@ -119,7 +122,8 @@ in, so the parser and local checks run offline. `.xlsx` forms are read natively 
 Turns the signed `config.json` into a deployed landing zone (FR2.1–FR2.9): RP registration, RBAC,
 the one-time NSP Perimeter Joiner custom role, network provisioning via `network.bicep` (VNet,
 subnets with FR1.2 delegations, shared NSG allow-list, UDR route tables, privatelink DNS zones +
-links), BYO storage, and the firewall-request / quota-exemption artifacts under `out/`. Builds the
+links), BYO storage, and the firewall-request / quota-increase-request / policy-exemption-request
+files next to `-JsonPath`. Builds the
 network only when `network.model` is byo/byo-spoke/greenfield; byo-existing and managed skip
 provisioning. Idempotent; stops on the first hard failure with its remediation. **Writes platform
 resources — run against the intended subscription only.** Requires rights to create role
@@ -177,13 +181,12 @@ platform resources — run against the intended subscription only.**
 
 ### Stage 5 — Scenario enablement (`stage5-scenario-enablement/stage5_enable.ps1`)
 
-End-to-end certification of a Q&A agent (FR5.1). Verifies platform private-endpoint DNS
-and 443 reachability, creates a Discovery agent named `scientistQnAAgent` with **no** Discovery
-tool bound, opens an investigation + conversation, sends a scientific prompt, and verifies the
-agent answered with assistant text (passes only when the response completes with a non-empty
-answer, not just an HTTP 200). Requires a green Stage 1 `config.json`, a successful Stage 4
-deployment (workspace + project + chatModel live), and a network path to the platform private
-endpoint (run inside the VNet or a peered/allowed network).
+End-to-end certification of a Q&A agent (FR5.3–FR5.7). Creates a Discovery agent named
+`scientistQnAAgent` with **no** Discovery tool bound, opens an investigation + conversation,
+sends a scientific prompt, and verifies the agent answered with assistant text (passes only when
+the response completes with a non-empty answer, not just an HTTP 200). Requires a green Stage 1
+`config.json` and a successful Stage 4 deployment (workspace + project + chatModel live).
+In-network connectivity probing is not part of Stage 5; it belongs to Stage 3.
 
 | Parameter | Required | Description |
 |---|---|---|

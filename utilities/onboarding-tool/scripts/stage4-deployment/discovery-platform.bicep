@@ -23,8 +23,10 @@ param chatModelName string = 'gpt-5.4'
 @description('User-assigned managed identity resource id used by all platform resources.')
 param managedIdentityId string
 
-@description('managedcluster-role subnet id (AKS control plane / management).')
+@description('managedcluster-role subnet id (supercomputer system nodes). Must NOT be delegated.')
 param managedClusterSubnetId string
+@description('Management (AKS API-server VNet integration) subnet id, delegated to Microsoft.ContainerService/managedClusters. Required for UserDefinedRouting; leave empty for LoadBalancer.')
+param managementSubnetId string = ''
 @description('nodepool-role subnet id.')
 param nodePoolSubnetId string
 @description('agent-containerapp-role subnet id.')
@@ -63,7 +65,7 @@ resource supercomputer 'Microsoft.Discovery/supercomputers@2026-06-01' = {
   }
   properties: {
     subnetId: managedClusterSubnetId
-    managementSubnetId: managedClusterSubnetId
+    managementSubnetId: empty(managementSubnetId) ? null : managementSubnetId
     outboundType: outboundType
     systemSku: empty(systemSku) ? null : systemSku
     identities: {

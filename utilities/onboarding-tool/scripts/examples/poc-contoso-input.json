@@ -21,7 +21,7 @@
       { "role": "agent-containerapp",     "cidr": "10.46.252.0/26",   "requiredPrefix": "/26", "delegation": "Microsoft.App/environments" },
       { "role": "workspace-containerapp", "cidr": "10.46.252.64/26",  "requiredPrefix": "/26", "delegation": "Microsoft.App/environments" },
       { "role": "search-containerapp",    "cidr": "10.46.253.32/27",  "requiredPrefix": "/27", "delegation": "Microsoft.App/environments" },
-      { "role": "managedcluster",         "cidr": "10.46.253.128/26", "requiredPrefix": "/26", "delegation": "Microsoft.ContainerService/managedClusters" },
+      { "role": "managedcluster",         "cidr": "10.46.253.128/26", "requiredPrefix": "/26", "delegation": "none" },
       { "role": "nodepool",               "cidr": "10.46.252.128/26", "requiredPrefix": "/26", "delegation": "none" },
       { "role": "private-endpoints",      "cidr": "10.46.253.0/27",   "requiredPrefix": "/27", "delegation": "none" },
       { "role": "spare",                  "cidr": "10.46.253.64/27",  "requiredPrefix": "/27", "delegation": "none" }

@@ -38,7 +38,7 @@ Capture and normalize control-plane region, workload region, VNet CIDR, per-serv
 - Missing field: complete the corresponding cell in the planning sheet.
 
 ### subnet_sizing — FR1.2
-Check each Discovery subnet meets its required prefix (agent /26, workspace /26, search /27, AKS managed cluster /26, AKS node pool /26 ×2, private endpoints /27, spare /27) and delegation (container-app subnets → `Microsoft.App/environments`, managed cluster → `Microsoft.ContainerService/managedClusters`, others none). Confirm the packed layout fits a /23; offer the /24 agent-subnet fallback where a region rejects the packed layout.
+Check each Discovery subnet meets its required prefix (agent /26, workspace /26, search /27, AKS managed cluster /26, AKS node pool /26 ×2, private endpoints /27, spare /27) and delegation (container-app subnets → `Microsoft.App/environments`; managed cluster → none, because the supercomputer system nodes run there; spare/management → `Microsoft.ContainerService/managedClusters` when `outboundType=UserDefinedRouting`, otherwise either; others none). Confirm the packed layout fits a /23; offer the /24 agent-subnet fallback where a region rejects the packed layout.
 - Prefix too small: resize the subnet to the required prefix.
 - Wrong/missing delegation: set the delegation in the table.
 - Region rejects packed layout: switch to the /24 agent-subnet fallback.

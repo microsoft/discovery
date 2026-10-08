@@ -5,7 +5,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.39.26.7824",
-      "templateHash": "6215430507893665292"
+      "templateHash": "808327707704316604"
     }
   },
   "parameters": {
@@ -54,7 +54,14 @@
     "managedClusterSubnetId": {
       "type": "string",
       "metadata": {
-        "description": "managedcluster-role subnet id (AKS control plane / management)."
+        "description": "managedcluster-role subnet id (supercomputer system nodes). Must NOT be delegated."
+      }
+    },
+    "managementSubnetId": {
+      "type": "string",
+      "defaultValue": "",
+      "metadata": {
+        "description": "Management (AKS API-server VNet integration) subnet id, delegated to Microsoft.ContainerService/managedClusters. Required for UserDefinedRouting; leave empty for LoadBalancer."
       }
     },
     "nodePoolSubnetId": {
@@ -143,7 +150,7 @@
       },
       "properties": {
         "subnetId": "[parameters('managedClusterSubnetId')]",
-        "managementSubnetId": "[parameters('managedClusterSubnetId')]",
+        "managementSubnetId": "[if(empty(parameters('managementSubnetId')), null(), parameters('managementSubnetId'))]",
         "outboundType": "[parameters('outboundType')]",
         "systemSku": "[if(empty(parameters('systemSku')), null(), parameters('systemSku'))]",
         "identities": {

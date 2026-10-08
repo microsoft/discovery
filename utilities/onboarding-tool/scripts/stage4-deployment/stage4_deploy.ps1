@@ -16,7 +16,7 @@ param(
     [string]$BicepPath,
     [string]$ParametersPath,
     [switch]$NoBicep,
-    [string]$ReadinessReport,
+    [string[]]$ReadinessReport,
     [switch]$Recovery,
     [string]$Subscription,
     [string]$ResourceGroup,
@@ -32,6 +32,12 @@ function Resolve-DiscoveryError {
     $text = $ErrorText
     $rules = @(
         [pscustomobject]@{
+            Signature   = 'Insufficient VM quota (VmSkuQuota)'
+            RootCause   = 'the subscription does not have enough vCPU quota in the region for the supercomputer system pool (3 nodes of the system SKU) that the service validates at submit time'
+            Remediation = 'request a quota increase for the quota named in the error (Total Regional vCPUs and/or the VM family) in the deployment region via Subscriptions > Usage + quotas or az quota update, wait for it to be approved, then re-run Stage 4; Stage 1 check vcpu-quota reports the shortfall up front'
+            Match       = { param($t) $t -match '(?is)VmSkuQuota|Insufficient quota for VM size|QuotaExceeded|OperationNotAllowed.*quota' }
+        }
+        [pscustomobject]@{
             Signature   = 'Creation not supported in region'
             RootCause   = 'the target region is not a Discovery-creatable region for this resource type (the ARM-advertised location list can be broader than what the service allows for creation)'
             Remediation = 'deploy into a Discovery-creatable region (for supercomputers/storageContainers eastus is confirmed creatable; eastus2 is rejected despite being advertised) and place the BYO VNet/subnets in that same region so the supercomputer stays co-regional with its node pool subnet'
@@ -42,6 +48,12 @@ function Resolve-DiscoveryError {
             RootCause   = 'supercomputer location (controlPlaneRegion) differs from the BYO VNet/subnet region'
             Remediation = 'set controlPlaneRegion to the region of the managedcluster/nodepool VNet so the supercomputer is co-regional with its subnets, then delete the failed supercomputer and re-run (region is immutable)'
             Match       = { param($t) $t -match '(?is)RegionMismatch|Region mismatch for dependent resource|must be in the same region as the primary resource' }
+        }
+        [pscustomobject]@{
+            Signature   = 'Supercomputer InternalServerError (target=internalMetadata)'
+            RootCause   = 'the supercomputer failed before AKS was created (managed resource group left empty); observed when (a) the managedcluster subnet carries a Microsoft.ContainerService/managedClusters delegation or is also passed as managementSubnetId, or (b) the UAMI lacks its required roles'
+            Remediation = 'confirm the FR4.1 subnet-topology check passes (managedcluster subnet undelegated; a separate delegated management subnet only for UserDefinedRouting) and the managed identity role check passes (Discovery Platform Contributor, Storage Blob Data Contributor, AcrPull on the deployment RG; Network Contributor on the supercomputer subnets or their VNet), wait 5-10 minutes for role propagation, delete the Failed supercomputer (az resource delete --ids <supercomputer id> --api-version 2026-06-01), then re-run Stage 4; if both are already correct, open a support case with the correlation id'
+            Match       = { param($t) $t -match '(?is)InternalServerError.*internalMetadata|internalMetadata.*InternalServerError' }
         }
         [pscustomobject]@{
             Signature   = 'AKSCapacityHeavyUsage / InternalServerError on AKS create'
@@ -134,6 +146,13 @@ function Get-FailedDeploymentError {
         $msg = "$($errObj.message)".Trim()
         if (-not $code -and -not $msg) { continue }
         $line = (@("[$code]", $msg) | Where-Object { $_ -and $_ -ne '[]' }) -join ' '
+        # RP validation wrappers ("Resource payload validation failed") carry the actionable cause
+        # in error.details[]; append those so the user sees e.g. the quota shortfall.
+        $inner = @(@($errObj.details) | Where-Object { $_ } | ForEach-Object {
+                $dc = "$($_.code)".Trim(); $dm = "$($_.message)".Trim(); $dt = "$($_.target)".Trim()
+                if ($dm) { (@("[$(if ($dt) { $dt } else { $dc })]", $dm) | Where-Object { $_ -ne '[]' }) -join ' ' }
+            })
+        if ($inner.Count) { $line = "$($line): $($inner -join '; ')" }
         $target = "$($errObj.target)".Trim()
         if ($target) { $line = "$line (target=$target)" }
         $resId = "$($p.targetResource.id)".Trim()
@@ -430,6 +449,12 @@ function New-StepResult {
         [string]$ErrorText = '',
         [object]$Extra = $null
     )
+    if ([string]::IsNullOrWhiteSpace($ResourceId)) {
+        $why = "Internal tool error: the resource id for '$Name' was not computed, so its provisioning state could not be checked. The Azure deployment itself may have succeeded."
+        return New-CheckResult -Id $Id -Name $Name -Status 'Fail' -Fr $Fr -Detail $why `
+            -Remediation 'Check the resource in the Azure portal (or az resource show), and report this tool defect with the Stage 4 console log; re-running Stage 4 resumes from existing resources.' `
+            -Data ([pscustomobject]@{ resource = ''; provisioningState = 'NotChecked'; rawError = $ErrorText; extra = $Extra })
+    }
     $ok = $State -eq 'Succeeded'
     $resolved = if ($ok) { $null } else { Resolve-DiscoveryError -ErrorText $ErrorText }
     $detail = "resource=$ResourceId provisioningState=$State"
@@ -498,6 +523,10 @@ function New-Stage4BicepParamFile {
     $net = Get-ObjProp -Object $Config -Name 'network'
     $outboundType = Get-ObjProp -Object $net -Name 'outboundType'
     if ($outboundType) { $p['outboundType'] = [string]$outboundType }
+    if (-not $outboundType -or [string]$outboundType -eq 'UserDefinedRouting') {
+        $mgmt = Get-SubnetIdByRole -Config $Config -Role 'spare' -ResourceGroup $ResourceGroup
+        if ($mgmt) { $p['managementSubnetId'] = $mgmt }
+    }
     foreach ($opt in 'nodePoolMinNodeCount', 'nodePoolMaxNodeCount') {
         $v = Get-ObjProp -Object $Config -Name $opt
         if ($null -ne $v) { $p[$opt] = [int]$v }
@@ -545,8 +574,88 @@ if ([string]::IsNullOrWhiteSpace($managedIdentityId)) {
     Complete-Stage -Results $results.ToArray()
 }
 
-$supercomputerId = New-DiscoveryId -SubscriptionId $subscriptionId -ResourceGroup $resourceGroup -TypePath 'supercomputers' -NamePath $supercomputerName
+# UAMI pre-flight: the id is set, so verify it resolves to a real identity and surface its
+# role coverage. The tool does not create the UAMI or assign its roles (prerequisites), so a
+# missing identity is a hard Fail while missing/unreadable roles are a Warn (deploy can submit,
+# but AKS/workspace may fail at runtime without the right roles).
+$uami = Get-AzJson -Args @('identity', 'show', '--ids', $managedIdentityId) -AllowFail
+$uamiPrincipalId = if ($uami) { [string]$uami.principalId } else { '' }
+if (-not $uami -or [string]::IsNullOrWhiteSpace($uamiPrincipalId)) {
+    $results.Add((New-CheckResult -Id 'deploy-managed-identity-exists' -Name 'managed identity exists' -Status 'Fail' -Fr 'FR4.1' `
+                -Detail "managedIdentity.id does not resolve to an existing user-assigned managed identity: $managedIdentityId" `
+                -Remediation 'Create the user-assigned managed identity (az identity create) so the resource id in managedIdentity.id exists, or correct the id in the config. The platform identity parameter must reference an existing UAMI.' `
+                -Data ([pscustomobject]@{ managedIdentityId = $managedIdentityId; resolved = $false })))
+    if ($PassThru) { return $results.ToArray() }
+    $null = Write-OnboardingReport -Results $results.ToArray() -Title 'Stage 4 · deploy order (FR4.1-FR4.2)' -JsonPath $JsonPath
+    Complete-Stage -Results $results.ToArray()
+}
+$results.Add((New-CheckResult -Id 'deploy-managed-identity-exists' -Name 'managed identity exists' -Status 'Pass' -Fr 'FR4.1' `
+            -Detail "UAMI resolves (principalId=$uamiPrincipalId)." `
+            -Data ([pscustomobject]@{ managedIdentityId = $managedIdentityId; principalId = $uamiPrincipalId; resolved = $true })))
+$uamiRolesRaw = Invoke-Az -Args @('role', 'assignment', 'list', '--assignee', $uamiPrincipalId, '--all', '-o', 'json') -AllowFail
+$uamiRoles = $null
+if (-not [string]::IsNullOrWhiteSpace($uamiRolesRaw)) {
+    # -NoEnumerate keeps an empty '[]' as an empty array instead of collapsing to $null (= unreadable).
+    try { $uamiRoles = $uamiRolesRaw | ConvertFrom-Json -NoEnumerate } catch { $uamiRoles = $null }
+}
+if ($null -eq $uamiRoles) {
+    $results.Add((New-CheckResult -Id 'deploy-managed-identity-roles' -Name 'managed identity role assignments' -Status 'Warn' -Fr 'FR4.1' `
+                -Detail 'Could not read role assignments for the UAMI (insufficient permission to list role assignments, or a transient error); UAMI role coverage was not verified.' `
+                -Remediation 'Verify manually that the UAMI holds Microsoft Discovery Platform Contributor (Preview), Storage Blob Data Contributor and AcrPull on the deployment resource group, plus Network Contributor on the managedcluster and nodepool subnets (or their VNet), then proceed.' `
+                -Data ([pscustomobject]@{ principalId = $uamiPrincipalId; verified = $false })))
+}
+else {
+    # Minimum UAMI roles per "Configure managed identities for Microsoft Discovery" (Learn):
+    # three core roles on the deployment RG, plus Network Contributor on the VNet that hosts the
+    # supercomputer subnets (the AKS cluster identity must join them).
+    $rgScope = "/subscriptions/$subscriptionId/resourceGroups/$resourceGroup"
+    $scNetRoles = @('managedcluster', 'nodepool')
+    $uamiOutbound = [string](Get-ObjProp -Object (Get-ObjProp -Object $cfg -Name 'network') -Name 'outboundType')
+    if (-not $uamiOutbound -or $uamiOutbound -eq 'UserDefinedRouting') { $scNetRoles += 'spare' }
+    $scSubnetScopes = @($scNetRoles | ForEach-Object { Get-SubnetIdByRole -Config $cfg -Role $_ -ResourceGroup $resourceGroup } | Where-Object { $_ } | Select-Object -Unique)
+    $ownerId = '8e3af657-a8ff-443c-a75c-2fe8c4bcb635'; $contributorId = 'b24988ac-6180-42a0-ab88-20f7382dd24c'
+    $requiredUamiRoles = @(
+        [pscustomobject]@{ name = 'Microsoft Discovery Platform Contributor (Preview)'; id = '01288891-85ee-45a7-b367-9db3b752fc65'; scope = $rgScope; accepts = @() }
+        [pscustomobject]@{ name = 'Storage Blob Data Contributor'; id = 'ba92f5b4-2d11-453d-a403-e96b0029c9fe'; scope = $rgScope; accepts = @() }
+        [pscustomobject]@{ name = 'AcrPull'; id = '7f951dda-4ed3-4680-a7ca-43fe172d538d'; scope = $rgScope; accepts = @() }
+    )
+    # Network Contributor is needed on each supercomputer subnet; a grant on the VNet, network RG or
+    # subscription covers it. (The service self-assigns it on the managedcluster subnet only.)
+    foreach ($sn in $scSubnetScopes) {
+        $requiredUamiRoles += [pscustomobject]@{ name = 'Network Contributor'; id = '4d97b98b-1d4f-4787-a291-c67834d212e7'; scope = $sn; accepts = @($contributorId, $ownerId) }
+    }
+    $missingRoles = [System.Collections.Generic.List[object]]::new()
+    foreach ($req in $requiredUamiRoles) {
+        # An assignment satisfies the requirement when it is the same (or an accepted superset) role
+        # at the required scope or any ancestor scope (subscription / RG / VNet).
+        $ok = @($uamiRoles | Where-Object {
+                $defId = ([string]$_.roleDefinitionId -split '/')[-1]
+                $s = ([string]$_.scope).TrimEnd('/')
+                ($defId -eq $req.id -or $req.accepts -contains $defId) -and
+                ($req.scope -ieq $s -or $req.scope.StartsWith("$s/", [System.StringComparison]::OrdinalIgnoreCase))
+            }).Count -gt 0
+        if (-not $ok) { $missingRoles.Add($req) }
+    }
+    $roleSummary = @($uamiRoles | ForEach-Object { [pscustomobject]@{ role = $_.roleDefinitionName; scope = $_.scope } })
+    if ($missingRoles.Count -gt 0) {
+        $cmds = ($missingRoles | ForEach-Object { "az role assignment create --assignee-object-id $uamiPrincipalId --assignee-principal-type ServicePrincipal --role $($_.id) --scope $($_.scope)" }) -join ' ; '
+        $results.Add((New-CheckResult -Id 'deploy-managed-identity-roles' -Name 'managed identity role assignments' -Status 'Fail' -Fr 'FR4.1' `
+                    -Detail ("The UAMI is missing $($missingRoles.Count) required role(s): " + (($missingRoles | ForEach-Object { "$($_.name) on $($_.scope)" }) -join '; ') + ". The supercomputer's AKS cluster/kubelet/workload identities and the workspace all run as this UAMI; without these roles the supercomputer fails a few minutes after submit with an opaque 'InternalServerError (target=internalMetadata)' and must be deleted before retrying. Role assignments currently held: $(@($uamiRoles).Count).") `
+                    -Remediation "Ask an Owner / User Access Administrator to assign the missing roles, wait 5-10 minutes for propagation, then re-run Stage 4: $cmds" `
+                    -Data ([pscustomobject]@{ principalId = $uamiPrincipalId; missing = @($missingRoles | ForEach-Object { [pscustomobject]@{ role = $_.name; roleId = $_.id; scope = $_.scope } }); roleAssignments = $roleSummary })))
+        # Stop before submitting: a role-less supercomputer burns minutes, then must be deleted by hand.
+        if ($PassThru) { return $results.ToArray() }
+        $null = Write-OnboardingReport -Results $results.ToArray() -Title 'Stage 4 · deploy order (FR4.1-FR4.2)' -JsonPath $JsonPath
+        Complete-Stage -Results $results.ToArray()
+    }
+    else {
+        $results.Add((New-CheckResult -Id 'deploy-managed-identity-roles' -Name 'managed identity role assignments' -Status 'Pass' -Fr 'FR4.1' `
+                    -Detail ("UAMI holds all required roles: " + (($requiredUamiRoles | ForEach-Object { "$($_.name) on $($_.scope)" }) -join '; ') + '.') `
+                    -Data ([pscustomobject]@{ principalId = $uamiPrincipalId; roleAssignments = $roleSummary })))
+    }
+}
 $workspaceId = New-DiscoveryId -SubscriptionId $subscriptionId -ResourceGroup $resourceGroup -TypePath 'workspaces' -NamePath $workspaceName
+$supercomputerId = if ($supercomputerName) { New-DiscoveryId -SubscriptionId $subscriptionId -ResourceGroup $resourceGroup -TypePath 'supercomputers' -NamePath $supercomputerName } else { '' }
 $chatModelId = "$workspaceId/chatModelDeployments/gpt-5-4"
 $storageContainerId = New-DiscoveryId -SubscriptionId $subscriptionId -ResourceGroup $resourceGroup -TypePath 'storageContainers' -NamePath $storageContainerName
 $projectId = "$workspaceId/projects/$projectName"
@@ -566,6 +675,47 @@ if (-not $Recovery -and $location) {
             $null = Write-OnboardingReport -Results $results.ToArray() -Title 'Stage 4 · deploy order (FR4.1-FR4.2)' -JsonPath $JsonPath
             Complete-Stage -Results $results.ToArray()
         }
+    }
+    # Subnet-topology pre-flight. Supercomputer system nodes join the managedcluster subnet, so it must
+    # carry no delegation; with UserDefinedRouting the API server needs a separate management subnet
+    # ('spare' role / managementSubnet) delegated to Microsoft.ContainerService/managedClusters.
+    # Either mistake surfaces only minutes later as an opaque InternalServerError (target=internalMetadata).
+    $mgmtDeleg = 'Microsoft.ContainerService/managedClusters'
+    $topoIssues = [System.Collections.Generic.List[string]]::new()
+    $topoFixes = [System.Collections.Generic.List[string]]::new()
+    if ($preflightSubnet) {
+        $scSn = Get-AzJson -Args @('network', 'vnet', 'subnet', 'show', '--ids', $preflightSubnet) -AllowFail
+        $scDel = @($scSn.delegations | ForEach-Object { $_.serviceName } | Where-Object { $_ })
+        if ($scDel.Count) {
+            $topoIssues.Add("managedcluster subnet $($scSn.name) is delegated to $($scDel -join ','); the supercomputer system nodes run in this subnet, so it must not be delegated.")
+            $topoFixes.Add("az network vnet subnet update --ids $preflightSubnet --remove delegations")
+        }
+    }
+    $preOutbound = [string](Get-ObjProp -Object (Get-ObjProp -Object $cfg -Name 'network') -Name 'outboundType')
+    if (-not $preOutbound -or $preOutbound -eq 'UserDefinedRouting') {
+        $mgmtId = Get-SubnetIdByRole -Config $cfg -Role 'spare' -ResourceGroup $resourceGroup
+        $mgmtSn = if ($mgmtId) { Get-AzJson -Args @('network', 'vnet', 'subnet', 'show', '--ids', $mgmtId) -AllowFail } else { $null }
+        if (-not $mgmtSn) {
+            $topoIssues.Add("outboundType=UserDefinedRouting requires a management subnet (role 'managementSubnet'/'spare', at least /28) for the AKS API server, but none was found$(if ($mgmtId) { " at $mgmtId" }).")
+            $topoFixes.Add("Add a managementSubnet row (delegation $mgmtDeleg) to the form and re-run Stages 1-3, or set network.outboundType=LoadBalancer")
+        }
+        elseif (@($mgmtSn.delegations | ForEach-Object { $_.serviceName }) -notcontains $mgmtDeleg) {
+            $topoIssues.Add("management subnet $($mgmtSn.name) is not delegated to $mgmtDeleg (required for API-server VNet integration under UserDefinedRouting).")
+            $topoFixes.Add("az network vnet subnet update --ids $mgmtId --delegations $mgmtDeleg")
+        }
+    }
+    if ($topoIssues.Count) {
+        $results.Add((New-CheckResult -Id 'deploy-subnet-topology' -Name 'supercomputer subnet topology' -Status 'Fail' -Fr 'FR4.1' `
+                    -Detail (($topoIssues -join ' ') + ' Stage 4 stopped before submitting so no Failed supercomputer is left behind.') `
+                    -Remediation ("Fix the subnets, then re-run Stage 3 and Stage 4: " + ($topoFixes -join ' ; ')) `
+                    -Data ([pscustomobject]@{ issues = @($topoIssues); fixes = @($topoFixes) })))
+        if ($PassThru) { return $results.ToArray() }
+        $null = Write-OnboardingReport -Results $results.ToArray() -Title 'Stage 4 · deploy order (FR4.1-FR4.2)' -JsonPath $JsonPath
+        Complete-Stage -Results $results.ToArray()
+    }
+    else {
+        $results.Add((New-CheckResult -Id 'deploy-subnet-topology' -Name 'supercomputer subnet topology' -Status 'Pass' -Fr 'FR4.1' `
+                    -Detail "managedcluster subnet has no delegation$(if (-not $preOutbound -or $preOutbound -eq 'UserDefinedRouting') { "; management subnet is delegated to $mgmtDeleg (UserDefinedRouting)" } else { "; outboundType=$preOutbound needs no management subnet" })."))
     }
 }
 
@@ -606,7 +756,8 @@ if ($generatedParamFile) { Remove-Item -LiteralPath $generatedParamFile -Force -
 if (-not $BicepPath) {
     $scMissing = @()
     $scSubnet = Get-SubnetIdByRole -Config $cfg -Role 'managedcluster' -ResourceGroup $resourceGroup
-    $scMgmtSubnet = Get-SubnetIdByRole -Config $cfg -Role 'managedcluster' -ResourceGroup $resourceGroup
+    $scOutbound = [string](Get-ObjProp -Object (Get-ObjProp -Object $cfg -Name 'network') -Name 'outboundType')
+    $scMgmtSubnet = if (-not $scOutbound -or $scOutbound -eq 'UserDefinedRouting') { Get-SubnetIdByRole -Config $cfg -Role 'spare' -ResourceGroup $resourceGroup } else { '' }
     $nodeSubnet = Get-SubnetIdByRole -Config $cfg -Role 'nodepool' -ResourceGroup $resourceGroup
     if (-not $supercomputerName) { $scMissing += 'names.supercomputer' }
     if (-not $location) { $scMissing += 'controlPlaneRegion' }
@@ -638,7 +789,6 @@ if (-not $BicepPath) {
             tags       = @{ version = 'v2'; 'discovery.overridemrgregion' = [string]$cfg.workloadRegion }
             properties = @{
                 subnetId           = $scSubnet
-                managementSubnetId = $scMgmtSubnet
                 outboundType       = [string]$scOutboundType
                 identities         = @{
                     clusterIdentity    = @{ id = $managedIdentityId }
@@ -648,6 +798,7 @@ if (-not $BicepPath) {
             }
         }
         $systemSku = Get-ObjProp -Object $cfg -Name 'systemSku'
+        if ($scMgmtSubnet) { $scBody.properties.managementSubnetId = $scMgmtSubnet }
         if ($systemSku) { $scBody.properties.systemSku = [string]$systemSku }
         $put = Invoke-ArmPut -ResourceId $supercomputerId -Body $scBody
         if ($put.ok -and $nodePoolName -and $nodeSubnet) {
@@ -1039,35 +1190,50 @@ Assert-AzLogin -SubscriptionId ([string]$cfg.subscriptionId)
 
 $readinessGateOpen = $true
 if ($ReadinessReport) {
-    if (-not (Test-Path -LiteralPath $ReadinessReport)) {
-        $readinessGateOpen = $false
-        $results.Add((New-CheckResult -Id 'stage3-readiness-report' -Name 'Stage 3 readiness report' -Status 'Fail' -Fr 'FR4.6' `
-                    -Detail "Readiness report not found: $ReadinessReport" `
-                    -Remediation 'Run Stage 3 validation and pass the GO report before Stage 4 writes platform resources.'))
-    } else {
+    $ReadinessReport = @($ReadinessReport | ForEach-Object { $_ -split ',' } | ForEach-Object { $_.Trim() } | Where-Object { $_ })
+    $coveredProfiles = @()
+    $multi = @($ReadinessReport).Count -gt 1
+    foreach ($reportPath in @($ReadinessReport)) {
+        $checkId = 'stage3-readiness-report'
+        $checkName = 'Stage 3 readiness report'
+        if ($multi) { $checkId += '-' + [IO.Path]::GetFileNameWithoutExtension($reportPath); $checkName += " ($([IO.Path]::GetFileName($reportPath)))" }
+        if (-not (Test-Path -LiteralPath $reportPath)) {
+            $readinessGateOpen = $false
+            $results.Add((New-CheckResult -Id $checkId -Name $checkName -Status 'Fail' -Fr 'FR4.6' `
+                        -Detail "Readiness report not found: $reportPath" `
+                        -Remediation 'Run Stage 3 validation and pass the GO report before Stage 4 writes platform resources.'))
+            continue
+        }
         try {
-            $readiness = Get-Content -LiteralPath $ReadinessReport -Raw | ConvertFrom-Json -ErrorAction Stop
+            $readiness = Get-Content -LiteralPath $reportPath -Raw | ConvertFrom-Json -ErrorAction Stop
             $verdict = Get-ObjProp -Object $readiness -Name 'verdict'
+            $reportProfile = [string](Get-ObjProp -Object (Get-ObjProp -Object $readiness -Name 'extra') -Name 'profile')
             if ($verdict -eq 'GO') {
-                $results.Add((New-CheckResult -Id 'stage3-readiness-report' -Name 'Stage 3 readiness report' -Status 'Pass' -Fr 'FR4.6' `
-                            -Detail "verdict=GO path=$ReadinessReport"))
+                if ($reportProfile) { $coveredProfiles += $reportProfile }
+                $results.Add((New-CheckResult -Id $checkId -Name $checkName -Status 'Pass' -Fr 'FR4.6' `
+                            -Detail "verdict=GO profile=$reportProfile path=$reportPath"))
             } else {
                 $readinessGateOpen = $false
-                $results.Add((New-CheckResult -Id 'stage3-readiness-report' -Name 'Stage 3 readiness report' -Status 'Fail' -Fr 'FR4.6' `
-                            -Detail "verdict=$verdict path=$ReadinessReport" `
+                $results.Add((New-CheckResult -Id $checkId -Name $checkName -Status 'Fail' -Fr 'FR4.6' `
+                            -Detail "verdict=$verdict profile=$reportProfile path=$reportPath" `
                             -Remediation 'Do not run Stage 4 until Stage 3 dependency validation is GO.'))
             }
         } catch {
             $readinessGateOpen = $false
-            $results.Add((New-CheckResult -Id 'stage3-readiness-report' -Name 'Stage 3 readiness report' -Status 'Fail' -Fr 'FR4.6' `
+            $results.Add((New-CheckResult -Id $checkId -Name $checkName -Status 'Fail' -Fr 'FR4.6' `
                         -Detail "Unable to parse readiness report: $($_.Exception.Message)" `
                         -Remediation 'Regenerate the Stage 3 JSON report and rerun Stage 4.'))
         }
     }
+    if ($readinessGateOpen -and $coveredProfiles -and ('supercomputer' -notin $coveredProfiles)) {
+        $results.Add((New-CheckResult -Id 'stage3-readiness-coverage' -Name 'Stage 3 profile coverage' -Status 'Warn' -Fr 'FR4.6' `
+                    -Detail "The supplied Stage 3 report(s) cover profile(s) '$($coveredProfiles -join ', ')' but not 'supercomputer'. Stage 4 deploys a supercomputer first, so its subnets (managedcluster, nodepool, spare) were not validated by Stage 3. Stage 4's own subnet-topology pre-flight still runs, but NSG/route/DNS checks for those subnets were skipped." `
+                    -Remediation 'Run Stage 3 with -Profile supercomputer too and pass both reports: -ReadinessReport ./out/stage3-supercomputer.json,./out/stage3-workspace.json'))
+    }
 } else {
     $results.Add((New-CheckResult -Id 'stage3-readiness-report' -Name 'Stage 3 readiness report' -Status 'Warn' -Fr 'FR4.6' `
-                -Detail 'No -ReadinessReport was supplied; proceeding because the parameter is optional.' `
-                -Remediation 'For production runs, pass the Stage 3 GO report to gate Stage 4 writes.'))
+                -Detail 'No -ReadinessReport was supplied, so Stage 4 cannot confirm that Stage 3 returned GO for this config; it proceeds without that gate. Network/DNS problems Stage 3 would have caught will instead surface as deployment failures.' `
+                -Remediation 'Pass the Stage 3 report: -ReadinessReport ./out/stage3.json (Stage 4 then refuses to write unless that report is GO).'))
 }
 
 if ($readinessGateOpen) {
