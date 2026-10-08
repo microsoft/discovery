@@ -243,6 +243,8 @@ $actions = @(
     'Microsoft.Network/locations/networkSecurityPerimeterOperationStatuses/read'
 )
 
+$equivalentRoleUsed = $null
+
 try {
     Assert-AzLogin -SubscriptionId $cfg.subscriptionId
     $existing = Get-AzJson -Args @('role', 'definition', 'list', '--name', $roleName) -AllowFail
@@ -256,28 +258,35 @@ try {
     }
 
     if ($needsWrite) {
+        # az role definition create/update expects the flat CLI schema: the role name
+        # lives under 'Name', permissions are top-level Actions/NotActions/DataActions/
+        # NotDataActions, and scopes under AssignableScopes.
         $body = [ordered]@{
-            Name             = if ($role) { $role.name } else { $null }
-            roleName         = $roleName
-            description      = 'Allows the Microsoft Discovery control plane to join resources to network security perimeters.'
-            type             = 'CustomRole'
-            assignableScopes = @($scope)
-            permissions      = @([ordered]@{
-                    actions        = $actions
-                    notActions     = @()
-                    dataActions    = @()
-                    notDataActions = @()
-                })
+            Name             = $roleName
+            Description      = 'Allows the Microsoft Discovery control plane to join resources to network security perimeters.'
+            Actions          = $actions
+            NotActions       = @()
+            DataActions      = @()
+            NotDataActions   = @()
+            AssignableScopes = @($scope)
         }
-        if (-not $role) { $body.Remove('Name') }
         $tmp = Join-Path ([System.IO.Path]::GetTempPath()) "discovery-nsp-joiner-$([guid]::NewGuid()).json"
         try {
-            ([pscustomobject]$body | ConvertTo-Json -Depth 8) | Set-Content -LiteralPath $tmp -Encoding utf8
-            if ($role) {
-                Invoke-Az -Args @('role', 'definition', 'update', '--role-definition', $tmp) | Out-Null
+            ($body | ConvertTo-Json -Depth 8) | Set-Content -LiteralPath $tmp -Encoding utf8
+            try {
+                if ($role) {
+                    Invoke-Az -Args @('role', 'definition', 'update', '--role-definition', $tmp) | Out-Null
+                }
+                else {
+                    Invoke-Az -Args @('role', 'definition', 'create', '--role-definition', $tmp) | Out-Null
+                }
             }
-            else {
-                Invoke-Az -Args @('role', 'definition', 'create', '--role-definition', $tmp) | Out-Null
+            catch {
+                # Custom-role names are unique across the whole tenant/directory, so in
+                # shared directories the canonical name may already be taken by another
+                # subscription where it is neither visible nor assignable here. Don't hard
+                # fail: fall back below to any role already granting the required actions.
+                if ($_.Exception.Message -notmatch 'RoleDefinitionWithSameNameExists') { throw }
             }
         }
         finally {
@@ -289,6 +298,27 @@ try {
     $sp = Get-AzJson -Args @('ad', 'sp', 'show', '--id', $controlPlaneAppId) -AllowFail
     if (-not $sp -or -not $sp.id) { throw "Control-plane service principal not found for appId $controlPlaneAppId." }
 
+    if (-not $roleAfter) {
+        # The canonical role is not present/visible at this scope (typically because the
+        # name is already used elsewhere in the tenant). Accept an equivalent role that
+        # already grants the required NSP actions to the control-plane SP at this scope.
+        foreach ($ra in @(Get-AzJson -Args @('role', 'assignment', 'list', '--assignee', $sp.id, '--scope', $scope) -AllowFail)) {
+            $rd = @(Get-AzJson -Args @('role', 'definition', 'list', '--name', $ra.roleDefinitionName, '--scope', $scope) -AllowFail)[0]
+            if (-not $rd) { continue }
+            $granted = @($rd.permissions[0].actions)
+            if (@($actions | Where-Object { $_ -notin $granted }).Count -eq 0) {
+                $roleAfter = $rd
+                $equivalentRoleUsed = $ra.roleDefinitionName
+                break
+            }
+        }
+        if (-not $roleAfter) {
+            throw "Custom role '$roleName' name is already in use elsewhere in the tenant and no equivalent role granting the NSP join actions is assigned to the control-plane service principal at $scope. Create a uniquely-named equivalent role and assign it."
+        }
+    }
+
+    $effectiveRoleName = if ($equivalentRoleUsed) { $equivalentRoleUsed } else { $roleName }
+
     $assignment = Get-AzJson -Args @('role', 'assignment', 'list', '--assignee', $sp.id, '--role', $roleAfter.name, '--scope', $scope) -AllowFail
     if (-not $assignment -or @($assignment).Count -eq 0) {
         Invoke-Az -Args @('role', 'assignment', 'create', '--assignee-object-id', $sp.id, '--assignee-principal-type', 'ServicePrincipal', '--role', $roleAfter.name, '--scope', $scope) | Out-Null
@@ -299,8 +329,8 @@ try {
     }
 
     $results.Add((New-CheckResult -Id 'nsp-perimeter-joiner-role' -Name 'NSP Perimeter Joiner custom role and assignment' -Status 'Pass' -Fr 'FR2.1a' `
-                -Detail "role=$roleName state=$(($needsWrite) ? 'created-or-updated' : 'exists'); assignment=$assignedState" `
-                -Data @{ roleName = $roleName; roleDefinitionId = $roleAfter.name; appId = $controlPlaneAppId; principalObjectId = $sp.id; scope = $scope; actions = $actions; assigned = $assignedState }))
+                -Detail "role=$effectiveRoleName state=$(($equivalentRoleUsed) ? 'existing-equivalent' : (($needsWrite) ? 'created-or-updated' : 'exists')); assignment=$assignedState" `
+                -Data @{ roleName = $effectiveRoleName; roleDefinitionId = $roleAfter.name; appId = $controlPlaneAppId; principalObjectId = $sp.id; scope = $scope; actions = $actions; assigned = $assignedState }))
 }
 catch {
     $results.Add((New-CheckResult -Id 'nsp-perimeter-joiner-role' -Name 'NSP Perimeter Joiner custom role and assignment' -Status 'Fail' -Fr 'FR2.1a' `
@@ -316,9 +346,10 @@ function New-Stage2NetworkParamFile {
     $net = $Config.network
     $subnets = @()
     foreach ($sn in $net.subnets) {
-        $name = if (($sn.PSObject.Properties.Name -contains 'name') -and $sn.name) { [string]$sn.name } else { "snet-$($sn.role)" }
+        $canon = Resolve-SubnetRole ([string]$sn.role)
+        $name = if (($sn.PSObject.Properties.Name -contains 'name') -and $sn.name) { [string]$sn.name } else { "snet-$canon" }
         $deleg = if (($sn.PSObject.Properties.Name -contains 'delegation') -and $sn.delegation) { [string]$sn.delegation } else { 'none' }
-        $subnets += [ordered]@{ role = [string]$sn.role; name = $name; cidr = [string]$sn.cidr; delegation = $deleg }
+        $subnets += [ordered]@{ role = $canon; name = $name; cidr = [string]$sn.cidr; delegation = $deleg }
     }
     $corpDns = @()
     if (($net.PSObject.Properties.Name -contains 'corpDns') -and $net.corpDns) {
@@ -378,10 +409,9 @@ function Get-VNetName {
 function Get-SubnetName {
     param([object]$Subnet)
     $name = Get-ConfigValue $Subnet @('name', 'subnetName')
-    if (-not $name) { $name = "snet-$($Subnet.role)" }
+    if (-not $name) { $name = "snet-$(Resolve-SubnetRole $Subnet.role)" }
     return $name
 }
-
 function New-ChildName {
     param([string]$Prefix, [object]$Subnet)
     $name = Get-ConfigValue $Subnet @("${Prefix}Name")
@@ -399,14 +429,15 @@ if (-not $rg) {
     return $results.ToArray()
 }
 
-# network.model intents: byo / byo-spoke / greenfield => the tool lays out the VNet, subnets,
-# NSG, routes and private DNS declaratively (network.bicep). byo-existing => validate only
-# (Stage 3). managed => the Discovery RP creates the network, tool is a no-op here.
+# network.model intents: byo / byo-spoke / greenfield / managed => the tool lays out the VNet,
+# subnets, NSG, routes and private DNS declaratively (network.bicep). In managed mode the tool
+# builds the same landing-zone network (the supercomputer always binds to a real subnet).
+# byo-existing => validate only (Stage 3).
 $model = [string]$cfg.network.model
-$buildModels = @('byo', 'byo-spoke', 'greenfield')
+$buildModels = @('byo', 'byo-spoke', 'greenfield', 'managed')
 if ($model -notin $buildModels) {
     $results.Add((New-CheckResult -Id 'network-model' -Name 'network model' -Status 'Skip' -Fr 'FR2.2' `
-                -Detail "network.model=$model; the tool does not provision the VNet (byo-existing = validate in Stage 3, managed = RP-managed)."))
+                -Detail "network.model=$model; the tool does not provision the VNet (byo-existing = validate in Stage 3)."))
     return $results.ToArray()
 }
 
@@ -503,7 +534,7 @@ function Get-VNetName {
 function Get-SubnetName {
     param([object]$Subnet)
     $name = Get-ConfigValue $Subnet @('name', 'subnetName')
-    if (-not $name) { $name = "snet-$($Subnet.role)" }
+    if (-not $name) { $name = "snet-$(Resolve-SubnetRole $Subnet.role)" }
     return $name
 }
 function Get-StorageAccountId {
@@ -594,7 +625,7 @@ else {
                 $accessData.vnet = $vnet
             }
             elseif ($access -eq 'privateEndpoint') {
-                $peSubnet = @($cfg.network.subnets | Where-Object { $_.role -eq 'private-endpoints' } | Select-Object -First 1)
+                $peSubnet = @($cfg.network.subnets | Where-Object { (Resolve-SubnetRole $_.role) -eq 'private-endpoints' } | Select-Object -First 1)
                 if ($peSubnet) {
                     $vnet = Get-VNetName
                     $subnetName = Get-SubnetName $peSubnet
@@ -870,56 +901,112 @@ $(@($quotaRequests.requests | ForEach-Object { "| $(Get-ConfigValue $_ @('servic
     $results.Add((New-CheckResult -Id 'quota-request-artifact' -Name 'quota increase request artifact' -Status 'Pass' -Fr 'FR2.8' `
                 -Detail "Wrote $quotaJson and $quotaMd." -Data @{ jsonPath = $quotaJson; markdownPath = $quotaMd; requestCount = @($quotaRequests.requests).Count }))
 
-    $exemptions = @(
-        [ordered]@{
-            name = 'workspace-mrg-foundry-cognitive-services-public-access'
-            policy = 'Cognitive Services accounts should disable public network access'
-            scope = 'Workspace managed resource group Foundry account'
-            justification = 'Temporary Discovery RP requirement; NSP enforced; remove when RP fix ships.'
-            requestedDuration = 'Time-bound, non-prod first'
-        },
-        [ordered]@{
-            name = 'workspace-mrg-log-analytics-public-access'
-            policy = 'Log Analytics workspaces should disable public network access'
-            scope = 'Workspace managed resource group Log Analytics workspace'
-            justification = 'Managed logging dependency currently has no config-only fix in Discovery deployment.'
-            requestedDuration = 'Time-bound, non-prod first'
-        },
-        [ordered]@{
-            name = 'bookshelf-mrg-storage-public-access'
-            policy = 'Storage accounts should disable public network access'
-            scope = 'Bookshelf managed resource group storage account'
-            justification = 'Temporary Bookshelf managed storage public-access policy conflict; NSP enforced.'
-            requestedDuration = 'Time-bound, non-prod first'
+    $subScope = "/subscriptions/$($cfg.subscriptionId)"
+    $findings = if ($cfg.PSObject.Properties.Name -contains 'policyFindings') { $cfg.policyFindings } else { $null }
+    $hasFindings = [bool]$findings
+
+    # Prefer the policies Stage 1 actually discovered/declared as needing an exemption.
+    $sourceItems = @()
+    if ($hasFindings) {
+        if (($findings.PSObject.Properties.Name -contains 'exemptionsNeeded') -and $findings.exemptionsNeeded) {
+            $sourceItems = @($findings.exemptionsNeeded)
         }
-    )
+        elseif (($findings.PSObject.Properties.Name -contains 'conflicts') -and $findings.conflicts) {
+            $sourceItems = @($findings.conflicts | Where-Object { $_.handling -eq 'exemption' })
+        }
+    }
+
+    $exemptions = @()
+    foreach ($item in $sourceItems) {
+        $policyName = [string]$item.policy
+        if (-not $policyName) { continue }
+        $assignmentName = [string]$item.assignmentName
+        $assignmentScope = if ($item.scope) { [string]$item.scope } else { $subScope }
+        $assignmentId = if ($assignmentName) { "$assignmentScope/providers/Microsoft.Authorization/policyAssignments/$assignmentName" } else { $null }
+        $exName = ('exempt-' + ($policyName -replace '[^A-Za-z0-9]+', '-')).ToLower().Trim('-')
+        if ($exName.Length -gt 64) { $exName = $exName.Substring(0, 64).Trim('-') }
+        if ($assignmentId) {
+            $cmd = "az policy exemption create --name $exName --policy-assignment ""$assignmentId"" --scope ""$subScope"" --exemption-category Waiver --description ""Discovery onboarding exemption for: $policyName"""
+        }
+        else {
+            $cmd = "az policy assignment list --scope ""$subScope"" --disable-scope-strict-match --query ""[?displayName=='$policyName'].id | [0]"" -o tsv   # then: az policy exemption create --name $exName --policy-assignment <assignment-id> --scope ""$subScope"" --exemption-category Waiver"
+        }
+        $exemptions += [ordered]@{
+            name              = $exName
+            policy            = $policyName
+            assignmentName    = $assignmentName
+            assignmentId      = $assignmentId
+            scope             = $subScope
+            exemptionCategory = 'Waiver'
+            reason            = [string]$item.reason
+            source            = [string]$item.source
+            command           = $cmd
+        }
+    }
+
+    if ($hasFindings) {
+        $exemptionSource = 'policyFindings'
+    }
+    else {
+        # Legacy config without Stage 1 policy findings: fall back to the known Discovery blockers.
+        $exemptionSource = 'default-discovery-set'
+        $exemptions = @(
+            [ordered]@{ name = 'exempt-cognitive-services-public-access'; policy = 'Cognitive Services accounts should disable public network access'; assignmentName = $null; assignmentId = $null; scope = $subScope; exemptionCategory = 'Waiver'; reason = 'Temporary Discovery RP requirement; NSP enforced; remove when RP fix ships.'; source = 'known'; command = "az policy assignment list --scope ""$subScope"" --disable-scope-strict-match --query ""[?contains(displayName,'Cognitive Services')].id | [0]"" -o tsv   # then: az policy exemption create --name exempt-cognitive-services-public-access --policy-assignment <assignment-id> --scope ""$subScope"" --exemption-category Waiver" }
+            [ordered]@{ name = 'exempt-log-analytics-public-access'; policy = 'Log Analytics workspaces should disable public network access'; assignmentName = $null; assignmentId = $null; scope = $subScope; exemptionCategory = 'Waiver'; reason = 'Managed logging dependency currently has no config-only fix in Discovery deployment.'; source = 'known'; command = "az policy assignment list --scope ""$subScope"" --disable-scope-strict-match --query ""[?contains(displayName,'Log Analytics')].id | [0]"" -o tsv   # then: az policy exemption create --name exempt-log-analytics-public-access --policy-assignment <assignment-id> --scope ""$subScope"" --exemption-category Waiver" }
+            [ordered]@{ name = 'exempt-storage-public-access'; policy = 'Storage accounts should disable public network access'; assignmentName = $null; assignmentId = $null; scope = $subScope; exemptionCategory = 'Waiver'; reason = 'Temporary Bookshelf managed storage public-access policy conflict; NSP enforced.'; source = 'known'; command = "az policy assignment list --scope ""$subScope"" --disable-scope-strict-match --query ""[?contains(displayName,'Storage account')].id | [0]"" -o tsv   # then: az policy exemption create --name exempt-storage-public-access --policy-assignment <assignment-id> --scope ""$subScope"" --exemption-category Waiver" }
+        )
+    }
+
     $policyRequests = [ordered]@{
-        title = 'Discovery policy exemption requests'
+        title        = 'Discovery policy exemption requests'
         generatedUtc = (Get-Date).ToUniversalTime().ToString('o')
         subscription = $cfg.subscriptionId
-        requests = $exemptions
-        notes = @(
+        source       = $exemptionSource
+        requests     = $exemptions
+        notes        = @(
             'Do not request an NSP association exemption; resolve with ordering/retry plus the FR2.1a Perimeter Joiner custom role.',
-            'Do not request a Container Apps allowInsecure exemption; the RP sets allowInsecure:false.'
+            'Do not request a Container Apps allowInsecure exemption; the RP sets allowInsecure:false.',
+            'Each exemption scope defaults to the subscription; narrow it to the managed resource group once Stage 4 creates it.'
         )
     }
     $policyJson = Join-Path $OutDir "policy-exemption-requests-$($cfg.names.workspace).json"
     $policyMd = Join-Path $OutDir "policy-exemption-requests-$($cfg.names.workspace).md"
     ($policyRequests | ConvertTo-Json -Depth 12) | Set-Content -LiteralPath $policyJson -Encoding utf8
-    @"
-# Discovery policy exemption requests
 
-| Name | Policy | Scope | Justification | Duration |
-| --- | --- | --- | --- | --- |
-$(@($exemptions | ForEach-Object { "| $($_.name) | $($_.policy) | $($_.scope) | $($_.justification) | $($_.requestedDuration) |" }) -join "`n")
-
-Not requested:
-
-- NSP association: fix with ordering/retry plus the FR2.1a Perimeter Joiner custom role, not an exemption.
-- Container Apps allowInsecure: fixed in the RP with `allowInsecure:false`, no exemption needed.
-"@ | Set-Content -LiteralPath $policyMd -Encoding utf8
+    $fence = '```'
+    $mdLines = [System.Collections.Generic.List[string]]::new()
+    $mdLines.Add('# Discovery policy exemption requests')
+    $mdLines.Add('')
+    $mdLines.Add("Source: $exemptionSource (policyFindings = discovered/declared in Stage 1; default-discovery-set = no Stage 1 findings in the config).")
+    $mdLines.Add('')
+    if (@($exemptions).Count -eq 0) {
+        $mdLines.Add('No policy exemptions are required based on the Stage 1 policy findings.')
+    }
+    else {
+        $mdLines.Add('| Name | Policy | Scope | Reason |')
+        $mdLines.Add('| --- | --- | --- | --- |')
+        foreach ($e in $exemptions) { $mdLines.Add("| $($e.name) | $($e.policy) | $($e.scope) | $($e.reason) |") }
+        $mdLines.Add('')
+        $mdLines.Add('## Create the exemptions')
+        $mdLines.Add('')
+        $mdLines.Add('Run these after Stage 4 creates the managed resource groups (narrow --scope to the managed RG where possible):')
+        $mdLines.Add('')
+        $mdLines.Add($fence + 'bash')
+        foreach ($e in $exemptions) {
+            $mdLines.Add("# $($e.policy)")
+            $mdLines.Add($e.command)
+            $mdLines.Add('')
+        }
+        $mdLines.Add($fence)
+    }
+    $mdLines.Add('')
+    $mdLines.Add('Not requested:')
+    $mdLines.Add('')
+    $mdLines.Add('- NSP association: fix with ordering/retry plus the FR2.1a Perimeter Joiner custom role, not an exemption.')
+    $mdLines.Add('- Container Apps allowInsecure: fixed in the RP with allowInsecure:false, no exemption needed.')
+    ($mdLines -join "`n") | Set-Content -LiteralPath $policyMd -Encoding utf8
     $results.Add((New-CheckResult -Id 'policy-exemption-artifact' -Name 'policy exemption request artifact' -Status 'Pass' -Fr 'FR2.8' `
-                -Detail "Wrote $policyJson and $policyMd." -Data @{ jsonPath = $policyJson; markdownPath = $policyMd; requestCount = @($exemptions).Count }))
+                -Detail "Wrote $policyJson and $policyMd ($exemptionSource; $(@($exemptions).Count) exemption(s))." -Data @{ jsonPath = $policyJson; markdownPath = $policyMd; requestCount = @($exemptions).Count; source = $exemptionSource }))
 }
 catch {
     $results.Add((New-CheckResult -Id 'quota-exemption-artifacts' -Name 'quota and exemption artifacts' -Status 'Fail' -Fr 'FR2.8' `

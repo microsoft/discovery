@@ -87,6 +87,7 @@ function Read-XlsxSheet {
         if (-not $wsXml) { throw "Worksheet part '$target' not found." }
         $cells = @{}
         foreach ($row in $wsXml.worksheet.sheetData.row) {
+            if ($null -eq $row -or -not $row.HasChildNodes) { continue }
             foreach ($c in $row.c) {
                 if ($null -eq $c) { continue }
                 $ref = $c.r
@@ -293,9 +294,16 @@ function Get-LivePolicyAssignments {
     foreach ($a in @($assignments)) {
         $defId = [string]$a.policyDefinitionId
         $effect = $null
-        if ($a.parameters -and ($a.parameters.PSObject.Properties.Name -contains 'effect') -and $a.parameters.effect.value) {
-            $effect = [string]$a.parameters.effect.value
+        try {
+            $params = $a.parameters
+            if ($params -is [psobject] -and ($params.PSObject.Properties.Name -contains 'effect')) {
+                $eff = $params.effect
+                if ($eff -is [psobject] -and ($eff.PSObject.Properties.Name -contains 'value') -and $eff.value) {
+                    $effect = [string]$eff.value
+                }
+            }
         }
+        catch { $effect = $null }
         $policyType = 'Unknown'
         if ($defId) {
             if (-not $defCache.ContainsKey($defId)) {
@@ -380,18 +388,25 @@ function Invoke-Stage1Checks {
     # ---- FR1.2 subnet sizing + delegation --------------------------------
     foreach ($sn in $Cfg.network.subnets) {
         $role = [string]$sn.role
+        $canonRole = Resolve-SubnetRole $role
+        if (-not (Test-CanonicalSubnetRole $role)) {
+            $R.Add((New-CheckResult -Id "subnet-$role" -Name "Subnet $role sizing/delegation" -Status 'Warn' -Fr 'FR1.2' `
+                        -Detail "unrecognized subnet role '$role'; sizing/delegation were not validated" `
+                        -Remediation "Use a canonical role ($($script:RequiredPrefixByRole.Keys -join ', ')) or a known planning-form alias (aksSubnet, supercomputerNodepoolSubnet, workspaceSubnet, agentSubnet, searchSubnet, privateEndpointSubnet, managementSubnet)."))
+            continue
+        }
         $issues = @()
         try { $info = Get-CidrInfo $sn.cidr } catch { $info = $null; $issues += "invalid CIDR '$($sn.cidr)'" }
-        $reqPrefix = if ($script:RequiredPrefixByRole.ContainsKey($role)) { $script:RequiredPrefixByRole[$role] } else { $null }
+        $reqPrefix = if ($script:RequiredPrefixByRole.ContainsKey($canonRole)) { $script:RequiredPrefixByRole[$canonRole] } else { $null }
         if ($info -and $reqPrefix -and $info.Prefix -gt $reqPrefix) { $issues += "prefix /$($info.Prefix) smaller than required /$reqPrefix" }
-        $expDel = if ($script:DelegationByRole.ContainsKey($role)) { $script:DelegationByRole[$role] } else { $null }
+        $expDel = if ($script:DelegationByRole.ContainsKey($canonRole)) { $script:DelegationByRole[$canonRole] } else { $null }
         if ($expDel -and ([string]$sn.delegation) -ne $expDel) { $issues += "delegation '$($sn.delegation)' should be '$expDel'" }
         if ($issues.Count) {
             $R.Add((New-CheckResult -Id "subnet-$role" -Name "Subnet $role sizing/delegation" -Status 'Fail' -Fr 'FR1.2' `
                         -Detail ($issues -join '; ') -Remediation 'Resize to the required prefix and set the correct delegation in the Config sheet.'))
         }
         else {
-            $R.Add((New-CheckResult -Id "subnet-$role" -Name "Subnet $role sizing/delegation" -Status 'Pass' -Fr 'FR1.2' -Detail "$($sn.cidr) delegation=$($sn.delegation)"))
+            $R.Add((New-CheckResult -Id "subnet-$role" -Name "Subnet $role sizing/delegation" -Status 'Pass' -Fr 'FR1.2' -Detail "$($sn.cidr) delegation=$($sn.delegation) (role=$canonRole)"))
         }
     }
 
@@ -538,7 +553,19 @@ function Invoke-Stage1Checks {
     $conflicts = @()
     foreach ($p in $candidateNames) {
         foreach ($known in $script:KnownDenyPolicies) {
-            if ($p -match [regex]::Escape($known.Match)) { $conflicts += [pscustomobject]@{ policy = $p; handling = $known.Handling; note = $known.Note } }
+            if ($p -match [regex]::Escape($known.Match)) {
+                $liveMatch = if ($live) { @($live | Where-Object { $_.displayName -eq $p -or $_.name -eq $p }) | Select-Object -First 1 } else { $null }
+                $conflicts += [pscustomobject]@{
+                    policy         = $p
+                    handling       = $known.Handling
+                    note           = $known.Note
+                    assignmentName = if ($liveMatch) { $liveMatch.name } else { $null }
+                    scope          = if ($liveMatch) { $liveMatch.scope } else { $null }
+                    definitionId   = if ($liveMatch) { $liveMatch.definitionId } else { $null }
+                    effect         = if ($liveMatch) { $liveMatch.effect } else { $null }
+                    source         = if ($liveMatch) { 'live' } else { 'declared' }
+                }
+            }
         }
     }
     $conflicts = @($conflicts | Sort-Object policy -Unique)
@@ -552,6 +579,7 @@ function Invoke-Stage1Checks {
     }
 
     # Collect + inspect custom, restrictive policies beyond the known set.
+    $customRestrictive = @()
     if (-not $loggedIn) {
         $R.Add((New-CheckResult -Id 'policy-collect' -Name 'Custom policy collection' -Status 'Skip' -Fr 'FR1.7' `
                     -Detail 'az not logged in; live policy assignments not collected.' -Remediation "Run 'az login' and re-run to collect and inspect the effective policy set."))
@@ -578,9 +606,30 @@ function Invoke-Stage1Checks {
         }
     }
 
+    # Persist structured findings so Stage 2 can emit targeted policy-exemption guidance (FR1.7 -> FR2).
+    $exemptionsNeeded = @()
+    foreach ($c in $conflicts) {
+        if ($c.handling -eq 'exemption') {
+            $exemptionsNeeded += [pscustomobject]@{
+                policy         = $c.policy
+                reason         = $c.note
+                assignmentName = $c.assignmentName
+                scope          = $c.scope
+                definitionId   = $c.definitionId
+                source         = $c.source
+            }
+        }
+    }
+    $script:PolicyFindings = [ordered]@{
+        source            = if (-not $loggedIn) { 'not-collected' } elseif ($null -eq $live) { 'read-failed' } else { 'live' }
+        collected         = if ($live) { @($live).Count } else { 0 }
+        conflicts         = @($conflicts)
+        customRestrictive = @($customRestrictive | ForEach-Object { [ordered]@{ name = $_.name; displayName = $_.displayName; effect = $_.effect; scope = $_.scope; definitionId = $_.definitionId } })
+        exemptionsNeeded  = @($exemptionsNeeded)
+    }
+
     return $R.ToArray()
 }
-
 # ===========================================================================
 # FR1.8 — export gate
 # ===========================================================================
@@ -609,11 +658,21 @@ elseif ($ext -eq '.xlsx') {
     $cells = Read-XlsxSheet -Path $FormPath -SheetName 'Config'
     $parsed = ConvertFrom-ConfigSheet -Cells $cells
     $cfgModel = ConvertTo-ConfigModel -Parsed $parsed
+    # Normalize the OrderedDictionary model to the same pscustomobject shape the JSON
+    # input path yields, so downstream logic that relies on $cfgModel.PSObject.Properties
+    # (waiver application, config export) sees the real keys rather than dictionary members.
+    $cfgModel = $cfgModel | ConvertTo-Json -Depth 20 | ConvertFrom-Json
     Write-Host "Parsed planning form: $FormPath  (subnets=$(@($parsed.Subnets).Count), policies=$(@($parsed.Policies).Count), waivers=$(@($parsed.Waivers).Count))"
 }
 else { throw "Unsupported form type '$ext'. Provide a .xlsx planning form or a .json config." }
 
 $results = Invoke-Stage1Checks -Cfg $cfgModel
+
+# FR1.7 -> FR2: persist the collected/declared policy findings into the config so Stage 2 can
+# emit targeted policy-exemption guidance without re-discovering the subscription's assignments.
+if ($script:PolicyFindings) {
+    $cfgModel | Add-Member -NotePropertyName policyFindings -NotePropertyValue $script:PolicyFindings -Force
+}
 
 # apply waivers: downgrade waived failing P0 checks only when a non-empty justification is recorded
 $validWaivers = @{}

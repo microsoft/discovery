@@ -126,17 +126,22 @@ function Invoke-Az {
     $prev = $ErrorActionPreference
     $ErrorActionPreference = 'Continue'
     try {
-        $out = & az @Args 2>&1
+        $merged = & az @Args 2>&1
         $code = $LASTEXITCODE
     }
     finally {
         $ErrorActionPreference = $prev
     }
+    # az writes warnings/telemetry to stderr; under 2>&1 those arrive as ErrorRecord objects.
+    # Keep them out of stdout so JSON payloads parse cleanly, and surface them only on failure.
+    $stdoutLines = @($merged | Where-Object { $_ -isnot [System.Management.Automation.ErrorRecord] })
+    $stderrLines = @($merged | Where-Object { $_ -is [System.Management.Automation.ErrorRecord] })
     if ($code -ne 0 -and -not $AllowFail) {
-        throw "az $($Args -join ' ') failed (exit $code): $($out -join "`n")"
+        $detail = (@($stderrLines + $stdoutLines) | ForEach-Object { [string]$_ }) -join "`n"
+        throw "az $($Args -join ' ') failed (exit $code): $detail"
     }
     if ($code -ne 0) { return '' }
-    return ($out -join "`n")
+    return (@($stdoutLines | ForEach-Object { [string]$_ }) -join "`n")
 }
 
 function Get-AzJson {
@@ -286,7 +291,58 @@ function Test-CidrOverlap {
     return ($x.Network -le $y.Broadcast -and $y.Network -le $x.Broadcast)
 }
 
+# ---------------------------------------------------------------------------
+# Subnet role vocabulary (friendly planning-form names -> canonical roles)
+# ---------------------------------------------------------------------------
+# The planning-form template uses human-friendly subnet role names, while the
+# code, Bicep templates and deployment payloads key off canonical roles. This
+# single map is the source of truth so Stage 1 validation, Stage 2 provisioning
+# and Stage 4 resolution all agree on the same vocabulary. Canonical roles map
+# to themselves; friendly aliases map to their canonical equivalent.
+$script:CanonicalSubnetRoles = @(
+    'managedcluster', 'nodepool', 'agent-containerapp', 'workspace-containerapp',
+    'search-containerapp', 'private-endpoints', 'spare'
+)
+$script:SubnetRoleAliases = @{
+    'akssubnet'                   = 'managedcluster'
+    'managedclustersubnet'        = 'managedcluster'
+    'supercomputernodepoolsubnet' = 'nodepool'
+    'nodepoolsubnet'              = 'nodepool'
+    'agentsubnet'                 = 'agent-containerapp'
+    'workspacesubnet'             = 'workspace-containerapp'
+    'searchsubnet'                = 'search-containerapp'
+    'privateendpointsubnet'       = 'private-endpoints'
+    'privateendpointssubnet'      = 'private-endpoints'
+    'managementsubnet'            = 'spare'
+    'sparesubnet'                 = 'spare'
+}
+
+function Resolve-SubnetRole {
+    <#
+    .SYNOPSIS Normalise a planning-form subnet role to its canonical role name.
+    .DESCRIPTION
+        Canonical roles pass through unchanged. Known friendly aliases
+        (e.g. 'aksSubnet' -> 'managedcluster') are mapped. Unknown roles are
+        returned trimmed and lower-cased so callers can detect them.
+    #>
+    param([string]$Role)
+    if ([string]::IsNullOrWhiteSpace($Role)) { return '' }
+    $key = $Role.Trim().ToLowerInvariant()
+    if ($script:CanonicalSubnetRoles -contains $key) { return $key }
+    if ($script:SubnetRoleAliases.ContainsKey($key)) { return $script:SubnetRoleAliases[$key] }
+    return $key
+}
+
+function Test-CanonicalSubnetRole {
+    <#
+    .SYNOPSIS $true when the (resolved) role is a recognised canonical role.
+    #>
+    param([string]$Role)
+    $script:CanonicalSubnetRoles -contains (Resolve-SubnetRole $Role)
+}
+
 Export-ModuleMember -Function `
     New-CheckResult, Test-AnyFailure, Get-OnboardingConfig, Test-ConfigWaiver, `
     Invoke-Az, Get-AzJson, Assert-AzLogin, Write-OnboardingReport, Complete-Stage, `
-    ConvertTo-UInt32Ip, Get-CidrInfo, Test-CidrContains, Test-CidrOverlap
+    ConvertTo-UInt32Ip, Get-CidrInfo, Test-CidrContains, Test-CidrOverlap, `
+    Resolve-SubnetRole, Test-CanonicalSubnetRole

@@ -112,6 +112,37 @@ function Resolve-DiscoveryError {
     }
 }
 
+function Get-FailedDeploymentError {
+    <#
+    .SYNOPSIS Drill into a Failed ARM deployment and return the real per-resource error(s).
+    .DESCRIPTION
+        'az deployment group create' surfaces only a generic "At least one resource deployment
+        operation failed" wrapper. The authoritative error (code/message/target) lives in the
+        per-resource deployment operations' statusMessage. This pulls those out so the user sees
+        the real RP error (e.g. InternalServerError on the supercomputer) instead of the wrapper.
+    #>
+    param([Parameter(Mandatory)][string]$ResourceGroup, [Parameter(Mandatory)][string]$DeploymentName)
+    $parts = @()
+    $ops = Get-AzJson -Args @('deployment', 'operation', 'group', 'list', '-g', $ResourceGroup, '-n', $DeploymentName) -AllowFail
+    foreach ($op in @($ops)) {
+        $p = $op.properties
+        if (-not $p -or "$($p.provisioningState)" -ne 'Failed') { continue }
+        $sm = $p.statusMessage
+        if (-not $sm) { continue }
+        $errObj = if ($sm.PSObject.Properties.Name -contains 'error') { $sm.error } else { $sm }
+        $code = "$($errObj.code)".Trim()
+        $msg = "$($errObj.message)".Trim()
+        if (-not $code -and -not $msg) { continue }
+        $line = (@("[$code]", $msg) | Where-Object { $_ -and $_ -ne '[]' }) -join ' '
+        $target = "$($errObj.target)".Trim()
+        if ($target) { $line = "$line (target=$target)" }
+        $resId = "$($p.targetResource.id)".Trim()
+        if ($resId) { $line = "$line [resource=$resId]" }
+        $parts += $line
+    }
+    return ($parts | Select-Object -Unique) -join ' | '
+}
+
 function Get-DiscoveryArmState {
     [CmdletBinding()]
     param([Parameter(Mandatory)][string]$ResourceId)
@@ -246,7 +277,7 @@ function Get-SubnetIdByRole {
     param([object]$Config, [string]$Role, [string]$ResourceGroup)
     $network = Get-ObjProp -Object $Config -Name 'network'
     $subnets = @(Get-ObjProp -Object $network -Name 'subnets')
-    $subnet = $subnets | Where-Object { (Get-ObjProp -Object $_ -Name 'role') -eq $Role } | Select-Object -First 1
+    $subnet = $subnets | Where-Object { (Resolve-SubnetRole (Get-ObjProp -Object $_ -Name 'role')) -eq $Role } | Select-Object -First 1
     if (-not $subnet) { return '' }
     $id = Get-ObjProp -Object $subnet -Name 'id'
     if ($id) { return [string]$id }
@@ -403,16 +434,22 @@ function New-StepResult {
     $resolved = if ($ok) { $null } else { Resolve-DiscoveryError -ErrorText $ErrorText }
     $detail = "resource=$ResourceId provisioningState=$State"
     if (-not $ok -and $resolved) { $detail = "$detail remediationMatch=$($resolved.errorSignature)" }
+    if (-not $ok -and $ErrorText) {
+        $clean = ($ErrorText -replace '\s+', ' ').Trim()
+        if ($clean.Length -gt 500) { $clean = $clean.Substring(0, 500) + '...' }
+        $detail = "$detail error=$clean"
+    }
     New-CheckResult -Id $Id -Name $Name -Status ($ok ? 'Pass' : 'Fail') -Fr $Fr -Detail $detail `
         -Remediation ($ok ? '' : $resolved.remediation) `
-        -Data ([pscustomobject]@{ resource = $ResourceId; provisioningState = $State; remediation = $resolved; extra = $Extra })
+        -Data ([pscustomobject]@{ resource = $ResourceId; provisioningState = $State; remediation = $resolved; rawError = $ErrorText; extra = $Extra })
 }
 
 function Invoke-BicepDeploymentOnce {
     param([string]$ResourceGroup, [string]$TemplateFile, [string]$ParameterFile)
     if (-not $TemplateFile) { return [pscustomobject]@{ ok = $true; error = '' } }
     if (-not (Test-Path -LiteralPath $TemplateFile)) { return [pscustomobject]@{ ok = $false; error = "BicepPath not found: $TemplateFile" } }
-    $args = @('deployment', 'group', 'create', '-g', $ResourceGroup, '--name', "stage4-$(Get-Date -Format yyyyMMddHHmmss)", '--template-file', $TemplateFile)
+    $deploymentName = "stage4-$(Get-Date -Format yyyyMMddHHmmss)"
+    $args = @('deployment', 'group', 'create', '-g', $ResourceGroup, '--name', $deploymentName, '--template-file', $TemplateFile)
     if ($ParameterFile) {
         if (-not (Test-Path -LiteralPath $ParameterFile)) { return [pscustomobject]@{ ok = $false; error = "ParametersPath not found: $ParameterFile" } }
         $args += @('--parameters', "@$ParameterFile")
@@ -421,7 +458,9 @@ function Invoke-BicepDeploymentOnce {
         Invoke-Az -Args $args | Out-Null
         return [pscustomobject]@{ ok = $true; error = '' }
     } catch {
-        return [pscustomobject]@{ ok = $false; error = $_.Exception.Message }
+        $detail = Get-FailedDeploymentError -ResourceGroup $ResourceGroup -DeploymentName $deploymentName
+        $msg = if ($detail) { $detail } else { $_.Exception.Message }
+        return [pscustomobject]@{ ok = $false; error = $msg }
     }
 }
 
@@ -873,10 +912,17 @@ function New-StepResult {
     )
     $ok = $State -eq 'Succeeded'
     $resolved = if ($ok) { $null } else { Resolve-DiscoveryError -ErrorText $ErrorText }
+    $detail = "resource=$ResourceId provisioningState=$State"
+    if (-not $ok -and $resolved) { $detail = "$detail remediationMatch=$($resolved.errorSignature)" }
+    if (-not $ok -and $ErrorText) {
+        $clean = ($ErrorText -replace '\s+', ' ').Trim()
+        if ($clean.Length -gt 500) { $clean = $clean.Substring(0, 500) + '...' }
+        $detail = "$detail error=$clean"
+    }
     New-CheckResult -Id $Id -Name $Name -Status ($ok ? 'Pass' : 'Fail') -Fr $Fr `
-        -Detail "resource=$ResourceId provisioningState=$State$($ok ? '' : " remediationMatch=$($resolved.errorSignature)")" `
+        -Detail $detail `
         -Remediation ($ok ? '' : $resolved.remediation) `
-        -Data ([pscustomobject]@{ resource = $ResourceId; provisioningState = $State; remediation = $resolved; extra = $Extra })
+        -Data ([pscustomobject]@{ resource = $ResourceId; provisioningState = $State; remediation = $resolved; rawError = $ErrorText; extra = $Extra })
 }
 
 Assert-AzLogin -SubscriptionId $Subscription

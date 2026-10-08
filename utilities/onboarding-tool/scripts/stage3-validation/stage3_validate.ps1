@@ -38,6 +38,7 @@ function Get-DefaultRemediation {
 function Add-Results {
     param([object[]]$Items)
     foreach ($item in @($Items)) {
+        if ($null -eq $item) { continue }
         if ($item.status -eq 'Fail' -and [string]::IsNullOrWhiteSpace($item.remediation)) {
             $item.remediation = Get-DefaultRemediation -Result $item
         }
@@ -993,6 +994,7 @@ if ($WithVm) {
 }
 
 if ($PassThru) { return $results.ToArray() }
+$finalResults = @($results.ToArray())
 $extra = [pscustomobject]@{ profile = $Profile; withVm = [bool]$WithVm; dependencySpec = if ($dependency.Count) { $dependency[0].Data.path } else { $null } }
-$null = Write-OnboardingReport -Results $results.ToArray() -Title "Stage 3 · infra validation ($Profile)" -JsonPath $JsonPath -Extra $extra
-Complete-Stage -Results $results.ToArray()
+$null = Write-OnboardingReport -Results $finalResults -Title "Stage 3 · infra validation ($Profile)" -JsonPath $JsonPath -Extra $extra
+Complete-Stage -Results $finalResults
