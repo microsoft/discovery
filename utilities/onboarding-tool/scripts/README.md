@@ -49,24 +49,31 @@ Per-stage parameters, prerequisites, and dependencies are documented in
 | 4 Deployment | [`stage4-deployment/stage4_deploy.ps1`](stage4-deployment/stage4_deploy.ps1) | deploy_order, true_state_detection, error_remediation_engine, recovery_reput |
 | 5 Scenario enablement | [`stage5-scenario-enablement/stage5_enable.ps1`](stage5-scenario-enablement/stage5_enable.ps1) | connectivity_check, create_tool, create_agent_bind_tool, create_investigation_conversation, send_prompt_poll, assert_tool_invocation, verification_summary |
 
-Supporting files: `lib/OnboardingCommon.psm1` (shared module),
-`stage1-planning/network-planning-form-template.xlsx` (blank planning form for the customer),
+Supporting files: `lib/OnboardingCommon.psm1` (shared module), two planning forms —
+`stage1-planning/discovery-resource-planning-form-managed-vnet.xlsx` (tool provisions the VNet) and
+`stage1-planning/discovery-resource-planning-form-byo-vnet.xlsx` (you bring an existing VNet) —
 `stage3-validation/dependency-spec.json` (per-profile check set, FR3.8),
 `examples/sample-config.json` (a filled reference config).
 
 ## Usage
 
-Run every command from this `scripts/` directory (the paths below are relative to it). First
-fill in `stage1-planning/network-planning-form-template.xlsx` (the yellow Value cells) and save it
-as your own form, then point Stage 1 at it. The `./out/` directory is created automatically, and
-Stage 1 only writes `config.json` once it reaches a `GO` verdict — Stages 2–5 consume that file, so
-resolve any failing Stage 1 checks (or add a `WAIVER` row) before continuing.
+Run every command from this `scripts/` directory (the paths below are relative to it). First pick
+the planning form that matches your network model and fill in its yellow Value cells:
+
+- **Managed VNet** (the tool provisions the VNet): `stage1-planning/discovery-resource-planning-form-managed-vnet.xlsx`
+- **BYO existing VNet** (you pre-created the VNet; Stage 3 validates it): `stage1-planning/discovery-resource-planning-form-byo-vnet.xlsx`
+
+The `./out/` directory is created automatically, and Stage 1 only writes `config.json` once it
+reaches a `GO` verdict — Stages 2–5 consume that file, so resolve any failing Stage 1 checks (or add
+a `WAIVER` row) before continuing. Deny/audit policies are collected live from the subscription at
+runtime; add a `POLICY` row only to declare or override one.
 
 ```powershell
 cd utilities/onboarding-tool/scripts   # all commands are relative to this directory
 
 # Stage 1 — validate the planning form and emit the ground-truth config.
-./stage1-planning/stage1_plan.ps1 -FormPath ./stage1-planning/network-planning-form-template.xlsx -OutConfig ./config.json -JsonPath ./out/stage1.json
+# (swap in discovery-resource-planning-form-byo-vnet.xlsx for the BYO-VNet path)
+./stage1-planning/stage1_plan.ps1 -FormPath ./stage1-planning/discovery-resource-planning-form-managed-vnet.xlsx -OutConfig ./config.json -JsonPath ./out/stage1.json
 
 # Stage 2 — prepare the landing zone (writes resources, idempotent).
 ./stage2-landing-zone/stage2_prepare.ps1 -ConfigPath ./config.json -JsonPath ./out/stage2.json
@@ -92,8 +99,9 @@ Full per-stage parameters, prerequisites, and dependencies. Every stage imports
 
 ### Stage 1 — Planning (`stage1-planning/stage1_plan.ps1`)
 
-Parses the filled network-planning form (`network-planning-form-template.xlsx`, `Config` sheet, or
-a `.json` config for testing), runs every embedded planning validation (FR1.0–FR1.8), and emits
+Parses the filled network-planning form (`discovery-resource-planning-form-managed-vnet.xlsx` or
+`discovery-resource-planning-form-byo-vnet.xlsx`, `Config` sheet, or a `.json` config for testing), runs every
+embedded planning validation (FR1.0–FR1.8), and emits
 `config.json` — the single source of truth for Stages 2–5. The config is written only when all P0
 checks pass or carry a recorded waiver. Az-dependent checks degrade to Warn/Skip when not logged
 in, so the parser and local checks run offline. `.xlsx` forms are read natively (zip + XML); no

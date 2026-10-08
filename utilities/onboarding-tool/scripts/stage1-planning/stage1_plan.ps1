@@ -5,7 +5,7 @@
 
 .DESCRIPTION
     Single self-contained Stage 1 script. Reads the customer's filled planning spreadsheet
-    (network-planning-form-template.xlsx, "Config" sheet) — or a .json config for testing —
+    (discovery-resource-planning-form-managed-vnet.xlsx or discovery-resource-planning-form-byo-vnet.xlsx, "Config" sheet) — or a .json config for testing —
     builds the in-memory config model, runs every embedded planning validation, and writes the
     machine-readable config.json (the single source of truth for Stages 2-5) only when all P0
     checks pass or carry a recorded waiver.
