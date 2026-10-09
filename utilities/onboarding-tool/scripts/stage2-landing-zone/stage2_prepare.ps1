@@ -104,6 +104,40 @@ foreach ($namespace in $providers) {
     return $results.ToArray()
 }
 
+function Grant-OnboardingRole {
+    # Idempotent role assignment that returns one check result.
+    param(
+        [Parameter(Mandatory)][string]$PrincipalId,
+        [string]$PrincipalType,
+        [Parameter(Mandatory)][string]$RoleName,
+        [Parameter(Mandatory)][string]$RoleId,
+        [Parameter(Mandatory)][string]$Scope,
+        [Parameter(Mandatory)][string]$ScopeLabel,
+        [string]$Fr = 'FR2.1',
+        [string]$IdPrefix = 'rbac'
+    )
+    $resultId = "$IdPrefix-$($ScopeLabel)-$($RoleName.ToLowerInvariant().Replace(' ', '-'))-$PrincipalId"
+    $data = @{ principal = $PrincipalId; role = $RoleName; roleDefinitionId = $RoleId; scope = $Scope }
+    try {
+        $exists = Get-AzJson -Args @('role', 'assignment', 'list', '--assignee', $PrincipalId, '--role', $RoleId, '--scope', $Scope) -AllowFail
+        if ($exists -and @($exists).Count -gt 0) {
+            $data.state = 'exists'
+            return New-CheckResult -Id $resultId -Name "$RoleName on $ScopeLabel" -Status 'Pass' -Fr $Fr -Detail "Already assigned to $PrincipalId." -Data $data
+        }
+        $azArgs = @('role', 'assignment', 'create', '--assignee-object-id', $PrincipalId, '--role', $RoleId, '--scope', $Scope)
+        if ($PrincipalType) { $azArgs += @('--assignee-principal-type', $PrincipalType) }
+        Invoke-Az -Args $azArgs | Out-Null
+        $data.state = 'created'
+        return New-CheckResult -Id $resultId -Name "$RoleName on $ScopeLabel" -Status 'Pass' -Fr $Fr -Detail "Assigned to $PrincipalId." -Data $data
+    }
+    catch {
+        return New-CheckResult -Id $resultId -Name "$RoleName on $ScopeLabel" -Status 'Fail' -Fr $Fr `
+            -Detail $_.Exception.Message `
+            -Remediation "Run as Owner, User Access Administrator, or Role Based Access Control Administrator at $Scope, or have one of them run: az role assignment create --assignee-object-id $PrincipalId --role $RoleId --scope $Scope" `
+            -Data $data
+    }
+}
+
 function Invoke-RbacAssign {
     param(
         [Parameter(Mandatory)][object]$Config,
@@ -190,34 +224,45 @@ else {
     }
 }
 
+# Azure built-in roles Learn lists for the Discovery administrator, in addition to Platform
+# Administrator. Foundry User is assigned by Stage 4 on the workspace managed resource group.
+$adminAzureRoles = [ordered]@{
+    'Managed Identity Contributor'  = 'e40ec5ca-96e0-45a2-b4ff-59039f2c2b59'
+    'Managed Identity Operator'     = 'f1a07417-d97a-45cb-824c-7a7467783830'
+    'Storage Account Contributor'   = '17d1049b-9a84-46fb-8f53-869881c3d3ab'
+    'Storage Blob Data Contributor' = 'ba92f5b4-2d11-453d-a403-e96b0029c9fe'
+    'Network Contributor'           = '4d97b98b-1d4f-4787-a291-c67834d212e7'
+    'AcrPush'                       = '8311e382-0749-4cb8-b61a-304f252e45ec'
+}
+
 foreach ($rg in $resourceGroups) {
     $scope = "/subscriptions/$($cfg.subscriptionId)/resourceGroups/$rg"
+    # Roles can't be assigned on a resource group that doesn't exist yet (for example the network
+    # resource group on a first run), so create it here; later steps reuse it.
+    $rgExists = Get-AzJson -Args @('group', 'exists', '--name', $rg) -AllowFail
+    if ($rgExists -ne $true) {
+        try {
+            Invoke-Az -Args @('group', 'create', '--name', $rg, '--location', $cfg.workloadRegion) | Out-Null
+            $results.Add((New-CheckResult -Id "rbac-rg-$rg" -Name "resource group $rg" -Status 'Pass' -Fr 'FR2.1' `
+                        -Detail "Created in $($cfg.workloadRegion) so roles can be assigned on it." -Data @{ resourceGroup = $rg; state = 'created' }))
+        }
+        catch {
+            $results.Add((New-CheckResult -Id "rbac-rg-$rg" -Name "resource group $rg" -Status 'Fail' -Fr 'FR2.1' `
+                        -Detail $_.Exception.Message `
+                        -Remediation "Run as Owner or Contributor at subscription scope, or create resource group $rg first."))
+            continue
+        }
+    }
     foreach ($roleName in $roles.Keys) {
         foreach ($principal in @(Get-PrincipalsForRole -RoleName $roleName)) {
-            $roleId = $roles[$roleName]
-            $resultId = "rbac-$($rg)-$($roleName.ToLowerInvariant().Replace(' ', '-'))-$($principal.ObjectId)"
-            try {
-                $exists = Get-AzJson -Args @('role', 'assignment', 'list', '--assignee', $principal.ObjectId, '--role', $roleId, '--scope', $scope) -AllowFail
-                if ($exists -and @($exists).Count -gt 0) {
-                    $results.Add((New-CheckResult -Id $resultId -Name "$roleName on $rg" -Status 'Pass' -Fr 'FR2.1' `
-                                -Detail "Already assigned to $($principal.ObjectId)." `
-                                -Data @{ principal = $principal.ObjectId; role = $roleName; roleDefinitionId = $roleId; scope = $scope; state = 'exists' }))
-                    continue
-                }
-
-                $args = @('role', 'assignment', 'create', '--assignee-object-id', $principal.ObjectId, '--role', $roleId, '--scope', $scope)
-                $ptype = Convert-PrincipalType $principal.Type
-                if ($ptype) { $args += @('--assignee-principal-type', $ptype) }
-                Invoke-Az -Args $args | Out-Null
-                $results.Add((New-CheckResult -Id $resultId -Name "$roleName on $rg" -Status 'Pass' -Fr 'FR2.1' `
-                            -Detail "Assigned to $($principal.ObjectId)." `
-                            -Data @{ principal = $principal.ObjectId; role = $roleName; roleDefinitionId = $roleId; scope = $scope; state = 'created' }))
-            }
-            catch {
-                $results.Add((New-CheckResult -Id $resultId -Name "$roleName on $rg" -Status 'Fail' -Fr 'FR2.1' `
-                            -Detail $_.Exception.Message `
-                            -Remediation 'Run as Owner, User Access Administrator, or Role Based Access Control Administrator at the target resource group scope.'))
-            }
+            $results.Add((Grant-OnboardingRole -PrincipalId $principal.ObjectId -PrincipalType (Convert-PrincipalType $principal.Type) `
+                        -RoleName $roleName -RoleId $roles[$roleName] -Scope $scope -ScopeLabel $rg))
+        }
+    }
+    foreach ($principal in @(Get-PrincipalsForRole -RoleName 'Platform Administrator')) {
+        foreach ($roleName in $adminAzureRoles.Keys) {
+            $results.Add((Grant-OnboardingRole -PrincipalId $principal.ObjectId -PrincipalType (Convert-PrincipalType $principal.Type) `
+                        -RoleName $roleName -RoleId $adminAzureRoles[$roleName] -Scope $scope -ScopeLabel $rg))
         }
     }
 }
@@ -616,18 +661,21 @@ else {
                 exposedHeaders  = @('*')
                 maxAgeInSeconds = 200
             }
-            $corsBody = @{
-                properties = @{
-                    cors = @{
-                        corsRules = @($preservedCorsRules) + @($requiredCorsRule)
-                    }
-                }
-            } | ConvertTo-Json -Depth 10 -Compress
-            Invoke-Az -Args @('rest', '--method', 'patch', '--url', $blobServiceUrl, '--body', $corsBody) | Out-Null
+            # blobServices/default accepts PUT only (PATCH returns 404). PUT replaces the service
+            # properties, so start from the current ones and swap in the CORS rules.
+            $blobProps = if ($existingBlobService -and $existingBlobService.properties) { $existingBlobService.properties } else { [pscustomobject]@{} }
+            $blobProps | Add-Member -NotePropertyName cors -NotePropertyValue @{ corsRules = @($preservedCorsRules) + @($requiredCorsRule) } -Force
+            $corsBodyFile = New-TemporaryFile
+            try {
+                @{ properties = $blobProps } | ConvertTo-Json -Depth 10 | Set-Content -LiteralPath $corsBodyFile.FullName -Encoding utf8
+                Invoke-Az -Args @('rest', '--method', 'put', '--url', $blobServiceUrl, '--body', "@$($corsBodyFile.FullName)", '--headers', 'Content-Type=application/json') | Out-Null
+            }
+            finally { Remove-Item -LiteralPath $corsBodyFile.FullName -Force -ErrorAction SilentlyContinue }
             $blobService = Get-AzJson -Args @('rest', '--method', 'get', '--url', $blobServiceUrl) -AllowFail
-            $corsRule = @($blobService.properties.cors.corsRules | Where-Object {
-                    @($corsOrigins | Where-Object { $_ -notin @($_.allowedOrigins) }).Count -eq 0
-                } | Select-Object -First 1)
+            $corsRule = $blobService.properties.cors.corsRules | Where-Object {
+                $rule = $_
+                @($corsOrigins | Where-Object { $_ -notin @($rule.allowedOrigins) }).Count -eq 0
+            } | Select-Object -First 1
             $corsOk = $corsRule -and
                 @($corsOrigins | Where-Object { $_ -notin @($corsRule.allowedOrigins) }).Count -eq 0 -and
                 @($corsMethods | Where-Object { $_ -notin @($corsRule.allowedMethods) }).Count -eq 0 -and
@@ -737,6 +785,76 @@ else {
     }
 }
 
+    return $results.ToArray()
+}
+
+function Invoke-ManagedIdentityRoles {
+    # Grants the workspace/supercomputer UAMI the roles Stage 4 verifies (FR4.1). Runs after
+    # network and storage provisioning so the network resource group and VNet exist.
+    param(
+        [Parameter(Mandatory)][object]$Config,
+        [Parameter(Mandatory)][string]$ConfigPath,
+        [switch]$PassThru,
+        [string]$JsonPath
+    )
+    $cfg = $Config
+    $results = [System.Collections.Generic.List[object]]::new()
+    function Get-ConfigValue {
+        param([object]$Object, [string[]]$Names)
+        if (-not $Object) { return $null }
+        foreach ($name in $Names) {
+            if ($Object.PSObject.Properties.Name -contains $name -and $Object.$name) { return $Object.$name }
+        }
+        return $null
+    }
+    $uamiId = $null
+    foreach ($c in @('managedIdentity', 'workspaceIdentity', 'identity')) {
+        if ($cfg.PSObject.Properties.Name -contains $c -and $cfg.$c -and $cfg.$c.PSObject.Properties.Name -contains 'id' -and $cfg.$c.id) { $uamiId = [string]$cfg.$c.id; break }
+    }
+    if (-not $uamiId) {
+        $results.Add((New-CheckResult -Id 'uami-roles' -Name 'managed identity role assignments' -Status 'Skip' -Fr 'FR2.1' `
+                    -Detail 'Config has no managedIdentity.id, so there is no identity to grant roles to. Stage 4 fails until one is set.' `
+                    -Remediation 'Create a user-assigned managed identity, set managedIdentity.id in the config, and rerun Stage 2.'))
+        return $results.ToArray()
+    }
+    $uami = Get-AzJson -Args @('identity', 'show', '--ids', $uamiId) -AllowFail
+    if (-not $uami -or -not $uami.principalId) {
+        $results.Add((New-CheckResult -Id 'uami-roles' -Name 'managed identity role assignments' -Status 'Warn' -Fr 'FR2.1' `
+                    -Detail "managedIdentity.id does not resolve to an existing identity: $uamiId. No roles were assigned." `
+                    -Remediation 'Create the identity (az identity create) or correct managedIdentity.id, then rerun Stage 2 before Stage 4.'))
+        return $results.ToArray()
+    }
+
+    $sub = $cfg.subscriptionId
+    $rg = [string]$cfg.resourceGroup
+    $rgScope = "/subscriptions/$sub/resourceGroups/$rg"
+    $grants = [System.Collections.Generic.List[object]]::new()
+    $grants.Add(@('Microsoft Discovery Platform Contributor (Preview)', '01288891-85ee-45a7-b367-9db3b752fc65', $rgScope, $rg))
+    $grants.Add(@('Storage Blob Data Contributor', 'ba92f5b4-2d11-453d-a403-e96b0029c9fe', $rgScope, $rg))
+    $grants.Add(@('AcrPull', '7f951dda-4ed3-4680-a7ca-43fe172d538d', $rgScope, $rg))
+
+    # Network Contributor on the VNet covers the supercomputer subnets Stage 4 checks.
+    $netRg = Get-ConfigValue $cfg.network @('networkResourceGroup', 'resourceGroup', 'rg')
+    $vnet = Get-ConfigValue $cfg.network @('vnetName', 'name')
+    if ($netRg) {
+        $netScope = "/subscriptions/$sub/resourceGroups/$netRg"
+        $netLabel = $netRg
+        if ($vnet) {
+            $vnetObj = Get-AzJson -Args @('network', 'vnet', 'show', '-g', $netRg, '-n', $vnet) -AllowFail
+            if ($vnetObj -and $vnetObj.id) { $netScope = [string]$vnetObj.id; $netLabel = $vnet }
+        }
+        $grants.Add(@('Network Contributor', '4d97b98b-1d4f-4787-a291-c67834d212e7', $netScope, $netLabel))
+    }
+    else {
+        $results.Add((New-CheckResult -Id 'uami-roles-network' -Name 'managed identity Network Contributor' -Status 'Warn' -Fr 'FR2.1' `
+                    -Detail 'Config has no network.networkResourceGroup, so Network Contributor was not assigned to the managed identity.' `
+                    -Remediation 'Assign Network Contributor to the managed identity on the VNet that hosts the supercomputer subnets before Stage 4.'))
+    }
+
+    foreach ($g in $grants) {
+        $results.Add((Grant-OnboardingRole -PrincipalId $uami.principalId -PrincipalType 'ServicePrincipal' `
+                    -RoleName $g[0] -RoleId $g[1] -Scope $g[2] -ScopeLabel $g[3] -IdPrefix 'uami'))
+    }
     return $results.ToArray()
 }
 
@@ -1071,6 +1189,7 @@ $steps = @(
     [pscustomobject]@{ ScriptName = 'nsp_perimeter_joiner_role.ps1'; FunctionName = 'Invoke-NspPerimeterJoinerRole' },
     [pscustomobject]@{ ScriptName = 'network_provision.ps1'; FunctionName = 'Invoke-NetworkProvision' },
     [pscustomobject]@{ ScriptName = 'byo_storage.ps1'; FunctionName = 'Invoke-ByoStorage' },
+    [pscustomobject]@{ ScriptName = 'managed_identity_roles.ps1'; FunctionName = 'Invoke-ManagedIdentityRoles' },
     [pscustomobject]@{ ScriptName = 'firewall_request_artifact.ps1'; FunctionName = 'Invoke-FirewallRequestArtifact' },
     [pscustomobject]@{ ScriptName = 'quota_exemption_requests.ps1'; FunctionName = 'Invoke-QuotaExemptionRequests' }
 )

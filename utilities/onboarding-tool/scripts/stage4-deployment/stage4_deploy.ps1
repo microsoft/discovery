@@ -420,6 +420,72 @@ function Get-StorageAccountId {
     return ''
 }
 
+function Grant-FoundryUserOnManagedRg {
+    <#
+    .SYNOPSIS Assign Foundry User on the workspace managed RG (Learn quickstart step 5).
+    .DESCRIPTION The managed RG only exists after the workspace is created, so Stage 2 cannot
+    grant this. Targets config principals with a Platform Administrator/Contributor role, else the
+    deploying identity. Failures are Warn: the platform is deployed, only Foundry portal edits break.
+    #>
+    param([object]$Config, [string]$WorkspaceId)
+    $foundryUserRoleId = '53ca6127-db72-4b80-b1b0-d745d6d5456d'
+    $mrg = Invoke-Az -Args @('resource', 'show', '--ids', $WorkspaceId, '--api-version', $script:DiscoveryApiVersion, '--query', 'properties.managedResourceGroup', '-o', 'tsv') -AllowFail
+    $mrg = "$mrg".Trim()
+    if ($mrg -match '/resourceGroups/([^/]+)') { $mrg = $Matches[1] }
+    if (-not $mrg) {
+        return @(New-CheckResult -Id 'foundry-user-mrg' -Name 'Foundry User on workspace managed RG' -Status 'Warn' -Fr 'FR4.1' `
+                -Detail "Could not read properties.managedResourceGroup from $WorkspaceId, so Foundry User was not assigned." `
+                -Remediation 'Find the managed resource group on the workspace overview page and assign Foundry User to the users who edit agents and workflows in the Foundry portal.')
+    }
+    $scope = "/subscriptions/$($Config.subscriptionId)/resourceGroups/$mrg"
+
+    $principals = @()
+    $cfgPrincipals = Get-ObjProp -Object $Config -Name 'principals'
+    foreach ($p in @($cfgPrincipals)) {
+        if (-not $p) { continue }
+        $role = [string](@((Get-ObjProp -Object $p -Name 'role'), (Get-ObjProp -Object $p -Name 'roleName'), (Get-ObjProp -Object $p -Name 'discoveryRole')) | Where-Object { $_ } | Select-Object -First 1)
+        $oid = [string](@((Get-ObjProp -Object $p -Name 'objectId'), (Get-ObjProp -Object $p -Name 'principalId'), (Get-ObjProp -Object $p -Name 'id')) | Where-Object { $_ } | Select-Object -First 1)
+        if ($oid -and $role -match '^Platform[ -]?(Administrator|Contributor)$') {
+            $principals += [pscustomobject]@{ ObjectId = $oid; Type = [string](Get-ObjProp -Object $p -Name 'type') }
+        }
+    }
+    if (-not $principals.Count) {
+        $deployer = Get-ObjProp -Object $Config -Name 'deployingIdentity'
+        $oid = Get-ObjProp -Object $deployer -Name 'objectId'
+        if ($oid) { $principals += [pscustomobject]@{ ObjectId = [string]$oid; Type = [string](Get-ObjProp -Object $deployer -Name 'type') } }
+    }
+    if (-not $principals.Count) {
+        return @(New-CheckResult -Id 'foundry-user-mrg' -Name 'Foundry User on workspace managed RG' -Status 'Warn' -Fr 'FR4.1' `
+                -Detail "No principals or deployingIdentity.objectId in config, so Foundry User was not assigned on $mrg." `
+                -Remediation "Assign Foundry User on $scope to the users who edit agents and workflows in the Foundry portal.")
+    }
+
+    $out = @()
+    foreach ($pr in $principals) {
+        $id = "foundry-user-mrg-$($pr.ObjectId)"
+        $data = [pscustomobject]@{ principal = $pr.ObjectId; role = 'Foundry User'; roleDefinitionId = $foundryUserRoleId; scope = $scope }
+        $exists = Get-AzJson -Args @('role', 'assignment', 'list', '--assignee', $pr.ObjectId, '--role', $foundryUserRoleId, '--scope', $scope) -AllowFail
+        if ($exists -and @($exists).Count) {
+            $out += New-CheckResult -Id $id -Name 'Foundry User on workspace managed RG' -Status 'Pass' -Fr 'FR4.1' -Detail "Already assigned to $($pr.ObjectId) on $mrg." -Data $data
+            continue
+        }
+        $azArgs = @('role', 'assignment', 'create', '--assignee-object-id', $pr.ObjectId, '--role', $foundryUserRoleId, '--scope', $scope)
+        $ptype = switch -Regex ($pr.Type) { '^user$' { 'User' } 'servicePrincipal|managedIdentity' { 'ServicePrincipal' } 'group' { 'Group' } default { $null } }
+        if ($ptype) { $azArgs += @('--assignee-principal-type', $ptype) }
+        try {
+            Invoke-Az -Args $azArgs | Out-Null
+            $out += New-CheckResult -Id $id -Name 'Foundry User on workspace managed RG' -Status 'Pass' -Fr 'FR4.1' -Detail "Assigned to $($pr.ObjectId) on $mrg." -Data $data
+        }
+        catch {
+            $out += New-CheckResult -Id $id -Name 'Foundry User on workspace managed RG' -Status 'Warn' -Fr 'FR4.1' `
+                -Detail "Could not assign Foundry User to $($pr.ObjectId) on ${mrg}: $($_.Exception.Message)" `
+                -Remediation "Have an Owner or User Access Administrator run: az role assignment create --assignee-object-id $($pr.ObjectId) --role $foundryUserRoleId --scope $scope" `
+                -Data $data
+        }
+    }
+    return $out
+}
+
 # Discover the workspace's managed AI Foundry (CognitiveServices) account so FR4.3 can verify
 # its true-state even when the config omits foundry.accountName/resourceGroup. Returns $null when
 # the managed RG or account can't be located (caller then degrades the gate to Warn).
@@ -1007,6 +1073,8 @@ if (@($results | Where-Object { $_.id -eq 'deploy-project' -and $_.status -eq 'F
     $null = Write-OnboardingReport -Results $results.ToArray() -Title 'Stage 4 · deploy order (FR4.1-FR4.2)' -JsonPath $JsonPath
     Complete-Stage -Results $results.ToArray()
 }
+
+foreach ($r in @(Grant-FoundryUserOnManagedRg -Config $cfg -WorkspaceId $workspaceId)) { $results.Add($r) }
 
 if ($PassThru) { return $results.ToArray() }
 $null = Write-OnboardingReport -Results $results.ToArray() -Title 'Stage 4 · deploy order (FR4.1-FR4.2)' -JsonPath $JsonPath
