@@ -54,7 +54,7 @@ Deploy `network.bicep` (one RG-scoped deployment) to lay out the VNet, subnets, 
 - Zone unlinked: private endpoints resolve to public IPs; re-run the deploy.
 
 ### byo_storage — FR2.6
-Create/verify the BYO storage account and containers per the config model, and apply the access model (private endpoint vs service endpoint). Set the Blob CORS rule Discovery Studio needs (origins `https://studio.discovery.microsoft.com`, `https://vscode.dev`, `https://*.vscode-cdn.net`; methods GET, HEAD, DELETE, OPTIONS, PUT; headers `*`; max age 200) with a PUT on `blobServices/default` that keeps the other service properties and unrelated CORS rules. PATCH isn't supported on that resource.
+Verify the customer's pre-created BYO storage account (looked up by `storage.accountId`, else by name in the subscription) and fail if it doesn't exist; the tool doesn't create it. Create/verify the containers per the config model, and apply the access model (private endpoint vs service endpoint). Set the Blob CORS rule Discovery Studio needs (origins `https://studio.discovery.microsoft.com`, `https://vscode.dev`, `https://*.vscode-cdn.net`; methods GET, HEAD, DELETE, OPTIONS, PUT; headers `*`; max age 200) with a PUT on `blobServices/default` that keeps the other service properties and unrelated CORS rules. PATCH isn't supported on that resource.
 - Public-access policy deny: see quota_exemption_requests for the Bookshelf MRG storage waiver.
 
 ### managed_identity_roles — FR2.1

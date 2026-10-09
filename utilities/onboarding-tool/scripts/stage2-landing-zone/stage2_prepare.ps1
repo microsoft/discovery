@@ -635,14 +635,18 @@ else {
     else {
         try {
             Assert-AzLogin -SubscriptionId $cfg.subscriptionId
-            Invoke-Az -Args @('group', 'create', '--name', $storageRg, '--location', $cfg.workloadRegion) | Out-Null
-            $st = Get-AzJson -Args @('storage', 'account', 'show', '-g', $storageRg, '-n', $account) -AllowFail
+            # Strict BYO: the customer pre-creates the account; Stage 2 only configures it.
+            $stId = Get-StorageAccountId
+            $st = if ($stId) { Get-AzJson -Args @('storage', 'account', 'show', '--ids', $stId) -AllowFail }
+            else { Get-AzJson -Args @('storage', 'account', 'show', '-n', $account, '--subscription', $cfg.subscriptionId) -AllowFail }
             if (-not $st) {
-                Invoke-Az -Args @('storage', 'account', 'create', '-g', $storageRg, '-n', $account, '-l', $cfg.workloadRegion, '--sku', 'Standard_LRS', '--kind', 'StorageV2', '--https-only', 'true', '--min-tls-version', 'TLS1_2', '--allow-blob-public-access', 'false', '--allow-shared-key-access', 'false') | Out-Null
-                $st = Get-AzJson -Args @('storage', 'account', 'show', '-g', $storageRg, '-n', $account)
-                $state = 'created'
+                $results.Add((New-CheckResult -Id 'byo-storage-account' -Name "BYO storage account $account" -Status 'Fail' -Fr 'FR2.6' `
+                            -Detail "Storage account '$(if ($stId) { $stId } else { $account })' was not found in subscription $($cfg.subscriptionId). The tool does not create it." `
+                            -Remediation 'Pre-create a StorageV2 account in the target subscription, set storage.account or storage.accountId, re-run Stage 1, then re-run Stage 2.'))
+                return $results.ToArray()
             }
-            else { $state = 'exists' }
+            if ($st.id -match '/resourceGroups/([^/]+)') { $storageRg = $Matches[1] }
+            $state = 'exists'
 
             $defaultAction = ($access -eq 'serviceEndpoint') ? 'Deny' : 'Deny'
             Invoke-Az -Args @('storage', 'account', 'update', '-g', $storageRg, '-n', $account, '--allow-blob-public-access', 'false', '--default-action', $defaultAction) | Out-Null

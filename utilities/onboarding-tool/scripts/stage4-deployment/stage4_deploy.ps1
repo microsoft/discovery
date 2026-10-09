@@ -404,7 +404,7 @@ function Get-StorageAccountId {
     $account = Get-ObjProp -Object $storage -Name 'account'
     if ($account) {
         # Mirror Stage 2's storage-RG precedence (storage.resourceGroup/resourceGroupName,
-        # then the network RG) so the derived id points at the account Stage 2 actually created.
+        # then the network RG). Stage 1 normally writes storage.accountId, so this is a fallback.
         $storageRg = Get-ObjProp -Object $storage -Name 'resourceGroup'
         if (-not $storageRg) { $storageRg = Get-ObjProp -Object $storage -Name 'resourceGroupName' }
         if (-not $storageRg) {

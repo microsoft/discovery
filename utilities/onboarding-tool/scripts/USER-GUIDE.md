@@ -43,7 +43,7 @@ Install and sign in once:
    ```
 3. **Permissions** at subscription scope: **Owner**, or **Contributor** plus **User Access
    Administrator** or **RBAC Administrator**. Stage 2 registers providers and creates resource
-   groups, the VNet, and the storage account (Contributor), and it creates role assignments
+   groups and the VNet, and configures the storage account (Contributor), and it creates role assignments
    (User Access Administrator or RBAC Administrator). Either role alone isn't enough.
 4. **A subscription enabled (allow-listed) for Microsoft Discovery.** If
    `Microsoft.Discovery` is not visible in the subscription, contact your Microsoft account
@@ -92,6 +92,14 @@ Install and sign in once:
    TPM (250K for the built-in deployment plus 200K for the validation chat model). GlobalStandard
    quota is shared across all regions in the subscription. Stage 1 checks vCPU and TPM quota, and
    Stage 3 re-checks them before Stage 4. AI Search capacity for Bookshelf isn't checked.
+8. **A storage account** for project data, required for every deployment. The tool doesn't
+   create it. Create a StorageV2 account in the target subscription and put its name in
+   `storage.account` (or its resource ID in `storage.accountId`):
+   ```powershell
+   az storage account create -g <your-rg> -n <globally-unique-name> -l <region> --sku Standard_LRS --kind StorageV2 --min-tls-version TLS1_2 --allow-blob-public-access false
+   ```
+   Stage 1 checks that it exists. Stage 2 then sets its network default action to Deny, adds the
+   Discovery Studio CORS rule and the containers, and creates the blob private endpoint.
 
 > `ImportExcel` is **not** required. Stage 1 reads `.xlsx` forms natively.
 
@@ -120,7 +128,7 @@ Notes next to each field explain what to enter. A few that trip people up:
 | `network.vnetName` | **Managed form:** optional — leave blank and the tool names the VNet `vnet-<names.workspace>`. **BYO form:** the name of your **existing** VNet in `network.networkResourceGroup` (Stage 1 checks it exists and is in `controlPlaneRegion`). |
 | `controlPlaneRegion` / `workloadRegion` | Use a supported production region: **East US**, **Sweden Central**, or **UK South**. Keep resources for one deployment in the same region unless an approved architecture requires otherwise. |
 | `names.*` | The resource names (workspace, project, supercomputer, node pool, etc.). Keep them unique in the subscription. |
-| `storage.account` | Required for every project, independently of Bookshelf. Use a globally unique storage account name and keep `storage.model=byo`; Stage 2 creates the account, required Blob CORS rules, and private endpoint if it does not exist. The account denies public network traffic, so users who open project outputs in Discovery Studio need network access to it: from the VNet (VPN or ExpressRoute), or through a client IP rule you add. |
+| `storage.account` | Required for every project, independently of Bookshelf. The name of the storage account you pre-created (prerequisite 8); keep `storage.model=byo`. Stage 1 fails if the account doesn't exist. Stage 2 adds the Blob CORS rules and private endpoint. The account denies public network traffic, so users who open project outputs in Discovery Studio need network access to it: from the VNet (VPN or ExpressRoute), or through a client IP rule you add. |
 | `workspace.publicNetworkAccess` | `Enabled` (default) or `Disabled`. With `Disabled`, the workspace data plane (agents, investigations, conversations) answers only from inside the VNet, so Stage 5 must run from a runner with private network access. |
 | `workspace.networkIsolation` | `true` (default) isolates the Workbench and requires VPN or ExpressRoute to the workspace VNet. `false` enables authenticated public Workbench access. This setting is independent of `workspace.publicNetworkAccess`. |
 

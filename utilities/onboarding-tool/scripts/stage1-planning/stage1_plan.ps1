@@ -673,13 +673,37 @@ function Invoke-Stage1Checks {
     # ---- Project storage: every Discovery project needs a storage container ----
     $stModel = if ($Cfg.storage -and $Cfg.storage.model) { [string]$Cfg.storage.model } else { 'managed' }
     $stAccount = if ($Cfg.storage) { @($Cfg.storage.account, $Cfg.storage.accountId) | Where-Object { Test-Field $_ } | Select-Object -First 1 } else { $null }
-    if ($stModel -ne 'byo' -or -not $stAccount) {
+    $stPrecreate = 'Pre-create a StorageV2 account in the target subscription (the tool does not create it), then set storage.model=byo and storage.account (name) or storage.accountId (resource ID). Stage 2 adds the CORS rules, containers, and private endpoint.'
+    if ($stModel -ne 'byo') {
         $R.Add((New-CheckResult -Id 'project-storage' -Name 'Project storage account' -Status 'Fail' -Fr 'FR1.1' `
-                    -Detail "storage.model=$stModel and storage.account/accountId=$(if ($stAccount) { $stAccount } else { 'empty' }). Every Discovery project requires a storage container backed by a customer storage account." `
-                    -Remediation 'Set storage.model=byo and storage.account (Stage 2 creates the account, CORS rules, and private endpoint if missing) or storage.accountId (existing account).'))
-    } else {
-        $R.Add((New-CheckResult -Id 'project-storage' -Name 'Project storage account' -Status 'Pass' -Fr 'FR1.1' `
-                    -Detail "storage.model=byo; account=$stAccount; project storage is required independently of bookshelf.inScope."))
+                    -Detail "storage.model=$stModel. Every Discovery project needs a storage container backed by a storage account you own, so only storage.model=byo is supported." `
+                    -Remediation $stPrecreate))
+    }
+    elseif (-not $stAccount) {
+        $R.Add((New-CheckResult -Id 'project-storage' -Name 'Project storage account' -Status 'Fail' -Fr 'FR1.1' `
+                    -Detail 'storage.account and storage.accountId are both empty. Every Discovery project needs a storage container backed by a storage account you own.' `
+                    -Remediation $stPrecreate))
+    }
+    elseif (-not $loggedIn) {
+        $R.Add((New-CheckResult -Id 'project-storage' -Name 'Project storage account' -Status 'Warn' -Fr 'FR1.1' `
+                    -Detail "az not logged in; storage account '$stAccount' was not checked." `
+                    -Remediation "Run 'az login' and re-run to confirm the account exists."))
+    }
+    else {
+        $stArgs = if ($stAccount -match '/storageAccounts/') { @('storage', 'account', 'show', '--ids', $stAccount) }
+        else { @('storage', 'account', 'show', '-n', $stAccount, '--subscription', $Cfg.subscriptionId) }
+        $st = Get-AzJson -Args $stArgs -AllowFail
+        if ($st -and $st.id) {
+            # Persist the resolved id so Stages 2 and 4 target this account and its resource group.
+            $Cfg.storage | Add-Member -NotePropertyName accountId -NotePropertyValue ([string]$st.id) -Force
+            $R.Add((New-CheckResult -Id 'project-storage' -Name 'Project storage account' -Status 'Pass' -Fr 'FR1.1' `
+                        -Detail "Found $($st.id) ($($st.kind), $($st.location))." -Data @{ id = $st.id; location = $st.location; kind = $st.kind }))
+        }
+        else {
+            $R.Add((New-CheckResult -Id 'project-storage' -Name 'Project storage account' -Status 'Fail' -Fr 'FR1.1' `
+                        -Detail "Storage account '$stAccount' was not found in subscription $($Cfg.subscriptionId)." `
+                        -Remediation $stPrecreate))
+        }
     }
 
     # ---- FR1.5 quota / SKU / TPM / Cosmos --------------------------------
