@@ -38,6 +38,11 @@ jobs:
           script: |
             const pr = context.payload.pull_request;
             const trustedAssociations = new Set(['MEMBER', 'OWNER']);
+            const currentPr = await github.rest.pulls.get({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: pr.number,
+            });
             const files = await github.paginate(github.rest.pulls.listFiles, {
               owner: context.repo.owner,
               repo: context.repo.repo,
@@ -45,7 +50,7 @@ jobs:
               per_page: 100,
             });
             const eligible = (
-              trustedAssociations.has(pr.author_association) &&
+              trustedAssociations.has(currentPr.data.author_association) &&
               files.length === 1 &&
               /^docs\/discovery-app\/releases\/manifests\/[a-z][a-z0-9-]*\.json$/
                 .test(files[0].filename) &&

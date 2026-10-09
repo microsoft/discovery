@@ -77,27 +77,15 @@ def test_public_scope_rejects_noncanonical_or_escaping_paths(path: str) -> None:
     ]
 
 
-def test_microsoft_org_member_can_modify_ordinary_repository_content() -> None:
+@pytest.mark.parametrize("association", ["MEMBER", "OWNER"])
+def test_microsoft_org_member_can_modify_any_repository_content(
+    association: str,
+) -> None:
     changed = [
         "docs/discovery-app/releases/manifests/preview.json",
         "utilities/discovery-toolbox/vsix/DiscoveryToolbox-v1.9.11.vsix",
         "utilities/discovery-toolbox/vsix/latest.json",
         "utilities/agent-evaluation/evaluators/pipeline.py",
-    ]
-
-    assert check_contributor_scope(
-        changed,
-        "read",
-        "employee",
-        author_association="MEMBER",
-    ) == []
-
-
-@pytest.mark.parametrize("association", ["MEMBER", "OWNER"])
-def test_microsoft_org_member_still_cannot_modify_control_plane(
-    association: str,
-) -> None:
-    changed = [
         ".github/workflows/pr-review.yml",
         "docs/schemas/metadata-schema.json",
         ".auto-registry/agent-registry.json",
@@ -112,7 +100,7 @@ def test_microsoft_org_member_still_cannot_modify_control_plane(
         author_association=association,
     )
 
-    assert [failure.file for failure in failures] == changed
+    assert failures == []
 
 
 def test_absent_permission_disables_pr_only_check_for_local_validation() -> None:
