@@ -1,0 +1,418 @@
+{
+  "advertisedMethods": [
+    {
+      "familyId": "regional-agreement",
+      "methodId": "regional-agreement-v1",
+      "methodVersion": "1.0.0"
+    },
+    {
+      "familyId": "vector-time-readiness",
+      "methodId": "vector-time-readiness-audit-v1",
+      "methodVersion": "1.0.0"
+    }
+  ],
+  "canonicalSchemas": [
+    {
+      "byteLength": 4207,
+      "reference": "generated/data/schemas/flowblind-catalog-research-v2-action-response.schema.json",
+      "role": "canonical-v2-schema",
+      "sha256": "2abb2fa3a9fa51a07eb5837d2d614ae1848ac73b3d02d6d61812f07c33e27307"
+    },
+    {
+      "byteLength": 1992,
+      "reference": "generated/data/schemas/flowblind-catalog-research-v2-authority-unavailable.schema.json",
+      "role": "canonical-v2-schema",
+      "sha256": "a973f1dc2716cac6b5ef54473d2ce018744d1a809a411472ae4273b70935af16"
+    },
+    {
+      "byteLength": 2909,
+      "reference": "generated/data/schemas/flowblind-catalog-research-v2-package-lock.schema.json",
+      "role": "canonical-v2-schema",
+      "sha256": "ae5cc76263881602f8ce51454739c10c1032e690e789e218b2c95ea592f9c11d"
+    },
+    {
+      "byteLength": 5681,
+      "reference": "generated/data/schemas/flowblind-catalog-research-v2-prepare-input.schema.json",
+      "role": "canonical-v2-schema",
+      "sha256": "da91fbac25b6d42e8f5913cc123f6c185bca93a9e03debfefabd2ef1fed42fc9"
+    },
+    {
+      "byteLength": 4473,
+      "reference": "generated/data/schemas/flowblind-catalog-research-v2-prepared-study.schema.json",
+      "role": "canonical-v2-schema",
+      "sha256": "58058d9dc98449c93350f337404c8df9804c631ff06639d1314f7a8aae265fb4"
+    },
+    {
+      "byteLength": 1663,
+      "reference": "generated/data/schemas/flowblind-catalog-research-v2-publication-receipt.schema.json",
+      "role": "canonical-v2-schema",
+      "sha256": "a19e4c11e7579b2904b502865f67422b881f2009f53de6915967deb0c6a6b9f4"
+    },
+    {
+      "byteLength": 797,
+      "reference": "generated/data/schemas/flowblind-catalog-research-v2-retained-package-manifest.schema.json",
+      "role": "canonical-v2-schema",
+      "sha256": "7868fb26be91149e1c2182b254a9f7d9918bad4a385a6f9e71ca0236a9e3c156"
+    },
+    {
+      "byteLength": 797,
+      "reference": "generated/data/schemas/flowblind-catalog-research-v2-run-input.schema.json",
+      "role": "canonical-v2-schema",
+      "sha256": "0b3e891b302cff15a3c026c0b7cf427757a7007044f6ed9051550dc958553208"
+    },
+    {
+      "byteLength": 1255,
+      "reference": "generated/data/schemas/flowblind-catalog-research-v2-source-modules.schema.json",
+      "role": "canonical-v2-schema",
+      "sha256": "f81df29762f28eb50a7d79c73b3e650c9b8f75f8b486b0a53d208b6aa02e632b"
+    },
+    {
+      "byteLength": 3917,
+      "reference": "generated/data/schemas/flowblind-v2-hidden-flow-preparation-marker-v1.schema.json",
+      "role": "canonical-v2-schema",
+      "sha256": "f80fb7ce44eeac9164cee41602a9bb17b7819f32621869efa1eed1b89d1c4a18"
+    }
+  ],
+  "contract": {
+    "byteLength": 5982,
+    "reference": "generated/data/package/flowblind-catalog-research-contract-v2.md",
+    "role": "public-contract",
+    "sha256": "a449f9ffd53849a40901249907304b48ed296c84966eca52054b39b68c9f3b98"
+  },
+  "defaultOffMethods": [
+    "flowblind-finite-sensor-placement-v1@2.0.0",
+    "generic-planar-external-validation-v1@1.0.0"
+  ],
+  "files": [
+    {
+      "byteLength": 1247,
+      "reference": "flowblind-hidden-declaration-preview-v2.js",
+      "role": "internal-declaration-preview-facade",
+      "sha256": "493ead08d19d293c0bf9d308ee4ab1ea3c9811b98e3f13f0f10967d67b03d100"
+    },
+    {
+      "byteLength": 1943,
+      "reference": "flowblind-prepare-study-v2.js",
+      "role": "public-executable-facade",
+      "sha256": "9f68ea4bf71d52f663014259d0cb3a1a4cb009738f264124a7c6bbb057ea68f4"
+    },
+    {
+      "byteLength": 1088,
+      "reference": "flowblind-report-resource-v2.js",
+      "role": "internal-resource-facade",
+      "sha256": "2c48158c25f1e513990b19212b9f83adffe836773626884a6810b2f73424f428"
+    },
+    {
+      "byteLength": 2058,
+      "reference": "flowblind-run-and-verify-study-v2.js",
+      "role": "public-executable-facade",
+      "sha256": "15e9a1b4bd7dfe90855be0a52b6084a8eb6b5c1e9f2f8a8366b9568ae077b7cd"
+    },
+    {
+      "byteLength": 14515,
+      "reference": "flowblind-scenario-harness-v2.js",
+      "role": "internal-scenario-harness",
+      "sha256": "efbf9bf4d52e9731e672121fb2647e669ba236cd2793a6d6184644d8d4e26997"
+    },
+    {
+      "byteLength": 2169,
+      "reference": "generated/data/flowblind-catalog-research-v2-release-policy-v1.json",
+      "role": "release-policy",
+      "sha256": "61467c08de634b51a16e6382b427176a184ecb5d97cac4674d831ce4a0d935b3"
+    },
+    {
+      "byteLength": 9957,
+      "reference": "generated/data/flowblind-catalog-research-v2-scenario-coverage-v1.json",
+      "role": "scenario-coverage-manifest",
+      "sha256": "cc9595095db664c7b5e9faf56c1d257e93ceff61f3c1f80dfdae55972b82e661"
+    },
+    {
+      "byteLength": 26770,
+      "reference": "generated/data/manifests/flowblind-catalog-research-v2-retained-package-manifest-v1.json",
+      "role": "retained-package-manifest",
+      "sha256": "8427ecdd9f8c60982c7a05d6eece5bcd79ff39a184a3300667729d50073ab73c"
+    },
+    {
+      "byteLength": 3357,
+      "reference": "generated/data/manifests/flowblind-catalog-research-v2-source-modules-v1.json",
+      "role": "source-module-manifest",
+      "sha256": "206d35878739ac1e1366fbb4b76b7ff461abb368c835eba6b712927d60be6ea3"
+    },
+    {
+      "byteLength": 1725,
+      "reference": "generated/data/manifests/flowblind-private-hidden-flow-v1-activation-manifest-v1.json",
+      "role": "private-activation-manifest",
+      "sha256": "da68fb63eb7b0bf0d68be6fdeb487a8a1b5b017934e6932cd5d439f40064a8d6"
+    },
+    {
+      "byteLength": 7891,
+      "reference": "generated/data/manifests/flowblind-retained-catalog-v1-manifest-v1.json",
+      "role": "retained-package-manifest",
+      "sha256": "b29a9d815519b3aeaf9536f10adabf97b7d43da2fc985f77cdbd6b3e6b096b1b"
+    },
+    {
+      "byteLength": 16365,
+      "reference": "generated/data/manifests/flowblind-retained-hidden-flow-v1-manifest-v1.json",
+      "role": "retained-package-manifest",
+      "sha256": "ad8a336e9a7b451775bc5b0b7f0f56f917ac8d05a8afabbe7f690108dc684253"
+    },
+    {
+      "byteLength": 32,
+      "reference": "generated/data/package/.gitattributes",
+      "role": "line-ending-policy",
+      "sha256": "be8edcd6c36df8dee5cb702c5a4afd55e5de39b99df7d398baec6f3adeb5b018"
+    },
+    {
+      "byteLength": 12029,
+      "reference": "generated/data/package/README.md",
+      "role": "package-readme",
+      "sha256": "85da1c63d136b468ee9cc80851a1b1abd16b858301d932ac79e17b0b248a0e63"
+    },
+    {
+      "byteLength": 3964,
+      "reference": "generated/data/package/agent.yaml",
+      "role": "catalog-agent-definition",
+      "sha256": "dcb6274c53fadc61061e201a8cc073f152e2fe3cc4795bcd1058f142966b92f7"
+    },
+    {
+      "byteLength": 5982,
+      "reference": "generated/data/package/flowblind-catalog-research-contract-v2.md",
+      "role": "public-contract",
+      "sha256": "a449f9ffd53849a40901249907304b48ed296c84966eca52054b39b68c9f3b98"
+    },
+    {
+      "byteLength": 1764,
+      "reference": "generated/data/package/flowblind-prepare.Dockerfile",
+      "role": "prepare-docker-context",
+      "sha256": "c2070cdce465605045569c31af77055ffaf8ca21d0e0a505f658130bf571bec5"
+    },
+    {
+      "byteLength": 6390,
+      "reference": "generated/data/package/flowblind-prepare.tool.yaml",
+      "role": "prepare-tool-definition",
+      "sha256": "7008190973a4ae4744901820bc9581c07616565f4a705203b763588724b9294f"
+    },
+    {
+      "byteLength": 1785,
+      "reference": "generated/data/package/flowblind-run-verify.Dockerfile",
+      "role": "run-docker-context",
+      "sha256": "18313a79cc7778bd45913bab168e0ccb32c4e143e3954a996f810c17300692cb"
+    },
+    {
+      "byteLength": 2629,
+      "reference": "generated/data/package/flowblind-run-verify.tool.yaml",
+      "role": "run-tool-definition",
+      "sha256": "12298bef877ebcdfd78c29a77f48cf326022e1fecb854e6d825c34aa6e211bd9"
+    },
+    {
+      "byteLength": 681,
+      "reference": "generated/data/package/metadata.yaml",
+      "role": "catalog-metadata",
+      "sha256": "0b0580db6eead2de31c03dda7c9e002633b6cd1ef4e7c876ee3cc1fb7d3dbb61"
+    },
+    {
+      "byteLength": 233,
+      "reference": "generated/data/package/package.json",
+      "role": "package-test-manifest",
+      "sha256": "25d3ea34624cedce2f0970cb6920f5d6043989d42d2adddb5b5a7cdc772b6a55"
+    },
+    {
+      "byteLength": 4207,
+      "reference": "generated/data/schemas/flowblind-catalog-research-v2-action-response.schema.json",
+      "role": "canonical-v2-schema",
+      "sha256": "2abb2fa3a9fa51a07eb5837d2d614ae1848ac73b3d02d6d61812f07c33e27307"
+    },
+    {
+      "byteLength": 1992,
+      "reference": "generated/data/schemas/flowblind-catalog-research-v2-authority-unavailable.schema.json",
+      "role": "canonical-v2-schema",
+      "sha256": "a973f1dc2716cac6b5ef54473d2ce018744d1a809a411472ae4273b70935af16"
+    },
+    {
+      "byteLength": 2909,
+      "reference": "generated/data/schemas/flowblind-catalog-research-v2-package-lock.schema.json",
+      "role": "canonical-v2-schema",
+      "sha256": "ae5cc76263881602f8ce51454739c10c1032e690e789e218b2c95ea592f9c11d"
+    },
+    {
+      "byteLength": 5681,
+      "reference": "generated/data/schemas/flowblind-catalog-research-v2-prepare-input.schema.json",
+      "role": "canonical-v2-schema",
+      "sha256": "da91fbac25b6d42e8f5913cc123f6c185bca93a9e03debfefabd2ef1fed42fc9"
+    },
+    {
+      "byteLength": 4473,
+      "reference": "generated/data/schemas/flowblind-catalog-research-v2-prepared-study.schema.json",
+      "role": "canonical-v2-schema",
+      "sha256": "58058d9dc98449c93350f337404c8df9804c631ff06639d1314f7a8aae265fb4"
+    },
+    {
+      "byteLength": 1663,
+      "reference": "generated/data/schemas/flowblind-catalog-research-v2-publication-receipt.schema.json",
+      "role": "canonical-v2-schema",
+      "sha256": "a19e4c11e7579b2904b502865f67422b881f2009f53de6915967deb0c6a6b9f4"
+    },
+    {
+      "byteLength": 1996,
+      "reference": "generated/data/schemas/flowblind-catalog-research-v2-release-policy.schema.json",
+      "role": "supporting-schema",
+      "sha256": "75626d0c716f0a044d98c687f762b29e1dda84557b74829b6f021a644b1ecad6"
+    },
+    {
+      "byteLength": 797,
+      "reference": "generated/data/schemas/flowblind-catalog-research-v2-retained-package-manifest.schema.json",
+      "role": "canonical-v2-schema",
+      "sha256": "7868fb26be91149e1c2182b254a9f7d9918bad4a385a6f9e71ca0236a9e3c156"
+    },
+    {
+      "byteLength": 797,
+      "reference": "generated/data/schemas/flowblind-catalog-research-v2-run-input.schema.json",
+      "role": "canonical-v2-schema",
+      "sha256": "0b3e891b302cff15a3c026c0b7cf427757a7007044f6ed9051550dc958553208"
+    },
+    {
+      "byteLength": 2561,
+      "reference": "generated/data/schemas/flowblind-catalog-research-v2-scenario-coverage.schema.json",
+      "role": "supporting-schema",
+      "sha256": "10eaeb864deb591e7c8cac6c16a59266545af9d2a49468b1d567a5c8fd1b1d3d"
+    },
+    {
+      "byteLength": 1255,
+      "reference": "generated/data/schemas/flowblind-catalog-research-v2-source-modules.schema.json",
+      "role": "canonical-v2-schema",
+      "sha256": "f81df29762f28eb50a7d79c73b3e650c9b8f75f8b486b0a53d208b6aa02e632b"
+    },
+    {
+      "byteLength": 1789,
+      "reference": "generated/data/schemas/flowblind-catalog-research-v2-verifier-release.schema.json",
+      "role": "supporting-schema",
+      "sha256": "decaf5d08b48f2f60c3b88310c75498b5778a35392debb60663f5e3919b1921d"
+    },
+    {
+      "byteLength": 1885,
+      "reference": "generated/data/schemas/flowblind-catalog-v2-hidden-flow-report-verification-v1.schema.json",
+      "role": "supporting-schema",
+      "sha256": "c82d772c85df33df46518c9da9a8988b60c94d2c076d0d97fdea44b38f7aab25"
+    },
+    {
+      "byteLength": 4042,
+      "reference": "generated/data/schemas/flowblind-private-hidden-flow-v1-activation-manifest.schema.json",
+      "role": "supporting-schema",
+      "sha256": "64a3a3c1f45a80ec4f19c3eae1157cd29e9b9aa072431093cd898ca127ab0a9c"
+    },
+    {
+      "byteLength": 2011,
+      "reference": "generated/data/schemas/flowblind-retained-package-manifest-v1.schema.json",
+      "role": "supporting-schema",
+      "sha256": "dd34f996e9d4af5434e73208698949e9d8177d46923423c0ae10cfa8cfdb2c7a"
+    },
+    {
+      "byteLength": 3917,
+      "reference": "generated/data/schemas/flowblind-v2-hidden-flow-preparation-marker-v1.schema.json",
+      "role": "canonical-v2-schema",
+      "sha256": "f80fb7ce44eeac9164cee41602a9bb17b7819f32621869efa1eed1b89d1c4a18"
+    },
+    {
+      "byteLength": 298540,
+      "reference": "generated/flowblind-catalog-research-runtime-v2.js",
+      "role": "outer-bundled-runtime",
+      "sha256": "6978446bbef7e703bd40579d7a93c86fae4c2a9ed5bebdcf18cf700cec147313"
+    },
+    {
+      "byteLength": 10868,
+      "reference": "launcher-support.js",
+      "role": "internal-launcher-support",
+      "sha256": "c4c599753339c7e7aa4d8be60f75efbffb066766383b841f0a8fabd2847301d7"
+    }
+  ],
+  "id": "flowblind-catalog-research-v2-package-lock-v1",
+  "packageId": "flowblind-research-teammate-v2",
+  "packageVersion": "2.0.0",
+  "privateHiddenMethod": {
+    "activationManifest": {
+      "byteLength": 1725,
+      "reference": "generated/data/manifests/flowblind-private-hidden-flow-v1-activation-manifest-v1.json",
+      "role": "private-activation-manifest",
+      "sha256": "da68fb63eb7b0bf0d68be6fdeb487a8a1b5b017934e6932cd5d439f40064a8d6"
+    },
+    "advertiseToScientist": false,
+    "defaultOff": true,
+    "familyId": "hidden-flow",
+    "methodId": "finite-basis-hidden-flow-v1",
+    "methodVersion": "1.1.0",
+    "requiredActivationManifestDigest": "sha256:da68fb63eb7b0bf0d68be6fdeb487a8a1b5b017934e6932cd5d439f40064a8d6"
+  },
+  "publicActions": [
+    {
+      "confirmation": "Disabled",
+      "name": "prepare-study",
+      "toolFolder": "flowblind-prepare"
+    },
+    {
+      "confirmation": "Enabled",
+      "name": "run-and-verify-study",
+      "toolFolder": "flowblind-run-verify"
+    }
+  ],
+  "publicRuntime": {
+    "byteLength": 298540,
+    "reference": "generated/flowblind-catalog-research-runtime-v2.js",
+    "role": "outer-bundled-runtime",
+    "sha256": "6978446bbef7e703bd40579d7a93c86fae4c2a9ed5bebdcf18cf700cec147313"
+  },
+  "releasePolicy": {
+    "byteLength": 2169,
+    "reference": "generated/data/flowblind-catalog-research-v2-release-policy-v1.json",
+    "role": "release-policy",
+    "sha256": "61467c08de634b51a16e6382b427176a184ecb5d97cac4674d831ce4a0d935b3"
+  },
+  "retainedPackageManifest": {
+    "byteLength": 26770,
+    "reference": "generated/data/manifests/flowblind-catalog-research-v2-retained-package-manifest-v1.json",
+    "role": "retained-package-manifest",
+    "sha256": "8427ecdd9f8c60982c7a05d6eece5bcd79ff39a184a3300667729d50073ab73c"
+  },
+  "retainedPackageManifests": [
+    {
+      "fileCount": 27,
+      "id": "catalog-v1",
+      "manifest": {
+        "byteLength": 7891,
+        "reference": "generated/data/manifests/flowblind-retained-catalog-v1-manifest-v1.json",
+        "role": "retained-package-manifest",
+        "sha256": "b29a9d815519b3aeaf9536f10adabf97b7d43da2fc985f77cdbd6b3e6b096b1b"
+      },
+      "root": "generated/retained/catalog-v1/runtime",
+      "treeSha256": "74c7c9c500d7f1d1c26550400ccf34ea32e0dd54ad72f0527031facc1a7b7b3b"
+    },
+    {
+      "fileCount": 54,
+      "id": "hidden-flow-v1",
+      "manifest": {
+        "byteLength": 16365,
+        "reference": "generated/data/manifests/flowblind-retained-hidden-flow-v1-manifest-v1.json",
+        "role": "retained-package-manifest",
+        "sha256": "ad8a336e9a7b451775bc5b0b7f0f56f917ac8d05a8afabbe7f690108dc684253"
+      },
+      "root": "generated/retained/hidden-flow-v1/runtime",
+      "treeSha256": "556d8d4d1c3be175258b91045ca7bd9c75ca836bd17a82ad21f2eb9769c4ebf6"
+    }
+  ],
+  "runtimeNetworkRequired": false,
+  "scenarioCoverage": {
+    "byteLength": 9957,
+    "reference": "generated/data/flowblind-catalog-research-v2-scenario-coverage-v1.json",
+    "role": "scenario-coverage-manifest",
+    "sha256": "cc9595095db664c7b5e9faf56c1d257e93ceff61f3c1f80dfdae55972b82e661"
+  },
+  "schemaVersion": 1,
+  "sourceModuleManifest": {
+    "byteLength": 3357,
+    "reference": "generated/data/manifests/flowblind-catalog-research-v2-source-modules-v1.json",
+    "role": "source-module-manifest",
+    "sha256": "206d35878739ac1e1366fbb4b76b7ff461abb368c835eba6b712927d60be6ea3"
+  },
+  "unregisteredMethods": [
+    "home-qc"
+  ]
+}

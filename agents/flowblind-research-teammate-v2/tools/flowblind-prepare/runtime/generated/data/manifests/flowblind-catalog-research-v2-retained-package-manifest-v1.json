@@ -1,0 +1,599 @@
+{
+  "id": "flowblind-catalog-research-v2-retained-package-manifest-v1",
+  "packageVersion": "2.0.0",
+  "packages": [
+    {
+      "fileCount": 27,
+      "files": [
+        {
+          "byteLength": 6406,
+          "reference": "flowblind-prepare-study.js",
+          "role": "retained-package-file",
+          "sha256": "9c3d488f5a1af9d3999e3682a3edbf69690d231c3bd6b3c656e2c83c669f0dd1"
+        },
+        {
+          "byteLength": 1221,
+          "reference": "flowblind-report-resource.js",
+          "role": "retained-package-file",
+          "sha256": "8a33c403fa9f73c5bb1e82578eee373722ed2e6fd34b59779148f00034e247b5"
+        },
+        {
+          "byteLength": 9256,
+          "reference": "flowblind-research-teammate-verification-v1.js",
+          "role": "retained-package-file",
+          "sha256": "7694359b56d1a967a8aff2f0bca16f30ad0efa5915f993cc376d901d25c1e0e5"
+        },
+        {
+          "byteLength": 4089,
+          "reference": "flowblind-run-and-verify-study.js",
+          "role": "retained-package-file",
+          "sha256": "137ca1dab05d8f939338f1be0409ed35f6be5169445e642c765e2ec932a936db"
+        },
+        {
+          "byteLength": 623,
+          "reference": "generated/data/catalog-policy-v1.json",
+          "role": "retained-package-file",
+          "sha256": "92bb1d59dc58bac39e307c43130fe8331c18467573f91cf715d40437c1353f0d"
+        },
+        {
+          "byteLength": 11094,
+          "reference": "generated/data/flowblind-catalog-package-lock-v1.json",
+          "role": "retained-package-file",
+          "sha256": "5d3b637cb6ac83f6243b08db1dd687e9abe05b358e281da7a313d8d26c208ebb"
+        },
+        {
+          "byteLength": 7294,
+          "reference": "generated/data/package/agent.yaml",
+          "role": "retained-package-file",
+          "sha256": "9edf901540701961a722c29b870c14dce8998f2aee52967a44ba73203aebdebe"
+        },
+        {
+          "byteLength": 20648,
+          "reference": "generated/data/package/flowblind-catalog-research-contract-v1.md",
+          "role": "retained-package-file",
+          "sha256": "5ca5acdc8205e4721794e7f27871e08c2d2f6a54b6dd9f59237cee5366d0415a"
+        },
+        {
+          "byteLength": 851,
+          "reference": "generated/data/package/flowblind-prepare-study.Dockerfile",
+          "role": "retained-package-file",
+          "sha256": "53ba64d2eff52049c43436a36503de8deed84917212b43cc2c97b1973599a705"
+        },
+        {
+          "byteLength": 7690,
+          "reference": "generated/data/package/flowblind-prepare-study.tool.yaml",
+          "role": "retained-package-file",
+          "sha256": "db88488eadae77399184297ef55964eff6c72ac2e3e0042fea135ad72a94dbf5"
+        },
+        {
+          "byteLength": 876,
+          "reference": "generated/data/package/flowblind-run-and-verify-study.Dockerfile",
+          "role": "retained-package-file",
+          "sha256": "1773582b3a3f718b13e4223387c037972226a7920e7679d5f3ce83955d7020b0"
+        },
+        {
+          "byteLength": 2307,
+          "reference": "generated/data/package/flowblind-run-and-verify-study.tool.yaml",
+          "role": "retained-package-file",
+          "sha256": "d786f052ce56a2b6ea3cd9ad0261e349bef2318d04f182d523886a9d53adbe42"
+        },
+        {
+          "byteLength": 758,
+          "reference": "generated/data/package/metadata.yaml",
+          "role": "retained-package-file",
+          "sha256": "26ea505a3f246257e713d008b9b7827e6ca0c83120edb16364498e3c11c74f4a"
+        },
+        {
+          "byteLength": 16420,
+          "reference": "generated/data/schemas/flowblind-catalog-action-response-v1.schema.json",
+          "role": "retained-package-file",
+          "sha256": "5447fd4a36139e79db0a5708bd325ed6ff3d1a1f4124a5f72a7705eb302d1379"
+        },
+        {
+          "byteLength": 16124,
+          "reference": "generated/data/schemas/flowblind-catalog-preparation-bundle-v1.schema.json",
+          "role": "retained-package-file",
+          "sha256": "b24c651270864a5b0fd46f68d09dafc614155c633caf0af5ae6e7d41216f48b7"
+        },
+        {
+          "byteLength": 4663,
+          "reference": "generated/data/schemas/flowblind-catalog-prepare-input-v1.schema.json",
+          "role": "retained-package-file",
+          "sha256": "242cff1b3521f76ca6eb598d86da28d65717e8e1ae32daf8900c28181f1ef2b8"
+        },
+        {
+          "byteLength": 5770,
+          "reference": "generated/data/schemas/flowblind-catalog-report-verification-v1.schema.json",
+          "role": "retained-package-file",
+          "sha256": "243ab353c1a51b5161a6cf5dfae76a7c4494b98ce7302df918bf1a3549e2c3d4"
+        },
+        {
+          "byteLength": 1311,
+          "reference": "generated/data/schemas/flowblind-catalog-research-input-v1.schema.json",
+          "role": "retained-package-file",
+          "sha256": "d10c3683e748a98cc581f784c71695398dfe7217b92b9ab441adf9584bf4cf9c"
+        },
+        {
+          "byteLength": 13676,
+          "reference": "generated/data/schemas/flowblind-catalog-vector-action-success-v1.schema.json",
+          "role": "retained-package-file",
+          "sha256": "46a8891e9533fa550e0987bd247149a45a6dcdd6759636a3c6ef0fcafc688128"
+        },
+        {
+          "byteLength": 15453,
+          "reference": "generated/data/schemas/flowblind-catalog-vector-preparation-bundle-v1.schema.json",
+          "role": "retained-package-file",
+          "sha256": "dda0e5885aca5af3de1d55bfaf261bbcd0bd4d905a509361911760733cbe74fc"
+        },
+        {
+          "byteLength": 2767,
+          "reference": "generated/data/schemas/flowblind-catalog-vector-source-sidecar-v1.schema.json",
+          "role": "retained-package-file",
+          "sha256": "988f23997babb553df361c29653b3637f245f14866e45d136ee62e0aaaf41734"
+        },
+        {
+          "byteLength": 15543,
+          "reference": "generated/data/schemas/flowblind-catalog-vector-verified-study-v1.schema.json",
+          "role": "retained-package-file",
+          "sha256": "e27e5aa74745f05597770e2282a69a80416f4cd013e55625e83252a326741b1b"
+        },
+        {
+          "byteLength": 19977,
+          "reference": "generated/data/schemas/flowblind-catalog-verified-study-v1.schema.json",
+          "role": "retained-package-file",
+          "sha256": "8145d27c5f4e9f6ebd56d3d6f3547dd071a3b536d74dbd46732d5877a399a94f"
+        },
+        {
+          "byteLength": 1846,
+          "reference": "generated/data/schemas/flowblind-trusted-source-sidecar-v2.schema.json",
+          "role": "retained-package-file",
+          "sha256": "e37485d219fa3dd0d51b04e1be78cf606c67725c910982cd9ceb80951610912b"
+        },
+        {
+          "byteLength": 5749,
+          "reference": "generated/data/schemas/regional-agreement-study-manifest.schema.json",
+          "role": "retained-package-file",
+          "sha256": "119ec197e405ecd598e1e8122e456b787655241ed1cbf7f5f540b77e959db530"
+        },
+        {
+          "byteLength": 20751,
+          "reference": "generated/data/schemas/vector-dataset.schema.json",
+          "role": "retained-package-file",
+          "sha256": "68df678926a290beccd25647c81fcb9185d2f32c5b3746c2b286954854773be4"
+        },
+        {
+          "byteLength": 348413,
+          "reference": "generated/flowblind-catalog-research-runtime-v1.js",
+          "role": "retained-package-file",
+          "sha256": "bd322f10f28092ebac9ef63fe144ba4426dd63c41e97b4d89b40d6152d00477a"
+        }
+      ],
+      "id": "flowblind-retained-catalog-v1-manifest-v1",
+      "packageEvidence": {
+        "artifactCount": 21,
+        "internalFacadeCount": 3,
+        "lock": {
+          "byteLength": 11094,
+          "reference": "generated/data/flowblind-catalog-package-lock-v1.json",
+          "role": "retained-package-file",
+          "sha256": "5d3b637cb6ac83f6243b08db1dd687e9abe05b358e281da7a313d8d26c208ebb"
+        },
+        "runtime": {
+          "byteLength": 348413,
+          "reference": "generated/flowblind-catalog-research-runtime-v1.js",
+          "role": "retained-package-file",
+          "sha256": "bd322f10f28092ebac9ef63fe144ba4426dd63c41e97b4d89b40d6152d00477a"
+        },
+        "sourceModuleCount": 37,
+        "verifier": {
+          "byteLength": 9256,
+          "reference": "flowblind-research-teammate-verification-v1.js",
+          "role": "retained-package-file",
+          "sha256": "7694359b56d1a967a8aff2f0bca16f30ad0efa5915f993cc376d901d25c1e0e5"
+        }
+      },
+      "provenance": {
+        "immutableCommit": "a0a2b09933b2a2d88542a459e5f24980739de46d"
+      },
+      "retainedId": "catalog-v1",
+      "root": "generated/retained/catalog-v1/runtime",
+      "schemaVersion": 1,
+      "sourceCommit": "a0a2b09933b2a2d88542a459e5f24980739de46d",
+      "treeCanonicalization": "path-nul-byteLength-nul-sha256-lf-v1",
+      "treeSha256": "74c7c9c500d7f1d1c26550400ccf34ea32e0dd54ad72f0527031facc1a7b7b3b"
+    },
+    {
+      "fileCount": 54,
+      "files": [
+        {
+          "byteLength": 20847,
+          "reference": "flowblind-hidden-flow-capability-verification-v1.js",
+          "role": "retained-package-file",
+          "sha256": "1e0a3b59d10d65140958ee91cd1e911c4a68750e3f4b0cd4dded5ee4c666c44f"
+        },
+        {
+          "byteLength": 1268,
+          "reference": "flowblind-hidden-flow-declaration-preview.js",
+          "role": "retained-package-file",
+          "sha256": "433564bfc94ead53c9f2ed351fad406996bd93e30d56dd45de05e705d2cab7c9"
+        },
+        {
+          "byteLength": 3201,
+          "reference": "flowblind-hidden-flow-prepare.js",
+          "role": "retained-package-file",
+          "sha256": "8f97027e06ee7d619d2ce51c974abfb7cb78300351091d54fd4bc5726baf9a6c"
+        },
+        {
+          "byteLength": 3209,
+          "reference": "flowblind-hidden-flow-run.js",
+          "role": "retained-package-file",
+          "sha256": "6f717b3a77dff8a748954f1799b47bc34ab4d9e64e1522a454d3c972a4cc3948"
+        },
+        {
+          "byteLength": 13417,
+          "reference": "generated/data/examples/exact-null-component.json",
+          "role": "retained-package-file",
+          "sha256": "70e36e5f4ac8cad0f8c97cbe3a0f516e194493bb59be73a06d0fc2c9df8bea40"
+        },
+        {
+          "byteLength": 13422,
+          "reference": "generated/data/examples/tolerance-speed.json",
+          "role": "retained-package-file",
+          "sha256": "f43a79c468eb7759c873b7e3303acc3aae67b0c6ad973a3ab83b7af26f076a62"
+        },
+        {
+          "byteLength": 4428,
+          "reference": "generated/data/flowblind-catalog-hidden-flow-declaration-v1.json",
+          "role": "retained-package-file",
+          "sha256": "23c0312553437f397e822cb7844a878731e8fd42bc7ac62e5db346cb6aa56cc7"
+        },
+        {
+          "byteLength": 21929,
+          "reference": "generated/data/flowblind-catalog-hidden-flow-package-lock-v1.json",
+          "role": "retained-package-file",
+          "sha256": "5adde457ed53ece29eec6bfffedfc835807ac16f276a786bd5dc19c71290c0c4"
+        },
+        {
+          "byteLength": 5142,
+          "reference": "generated/data/flowblind-catalog-hidden-flow-review-policy-v1.json",
+          "role": "retained-package-file",
+          "sha256": "a9be45742d15cfa2193259a251a523324db05a044c75682502b75024c70f45ba"
+        },
+        {
+          "byteLength": 1741,
+          "reference": "generated/data/package/Dockerfile",
+          "role": "retained-package-file",
+          "sha256": "99177bc19177e9535e41b8a507a206658a91303eb0721068f982c1436ea7da41"
+        },
+        {
+          "byteLength": 24815,
+          "reference": "generated/data/package/catalog-hidden-flow-capability-v1.md",
+          "role": "retained-package-file",
+          "sha256": "ef0be242dcfedf6db397b3e9b4ad429e05e4fc38e21f4c37b3b586346717f3d0"
+        },
+        {
+          "byteLength": 496,
+          "reference": "generated/data/python/requirements.lock.txt",
+          "role": "retained-package-file",
+          "sha256": "1ffda1962375e2d2d77b794b7a930d55902869a2923e695ad333a3f8e0d7a4ed"
+        },
+        {
+          "byteLength": 376,
+          "reference": "generated/data/python/tools/hidden_flow_solver/__init__.py",
+          "role": "retained-package-file",
+          "sha256": "c65ef05bc7bcd5fff767a241ee843ab20c463394d9533e2a7b299c65e8f3f224"
+        },
+        {
+          "byteLength": 48,
+          "reference": "generated/data/python/tools/hidden_flow_solver/__main__.py",
+          "role": "retained-package-file",
+          "sha256": "935a1c1166b0c1ea35a82256345000bf2c73ded718d77773bc27a71ecce28f7d"
+        },
+        {
+          "byteLength": 7879,
+          "reference": "generated/data/python/tools/hidden_flow_solver/cli.py",
+          "role": "retained-package-file",
+          "sha256": "35120f9de35c97a60d54e19d696aed584ad4c28f817b3c7a554e635f3419e3d7"
+        },
+        {
+          "byteLength": 28921,
+          "reference": "generated/data/python/tools/hidden_flow_solver/solver.py",
+          "role": "retained-package-file",
+          "sha256": "f6c5846411bde98fbf6f3cb98fc2272e80382bf7646454849cca94eea7a52bfe"
+        },
+        {
+          "byteLength": 11999,
+          "reference": "generated/data/reviewed-source/src/application/evidenceReport.ts",
+          "role": "retained-package-file",
+          "sha256": "a2407ca877333a6830f442fd12fbd3c0fc86f81300ee8993d88bdf3e91159807"
+        },
+        {
+          "byteLength": 15601,
+          "reference": "generated/data/reviewed-source/src/application/hiddenFlowEvidenceReport.ts",
+          "role": "retained-package-file",
+          "sha256": "05003cec629e3e11c00c1e1ec5d94669cb8a29488efef6fe5e499f2aa91ef8eb"
+        },
+        {
+          "byteLength": 18924,
+          "reference": "generated/data/reviewed-source/src/domain/hiddenFlowBasis.ts",
+          "role": "retained-package-file",
+          "sha256": "b144505e3e23717284b0783ba8cba3464b5db227be46e94f4e1410fce808271c"
+        },
+        {
+          "byteLength": 14616,
+          "reference": "generated/data/reviewed-source/src/domain/hiddenFlowModel.ts",
+          "role": "retained-package-file",
+          "sha256": "0c13694eab9f3b36190c411cb4440bfec907502bf606e550153c2679d3ee4176"
+        },
+        {
+          "byteLength": 8196,
+          "reference": "generated/data/reviewed-source/src/domain/hiddenFlowOperator.ts",
+          "role": "retained-package-file",
+          "sha256": "c7bf2af49306896f8db086d29883abdffe6021c3a77af3ddadde4d91fcd9f1b0"
+        },
+        {
+          "byteLength": 15049,
+          "reference": "generated/data/reviewed-source/src/domain/hiddenFlowSolverValidation.ts",
+          "role": "retained-package-file",
+          "sha256": "e49b6daa037777cdc6cd8b4b82e1ea9e89c3fef9d197a81224c065699695c29e"
+        },
+        {
+          "byteLength": 22645,
+          "reference": "generated/data/reviewed-source/src/domain/hiddenFlowValidation.ts",
+          "role": "retained-package-file",
+          "sha256": "05df92231f78c9c38295284cf71229cbb77d8af99f8276211843e758274388c9"
+        },
+        {
+          "byteLength": 32253,
+          "reference": "generated/data/reviewed-source/src/domain/hiddenFlowVerification.ts",
+          "role": "retained-package-file",
+          "sha256": "01c43547c6f2e3345ef99bdab167da192bf8bedd4fbf30f9d4a4c764786acb45"
+        },
+        {
+          "byteLength": 93,
+          "reference": "generated/data/reviewed-source/src/version.ts",
+          "role": "retained-package-file",
+          "sha256": "4f229adc6c68342f6be22cf64a4d233501545657f8b89d8042f72c86d1480123"
+        },
+        {
+          "byteLength": 4218,
+          "reference": "generated/data/reviewed-source/tools/catalogCapabilities/hiddenFlow/adapterContract.ts",
+          "role": "retained-package-file",
+          "sha256": "cdb2e0b33a2d1ccebc7d4baaaa1a5c3ac5175b9c8832c66be7a26fe22b5419cb"
+        },
+        {
+          "byteLength": 8060,
+          "reference": "generated/data/reviewed-source/tools/catalogCapabilities/hiddenFlow/authority.ts",
+          "role": "retained-package-file",
+          "sha256": "197237bcc145d350c11bcccfc04da0f5eb5c0d298aed504cf8a79e329e85b2e7"
+        },
+        {
+          "byteLength": 7470,
+          "reference": "generated/data/reviewed-source/tools/catalogCapabilities/hiddenFlow/capability.ts",
+          "role": "retained-package-file",
+          "sha256": "02d528198517064ff998b83bf5ab008b1d34a74ab8c52444c832fd83db9f1a7a"
+        },
+        {
+          "byteLength": 9342,
+          "reference": "generated/data/reviewed-source/tools/catalogCapabilities/hiddenFlow/engine.ts",
+          "role": "retained-package-file",
+          "sha256": "69502e746abe15d0bbd6e8bc468c53321462abfc7d66b51ffd48177a69871e3d"
+        },
+        {
+          "byteLength": 19874,
+          "reference": "generated/data/reviewed-source/tools/catalogCapabilities/hiddenFlow/execution.ts",
+          "role": "retained-package-file",
+          "sha256": "30bb6a1bf5263a2965af4c556161799e9b572f20831a8e442589069c66f2caf6"
+        },
+        {
+          "byteLength": 3171,
+          "reference": "generated/data/reviewed-source/tools/catalogCapabilities/hiddenFlow/index.ts",
+          "role": "retained-package-file",
+          "sha256": "402788efbc9e40f0b5df80c08a2a83efc47f35c81aac1d1d0b277ae524905329"
+        },
+        {
+          "byteLength": 20813,
+          "reference": "generated/data/reviewed-source/tools/catalogCapabilities/hiddenFlow/package-verifier-template.js",
+          "role": "retained-package-file",
+          "sha256": "f237813eeab52e73d30d331b108a10053ecda2e54787f55fa8822a5ccf3ee60e"
+        },
+        {
+          "byteLength": 19696,
+          "reference": "generated/data/reviewed-source/tools/catalogCapabilities/hiddenFlow/packageBuild.config.ts",
+          "role": "retained-package-file",
+          "sha256": "9d4efec2b90def304ebf0368d3d17462fbe8f15ac451718294edc03486cc6498"
+        },
+        {
+          "byteLength": 12181,
+          "reference": "generated/data/reviewed-source/tools/catalogCapabilities/hiddenFlow/packageIo.ts",
+          "role": "retained-package-file",
+          "sha256": "4e16d96b8a1245f97c6859c5a9de1c34cab000492d1f9e4f23c064124ed1dabb"
+        },
+        {
+          "byteLength": 40334,
+          "reference": "generated/data/reviewed-source/tools/catalogCapabilities/hiddenFlow/packagePublication.ts",
+          "role": "retained-package-file",
+          "sha256": "c4b4471a93d3a6d1a39209540cc31539491a9efa5c821c4abd3d556370fcac28"
+        },
+        {
+          "byteLength": 10650,
+          "reference": "generated/data/reviewed-source/tools/catalogCapabilities/hiddenFlow/pinnedSolver.ts",
+          "role": "retained-package-file",
+          "sha256": "d812f569a84e5c51a33b649379b1d0c3c3432596b2ad258b98e01b400f3a0774"
+        },
+        {
+          "byteLength": 12918,
+          "reference": "generated/data/reviewed-source/tools/catalogCapabilities/hiddenFlow/preparation.ts",
+          "role": "retained-package-file",
+          "sha256": "601580cce33a33be1495a922b0cae4ae7e83931763fb10a05b2a70e283454268"
+        },
+        {
+          "byteLength": 20685,
+          "reference": "generated/data/reviewed-source/tools/catalogCapabilities/hiddenFlow/profile.ts",
+          "role": "retained-package-file",
+          "sha256": "1c7c2bf65942de29559b27e27834dcaaab4163f4aa016226dba1c2ca0a31e59f"
+        },
+        {
+          "byteLength": 9275,
+          "reference": "generated/data/reviewed-source/tools/catalogCapabilities/hiddenFlow/runtime.ts",
+          "role": "retained-package-file",
+          "sha256": "3172f6c5505267c6f58716de39e144e6bb1ef6a3320cfdb56ed75c630e6e59a3"
+        },
+        {
+          "byteLength": 2841,
+          "reference": "generated/data/reviewed-source/tools/discovery/flowblindDisplayText.ts",
+          "role": "retained-package-file",
+          "sha256": "b32b1074a62593db1713d38b6d3a601fcfc229e506f211e29c317c38b3bbad56"
+        },
+        {
+          "byteLength": 13743,
+          "reference": "generated/data/schemas/flowblind-catalog-hidden-flow-action-response-v1.schema.json",
+          "role": "retained-package-file",
+          "sha256": "53ace02be2506bd27ea4fd3839b027ec1b87974407b0779027b5546769615ade"
+        },
+        {
+          "byteLength": 5284,
+          "reference": "generated/data/schemas/flowblind-catalog-hidden-flow-declaration-v1.schema.json",
+          "role": "retained-package-file",
+          "sha256": "edd2511511ad34e16068464989c5fc12485e2982def8075d58d624714933a145"
+        },
+        {
+          "byteLength": 22067,
+          "reference": "generated/data/schemas/flowblind-catalog-hidden-flow-evidence-v1.schema.json",
+          "role": "retained-package-file",
+          "sha256": "a3567bf7edbb697fa3e0c5a19895b9cc057d55ec86de45db109eae38f5f44196"
+        },
+        {
+          "byteLength": 705,
+          "reference": "generated/data/schemas/flowblind-catalog-hidden-flow-input-v1.schema.json",
+          "role": "retained-package-file",
+          "sha256": "a40cb565a5cf7c951f8d704824d7760a66bdf51875b40f40fca52198ef68a1a1"
+        },
+        {
+          "byteLength": 2309,
+          "reference": "generated/data/schemas/flowblind-catalog-hidden-flow-package-evidence-v1.schema.json",
+          "role": "retained-package-file",
+          "sha256": "d32ffe4163af1ff70df6400f7c39f386502ca2218e9d33733c142a86517b4c80"
+        },
+        {
+          "byteLength": 2840,
+          "reference": "generated/data/schemas/flowblind-catalog-hidden-flow-package-lock-v1.schema.json",
+          "role": "retained-package-file",
+          "sha256": "eb2f10353f8a211ae1014f4af17593e10d0e150e5c338280230e168c0a07bbd5"
+        },
+        {
+          "byteLength": 8632,
+          "reference": "generated/data/schemas/flowblind-catalog-hidden-flow-preparation-bundle-v1.schema.json",
+          "role": "retained-package-file",
+          "sha256": "9375b5cac033d8ed1234049807bc4e1303f7493fb2bb803844098e646fd509f4"
+        },
+        {
+          "byteLength": 12722,
+          "reference": "generated/data/schemas/flowblind-catalog-hidden-flow-problem-acceptance-v1.schema.json",
+          "role": "retained-package-file",
+          "sha256": "72bb78b2b5ad529656dd03f341849a2e165c3a831a315cef22c9a796cfbde9b7"
+        },
+        {
+          "byteLength": 5754,
+          "reference": "generated/data/schemas/flowblind-catalog-hidden-flow-report-verification-v1.schema.json",
+          "role": "retained-package-file",
+          "sha256": "e32b09f7e38b451eb778c3de28c9b55f56d1674862a9cdc21ac1f8c6ca02ab5e"
+        },
+        {
+          "byteLength": 7193,
+          "reference": "generated/data/schemas/flowblind-catalog-hidden-flow-review-attestation-v1.schema.json",
+          "role": "retained-package-file",
+          "sha256": "c4d4a8a31d5855fa7c1c2b15215b9b6d414551e5a943c1402920c838a9e67672"
+        },
+        {
+          "byteLength": 3440,
+          "reference": "generated/data/schemas/flowblind-catalog-hidden-flow-review-policy-v1.schema.json",
+          "role": "retained-package-file",
+          "sha256": "e5a552ddb0afc8d35a0660678eb1f21a2870adf62fb9783b448160f7cfd5b230"
+        },
+        {
+          "byteLength": 8831,
+          "reference": "generated/data/schemas/flowblind-catalog-hidden-flow-verified-run-v1.schema.json",
+          "role": "retained-package-file",
+          "sha256": "d4a76ca4dc48813b97b83fb2fd951f9495d6e9e8119623732332edf540cccd60"
+        },
+        {
+          "byteLength": 12075,
+          "reference": "generated/data/schemas/hidden-flow-problem.schema.json",
+          "role": "retained-package-file",
+          "sha256": "75486c4816e9c9a8e0af93b988f935b77ecc4e30cb0f61fcbba357111983c0f6"
+        },
+        {
+          "byteLength": 179302,
+          "reference": "generated/flowblind-catalog-hidden-flow-runtime-v1.js",
+          "role": "retained-package-file",
+          "sha256": "162d466c18735d9c362396eb21770094a66fa5bd2682b833b5dd68fbf2774840"
+        }
+      ],
+      "id": "flowblind-retained-hidden-flow-v1-manifest-v1",
+      "packageEvidence": {
+        "artifactCount": 48,
+        "declaration": {
+          "byteLength": 4428,
+          "reference": "generated/data/flowblind-catalog-hidden-flow-declaration-v1.json",
+          "role": "retained-package-file",
+          "sha256": "23c0312553437f397e822cb7844a878731e8fd42bc7ac62e5db346cb6aa56cc7"
+        },
+        "dockerfile": {
+          "byteLength": 1741,
+          "reference": "generated/data/package/Dockerfile",
+          "role": "retained-package-file",
+          "sha256": "99177bc19177e9535e41b8a507a206658a91303eb0721068f982c1436ea7da41"
+        },
+        "internalFacadeCount": 3,
+        "lock": {
+          "byteLength": 21929,
+          "reference": "generated/data/flowblind-catalog-hidden-flow-package-lock-v1.json",
+          "role": "retained-package-file",
+          "sha256": "5adde457ed53ece29eec6bfffedfc835807ac16f276a786bd5dc19c71290c0c4"
+        },
+        "reviewPolicy": {
+          "byteLength": 5142,
+          "reference": "generated/data/flowblind-catalog-hidden-flow-review-policy-v1.json",
+          "role": "retained-package-file",
+          "sha256": "a9be45742d15cfa2193259a251a523324db05a044c75682502b75024c70f45ba"
+        },
+        "runtime": {
+          "byteLength": 179302,
+          "reference": "generated/flowblind-catalog-hidden-flow-runtime-v1.js",
+          "role": "retained-package-file",
+          "sha256": "162d466c18735d9c362396eb21770094a66fa5bd2682b833b5dd68fbf2774840"
+        },
+        "verifier": {
+          "byteLength": 20847,
+          "reference": "flowblind-hidden-flow-capability-verification-v1.js",
+          "role": "retained-package-file",
+          "sha256": "1e0a3b59d10d65140958ee91cd1e911c4a68750e3f4b0cd4dded5ee4c666c44f"
+        }
+      },
+      "provenance": {
+        "acceptedBridge": "47e9d3826dc2bab877d621f706a66a3bc0de1572",
+        "authorityRuntimeBase": "123bd990f48e7351884f035c0941367b8bd5f942",
+        "bridgeAcceptanceReceipt": {
+          "commit": "47e9d3826dc2bab877d621f706a66a3bc0de1572",
+          "id": "flowblind-hidden-flow-v1-bridge-acceptance-v1",
+          "source": "tools/catalogResearchV2/integrations/hiddenFlowV1.ts",
+          "status": "accepted"
+        },
+        "bridgeSource": {
+          "byteLength": 94372,
+          "reference": "tools/catalogResearchV2/integrations/hiddenFlowV1.ts",
+          "sha256": "f61326fd42415d02d03686dad4bb1d9e5b3098225c5eebf37a2aa4fffc987122"
+        },
+        "independentHardening": "8b0080d3aa006f3cc02bc0391b2cb581f017661f"
+      },
+      "retainedId": "hidden-flow-v1",
+      "root": "generated/retained/hidden-flow-v1/runtime",
+      "schemaVersion": 1,
+      "sourceCommit": "8b0080d3aa006f3cc02bc0391b2cb581f017661f",
+      "treeCanonicalization": "path-nul-byteLength-nul-sha256-lf-v1",
+      "treeSha256": "556d8d4d1c3be175258b91045ca7bd9c75ca836bd17a82ad21f2eb9769c4ebf6"
+    }
+  ],
+  "schemaVersion": 1
+}

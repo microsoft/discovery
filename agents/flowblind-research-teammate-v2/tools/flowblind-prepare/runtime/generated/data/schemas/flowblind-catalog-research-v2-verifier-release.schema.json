@@ -1,0 +1,81 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://flowblind.local/schemas/flowblind-catalog-research-v2-verifier-release.schema.json",
+  "title": "FlowBlind catalog-native research v2 detached verifier release",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "id",
+    "packageId",
+    "packageVersion",
+    "authority",
+    "lock",
+    "verifier",
+    "liveImageManifestDigests"
+  ],
+  "properties": {
+    "schemaVersion": {
+      "const": 1
+    },
+    "id": {
+      "const": "flowblind-catalog-research-v2-verifier-release-v1"
+    },
+    "packageId": {
+      "const": "flowblind-research-teammate-v2"
+    },
+    "packageVersion": {
+      "const": "2.0.0"
+    },
+    "authority": {
+      "const": "independent-host-allowlist-required"
+    },
+    "lock": {
+      "$ref": "#/$defs/identity"
+    },
+    "verifier": {
+      "$ref": "#/$defs/identity"
+    },
+    "liveImageManifestDigests": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "prepare",
+        "run"
+      ],
+      "properties": {
+        "prepare": {
+          "const": "REQUIRED_BEFORE_LIVE_ACTIVATION"
+        },
+        "run": {
+          "const": "REQUIRED_BEFORE_LIVE_ACTIVATION"
+        }
+      }
+    }
+  },
+  "$defs": {
+    "identity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "reference",
+        "byteLength",
+        "sha256"
+      ],
+      "properties": {
+        "reference": {
+          "type": "string",
+          "minLength": 1
+        },
+        "byteLength": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "sha256": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        }
+      }
+    }
+  }
+}

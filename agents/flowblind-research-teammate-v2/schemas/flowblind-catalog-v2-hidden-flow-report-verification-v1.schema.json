@@ -1,0 +1,83 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://flowblind.local/schemas/flowblind-catalog-v2-hidden-flow-report-verification-v1.schema.json",
+  "title": "FlowBlind v2 hidden-flow report verification",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "$schema",
+    "schemaVersion",
+    "recordType",
+    "status",
+    "capability",
+    "preparation",
+    "problem",
+    "software",
+    "deterministicReplay",
+    "artifacts",
+    "bridge",
+    "publication"
+  ],
+  "properties": {
+    "$schema": {
+      "const": "https://flowblind.local/schemas/flowblind-catalog-v2-hidden-flow-report-verification-v1.schema.json"
+    },
+    "schemaVersion": {
+      "const": 1
+    },
+    "recordType": {
+      "const": "flowblind-catalog-v2-hidden-flow-report-verification-v1"
+    },
+    "status": {
+      "const": "verified-report-complete"
+    },
+    "capability": {
+      "type": "object"
+    },
+    "preparation": {
+      "type": "object"
+    },
+    "problem": {
+      "type": "object"
+    },
+    "software": {
+      "type": "object"
+    },
+    "deterministicReplay": {
+      "type": "object"
+    },
+    "artifacts": {
+      "type": "object"
+    },
+    "bridge": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "outerPreparationMarker",
+        "maximumVerifiedRunBytes",
+        "markerInstalledLast"
+      ],
+      "properties": {
+        "outerPreparationMarker": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "reference",
+            "byteLength",
+            "sha256",
+            "mediaType"
+          ]
+        },
+        "maximumVerifiedRunBytes": {
+          "const": 67108864
+        },
+        "markerInstalledLast": {
+          "const": true
+        }
+      }
+    },
+    "publication": {
+      "type": "object"
+    }
+  }
+}

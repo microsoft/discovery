@@ -1,0 +1,21 @@
+{
+  "authority": "independent-host-allowlist-required",
+  "id": "flowblind-catalog-research-v2-verifier-release-v1",
+  "liveImageManifestDigests": {
+    "prepare": "REQUIRED_BEFORE_LIVE_ACTIVATION",
+    "run": "REQUIRED_BEFORE_LIVE_ACTIVATION"
+  },
+  "lock": {
+    "byteLength": 16667,
+    "reference": "runtime/generated/data/flowblind-catalog-research-v2-package-lock-v1.json",
+    "sha256": "a2c9b38791028e30c4f12e55b34416a0c03c9d2d5ee611a74f83523c50662c19"
+  },
+  "packageId": "flowblind-research-teammate-v2",
+  "packageVersion": "2.0.0",
+  "schemaVersion": 1,
+  "verifier": {
+    "byteLength": 36769,
+    "reference": "runtime/flowblind-research-teammate-verification-v2.js",
+    "sha256": "1671ae3eff6a77b73c9bd53f061502918c626b18da0d7bf31fee4ee41f61207a"
+  }
+}

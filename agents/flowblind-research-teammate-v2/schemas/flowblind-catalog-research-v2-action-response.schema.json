@@ -1,0 +1,198 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://flowblind.local/schemas/flowblind-catalog-research-v2-action-response.schema.json",
+  "title": "FlowBlind catalog-native research v2 action response",
+  "oneOf": [
+    {
+      "$ref": "#/$defs/resultFree"
+    },
+    {
+      "$ref": "#/$defs/prepared"
+    },
+    {
+      "$ref": "#/$defs/report"
+    }
+  ],
+  "$defs": {
+    "text": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 4096
+    },
+    "sha256": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "identity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "reference",
+        "byteLength",
+        "sha256",
+        "mediaType"
+      ],
+      "properties": {
+        "reference": {
+          "$ref": "#/$defs/text"
+        },
+        "byteLength": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 67108864
+        },
+        "sha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "mediaType": {
+          "$ref": "#/$defs/text"
+        }
+      }
+    },
+    "capability": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "familyId",
+        "methodId",
+        "methodVersion"
+      ],
+      "properties": {
+        "familyId": {
+          "$ref": "#/$defs/text"
+        },
+        "methodId": {
+          "$ref": "#/$defs/text"
+        },
+        "methodVersion": {
+          "$ref": "#/$defs/text"
+        }
+      }
+    },
+    "resultFree": {
+      "type": "object",
+      "required": [
+        "schemaVersion",
+        "routerVersion",
+        "status",
+        "containsResults",
+        "reasonCodes",
+        "guidance"
+      ],
+      "properties": {
+        "schemaVersion": {
+          "const": 2
+        },
+        "routerVersion": {
+          "const": "2.0.0"
+        },
+        "status": {
+          "$ref": "#/$defs/text"
+        },
+        "containsResults": {
+          "const": false
+        },
+        "reasonCodes": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/text"
+          }
+        },
+        "guidance": {
+          "$ref": "#/$defs/text"
+        }
+      }
+    },
+    "prepared": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "status",
+        "containsResults",
+        "capability",
+        "package",
+        "preparationSchema",
+        "preparedStudy",
+        "preparation",
+        "adapterPublication",
+        "publication"
+      ],
+      "properties": {
+        "status": {
+          "const": "prepared-awaiting-confirmation"
+        },
+        "containsResults": {
+          "const": false
+        },
+        "capability": {
+          "$ref": "#/$defs/capability"
+        },
+        "package": {
+          "type": "object"
+        },
+        "preparationSchema": {
+          "type": "object"
+        },
+        "preparedStudy": {
+          "type": "object"
+        },
+        "preparation": {},
+        "adapterPublication": {
+          "type": "object"
+        },
+        "publication": {
+          "type": "object"
+        }
+      }
+    },
+    "report": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "status",
+        "containsResults",
+        "capability",
+        "package",
+        "resultSchema",
+        "renderer",
+        "result",
+        "adapterPublication",
+        "publication"
+      ],
+      "properties": {
+        "status": {
+          "const": "report-complete"
+        },
+        "containsResults": {
+          "type": "boolean"
+        },
+        "capability": {
+          "$ref": "#/$defs/capability"
+        },
+        "package": {
+          "type": "object"
+        },
+        "resultSchema": {
+          "type": "object"
+        },
+        "renderer": {
+          "type": "object"
+        },
+        "result": {},
+        "preparation": {
+          "type": "object"
+        },
+        "retainedReport": {
+          "type": "object"
+        },
+        "adapterPublication": {
+          "type": "object"
+        },
+        "publication": {
+          "type": "object"
+        }
+      }
+    }
+  }
+}

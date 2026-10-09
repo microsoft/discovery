@@ -1,0 +1,21 @@
+{
+  "disableDataHandlingTools": false,
+  "discoverySchemaBaseline": "82db92769ac5e7c66f7028b0e2cd0260b67c63ef",
+  "humanInTheLoop": "Enabled",
+  "id": "flowblind-catalog-policy-v1",
+  "publicInputSchema": "data/schemas/flowblind-catalog-research-input-v1.schema.json",
+  "runtimeNetworkRequired": false,
+  "schemaVersion": 1,
+  "tools": [
+    {
+      "action": "prepare-study",
+      "confirmation": "Disabled",
+      "packagePath": "tools/flowblind-prepare-study"
+    },
+    {
+      "action": "run-and-verify-study",
+      "confirmation": "Enabled",
+      "packagePath": "tools/flowblind-run-and-verify-study"
+    }
+  ]
+}
