@@ -28,12 +28,14 @@ Before starting the deployment, ensure you have:
 
 ### Step 1: Build and Publish Docker Image
 
-1. **Build the image** from the tool directory, `tools/sandboxaq-model/`,
-   which contains the Dockerfile:
+1. **Build the image**, starting from the repository root. The Dockerfile is
+   in `agents/sandboxaq/tools/sandboxaq-model/`:
 
    ```bash
-   cd tools/sandboxaq-model
-   docker build --platform linux/amd64 -t sandboxaq-model:latest .
+   cd agents/sandboxaq
+   docker build --platform linux/amd64 \
+     -t sandboxaq-model:latest \
+     tools/sandboxaq-model
    ```
 
    > `--platform linux/amd64` is required when building on Apple Silicon or
@@ -82,8 +84,11 @@ The SandboxAQ agent provides:
 - **Model Invocation**: Sends prompts to the subscribed SandboxAQ deployment
 - **Structured Output**: Preserves JSON returned by the endpoint and writes
   results to `/output/final_results.json`
-- **Sensitive-Data Handling**: Applies access, privacy, and human-review
-  guidance when working with HR or other confidential business data
+- **Sensitive-data guidance**: The agent instructions tell it to follow
+  organizational access and privacy policies, avoid inferring protected
+  attributes or making employment decisions, identify uncertainty, and request
+  human review where appropriate. These are behavioral instructions, not
+  platform-enforced controls.
 
 ## Usage
 
