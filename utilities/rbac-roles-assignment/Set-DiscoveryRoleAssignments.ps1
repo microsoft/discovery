@@ -188,7 +188,7 @@ $ROLE_IDS = @{
     # GUID; resolved at runtime via Get-AzRoleDefinition after authentication.
 }
 
-$BOOKSHELF_ROLE_NAME = "Microsoft Discovery Bookshelf Index Data Reader - Preview"
+$BOOKSHELF_ROLE_NAME = "Microsoft Discovery Bookshelf Index Data Reader"
 # Populated at runtime after Connect-AzAccount in Step 4.
 $script:BookshelfRoleResolutionError = $null
 

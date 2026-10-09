@@ -121,7 +121,7 @@ Notes next to each field explain what to enter. A few that trip people up:
 | Field | What to enter |
 |---|---|
 | `subscriptionId` | The subscription you ran `az account set` against. |
-| `deployingIdentity.objectId` | The identity that will deploy. If `principals` is empty, Stage 2 grants it the Discovery roles plus the Azure roles a Discovery administrator needs (Managed Identity Contributor and Operator, Storage Account Contributor, Storage Blob Data Contributor, Network Contributor, AcrPush) on the target resource groups, and Stage 4 grants it Foundry User on the workspace managed resource group. Enter the Entra **objectId (GUID)**, or — if you don't know it — an **email/UPN** of a user in the target tenant (or an app registration's appId/display name). Stage 1 resolves a non-GUID value to the objectId via `az` (run `az login` first). Find your own objectId with `az ad signed-in-user show --query id -o tsv`. |
+| `deployingIdentity.objectId` | The identity that will deploy. If `principals` is empty, Stage 2 grants it the Discovery roles plus the Azure roles a Discovery administrator needs (Managed Identity Contributor and Operator, Storage Account Contributor, Storage Blob Data Contributor, Network Contributor, AcrPush) on the target resource groups plus Reader on the subscription, and Stage 4 grants it Foundry Owner on the workspace managed resource group. Enter the Entra **objectId (GUID)**, or — if you don't know it — an **email/UPN** of a user in the target tenant (or an app registration's appId/display name). Stage 1 resolves a non-GUID value to the objectId via `az` (run `az login` first). Find your own objectId with `az ad signed-in-user show --query id -o tsv`. |
 | `resourceGroup` | The platform resource group from prerequisite 5. |
 | `managedIdentity.id` | The UAMI resource id from prerequisite 6 (used by Stage 4). |
 | `network.networkResourceGroup` | The resource group that holds (managed: will hold) the VNet. Can be the platform RG or a separate network RG; it must exist before Stage 2. |
@@ -260,9 +260,9 @@ group. Re-runnable: it detects real resource state and resumes from the first in
   api-version `2026-06-01` via `discovery-platform.bicep`.
 - Detects real resource state before each step, so a re-run **resumes** from the first incomplete
   resource. Use `-Recovery` to re-PUT a stranded resource.
-- After the project, assigns **Foundry User** on the workspace managed resource group (to
-  `principals` with a Platform Administrator or Contributor role, else `deployingIdentity`) so they
-  can edit agents and workflows in the Foundry portal. A failure here is a warning.
+- After the project, assigns Foundry roles on the workspace managed resource group: Foundry Owner
+  to `principals` with Platform Administrator (else `deployingIdentity`), and Foundry User to
+  Platform Contributor principals. A failure here is a warning.
 - **Supercomputer creation includes AKS provisioning and can take 15–30 minutes.** Be patient.
 - Requires the Stage 4 config fields: `resourceGroup`, `managedIdentity.id` (your pre-created UAMI),
   and `storage`.

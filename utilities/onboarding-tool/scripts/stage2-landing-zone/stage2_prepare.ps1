@@ -225,7 +225,8 @@ else {
 }
 
 # Azure built-in roles Learn lists for the Discovery administrator, in addition to Platform
-# Administrator. Foundry User is assigned by Stage 4 on the workspace managed resource group.
+# Administrator. Reader is granted at subscription scope below; Foundry Owner is assigned by
+# Stage 4 on the workspace managed resource group.
 $adminAzureRoles = [ordered]@{
     'Managed Identity Contributor'  = 'e40ec5ca-96e0-45a2-b4ff-59039f2c2b59'
     'Managed Identity Operator'     = 'f1a07417-d97a-45cb-824c-7a7467783830'
@@ -265,6 +266,15 @@ foreach ($rg in $resourceGroups) {
                         -RoleName $roleName -RoleId $adminAzureRoles[$roleName] -Scope $scope -ScopeLabel $rg))
         }
     }
+}
+
+if ($resourceGroups.Count) {
+    foreach ($principal in @(Get-PrincipalsForRole -RoleName 'Platform Administrator')) {
+        $results.Add((Grant-OnboardingRole -PrincipalId $principal.ObjectId -PrincipalType (Convert-PrincipalType $principal.Type) `
+                    -RoleName 'Reader' -RoleId 'acdd72a7-3385-48ef-bd42-f606fba81ae7' -Scope "/subscriptions/$($cfg.subscriptionId)" -ScopeLabel 'subscription'))
+    }
+    $results.Add((New-CheckResult -Id 'rbac-foundry-owner' -Name 'Foundry Owner on workspace managed RG' -Status 'Skip' -Fr 'FR2.1' `
+                -Detail 'The workspace managed resource group does not exist until Stage 4 creates the workspace. Stage 4 assigns Foundry Owner there to Platform Administrator principals.'))
 }
 
     return $results.ToArray()
