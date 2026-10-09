@@ -45,7 +45,9 @@ function Read-XlsxSheet {
         [Parameter(Mandatory)][string]$SheetName
     )
     Add-Type -AssemblyName System.IO.Compression.FileSystem
-    $zip = [System.IO.Compression.ZipFile]::OpenRead((Resolve-Path -LiteralPath $Path))
+    # Share read/write so a form that is still open in Excel can be read.
+    $stream = [System.IO.File]::Open((Resolve-Path -LiteralPath $Path).ProviderPath, [System.IO.FileMode]::Open, [System.IO.FileAccess]::Read, [System.IO.FileShare]::ReadWrite)
+    $zip = [System.IO.Compression.ZipArchive]::new($stream, [System.IO.Compression.ZipArchiveMode]::Read)
     try {
         function Get-Entry([string]$name) { $zip.Entries | Where-Object { $_.FullName -eq $name } | Select-Object -First 1 }
         function Read-Xml($entry) {
@@ -105,7 +107,7 @@ function Read-XlsxSheet {
         }
         return $cells
     }
-    finally { $zip.Dispose() }
+    finally { $zip.Dispose(); $stream.Dispose() }
 }
 
 function Split-CellRef {
@@ -447,6 +449,23 @@ function Invoke-Stage1Checks {
             $R.Add((New-CheckResult -Id 'sub-prereq' -Name 'Subscription enabled for Discovery' -Status 'Fail' -Fr 'FR1.0' `
                         -Detail 'Microsoft.Discovery is not visible in the target subscription. The subscription may not be allowlisted, or the caller may lack permission to read providers.' `
                         -Remediation 'Confirm the subscription is allowlisted for Microsoft Discovery with your Microsoft account representative and grant the deploying identity permission to read/register resource providers.'))
+        }
+    }
+
+    # ---- FR1.0 managed identity exists (prerequisite the tool does not create) ----
+    $uamiId = [string]$Cfg.managedIdentity.id
+    if ($uamiId -and $uamiId -match '/userAssignedIdentities/') {
+        if (-not $loggedIn) {
+            $R.Add((New-CheckResult -Id 'uami-exists' -Name 'Managed identity exists' -Status 'Skip' -Fr 'FR1.0' `
+                        -Detail 'az not logged in; managedIdentity.id was not resolved.' -Remediation "Run 'az login' and re-run to confirm the identity exists."))
+        }
+        elseif (Get-AzJson -Args @('identity', 'show', '--ids', $uamiId) -AllowFail) {
+            $R.Add((New-CheckResult -Id 'uami-exists' -Name 'Managed identity exists' -Status 'Pass' -Fr 'FR1.0' -Detail $uamiId))
+        }
+        else {
+            $R.Add((New-CheckResult -Id 'uami-exists' -Name 'Managed identity exists' -Status 'Warn' -Fr 'FR1.0' `
+                        -Detail "managedIdentity.id does not resolve to an existing identity: $uamiId. The tool does not create it; Stage 2 skips its role assignments and Stage 4 fails without it." `
+                        -Remediation 'Create it before Stage 2: az group create -n <rg> -l <region>; az identity create -g <rg> -n <name> -l <region>. Or correct managedIdentity.id.'))
         }
     }
     if (-not $Cfg.deployingIdentity.canRegisterProviders) {
@@ -849,9 +868,18 @@ if ($ext -eq '.json') {
     Write-Host "Loaded config model from JSON: $FormPath"
 }
 elseif ($ext -eq '.xlsx') {
-    $cells = Read-XlsxSheet -Path $FormPath -SheetName 'Config'
-    $parsed = ConvertFrom-ConfigSheet -Cells $cells
-    $cfgModel = ConvertTo-ConfigModel -Parsed $parsed
+    # Stop on a read failure: continuing with an empty model runs no checks and reports a false GO.
+    $prevEap = $ErrorActionPreference
+    $ErrorActionPreference = 'Stop'
+    try {
+        $cells = Read-XlsxSheet -Path $FormPath -SheetName 'Config'
+        $parsed = ConvertFrom-ConfigSheet -Cells $cells
+        $cfgModel = ConvertTo-ConfigModel -Parsed $parsed
+    }
+    catch {
+        throw "Could not read the planning form $FormPath : $($_.Exception.Message) Close it in Excel or save a copy, then re-run."
+    }
+    finally { $ErrorActionPreference = $prevEap }
     # Normalize the OrderedDictionary model to the same pscustomobject shape the JSON
     # input path yields, so downstream logic that relies on $cfgModel.PSObject.Properties
     # (waiver application, config export) sees the real keys rather than dictionary members.
