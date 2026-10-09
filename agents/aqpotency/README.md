@@ -10,7 +10,7 @@ This agent gives Discovery users conversational access to three framings of that
 
 **Intended user:** medicinal chemists, computational chemists, and computational biologists prioritizing compounds and assessing off-target liabilities.
 
-**Related agents.** [`aqcat`](../aqcat/README.md) covers catalysis and surface reactivity on the same platform and the same connection. [`sandboxaq`](../sandboxaq/README.md) is separate — it prompts a SandboxAQ model you have subscribed to in Azure AI Foundry, and needs no platform tenant.
+**Related agents.** [`aqcat`](../aqcat/README.md) covers catalysis and surface reactivity on the same platform and the same connection.
 
 **Successful outcome:** predicted potencies with uncertainty, correctly attributed to molecule and target, with weakly-supported predictions clearly marked so they are not ranked as though they were confident.
 
