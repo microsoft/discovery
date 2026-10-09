@@ -14,18 +14,6 @@ endpoint from a Discovery-managed tool container. This deployment includes:
 - **Tool Definition**: Configuration for the `sandboxaq-model` tool
 - **Agent Definition**: AI agent configuration for the SandboxAQ agent
 
-### Which SandboxAQ agent do I want?
-
-Three SandboxAQ agents are published in this catalog. Choose by what you have access to:
-
-| Agent | Use it when | Requires |
-|---|---|---|
-| **`sandboxaq`** (this one) | You have subscribed to a SandboxAQ model in Azure AI Foundry and want to prompt it directly | A SandboxAQ model subscription in Foundry |
-| [**`aqcat`**](../aqcat/README.md) | You want adsorption energies and surface reactivity for catalysis | A SandboxAQ AI Simulation Platform tenant |
-| [**`aqpotency`**](../aqpotency/README.md) | You want small-molecule potency, panel scans, or selectivity | A SandboxAQ AI Simulation Platform tenant |
-
-This agent is general-purpose inference against a model deployment you control. The other two are domain agents that reach specific scientific tools on the SandboxAQ platform.
-
 ## Prerequisites
 
 Before starting the deployment, ensure you have:
@@ -40,11 +28,16 @@ Before starting the deployment, ensure you have:
 
 ### Step 1: Build and Publish Docker Image
 
-1. **Build the image** from this tool directory:
+1. **Build the image** from the tool directory, `tools/sandboxaq-model/`,
+   which contains the Dockerfile:
 
    ```bash
-   docker build -t sandboxaq-model:latest .
+   cd tools/sandboxaq-model
+   docker build --platform linux/amd64 -t sandboxaq-model:latest .
    ```
+
+   > `--platform linux/amd64` is required when building on Apple Silicon or
+   > other ARM machines; the tool runs on x86-64 Azure VMs.
 
 2. **Tag the image** for your Azure Container Registry:
 
@@ -114,7 +107,9 @@ The SandboxAQ agent provides:
 
 This agent operates as a `kind: prompt` agent within Discovery Studio.
 
-    User Input → SandboxAQ Agent (LLM) → sandboxaq-model Tool (Container) → Azure AI Foundry → Results
+```text
+User Input → SandboxAQ Agent (LLM) → sandboxaq-model Tool (Container) → Azure AI Foundry → Results
+```
 
 - **Model:** Configured via the `{{CHAT-MODEL}}` parameter at deploy time
 - **Tool:** `sandboxaq-model` container exposing a `python3` code environment
@@ -166,7 +161,7 @@ endpoint URL or credential.
 For issues or questions with this agent, contact SandboxAQ:
 <https://www.sandboxaq.com/contact>
 
-SandboxAQ contact: support@sandboxaq.com
+SandboxAQ contact: <support@sandboxaq.com>
 
 For platform issues, open a GitHub issue:
 <https://github.com/microsoft/discovery/issues>
