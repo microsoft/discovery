@@ -237,6 +237,7 @@ function Invoke-NspPerimeterJoinerRole {
 
 $roleName = 'Discovery NSP Perimeter Joiner'
 $controlPlaneAppId = '92c174ac-8e41-4815-a1b7-d81b19ab03ce'
+$readerRoleId = 'acdd72a7-3385-48ef-bd42-f606fba81ae7'
 $scope = "/subscriptions/$($cfg.subscriptionId)"
 $actions = @(
     'Microsoft.Network/networkSecurityPerimeters/joinPerimeterRule/action',
@@ -328,9 +329,18 @@ try {
         $assignedState = 'exists'
     }
 
+    $readerAssignment = Get-AzJson -Args @('role', 'assignment', 'list', '--assignee', $sp.id, '--role', $readerRoleId, '--scope', $scope) -AllowFail
+    if (-not $readerAssignment -or @($readerAssignment).Count -eq 0) {
+        Invoke-Az -Args @('role', 'assignment', 'create', '--assignee-object-id', $sp.id, '--assignee-principal-type', 'ServicePrincipal', '--role', $readerRoleId, '--scope', $scope) | Out-Null
+        $readerAssignedState = 'created'
+    }
+    else {
+        $readerAssignedState = 'exists'
+    }
+
     $results.Add((New-CheckResult -Id 'nsp-perimeter-joiner-role' -Name 'NSP Perimeter Joiner custom role and assignment' -Status 'Pass' -Fr 'FR2.1a' `
-                -Detail "role=$effectiveRoleName state=$(($equivalentRoleUsed) ? 'existing-equivalent' : (($needsWrite) ? 'created-or-updated' : 'exists')); assignment=$assignedState" `
-                -Data @{ roleName = $effectiveRoleName; roleDefinitionId = $roleAfter.name; appId = $controlPlaneAppId; principalObjectId = $sp.id; scope = $scope; actions = $actions; assigned = $assignedState }))
+                -Detail "role=$effectiveRoleName state=$(($equivalentRoleUsed) ? 'existing-equivalent' : (($needsWrite) ? 'created-or-updated' : 'exists')); joinerAssignment=$assignedState; readerAssignment=$readerAssignedState" `
+                -Data @{ roleName = $effectiveRoleName; roleDefinitionId = $roleAfter.name; appId = $controlPlaneAppId; principalObjectId = $sp.id; scope = $scope; actions = $actions; assigned = $assignedState; readerRoleDefinitionId = $readerRoleId; readerAssigned = $readerAssignedState }))
 }
 catch {
     $results.Add((New-CheckResult -Id 'nsp-perimeter-joiner-role' -Name 'NSP Perimeter Joiner custom role and assignment' -Status 'Fail' -Fr 'FR2.1a' `
@@ -584,12 +594,46 @@ else {
             $st = Get-AzJson -Args @('storage', 'account', 'show', '-g', $storageRg, '-n', $account) -AllowFail
             if (-not $st) {
                 Invoke-Az -Args @('storage', 'account', 'create', '-g', $storageRg, '-n', $account, '-l', $cfg.workloadRegion, '--sku', 'Standard_LRS', '--kind', 'StorageV2', '--https-only', 'true', '--min-tls-version', 'TLS1_2', '--allow-blob-public-access', 'false', '--allow-shared-key-access', 'false') | Out-Null
+                $st = Get-AzJson -Args @('storage', 'account', 'show', '-g', $storageRg, '-n', $account)
                 $state = 'created'
             }
             else { $state = 'exists' }
 
             $defaultAction = ($access -eq 'serviceEndpoint') ? 'Deny' : 'Deny'
             Invoke-Az -Args @('storage', 'account', 'update', '-g', $storageRg, '-n', $account, '--allow-blob-public-access', 'false', '--default-action', $defaultAction) | Out-Null
+
+            $corsMethods = @('GET', 'HEAD', 'DELETE', 'OPTIONS', 'PUT')
+            $corsOrigins = @('https://studio.discovery.microsoft.com', 'https://vscode.dev', 'https://*.vscode-cdn.net')
+            $blobServiceUrl = "https://management.azure.com$($st.id)/blobServices/default?api-version=2023-05-01"
+            $existingBlobService = Get-AzJson -Args @('rest', '--method', 'get', '--url', $blobServiceUrl) -AllowFail
+            $preservedCorsRules = @($existingBlobService.properties.cors.corsRules | Where-Object {
+                    @($_.allowedOrigins | Where-Object { $_ -in $corsOrigins }).Count -eq 0
+                })
+            $requiredCorsRule = @{
+                allowedOrigins  = $corsOrigins
+                allowedMethods  = $corsMethods
+                allowedHeaders  = @('*')
+                exposedHeaders  = @('*')
+                maxAgeInSeconds = 200
+            }
+            $corsBody = @{
+                properties = @{
+                    cors = @{
+                        corsRules = @($preservedCorsRules) + @($requiredCorsRule)
+                    }
+                }
+            } | ConvertTo-Json -Depth 10 -Compress
+            Invoke-Az -Args @('rest', '--method', 'patch', '--url', $blobServiceUrl, '--body', $corsBody) | Out-Null
+            $blobService = Get-AzJson -Args @('rest', '--method', 'get', '--url', $blobServiceUrl) -AllowFail
+            $corsRule = @($blobService.properties.cors.corsRules | Where-Object {
+                    @($corsOrigins | Where-Object { $_ -notin @($_.allowedOrigins) }).Count -eq 0
+                } | Select-Object -First 1)
+            $corsOk = $corsRule -and
+                @($corsOrigins | Where-Object { $_ -notin @($corsRule.allowedOrigins) }).Count -eq 0 -and
+                @($corsMethods | Where-Object { $_ -notin @($corsRule.allowedMethods) }).Count -eq 0 -and
+                @($corsRule.allowedHeaders) -contains '*' -and
+                @($corsRule.exposedHeaders) -contains '*' -and
+                [int]$corsRule.maxAgeInSeconds -eq 200
 
             $containerStates = @()
             $containerFailures = @()
@@ -673,6 +717,7 @@ else {
 
             $st = Get-AzJson -Args @('storage', 'account', 'show', '-g', $storageRg, '-n', $account)
             $failParts = @()
+            if (-not $corsOk) { $failParts += 'cors-verification-failed' }
             if ($containerFailures.Count) { $failParts += "containers-failed=$($containerFailures -join ',')" }
             if ($ruleFailures.Count) { $failParts += "network-rules-failed=$($ruleFailures -join ',')" }
             if ($peFailures.Count) { $failParts += "pe-failed=$($peFailures -join ',')" }
@@ -681,8 +726,8 @@ else {
             if ($failParts.Count) { $storageDetail += " | " + ($failParts -join '; ') }
             $results.Add((New-CheckResult -Id 'byo-storage-account' -Name "BYO storage account $account" -Status $storageStatus -Fr 'FR2.6' `
                         -Detail $storageDetail `
-                        -Remediation $(if ($failParts.Count) { 'One or more containers, network rules, or the private DNS zone group could not be verified. Check RBAC (Storage/Network Contributor) and rerun.' } else { $null }) `
-                        -Data @{ id = $st.id; resourceGroup = $storageRg; account = $account; state = $state; containers = $containerStates; access = $accessData }))
+                        -Remediation $(if ($failParts.Count) { 'The required CORS rule, one or more containers, network rules, or the private DNS zone group could not be verified. Check RBAC (Storage/Network Contributor) and rerun.' } else { $null }) `
+                        -Data @{ id = $st.id; resourceGroup = $storageRg; account = $account; state = $state; containers = $containerStates; access = $accessData; cors = @{ configured = $corsOk; origins = $corsOrigins; methods = $corsMethods; maxAgeInSeconds = 200 } }))
         }
         catch {
             $results.Add((New-CheckResult -Id 'byo-storage-account' -Name "BYO storage account $account" -Status 'Fail' -Fr 'FR2.6' `
@@ -1063,4 +1108,3 @@ foreach ($step in $steps) {
 if ($PassThru) { return $results.ToArray() }
 $null = Write-OnboardingReport -Results $results.ToArray() -Title 'Stage 2 · landing-zone preparation (FR2.1-FR2.9)' -JsonPath $JsonPath
 Complete-Stage -Results $results.ToArray()
-

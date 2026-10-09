@@ -182,15 +182,15 @@
             "byo",
             "managed"
           ],
-          "description": "byo when bookshelf.inScope=true: the Bookshelf storage container needs a customer storage account (Stage 1 check bookshelf-storage)."
+          "description": "Must be byo for deployment. Every Discovery project requires a storage container backed by a customer storage account."
         },
         "account": {
           "type": "string",
-          "description": "Storage account name for Bookshelf (byo). Stage 2 creates it in the network resource group if it does not exist."
+          "description": "Storage account name for project storage. Stage 2 creates it in the network resource group if it does not exist."
         },
         "accountId": {
           "type": "string",
-          "description": "Resource id of the storage account used for the bookshelf (consumed by Stage 4 when bookshelf is in scope)."
+          "description": "Resource id of the storage account used by the project storage container."
         },
         "access": {
           "type": "string",
@@ -212,6 +212,11 @@
           ],
           "default": "Enabled",
           "description": "Workspace data-plane public network access. Disabled limits agent, investigation and conversation calls (Stage 5) to runners inside the VNet."
+        },
+        "networkIsolation": {
+          "type": "boolean",
+          "default": true,
+          "description": "Controls Workbench network isolation independently of publicNetworkAccess. When true, Workbench access requires VPN or ExpressRoute connectivity to the workspace VNet."
         }
       }
     },
