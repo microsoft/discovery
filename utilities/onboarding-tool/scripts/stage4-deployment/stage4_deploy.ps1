@@ -718,7 +718,7 @@ if (-not [string]::IsNullOrWhiteSpace($uamiRolesRaw)) {
 if ($null -eq $uamiRoles) {
     $results.Add((New-CheckResult -Id 'deploy-managed-identity-roles' -Name 'managed identity role assignments' -Status 'Warn' -Fr 'FR4.1' `
                 -Detail 'Could not read role assignments for the UAMI (insufficient permission to list role assignments, or a transient error); UAMI role coverage was not verified.' `
-                -Remediation 'Verify manually that the UAMI holds Microsoft Discovery Platform Contributor (Preview), Storage Blob Data Contributor and AcrPull on the deployment resource group, plus Network Contributor on the managedcluster and nodepool subnets (or their VNet), then proceed.' `
+                -Remediation 'Verify manually that the UAMI holds Microsoft Discovery Platform Contributor, Storage Blob Data Contributor and AcrPull on the deployment resource group, plus Network Contributor on the managedcluster and nodepool subnets (or their VNet), then proceed.' `
                 -Data ([pscustomobject]@{ principalId = $uamiPrincipalId; verified = $false })))
 }
 else {
@@ -732,7 +732,7 @@ else {
     $scSubnetScopes = @($scNetRoles | ForEach-Object { Get-SubnetIdByRole -Config $cfg -Role $_ -ResourceGroup $resourceGroup } | Where-Object { $_ } | Select-Object -Unique)
     $ownerId = '8e3af657-a8ff-443c-a75c-2fe8c4bcb635'; $contributorId = 'b24988ac-6180-42a0-ab88-20f7382dd24c'
     $requiredUamiRoles = @(
-        [pscustomobject]@{ name = 'Microsoft Discovery Platform Contributor (Preview)'; id = '01288891-85ee-45a7-b367-9db3b752fc65'; scope = $rgScope; accepts = @() }
+        [pscustomobject]@{ name = 'Microsoft Discovery Platform Contributor'; id = '01288891-85ee-45a7-b367-9db3b752fc65'; scope = $rgScope; accepts = @() }
         [pscustomobject]@{ name = 'Storage Blob Data Contributor'; id = 'ba92f5b4-2d11-453d-a403-e96b0029c9fe'; scope = $rgScope; accepts = @() }
         [pscustomobject]@{ name = 'AcrPull'; id = '7f951dda-4ed3-4680-a7ca-43fe172d538d'; scope = $rgScope; accepts = @() }
     )

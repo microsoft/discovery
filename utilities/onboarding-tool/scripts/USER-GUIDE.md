@@ -65,7 +65,7 @@ Install and sign in once:
 
    | Role | Scope |
    |---|---|
-   | Microsoft Discovery Platform Contributor (Preview) | your platform resource group |
+   | Microsoft Discovery Platform Contributor | your platform resource group |
    | Storage Blob Data Contributor | your platform resource group |
    | AcrPull | your platform resource group |
    | Network Contributor | the VNet (the network resource group if the VNet isn't found) |
