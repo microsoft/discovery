@@ -44,7 +44,7 @@ Per-stage parameters, prerequisites, and dependencies are documented in
 | Stage | Script | Folded checks / steps |
 |---|---|---|
 | 1 Planning | [`stage1-planning/stage1_plan.ps1`](stage1-planning/stage1_plan.ps1) | subscription_prereq, capture_fields, subnet_sizing, address_space_conflict, region_availability, quota_sku, naming_validation, policy_preflight, config_export |
-| 2 Landing zone | [`stage2-landing-zone/stage2_prepare.ps1`](stage2-landing-zone/stage2_prepare.ps1) | rp_register, rbac_assign, nsp_perimeter_joiner_role, network_provision, nsg_rules, route_tables, private_dns, byo_storage, firewall_request_artifact, quota_exemption_requests |
+| 2 Landing zone | [`stage2-landing-zone/stage2_prepare.ps1`](stage2-landing-zone/stage2_prepare.ps1) | rp_register, rbac_assign, nsp_perimeter_joiner_role, network_provision, nsg_rules, route_tables, private_dns, byo_storage, managed_identity_roles, firewall_request_artifact, quota_exemption_requests |
 | 3 Validation | [`stage3-validation/stage3_validate.ps1`](stage3-validation/stage3_validate.ps1) | check_subnet_delegation, check_nsg_effective, check_effective_routes, check_dns_and_pe, check_quota, testvm_lifecycle, probe_dns, probe_tcp443, probe_https, probe_artifacts, probe_pe_resolution, probe_eastwest, dependency_spec |
 | 4 Deployment | [`stage4-deployment/stage4_deploy.ps1`](stage4-deployment/stage4_deploy.ps1) | deploy_order, true_state_detection, error_remediation_engine, recovery_reput |
 | 5 Scenario enablement | [`stage5-scenario-enablement/stage5_enable.ps1`](stage5-scenario-enablement/stage5_enable.ps1) | create_agent, create_investigation_conversation, send_prompt_poll, verify_response, verification_summary |
@@ -119,7 +119,9 @@ in, so the parser and local checks run offline. `.xlsx` forms are read natively 
 
 ### Stage 2 — Landing zone (`stage2-landing-zone/stage2_prepare.ps1`)
 
-Turns the signed `config.json` into a deployed landing zone (FR2.1–FR2.9): RP registration, RBAC,
+Turns the signed `config.json` into a deployed landing zone (FR2.1–FR2.9): RP registration, RBAC
+(Discovery roles and the administrator's Azure roles on the target resource groups, plus the
+managed identity roles Stage 4 checks),
 the one-time NSP Perimeter Joiner custom role plus Reader access for the Discovery control-plane
 service principal, network provisioning via `network.bicep` (VNet,
 subnets with FR1.2 delegations, shared NSG allow-list, UDR route tables, privatelink DNS zones +
@@ -127,8 +129,8 @@ links), BYO storage, and the firewall-request / quota-increase-request / policy-
 files next to `-JsonPath`. Builds the
 network only when `network.model` is byo/byo-spoke/greenfield; byo-existing and managed skip
 provisioning. Idempotent; stops on the first hard failure with its remediation. **Writes platform
-resources — run against the intended subscription only.** Requires rights to create role
-assignments (Owner / User Access Administrator / RBAC Administrator at the target scope).
+resources — run against the intended subscription only.** Requires Owner, or Contributor plus
+User Access Administrator / RBAC Administrator, at subscription scope.
 
 | Parameter | Required | Description |
 |---|---|---|
@@ -212,6 +214,11 @@ Tracked work not yet implemented in the scripts:
 - Stage 5 — scenario validation. Stage 5 creates a Q&A agent (no tool) and checks the bookshelf
   private endpoints, but does not validate end-to-end bookshelf retrieval (that an ingested asset
   is queryable by the agent). Add that retrieval assertion.
+- All stages — automated tests. There are no unit tests and no CI workflow for this tool; changes
+  are validated only by parse checks and live runs against a test subscription. Add Pester tests
+  with `az` mocked (start with `lib/OnboardingCommon.psm1`, the Stage 1 local checks, Stage 2 role
+  and CORS logic, and Stage 4 error remediation), and a workflow that runs them plus a parse check
+  on pull requests that touch `utilities/onboarding-tool`.
 
 ## FR traceability
 
