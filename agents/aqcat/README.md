@@ -10,7 +10,7 @@ This agent gives Discovery users conversational access to that capability. A res
 
 **Intended user:** computational chemists, catalysis researchers, and materials scientists doing candidate triage.
 
-**Related agents.** [`aqpotency`](../aqpotency/README.md) covers small-molecule potency and selectivity on the same platform and the same connection. [`sandboxaq`](../sandboxaq/README.md) is separate — it prompts a SandboxAQ model you have subscribed to in Azure AI Foundry, and needs no platform tenant.
+**Related agents.** [`aqpotency`](../aqpotency/README.md) covers small-molecule potency and selectivity on the same platform and the same connection.
 
 **Successful outcome:** a ranked, correctly-attributed set of adsorption energies with units intact, each reported with its convergence status and the resolved bulk identifier, plus an explicit statement of which systems fall outside the model's applicability.
 
