@@ -41,14 +41,10 @@ Install and sign in once:
    az account set --subscription <your-subscription-id>
    az account show --query '{name:name, id:id}' -o table
    ```
-3. **Permissions** on the target subscription / resource group:
-   - Stage 2 creates **role assignments**, so you need **Owner**, **User Access Administrator**, or
-     **RBAC Administrator** at the target scope.
-   - Registering resource providers and creating resource groups/resources requires **Contributor**
-     or **Owner** at subscription scope. User Access Administrator and RBAC Administrator can
-     assign roles but do not by themselves grant resource creation permissions.
-   - Network and storage preparation require **Network Contributor** and **Storage Account
-     Contributor** at their respective resource groups when those resources are separated.
+3. **Permissions** at subscription scope: **Owner**, or **Contributor** plus **User Access
+   Administrator** or **RBAC Administrator**. Stage 2 registers providers and creates resource
+   groups, the VNet, and the storage account (Contributor), and it creates role assignments
+   (User Access Administrator or RBAC Administrator). Either role alone isn't enough.
 4. **A subscription enabled (allow-listed) for Microsoft Discovery.** If
    `Microsoft.Discovery` is not visible in the subscription, contact your Microsoft account
    representative to request access. Stage 1 treats an invisible provider as a blocking failure.
@@ -64,35 +60,38 @@ Install and sign in once:
    ```
    Copy the printed resource id; you will put it in the planning form / config.
 
-   **Assign the UAMI its roles before Stage 4** (needs Owner / User Access Administrator). The
-   supercomputer's AKS identities and the workspace all run as this UAMI:
+   Stage 2 assigns the UAMI its roles. The supercomputer's AKS identities and the workspace all
+   run as this UAMI:
 
    | Role | Scope |
    |---|---|
    | Microsoft Discovery Platform Contributor (Preview) | your platform resource group |
    | Storage Blob Data Contributor | your platform resource group |
    | AcrPull | your platform resource group |
-   | Network Contributor | the network resource group (or the VNet, or both the `managedcluster` and `nodepool` subnets) |
+   | Network Contributor | the VNet (the network resource group if the VNet isn't found) |
+
+   If whoever runs Stage 2 can't create role assignments, have an Owner or User Access
+   Administrator assign them:
 
    ```powershell
    $p  = az identity show -g <your-rg> -n <your-uami-name> --query principalId -o tsv
    $rg = az group show -n <your-rg> --query id -o tsv
-   $net = az group show -n <network-rg> --query id -o tsv
+   $net = az network vnet show -g <network-rg> -n <vnet-name> --query id -o tsv
    foreach ($r in 'Microsoft Discovery Platform Contributor','Storage Blob Data Contributor','AcrPull') {
      az role assignment create --assignee-object-id $p --assignee-principal-type ServicePrincipal --role $r --scope $rg
    }
    az role assignment create --assignee-object-id $p --assignee-principal-type ServicePrincipal --role 'Network Contributor' --scope $net
    ```
-   With a **managed VNet**, the network resource group must exist first (create it, or assign this
-   last role after Stage 2). Allow 5–10 minutes for role propagation. Stage 4 checks every role and
-   stops **before** deploying if any is missing, printing the exact `az` commands to fix it.
+   Allow 5–10 minutes for role propagation. Stage 4 checks every role and stops before deploying
+   if any is missing, printing the exact `az` commands to fix it.
 7. **Compute and model quota** in the deployment region. The supercomputer's system pool runs 3 ×
    `Standard_D4s_v6` (12 vCPUs) and is checked when you submit, so you need at least **12 free Total
    Regional vCPUs and 12 free Standard DSv6 Family vCPUs**. The node pool can scale out to 3 ×
    `Standard_D4ds_v6` (12 more vCPUs, DDSv6 Family). Check with
-   `az vm list-usage -l <region> -o table`. The workspace also needs Microsoft Foundry/Azure
-   OpenAI availability and sufficient GPT-5.4 TPM quota; Bookshelf requires AI Search capacity.
-   Stage 1 reports VM, model, and service quota gaps before deployment.
+   `az vm list-usage -l <region> -o table`. Each workspace also uses 450K GPT-5.4 GlobalStandard
+   TPM (250K for the built-in deployment plus 200K for the validation chat model). GlobalStandard
+   quota is shared across all regions in the subscription. Stage 1 checks vCPU and TPM quota, and
+   Stage 3 re-checks them before Stage 4. AI Search capacity for Bookshelf isn't checked.
 
 > `ImportExcel` is **not** required. Stage 1 reads `.xlsx` forms natively.
 
@@ -114,14 +113,14 @@ Notes next to each field explain what to enter. A few that trip people up:
 | Field | What to enter |
 |---|---|
 | `subscriptionId` | The subscription you ran `az account set` against. |
-| `deployingIdentity.objectId` | The identity that will deploy (Stage 2 grants it the platform roles). Enter the Entra **objectId (GUID)**, or — if you don't know it — an **email/UPN** of a user in the target tenant (or an app registration's appId/display name). Stage 1 resolves a non-GUID value to the objectId via `az` (run `az login` first). Find your own objectId with `az ad signed-in-user show --query id -o tsv`. |
+| `deployingIdentity.objectId` | The identity that will deploy. If `principals` is empty, Stage 2 grants it the Discovery roles plus the Azure roles a Discovery administrator needs (Managed Identity Contributor and Operator, Storage Account Contributor, Storage Blob Data Contributor, Network Contributor, AcrPush) on the target resource groups, and Stage 4 grants it Foundry User on the workspace managed resource group. Enter the Entra **objectId (GUID)**, or — if you don't know it — an **email/UPN** of a user in the target tenant (or an app registration's appId/display name). Stage 1 resolves a non-GUID value to the objectId via `az` (run `az login` first). Find your own objectId with `az ad signed-in-user show --query id -o tsv`. |
 | `resourceGroup` | The platform resource group from prerequisite 5. |
 | `managedIdentity.id` | The UAMI resource id from prerequisite 6 (used by Stage 4). |
 | `network.networkResourceGroup` | The resource group that holds (managed: will hold) the VNet. Can be the platform RG or a separate network RG; it must exist before Stage 2. |
 | `network.vnetName` | **Managed form:** optional — leave blank and the tool names the VNet `vnet-<names.workspace>`. **BYO form:** the name of your **existing** VNet in `network.networkResourceGroup` (Stage 1 checks it exists and is in `controlPlaneRegion`). |
 | `controlPlaneRegion` / `workloadRegion` | Use a supported production region: **East US**, **Sweden Central**, or **UK South**. Keep resources for one deployment in the same region unless an approved architecture requires otherwise. |
 | `names.*` | The resource names (workspace, project, supercomputer, node pool, etc.). Keep them unique in the subscription. |
-| `storage.account` | Required for every project, independently of Bookshelf. Use a globally unique storage account name and keep `storage.model=byo`; Stage 2 creates the account, required Blob CORS rules, and private endpoint if it does not exist. |
+| `storage.account` | Required for every project, independently of Bookshelf. Use a globally unique storage account name and keep `storage.model=byo`; Stage 2 creates the account, required Blob CORS rules, and private endpoint if it does not exist. The account denies public network traffic, so users who open project outputs in Discovery Studio need network access to it: from the VNet (VPN or ExpressRoute), or through a client IP rule you add. |
 | `workspace.publicNetworkAccess` | `Enabled` (default) or `Disabled`. With `Disabled`, the workspace data plane (agents, investigations, conversations) answers only from inside the VNet, so Stage 5 must run from a runner with private network access. |
 | `workspace.networkIsolation` | `true` (default) isolates the Workbench and requires VPN or ExpressRoute to the workspace VNet. `false` enables authenticated public Workbench access. This setting is independent of `workspace.publicNetworkAccess`. |
 
@@ -205,6 +204,8 @@ networking in the target subscription / resource group. Run against the intended
   assigns both that role and **Reader** to the Discovery control-plane service principal, and
   (for managed / byo-spoke / greenfield network models) provisions the VNet, subnets with the
   required delegations, shared NSG allow-list, route tables, and private DNS zones.
+- RBAC covers the Discovery roles and the administrator's Azure roles on the target resource
+  groups, plus the UAMI roles from prerequisite 6 after the network and storage exist.
 - Also emits firewall-request, quota-increase-request, and policy-exemption-request files next to
   `-JsonPath` (`./out/`); hand these to your network/governance team if required.
 - **Idempotent** — safe to re-run; it stops on the first hard failure with its remediation.
@@ -251,6 +252,9 @@ group. Re-runnable: it detects real resource state and resumes from the first in
   api-version `2026-06-01` via `discovery-platform.bicep`.
 - Detects real resource state before each step, so a re-run **resumes** from the first incomplete
   resource. Use `-Recovery` to re-PUT a stranded resource.
+- After the project, assigns **Foundry User** on the workspace managed resource group (to
+  `principals` with a Platform Administrator or Contributor role, else `deployingIdentity`) so they
+  can edit agents and workflows in the Foundry portal. A failure here is a warning.
 - **Supercomputer creation includes AKS provisioning and can take 15–30 minutes.** Be patient.
 - Requires the Stage 4 config fields: `resourceGroup`, `managedIdentity.id` (your pre-created UAMI),
   and `storage`.
@@ -324,7 +328,7 @@ commands above; `<workspace>` is the workspace name from `config.json`.
 |---|---|
 | Stage 1 won't write `config.json` | One or more required checks failed. Fix the flagged yellow cell (or add a `WAIVER`/`POLICY` row), then re-run. |
 | "Not logged in" / Az checks skipped | `az login` and `az account set --subscription <id>`, then re-run. |
-| Stage 2 RBAC failure | You lack role-assignment rights. Get **Owner / User Access Administrator / RBAC Administrator** at the scope. |
+| Stage 2 RBAC failure | You lack role-assignment rights. Get **Owner**, or **Contributor** plus **User Access Administrator / RBAC Administrator**, at subscription scope. |
 | Stage 4 fails on `managedIdentity` | `managedIdentity.id` is missing or wrong. Pre-create the UAMI (prerequisite 6) and set its resource id in the form, re-run Stage 1, then Stage 4. |
 | Stage 4 fails `managed identity role assignments` | The UAMI is missing a required role. Run the `az role assignment create` commands printed in the report, wait 5–10 minutes, then re-run Stage 4. |
 | Stage 4 fails `supercomputer subnet topology` | The `aksSubnet` is delegated, or `UserDefinedRouting` has no delegated `managementSubnet`. Run the `az network vnet subnet update` command printed in the report, re-run Stage 3, then Stage 4. |
