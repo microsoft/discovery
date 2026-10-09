@@ -45,7 +45,9 @@ function Read-XlsxSheet {
         [Parameter(Mandatory)][string]$SheetName
     )
     Add-Type -AssemblyName System.IO.Compression.FileSystem
-    $zip = [System.IO.Compression.ZipFile]::OpenRead((Resolve-Path -LiteralPath $Path))
+    # Share read/write so a form that is still open in Excel can be read.
+    $stream = [System.IO.File]::Open((Resolve-Path -LiteralPath $Path).ProviderPath, [System.IO.FileMode]::Open, [System.IO.FileAccess]::Read, [System.IO.FileShare]::ReadWrite)
+    $zip = [System.IO.Compression.ZipArchive]::new($stream, [System.IO.Compression.ZipArchiveMode]::Read)
     try {
         function Get-Entry([string]$name) { $zip.Entries | Where-Object { $_.FullName -eq $name } | Select-Object -First 1 }
         function Read-Xml($entry) {
@@ -105,7 +107,7 @@ function Read-XlsxSheet {
         }
         return $cells
     }
-    finally { $zip.Dispose() }
+    finally { $zip.Dispose(); $stream.Dispose() }
 }
 
 function Split-CellRef {
@@ -449,6 +451,23 @@ function Invoke-Stage1Checks {
                         -Remediation 'Confirm the subscription is allowlisted for Microsoft Discovery with your Microsoft account representative and grant the deploying identity permission to read/register resource providers.'))
         }
     }
+
+    # ---- FR1.0 managed identity exists (prerequisite the tool does not create) ----
+    $uamiId = [string]$Cfg.managedIdentity.id
+    if ($uamiId -and $uamiId -match '/userAssignedIdentities/') {
+        if (-not $loggedIn) {
+            $R.Add((New-CheckResult -Id 'uami-exists' -Name 'Managed identity exists' -Status 'Skip' -Fr 'FR1.0' `
+                        -Detail 'az not logged in; managedIdentity.id was not resolved.' -Remediation "Run 'az login' and re-run to confirm the identity exists."))
+        }
+        elseif (Get-AzJson -Args @('identity', 'show', '--ids', $uamiId) -AllowFail) {
+            $R.Add((New-CheckResult -Id 'uami-exists' -Name 'Managed identity exists' -Status 'Pass' -Fr 'FR1.0' -Detail $uamiId))
+        }
+        else {
+            $R.Add((New-CheckResult -Id 'uami-exists' -Name 'Managed identity exists' -Status 'Warn' -Fr 'FR1.0' `
+                        -Detail "managedIdentity.id does not resolve to an existing identity: $uamiId. The tool does not create it; Stage 2 skips its role assignments and Stage 4 fails without it." `
+                        -Remediation 'Create it before Stage 2: az group create -n <rg> -l <region>; az identity create -g <rg> -n <name> -l <region>. Or correct managedIdentity.id.'))
+        }
+    }
     if (-not $Cfg.deployingIdentity.canRegisterProviders) {
         $R.Add((New-CheckResult -Id 'identity-register' -Name 'Deploying identity can register providers' -Status 'Warn' -Fr 'FR1.0' `
                     -Detail 'Config marks the deploying identity as unable to register providers.' `
@@ -654,13 +673,37 @@ function Invoke-Stage1Checks {
     # ---- Project storage: every Discovery project needs a storage container ----
     $stModel = if ($Cfg.storage -and $Cfg.storage.model) { [string]$Cfg.storage.model } else { 'managed' }
     $stAccount = if ($Cfg.storage) { @($Cfg.storage.account, $Cfg.storage.accountId) | Where-Object { Test-Field $_ } | Select-Object -First 1 } else { $null }
-    if ($stModel -ne 'byo' -or -not $stAccount) {
+    $stPrecreate = 'Pre-create a StorageV2 account in the target subscription (the tool does not create it), then set storage.model=byo and storage.account (name) or storage.accountId (resource ID). Stage 2 adds the CORS rules, containers, and private endpoint.'
+    if ($stModel -ne 'byo') {
         $R.Add((New-CheckResult -Id 'project-storage' -Name 'Project storage account' -Status 'Fail' -Fr 'FR1.1' `
-                    -Detail "storage.model=$stModel and storage.account/accountId=$(if ($stAccount) { $stAccount } else { 'empty' }). Every Discovery project requires a storage container backed by a customer storage account." `
-                    -Remediation 'Set storage.model=byo and storage.account (Stage 2 creates the account, CORS rules, and private endpoint if missing) or storage.accountId (existing account).'))
-    } else {
-        $R.Add((New-CheckResult -Id 'project-storage' -Name 'Project storage account' -Status 'Pass' -Fr 'FR1.1' `
-                    -Detail "storage.model=byo; account=$stAccount; project storage is required independently of bookshelf.inScope."))
+                    -Detail "storage.model=$stModel. Every Discovery project needs a storage container backed by a storage account you own, so only storage.model=byo is supported." `
+                    -Remediation $stPrecreate))
+    }
+    elseif (-not $stAccount) {
+        $R.Add((New-CheckResult -Id 'project-storage' -Name 'Project storage account' -Status 'Fail' -Fr 'FR1.1' `
+                    -Detail 'storage.account and storage.accountId are both empty. Every Discovery project needs a storage container backed by a storage account you own.' `
+                    -Remediation $stPrecreate))
+    }
+    elseif (-not $loggedIn) {
+        $R.Add((New-CheckResult -Id 'project-storage' -Name 'Project storage account' -Status 'Warn' -Fr 'FR1.1' `
+                    -Detail "az not logged in; storage account '$stAccount' was not checked." `
+                    -Remediation "Run 'az login' and re-run to confirm the account exists."))
+    }
+    else {
+        $stArgs = if ($stAccount -match '/storageAccounts/') { @('storage', 'account', 'show', '--ids', $stAccount) }
+        else { @('storage', 'account', 'show', '-n', $stAccount, '--subscription', $Cfg.subscriptionId) }
+        $st = Get-AzJson -Args $stArgs -AllowFail
+        if ($st -and $st.id) {
+            # Persist the resolved id so Stages 2 and 4 target this account and its resource group.
+            $Cfg.storage | Add-Member -NotePropertyName accountId -NotePropertyValue ([string]$st.id) -Force
+            $R.Add((New-CheckResult -Id 'project-storage' -Name 'Project storage account' -Status 'Pass' -Fr 'FR1.1' `
+                        -Detail "Found $($st.id) ($($st.kind), $($st.location))." -Data @{ id = $st.id; location = $st.location; kind = $st.kind }))
+        }
+        else {
+            $R.Add((New-CheckResult -Id 'project-storage' -Name 'Project storage account' -Status 'Fail' -Fr 'FR1.1' `
+                        -Detail "Storage account '$stAccount' was not found in subscription $($Cfg.subscriptionId)." `
+                        -Remediation $stPrecreate))
+        }
     }
 
     # ---- FR1.5 quota / SKU / TPM / Cosmos --------------------------------
@@ -849,9 +892,18 @@ if ($ext -eq '.json') {
     Write-Host "Loaded config model from JSON: $FormPath"
 }
 elseif ($ext -eq '.xlsx') {
-    $cells = Read-XlsxSheet -Path $FormPath -SheetName 'Config'
-    $parsed = ConvertFrom-ConfigSheet -Cells $cells
-    $cfgModel = ConvertTo-ConfigModel -Parsed $parsed
+    # Stop on a read failure: continuing with an empty model runs no checks and reports a false GO.
+    $prevEap = $ErrorActionPreference
+    $ErrorActionPreference = 'Stop'
+    try {
+        $cells = Read-XlsxSheet -Path $FormPath -SheetName 'Config'
+        $parsed = ConvertFrom-ConfigSheet -Cells $cells
+        $cfgModel = ConvertTo-ConfigModel -Parsed $parsed
+    }
+    catch {
+        throw "Could not read the planning form $FormPath : $($_.Exception.Message) Close it in Excel or save a copy, then re-run."
+    }
+    finally { $ErrorActionPreference = $prevEap }
     # Normalize the OrderedDictionary model to the same pscustomobject shape the JSON
     # input path yields, so downstream logic that relies on $cfgModel.PSObject.Properties
     # (waiver application, config export) sees the real keys rather than dictionary members.

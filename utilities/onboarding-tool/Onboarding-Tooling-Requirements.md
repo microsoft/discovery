@@ -268,10 +268,10 @@ Access Administrator, or Role Based Access Control Administrator at the scope):
 
 | Role | Definition ID | Use |
 |---|---|---|
-| Platform Administrator (Preview) | `7a2b6e6c-472e-4b39-8878-a26eb63d75c6` | deploying identity — full control-plane + data-plane |
-| Platform Contributor (Preview) | `01288891-85ee-45a7-b367-9db3b752fc65` | scientists — operate resources, no infra create/delete |
-| Platform Reader (Preview) | `3bb7c424-af4e-436b-bfcc-8779c8934c31` | reviewers — read-only |
-| Bookshelf Index Data Reader (Preview) | `8ec773c5-7ce6-4b78-91d1-182f8faa536d` | agents querying knowledge bases |
+| Platform Administrator | `7a2b6e6c-472e-4b39-8878-a26eb63d75c6` | deploying identity — full control-plane + data-plane |
+| Platform Contributor | `01288891-85ee-45a7-b367-9db3b752fc65` | scientists — operate resources, no infra create/delete |
+| Platform Reader | `3bb7c424-af4e-436b-bfcc-8779c8934c31` | reviewers — read-only |
+| Bookshelf Index Data Reader | `8ec773c5-7ce6-4b78-91d1-182f8faa536d` | agents querying knowledge bases |
 
 Platform Administrator does not grant the ability to assign these roles to others. For
 project-scoped users, pair Project Contributor/Reader with the resource-specific roles

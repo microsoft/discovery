@@ -36,9 +36,9 @@
     The identity running this script must have ONE of the following on the target subscription
     or resource group (ARM enforces this for Microsoft.Discovery/* write operations):
 
-      • "Microsoft Discovery Platform Contributor (Preview)"
+      • "Microsoft Discovery Platform Contributor"
           Role definition ID: 01288891-85ee-45a7-b367-9db3b752fc65
-      • "Microsoft Discovery Platform Administrator (Preview)"
+      • "Microsoft Discovery Platform Administrator"
           Role definition ID: 7a2b6e6c-472e-4b39-8878-a26eb63d75c6
       • Standard "Contributor" role (covers Microsoft.Discovery/* via wildcard write)
 

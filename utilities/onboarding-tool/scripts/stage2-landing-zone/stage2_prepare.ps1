@@ -225,7 +225,8 @@ else {
 }
 
 # Azure built-in roles Learn lists for the Discovery administrator, in addition to Platform
-# Administrator. Foundry User is assigned by Stage 4 on the workspace managed resource group.
+# Administrator. Reader is granted at subscription scope below; Foundry Owner is assigned by
+# Stage 4 on the workspace managed resource group.
 $adminAzureRoles = [ordered]@{
     'Managed Identity Contributor'  = 'e40ec5ca-96e0-45a2-b4ff-59039f2c2b59'
     'Managed Identity Operator'     = 'f1a07417-d97a-45cb-824c-7a7467783830'
@@ -265,6 +266,15 @@ foreach ($rg in $resourceGroups) {
                         -RoleName $roleName -RoleId $adminAzureRoles[$roleName] -Scope $scope -ScopeLabel $rg))
         }
     }
+}
+
+if ($resourceGroups.Count) {
+    foreach ($principal in @(Get-PrincipalsForRole -RoleName 'Platform Administrator')) {
+        $results.Add((Grant-OnboardingRole -PrincipalId $principal.ObjectId -PrincipalType (Convert-PrincipalType $principal.Type) `
+                    -RoleName 'Reader' -RoleId 'acdd72a7-3385-48ef-bd42-f606fba81ae7' -Scope "/subscriptions/$($cfg.subscriptionId)" -ScopeLabel 'subscription'))
+    }
+    $results.Add((New-CheckResult -Id 'rbac-foundry-owner' -Name 'Foundry Owner on workspace managed RG' -Status 'Skip' -Fr 'FR2.1' `
+                -Detail 'The workspace managed resource group does not exist until Stage 4 creates the workspace. Stage 4 assigns Foundry Owner there to Platform Administrator principals.'))
 }
 
     return $results.ToArray()
@@ -635,14 +645,18 @@ else {
     else {
         try {
             Assert-AzLogin -SubscriptionId $cfg.subscriptionId
-            Invoke-Az -Args @('group', 'create', '--name', $storageRg, '--location', $cfg.workloadRegion) | Out-Null
-            $st = Get-AzJson -Args @('storage', 'account', 'show', '-g', $storageRg, '-n', $account) -AllowFail
+            # Strict BYO: the customer pre-creates the account; Stage 2 only configures it.
+            $stId = Get-StorageAccountId
+            $st = if ($stId) { Get-AzJson -Args @('storage', 'account', 'show', '--ids', $stId) -AllowFail }
+            else { Get-AzJson -Args @('storage', 'account', 'show', '-n', $account, '--subscription', $cfg.subscriptionId) -AllowFail }
             if (-not $st) {
-                Invoke-Az -Args @('storage', 'account', 'create', '-g', $storageRg, '-n', $account, '-l', $cfg.workloadRegion, '--sku', 'Standard_LRS', '--kind', 'StorageV2', '--https-only', 'true', '--min-tls-version', 'TLS1_2', '--allow-blob-public-access', 'false', '--allow-shared-key-access', 'false') | Out-Null
-                $st = Get-AzJson -Args @('storage', 'account', 'show', '-g', $storageRg, '-n', $account)
-                $state = 'created'
+                $results.Add((New-CheckResult -Id 'byo-storage-account' -Name "BYO storage account $account" -Status 'Fail' -Fr 'FR2.6' `
+                            -Detail "Storage account '$(if ($stId) { $stId } else { $account })' was not found in subscription $($cfg.subscriptionId). The tool does not create it." `
+                            -Remediation 'Pre-create a StorageV2 account in the target subscription, set storage.account or storage.accountId, re-run Stage 1, then re-run Stage 2.'))
+                return $results.ToArray()
             }
-            else { $state = 'exists' }
+            if ($st.id -match '/resourceGroups/([^/]+)') { $storageRg = $Matches[1] }
+            $state = 'exists'
 
             $defaultAction = ($access -eq 'serviceEndpoint') ? 'Deny' : 'Deny'
             Invoke-Az -Args @('storage', 'account', 'update', '-g', $storageRg, '-n', $account, '--allow-blob-public-access', 'false', '--default-action', $defaultAction) | Out-Null
@@ -829,7 +843,7 @@ function Invoke-ManagedIdentityRoles {
     $rg = [string]$cfg.resourceGroup
     $rgScope = "/subscriptions/$sub/resourceGroups/$rg"
     $grants = [System.Collections.Generic.List[object]]::new()
-    $grants.Add(@('Microsoft Discovery Platform Contributor (Preview)', '01288891-85ee-45a7-b367-9db3b752fc65', $rgScope, $rg))
+    $grants.Add(@('Microsoft Discovery Platform Contributor', '01288891-85ee-45a7-b367-9db3b752fc65', $rgScope, $rg))
     $grants.Add(@('Storage Blob Data Contributor', 'ba92f5b4-2d11-453d-a403-e96b0029c9fe', $rgScope, $rg))
     $grants.Add(@('AcrPull', '7f951dda-4ed3-4680-a7ca-43fe172d538d', $rgScope, $rg))
 

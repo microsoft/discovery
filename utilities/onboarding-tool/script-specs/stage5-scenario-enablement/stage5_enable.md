@@ -48,5 +48,5 @@ Hard pass/fail: the response must be `completed` and contain non-empty assistant
 - Completed with no text, or not completed: inspect error / last_error / incomplete_details and confirm the chat-model deployment is healthy.
 
 ### verification_summary — FR5.7
-Confirm supercomputer/workspace/project/chat-model are all Succeeded; Bookshelf (if in scope) has an Approved private endpoint with DNS to the configured BYO storage account (Stage 2 creates it); and agent created, conversation completed, agent answered.
+Confirm supercomputer/workspace/project/chat-model are all Succeeded; Bookshelf (if in scope) has an Approved private endpoint with DNS to the configured BYO storage account (Stage 2 creates the endpoint); and agent created, conversation completed, agent answered.
 - Any item red: platform is not certified; resolve the named item.

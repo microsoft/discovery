@@ -44,8 +44,8 @@ The script does not rely on Windows-only cmdlets or Windows-specific path behavi
 
 The caller must have one of the following roles on the target subscription or resource group:
 
-- `Microsoft Discovery Platform Contributor (Preview)`
-- `Microsoft Discovery Platform Administrator (Preview)`
+- `Microsoft Discovery Platform Contributor`
+- `Microsoft Discovery Platform Administrator`
 - `Contributor`
 
 The caller must also be able to read the existing Azure Storage account referenced by the source `DataContainer`.

@@ -16,7 +16,7 @@
       - User Access Administrator
       - Role Based Access Control Administrator
 
-    The Microsoft Discovery Platform Administrator (Preview) role alone is NOT sufficient
+    The Microsoft Discovery Platform Administrator role alone is NOT sufficient
     because it cannot assign the Azure built-in roles (Storage, Network, Managed Identity,
     Azure AI, etc.) that each persona requires.
 
@@ -173,8 +173,8 @@ $DISCOVERY_PLATFORM_ADMIN_ID = "7a2b6e6c-472e-4b39-8878-a26eb63d75c6"
 
 # All role definition IDs (stable built-in IDs — all roles including Bookshelf are present in every tenant)
 $ROLE_IDS = @{
-    "Microsoft Discovery Platform Administrator (Preview)" = "7a2b6e6c-472e-4b39-8878-a26eb63d75c6"
-    "Microsoft Discovery Platform Contributor (Preview)"   = "01288891-85ee-45a7-b367-9db3b752fc65"
+    "Microsoft Discovery Platform Administrator" = "7a2b6e6c-472e-4b39-8878-a26eb63d75c6"
+    "Microsoft Discovery Platform Contributor"   = "01288891-85ee-45a7-b367-9db3b752fc65"
     "Managed Identity Contributor"                         = "e40ec5ca-96e0-45a2-b4ff-59039f2c2b59"
     "Managed Identity Operator"                            = "f1a07417-d97a-45cb-824c-7a7467783830"
     "Storage Account Contributor"                          = "17d1049b-9a84-46fb-8f53-869881c3d3ab"
@@ -184,11 +184,11 @@ $ROLE_IDS = @{
     "Reader"                                               = "acdd72a7-3385-48ef-bd42-f606fba81ae7"
     "Azure AI Owner"                                       = "c883944f-8b7b-4483-af10-35834be79c4a"
     "Azure AI User"                                        = "53ca6127-db72-4b80-b1b0-d745d6d5456d"
-    # Microsoft Discovery Bookshelf Index Data Reader (Preview) — no published stable
+    # Microsoft Discovery Bookshelf Index Data Reader — no published stable
     # GUID; resolved at runtime via Get-AzRoleDefinition after authentication.
 }
 
-$BOOKSHELF_ROLE_NAME = "Microsoft Discovery Bookshelf Index Data Reader - Preview"
+$BOOKSHELF_ROLE_NAME = "Microsoft Discovery Bookshelf Index Data Reader"
 # Populated at runtime after Connect-AzAccount in Step 4.
 $script:BookshelfRoleResolutionError = $null
 
@@ -621,8 +621,8 @@ function Add-BookshelfRoleEntry {
 
 switch ($Persona) {
     "PlatformAdministrator" {
-        Add-RoleEntry $ROLE_IDS["Microsoft Discovery Platform Administrator (Preview)"] `
-            "Microsoft Discovery Platform Administrator (Preview)" $primaryScope $primaryLabel
+        Add-RoleEntry $ROLE_IDS["Microsoft Discovery Platform Administrator"] `
+            "Microsoft Discovery Platform Administrator" $primaryScope $primaryLabel
         Add-RoleEntry $ROLE_IDS["Managed Identity Contributor"] `
             "Managed Identity Contributor" $primaryScope $primaryLabel
         Add-RoleEntry $ROLE_IDS["Managed Identity Operator"] `
@@ -642,8 +642,8 @@ switch ($Persona) {
         Add-BookshelfRoleEntry $primaryScope $primaryLabel
     }
     "Scientist" {
-        Add-RoleEntry $ROLE_IDS["Microsoft Discovery Platform Contributor (Preview)"] `
-            "Microsoft Discovery Platform Contributor (Preview)" $primaryScope $primaryLabel
+        Add-RoleEntry $ROLE_IDS["Microsoft Discovery Platform Contributor"] `
+            "Microsoft Discovery Platform Contributor" $primaryScope $primaryLabel
         Add-RoleEntry $ROLE_IDS["Storage Account Contributor"] `
             "Storage Account Contributor" $primaryScope $primaryLabel
         Add-RoleEntry $ROLE_IDS["Storage Blob Data Contributor"] `
@@ -687,7 +687,7 @@ if ($executorObjectId) {
         if (-not $hasFullRightsAtPrimary) {
             if ($hasDiscoveryAdminRole) {
                 Exit-Fatal (
-                    "Executor holds only the Microsoft Discovery Platform Administrator (Preview) role, " +
+                    "Executor holds only the Microsoft Discovery Platform Administrator role, " +
                     "which cannot assign the Azure built-in roles required for a complete persona setup.`n`n" +
                     "To run this script, obtain one of the following at scope '$primaryScope':`n" +
                     "  - Owner                              (8e3af657-a8ff-443c-a75c-2fe8c4bcb635)`n" +
