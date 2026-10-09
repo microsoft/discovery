@@ -4,7 +4,7 @@
 
 Microsoft Discovery is the AI for Science platform that enables agentic-driven scientific research and development. Discovery Toolbox provides an end-to-end deployment and management experience — including instantiation of agents, tools, models, knowledge bases (Bookshelves), and the supercomputer compute pool — plus subscription-wide resource inventory with cascade tear-down, declarative validation plans, live agent chat, and a `@discovery` chat participant for natural-language operations.
 
-**Current version:** `v1.9.11`
+**Current version:** `v1.10.51`
 
 ---
 
@@ -48,8 +48,11 @@ Microsoft Discovery is the AI for Science platform that enables agentic-driven s
 - **Region Readiness** — Per-region readiness preflight: vCPU/GPU headroom, node-pool SKU availability (with an allowlisted-alternative recommendation), model TPM, and network/security guardrails side-by-side, with a region picker (home regions by default; add any region to vet a cross-region target).
 - **Network Security** — Four checks for the AIFSPInfrastructure service principal (existence, NSP Perimeter Joiner role, role assignment, Reader at subscription scope) with one-click create/assign actions. Required for every deploy (network hardening is on by default), not just hardened mode.
 - **Checklist** — The end-to-end Validation Checklist: one dense, linear table that walks a whole deployment top-to-bottom (every pre-flight check, then every validation stage) with live status, collapsible detail, and an Input column of the resource names each stage will create. Reflects both chat- and UI-driven runs.
+- **Pre-flight** — One consolidated page over the whole check catalogue, in a prescriptive run order, with per-check age (a freshly-run check never makes the rest look fresh), a blockers-first report you can export as Markdown or HTML, and **Export to PowerShell** — a standalone bundle generated from the same declarative specs the in-product checkers use, so it cannot drift into a second implementation. Checks that would create Azure resources are opt-in and are named when skipped, because a skipped check is not a passing one.
+- **Run Manifest** — Export, hand-edit and re-validate the exact manifest an end-to-end run will execute, so a run can be reviewed before it costs hours.
 - **Bicep Deployment** — Validate, configure, and deploy the bundled template with real-time terminal output and a live Infra Status bar.
-- **Inventory** — Subscription-wide scan of every Discovery resource group, workspace, project, agent, supercomputer, storage account, container, UAMI, ACR, MRG, and Bookshelf — with inline per-leaf delete and cascade tear-down (project / workspace / supercomputer) when `mdToolbox.enableCleanup` is on.
+- **Inventory** — Subscription-wide scan of every Discovery resource group, workspace, project, agent, supercomputer, storage account, container, UAMI, ACR, MRG, and Bookshelf — with inline per-leaf delete and cascade tear-down (project / workspace / supercomputer) when `mdToolbox.enableCleanup` is on. The scan also sweeps for **orphaned foundations** — Discovery infrastructure that outlived its workspace, which a workspace-rooted scan cannot see at all — and labels every resource group it finds with an ownership verdict. Only genuinely spent foundations are offered for teardown; a group holding a live workspace, or Discovery records beside somebody's running workload, is reported for completeness and never proposed for deletion.
+- **Bookshelf Status** — Indexing progress and knowledge-base health for every bookshelf, including the per-KB failures that otherwise surface only as an empty answer.
 - **Agents Page** — Combined catalog browser + agent inventory across workspaces and projects with model, tools, KBs, and Studio/Foundry links.
 - **Tool Publishing** — End-to-end ACR build & push pipeline via ACR Tasks (no local Docker required), with image verification and ARM deploy.
 - **Agent Publishing** — Create agents from scratch or catalog with 8-phase deploy progress events and retry on failure.
@@ -67,17 +70,17 @@ Microsoft Discovery is the AI for Science platform that enables agentic-driven s
 
 ## What's new & coming soon
 
-The sidebar's breadth is set by a single **View Level** (`mdToolbox.viewLevel`): **Simple** (essentials), **Standard** (everything except experimental — the default for this build), or **Advanced** (everything, including experimental pages marked `*`). Change it from the **Welcome** page or the **View Level** menu (sidebar **…**). Experimental pages exist and are functional — they're just hidden below the Advanced level.
+The sidebar's breadth is set by a single **View Level** (`mdToolbox.viewLevel`): **Simple** (essentials), **Standard** (everything except the advanced pages — the default for this build), or **Advanced** (everything, including the advanced pages marked `*`). Change it from the **Welcome** page or the **View Level** menu (sidebar **…**). Advanced pages are fully functional — they are hidden below the Advanced level because they are power-user surfaces, not because they are unfinished.
 
 | Status | Feature | What it does |
 | --- | --- | --- |
-| Experimental | **Plan-Driven Validation** | Author a declarative 7-stage build plan (workspace · chat model · storage · project · agents · interactions), execute it, and review per-step pass/fail with JSONL audit footers. Stage 6 supports a multi-substep composer (`createInvestigation` · `addTask` · `addConversation` · `addMessage`) so a single plan can stand up a project, deploy agents, and assert on chat responses end-to-end. Failed runs offer a one-click cleanup of every resource the run created. |
-| Experimental | **Live Agent Chat** | Talk to deployed Discovery agents from a 3-pane chat UX (investigations · conversations · messages) over REST or MCP, with a four-mode transport selector (`rest-only` · `mcp-only` · `rest-then-mcp` · `mcp-then-rest`) and per-message override. Conversations persist as JSONL under `~/.md-toolbox/conversations/`. |
-| Experimental | **Agent Scorecard** | LLM-as-judge per-agent scoring page tied to validation runs, with pass/fail rubrics and per-rubric drill-down. |
-| Experimental | **Bookshelves & Knowledge Bases** | Bookshelf enumeration, deploy form, and per-resource delete — wired into the Agent Deploy form's Knowledge Bases multi-select, the Inventory page, and the architecture diagram. |
-| Experimental | **Supercomputer Page** | AKS snapshot of the Discovery supercomputer with node pool list, resize/delete/create actions, and a read-only kubectl console. |
-| Experimental | **MCP Catalog & Invoke** | Browse MCP servers exposed by your Discovery environment and invoke their tools directly from the toolbox. |
-| Experimental | **@discovery Chat Participant** | Slash commands (`/help`, `/setup`, `/deploy`, `/list`, `/create-agent`, `/explain`) plus the full `#discovery_*` language model tool set — read tools (capabilities, catalog, starter kits, agents, tenants & subscriptions, docs, config, environment checks & preflight, Chat Progress plan, capacity & inventory scans) and write tools (`discovery_deployBicep` · `discovery_deployTool` · `discovery_deployAgent` · `discovery_provisionFoundation` · `discovery_applySetting` · `discovery_modifyNodePool`) for natural-language agent creation, infrastructure deploys, and Q&A. Write tools are double-gated on `mdToolbox.advancedDevProxy.allowDeploys` plus per-action approval flags. Requires GitHub Copilot Chat. |
+| Advanced | **Plan-Driven Validation** | Author a declarative 7-stage build plan (workspace · chat model · storage · project · agents · interactions), execute it, and review per-step pass/fail with JSONL audit footers. Stage 6 supports a multi-substep composer (`createInvestigation` · `addTask` · `addConversation` · `addMessage`) so a single plan can stand up a project, deploy agents, and assert on chat responses end-to-end. Failed runs offer a one-click cleanup of every resource the run created. |
+| Advanced | **Live Agent Chat** | Talk to deployed Discovery agents from a 3-pane chat UX (investigations · conversations · messages) over REST or MCP, with a four-mode transport selector (`rest-only` · `mcp-only` · `rest-then-mcp` · `mcp-then-rest`) and per-message override. Conversations persist as JSONL under `~/.md-toolbox/conversations/`. |
+| Advanced | **Agent Scorecard** | LLM-as-judge per-agent scoring page tied to validation runs, with pass/fail rubrics and per-rubric drill-down. |
+| Advanced | **Bookshelves & Knowledge Bases** | Bookshelf enumeration, deploy form, and per-resource delete — wired into the Agent Deploy form's Knowledge Bases multi-select, the Inventory page, and the architecture diagram. |
+| Advanced | **Supercomputer Page** | AKS snapshot of the Discovery supercomputer with node pool list, resize/delete/create actions, and a read-only kubectl console. |
+| Advanced | **MCP Catalog & Invoke** | Browse MCP servers exposed by your Discovery environment and invoke their tools directly from the toolbox. |
+| Advanced | **@discovery Chat Participant** | Slash commands (`/help`, `/setup`, `/deploy`, `/list`, `/create-agent`, `/explain`) plus the full `#discovery_*` language model tool set — read tools (capabilities, catalog, starter kits, agents, tenants & subscriptions, docs, config, environment checks & preflight, Chat Progress plan, capacity & inventory scans) and write tools (`discovery_deployBicep` · `discovery_deployTool` · `discovery_deployAgent` · `discovery_provisionFoundation` · `discovery_applySetting` · `discovery_modifyNodePool`) for natural-language agent creation, infrastructure deploys, and Q&A. Write tools are double-gated on `mdToolbox.advancedDevProxy.allowDeploys` plus per-action approval flags. Requires GitHub Copilot Chat. |
 | Planned | **Post-Deploy Health Smoke** | Dashboard-level passive health verification, endpoint connectivity tests, and Service Health correlation — complements the active Validation feature. |
 | Planned | **Centralized Input Validation** | Shared validation rules driving inline validation across every editable field. |
 
@@ -95,4 +98,4 @@ Found a bug, want a feature, or have general feedback? Open an issue on the [mic
 
 ---
 
-<sub>Published version **v1.9.11** &middot; built from `3bfa001` on 2026-09-29T23:11:52.803Z.</sub>
+<sub>Published version **v1.10.51** &middot; built from `d411709` on 2026-10-09T20:52:09.717Z.</sub>
