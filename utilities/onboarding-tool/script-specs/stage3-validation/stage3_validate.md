@@ -43,7 +43,7 @@ Use `az network nic show-effective-route-table` and `az network watcher show-nex
 - Managed cluster via NVA: set it to VnetLocal (delete+recreate the route).
 
 ### check_dns_and_pe — FR3.6d
-Confirm each FR2.5 privatelink zone exists and is linked, and private endpoints are Approved with non-empty DNS (Bookshelf expects 3 PEs approved; the Foundry endpoint carries 2 zones) — read-only.
+Confirm each FR2.5 privatelink zone exists and is linked, and private endpoints are Approved with non-empty DNS (Bookshelf expects the Stage 2 blob PE to the BYO storage account, Approved with DNS; the Foundry endpoint carries 2 zones) — read-only.
 - Zone unlinked or PE not Approved: fix the link / approve the PE (Stage 2 private_dns; Stage 4 PE approval). For byo-existing the customer owns the zones; the remediation prints the `az network private-dns zone create` and `link vnet create` commands.
 
 ### check_quota — FR3.6e

@@ -54,7 +54,7 @@
         "privatelink.table.core.windows.net",
         "privatelink.dfs.core.windows.net"
       ],
-      "expectedPrivateEndpoints": 3,
+      "expectedPrivateEndpoints": 1,
       "foundryEndpointZoneCount": 0
     }
   }

@@ -406,7 +406,7 @@ the NVA. Use `az network nic show-effective-route-table` and `az network watcher
 show-next-hop`.
 
 FR3.6d [P0] Private DNS zones from FR2.5 exist and are linked; private endpoints are `Approved`
-with non-empty DNS (Bookshelf expects 3 PEs approved, Foundry endpoint carries 2 zones).
+with non-empty DNS (Bookshelf expects the Stage 2 blob PE to the BYO storage account, Approved with DNS; Foundry endpoint carries 2 zones).
 
 FR3.6e [P0] Re-check the FR1.5 quota right before deploy, because subscription quota can drop
 between Stage 1 and Stage 4. The supercomputer profile checks vCPU quota and the workspace profile

@@ -560,6 +560,7 @@ function Invoke-CheckDnsAndPe {
         $groups = @($DefaultRg)
         if ($Config.PSObject.Properties.Name -contains 'privateEndpointResourceGroups' -and $Config.privateEndpointResourceGroups) { $groups += @($Config.privateEndpointResourceGroups) }
         if ($Config.PSObject.Properties.Name -contains 'managedResourceGroup' -and $Config.managedResourceGroup) { $groups += $Config.managedResourceGroup }
+        if ($Config.PSObject.Properties.Name -contains 'storage' -and $Config.storage -and $Config.storage.PSObject.Properties.Name -contains 'accountId' -and "$($Config.storage.accountId)" -match '/resourceGroups/([^/]+)') { $groups += $Matches[1] }
         return @($groups | Where-Object { $_ } | Sort-Object -Unique)
     }
     $rg = Get-DnsResourceGroup -Config $Config
@@ -592,11 +593,34 @@ function Invoke-CheckDnsAndPe {
     foreach ($peRg in $peGroups) {
         $pes += @(Get-AzJson -Args @('network', 'private-endpoint', 'list', '-g', $peRg) -AllowFail | ForEach-Object { $_ })
     }
-    $expectedPeCount = if ($Profile -eq 'bookshelf') { 3 } else { 0 }
-    if ($expectedPeCount -gt 0 -and @($pes).Count -lt $expectedPeCount) {
-        $out.Add((New-CheckResult -Id 'private-endpoint-count' -Name "private endpoint count $Profile" -Status 'Fail' -Fr 'FR3.6d' `
-                    -Detail "expected at least $expectedPeCount private endpoints; found $(@($pes).Count)." `
-                    -Remediation 'Fix private DNS zone links / VNet DNS.'))
+    # Bookshelf content lives in the BYO storage account behind the project storage container. Before
+    # deployment the only Bookshelf endpoint is the blob PE Stage 2 creates on that account.
+    $expectedPeCount = if ($Profile -eq 'bookshelf') { 1 } else { 0 }
+    if ($expectedPeCount -gt 0) {
+        $stAccount = if ($Config.PSObject.Properties.Name -contains 'storage' -and $Config.storage) {
+            if ($Config.storage.PSObject.Properties.Name -contains 'account' -and $Config.storage.account) { [string]$Config.storage.account }
+            elseif ($Config.storage.PSObject.Properties.Name -contains 'accountId' -and $Config.storage.accountId) { ([string]$Config.storage.accountId -split '/')[-1] }
+        }
+        $stPes = @($pes | Where-Object {
+                $pe = $_
+                @(@($pe.privateLinkServiceConnections) + @($pe.manualPrivateLinkServiceConnections) | Where-Object {
+                        $_ -and $stAccount -and "$($_.privateLinkServiceId)" -match "/storageAccounts/$([regex]::Escape($stAccount))$" -and @($_.groupIds) -contains 'blob'
+                    }).Count
+            })
+        if (-not $stAccount) {
+            $out.Add((New-CheckResult -Id 'private-endpoint-bookshelf-storage' -Name 'Bookshelf storage blob private endpoint' -Status 'Fail' -Fr 'FR3.6d' `
+                        -Detail 'storage.account/accountId is not set in config, so the Bookshelf storage endpoint cannot be checked.' `
+                        -Remediation 'Set storage.account in the planning form, rerun Stage 1, then Stage 2.'))
+        }
+        elseif (-not $stPes.Count) {
+            $out.Add((New-CheckResult -Id 'private-endpoint-bookshelf-storage' -Name 'Bookshelf storage blob private endpoint' -Status 'Fail' -Fr 'FR3.6d' `
+                        -Detail "No blob private endpoint to storage account '$stAccount' found in: $($peGroups -join ', ')." `
+                        -Remediation 'Re-run Stage 2 to create the storage private endpoint, and approve it if it is Pending.'))
+        }
+        else {
+            $out.Add((New-CheckResult -Id 'private-endpoint-bookshelf-storage' -Name 'Bookshelf storage blob private endpoint' -Status 'Pass' -Fr 'FR3.6d' `
+                        -Detail "Found $($stPes.Count) blob private endpoint(s) to '$stAccount': $(@($stPes | ForEach-Object name) -join ', '). Approval and DNS are checked per endpoint below."))
+        }
     }
     foreach ($pe in @($pes)) {
         $connections = @()
@@ -615,16 +639,10 @@ function Invoke-CheckDnsAndPe {
                     -Remediation ($ok ? '' : 'Fix private DNS zone links / VNet DNS.') `
                     -Data ([pscustomobject]@{ name = $pe.name; approved = $approved; dnsCount = $dnsCount; id = $pe.id })))
     }
-    if (-not @($pes).Count) {
-        if ($expectedPeCount -gt 0) {
-            $out.Add((New-CheckResult -Id 'private-endpoints-present' -Name 'private endpoints discovered' -Status 'Fail' -Fr 'FR3.6d' `
-                        -Detail "No private endpoints found in: $($peGroups -join ', '); profile '$Profile' expects $expectedPeCount." `
-                        -Remediation 'Fix private DNS zone links / VNet DNS.'))
-        }
-        else {
-            $out.Add((New-CheckResult -Id 'private-endpoints-present' -Name 'private endpoints discovered' -Status 'Skip' -Fr 'FR3.6d' `
-                        -Detail "No private endpoints found in: $($peGroups -join ', '). Not expected for profile '$Profile'; the platform provisions its private endpoints during Stage 4 deployment."))
-        }
+    # For bookshelf, a missing endpoint is already reported by private-endpoint-bookshelf-storage.
+    if (-not @($pes).Count -and $expectedPeCount -eq 0) {
+        $out.Add((New-CheckResult -Id 'private-endpoints-present' -Name 'private endpoints discovered' -Status 'Skip' -Fr 'FR3.6d' `
+                    -Detail "No private endpoints found in: $($peGroups -join ', '). Not expected for profile '$Profile'; the platform provisions its private endpoints during Stage 4 deployment."))
     }
     return $out.ToArray()
 }

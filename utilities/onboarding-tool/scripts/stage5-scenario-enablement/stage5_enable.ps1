@@ -376,7 +376,8 @@ function Invoke-Stage5VerificationSummary {
         $dns = 0
         $qualified = 0
         $found = 0
-        foreach ($rg in @($ResourceGroup, (Get-CfgString $cfg.network 'networkResourceGroup')) | Where-Object { $_ } | Sort-Object -Unique) {
+        $stRg = if ((Get-CfgString $cfg.storage 'accountId') -match '/resourceGroups/([^/]+)') { $Matches[1] } else { '' }
+        foreach ($rg in @($ResourceGroup, (Get-CfgString $cfg.network 'networkResourceGroup'), $stRg) | Where-Object { $_ } | Sort-Object -Unique) {
             $pes = @(Get-AzJson -Args @('network', 'private-endpoint', 'list', '-g', $rg) -AllowFail)
             foreach ($pe in $pes) {
                 $conns = @(@($pe.privateLinkServiceConnections) + @($pe.manualPrivateLinkServiceConnections) | Where-Object { $_ -and $stAccount -and "$($_.privateLinkServiceId)" -match "/storageAccounts/$([regex]::Escape($stAccount))$" })
