@@ -1,40 +1,18 @@
 # CODEOWNERS — Discovery Catalog
 #
 # Each line is a file pattern followed by one or more owners. Order matters:
-# later patterns take precedence over earlier ones. Maintainers listed for a
+# later patterns take precedence over earlier ones. Owners listed for a
 # path are auto-requested for review on any PR that touches the path.
 #
 # See https://docs.github.com/en/repositories/managing-your-repositories-settings-and-customization/customizing-your-repository/about-code-owners
 
-# Only security-sensitive or executable content has explicit owners. Ordinary
-# Markdown and data manifests use the repository's general review policy
-# without notifying every maintainer.
+# Maintainers own every path unless a later rule overrides this default,
+# including workflows, validation policy, schemas, and generated registries.
+*                                      @microsoft/discovery-samples-maintainer
 
-# CI / workflow tooling
-/.github/workflows/                     @microsoft/discovery-samples-maintainer
-/.github/scripts/                       @microsoft/discovery-samples-maintainer
-/.github/CODEOWNERS                     @microsoft/discovery-samples-maintainer
+# Operator utilities are reviewed by the engineering reviewers.
+/utilities/                            @microsoft/discovery-engineering-reviewers
 
-# Validation policy — the approved base images, source allowlist, tag taxonomy,
-# rule waivers, and ratchet baseline. Editing these changes what the catalog
-# will accept, so the gate must be explicit rather than inherited from `*`.
-/.github/policy/                        @microsoft/discovery-samples-maintainer
-/.github/policy/baseline.json           @microsoft/discovery-samples-maintainer
-/docs/validation-baseline-debt.md       @microsoft/discovery-samples-maintainer
-
-# Schema files — changes here can break every agent/kit in the catalog.
-/docs/schemas/                          @microsoft/discovery-samples-maintainer
-
-# Auto-generated registries — should normally never be hand-edited (see
-# POL-011). Bot-authored refresh PRs still require a human CODEOWNER approval.
-/.auto-registry/                        @microsoft/discovery-samples-maintainer
-
-# Per-content area
-/agents/                                @microsoft/discovery-samples-maintainer
-/starter-kits/                          @microsoft/discovery-samples-maintainer
-
-# Executable operator utilities. Discovery Toolbox release PRs intentionally
-# use the repository's ordinary one-approval rule (empty-owner) instead of requiring a
-# specific CODEOWNER; REL-002 verifies the VSIX pointer and digest.
-/utilities/                            @microsoft/discovery-samples-maintainer
-/utilities/discovery-toolbox
+# Discovery Toolbox is maintained separately from the other utilities.
+# Releases require maintainer review; REL-002 verifies the VSIX pointer and digest.
+/utilities/discovery-toolbox/           @microsoft/discovery-samples-maintainer

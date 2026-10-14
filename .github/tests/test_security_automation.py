@@ -562,11 +562,11 @@ def test_registry_refresh_cannot_rewrite_or_self_approve_generated_prs():
     codeowners = (REPO_ROOT / ".github" / "CODEOWNERS").read_text(
         encoding="utf-8"
     )
-    registry_owner = next(
+    default_owner = next(
         line for line in codeowners.splitlines()
-        if line.startswith("/.auto-registry/")
+        if line.startswith("* ")
     )
-    assert registry_owner.split()[1:] == [
+    assert default_owner.split()[1:] == [
         "@microsoft/discovery-samples-maintainer"
     ]
 
@@ -591,8 +591,12 @@ def test_baseline_debt_is_codeowned_tracked_and_shrink_only():
         )
     )
 
-    assert "/.github/policy/baseline.json" in codeowners
-    assert "/docs/validation-baseline-debt.md" in codeowners
+    default_owner = next(
+        line for line in codeowners.splitlines() if line.startswith("* ")
+    )
+    assert default_owner.split()[1:] == [
+        "@microsoft/discovery-samples-maintainer"
+    ]
     assert "New entries are prohibited" in debt
     assert "December 31, 2026" in debt
     assert baseline["count"] == len(baseline["violations"]) == 3
