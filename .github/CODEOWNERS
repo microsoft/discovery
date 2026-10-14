@@ -16,3 +16,7 @@
 # Discovery Toolbox is maintained separately from the other utilities.
 # Releases require maintainer review; REL-002 verifies the VSIX pointer and digest.
 /utilities/discovery-toolbox/           @microsoft/discovery-samples-maintainer
+
+# Reviewers group for agents and starter-kits
+/agents/                                @microsoft/discovery-contributions-reviewers
+/starter-kits/                          @microsoft/discovery-contributions-reviewers
