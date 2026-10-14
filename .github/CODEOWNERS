@@ -34,10 +34,7 @@
 /starter-kits/                          @microsoft/discovery-samples-maintainer
 
 # Executable operator utilities. Discovery Toolbox release PRs intentionally
-# use the repository's ordinary one-approval rule instead of requiring a
+# use the repository's ordinary one-approval rule (empty-owner) instead of requiring a
 # specific CODEOWNER; REL-002 verifies the VSIX pointer and digest.
-/utilities/dataasset-migration/         @microsoft/discovery-samples-maintainer
-/utilities/delete-discovery-deployment/ @microsoft/discovery-samples-maintainer
-/utilities/rbac-roles-assignment/       @microsoft/discovery-samples-maintainer
-/utilities/resource-provider-registration/ @microsoft/discovery-samples-maintainer
-/utilities/supercomputer-cli/           @microsoft/discovery-samples-maintainer
+/utilities/                            @microsoft/discovery-samples-maintainer
+/utilities/discovery-toolbox
