@@ -22,7 +22,7 @@
   ],
   "Values": [
     "1.0",
-    "67e7fe44-d943-4033-8f1f-742a9b0e6859",
+    "00000000-0000-0000-0000-000000000000",
     "devtest",
     "eastus2",
     "eastus2",
@@ -116,7 +116,7 @@
   "IsFixedSize": false,
   "SyncRoot": {
     "schemaVersion": "1.0",
-    "subscriptionId": "67e7fe44-d943-4033-8f1f-742a9b0e6859",
+    "subscriptionId": "00000000-0000-0000-0000-000000000000",
     "environment": "devtest",
     "controlPlaneRegion": "eastus2",
     "workloadRegion": "eastus2",

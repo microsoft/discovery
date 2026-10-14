@@ -39,7 +39,9 @@ Create the one-time-per-subscription custom role with exactly `Microsoft.Network
 - Missing role: resource creation fails with NSP association errors; create and assign the role, then retry.
 
 ### network_provision — FR2.2-FR2.5 (network.bicep)
-Deploy `network.bicep` (one RG-scoped deployment) to lay out the VNet, subnets, a shared NSG, route tables and private DNS zones declaratively. Runs only when `network.model` is a build model (`byo`/`byo-spoke`/`greenfield`); `byo-existing` and `managed` skip provisioning (validate in Stage 3 / RP-managed). Egress topology is switched by `network.outboundType`.
+Deploy `network.bicep` (one RG-scoped deployment) to lay out the VNet, subnets, a shared NSG, route tables and private DNS zones declaratively. The documented provisioning options are `managed`, `byo` and `byo-spoke`; only `byo-existing` skips this deployment and validates existing networking in Stage 3. All provisioning options use the same template, which declares the VNet address space and subnet collection and can modify an existing VNet; this is not an add-only subnet operation. The managed worksheet offers only `managed`; the BYO worksheet offers `byo`, `byo-spoke` and `byo-existing`. See the [worksheet selection guide](../../scripts/USER-GUIDE.md#3-choose-your-network-model-and-planning-form).
+
+Egress topology is switched separately by `network.outboundType` (`UserDefinedRouting` or `LoadBalancer` in both worksheets). The tool does not create a firewall/NVA, NAT Gateway or hub peering. For UDR, customers must provide a reachable appliance and configure connectivity, forwarding where applicable, firewall rules and SNAT; generating the firewall request does not apply those rules.
 - Delegation conflict: ensure the subnet is empty before setting delegation.
 - `network.outboundType=UserDefinedRouting` requires `network.nvaNextHop`; otherwise the step fails before deploy.
 

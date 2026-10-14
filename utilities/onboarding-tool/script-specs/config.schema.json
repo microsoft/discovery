@@ -179,10 +179,10 @@
         "model": {
           "type": "string",
           "enum": [
-            "byo",
-            "managed"
+            "byo"
           ],
-          "description": "Must be byo for deployment. Every Discovery project requires a storage container backed by a customer storage account."
+          "default": "byo",
+          "description": "Must be byo. Every Discovery project requires a storage container backed by a customer storage account; managed project storage isn't supported."
         },
         "account": {
           "type": "string",

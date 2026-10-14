@@ -1,11 +1,15 @@
 {
   "schemaVersion": "1.0",
-  "subscriptionId": "546ec9a3-31a2-4360-a459-7e628a08dcbb",
+  "subscriptionId": "00000000-0000-0000-0000-000000000000",
   "environment": "devtest",
   "controlPlaneRegion": "eastus",
   "workloadRegion": "eastus2",
+  "resourceGroup": "contoso-disc-rg1",
+  "managedIdentity": {
+    "id": "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/contoso-disc-rg1/providers/Microsoft.ManagedIdentity/userAssignedIdentities/id-contoso-disc"
+  },
   "deployingIdentity": {
-    "objectId": "35644e08-c894-4013-9b03-e7fa82689870",
+    "objectId": "11111111-1111-1111-1111-111111111111",
     "type": "user",
     "canRegisterProviders": true
   },
@@ -24,10 +28,10 @@
       { "role": "managedcluster",         "cidr": "10.46.253.128/26", "requiredPrefix": "/26", "delegation": "none" },
       { "role": "nodepool",               "cidr": "10.46.252.128/26", "requiredPrefix": "/26", "delegation": "none" },
       { "role": "private-endpoints",      "cidr": "10.46.253.0/27",   "requiredPrefix": "/27", "delegation": "none" },
-      { "role": "spare",                  "cidr": "10.46.253.64/27",  "requiredPrefix": "/27", "delegation": "none" }
+      { "role": "spare",                  "cidr": "10.46.253.64/27",  "requiredPrefix": "/27", "delegation": "Microsoft.ContainerService/managedClusters" }
     ]
   },
-  "storage": { "model": "managed", "access": "privateEndpoint" },
+  "storage": { "model": "byo", "account": "stcontosodiscpoc1", "access": "privateEndpoint" },
   "sizingTier": "Small",
   "bookshelf": { "inScope": true, "instances": 1 },
   "projects": 2,

@@ -9,8 +9,7 @@ The requirements doc stays authoritative; these scripts are the implementation.
 
 - PowerShell 7+ (`pwsh`). Every script declares `#Requires -Version 7.0`.
 - Azure CLI (`az`) logged in (`az login`) with access to the target subscription.
-- Optional: the `ImportExcel` module, only if you feed Stage 1 an `.xlsx` planning form
-  instead of JSON (`Install-Module ImportExcel -Scope CurrentUser`).
+- No `ImportExcel` module is required; Stage 1 reads `.xlsx` planning forms natively.
 
 ## Conventions
 
@@ -50,8 +49,8 @@ Per-stage parameters, prerequisites, and dependencies are documented in
 | 5 Scenario enablement | [`stage5-scenario-enablement/stage5_enable.ps1`](stage5-scenario-enablement/stage5_enable.ps1) | create_agent, create_investigation_conversation, send_prompt_poll, verify_response, verification_summary |
 
 Supporting files: `lib/OnboardingCommon.psm1` (shared module), two planning forms —
-`stage1-planning/discovery-resource-planning-form-managed-vnet.xlsx` (tool provisions the VNet) and
-`stage1-planning/discovery-resource-planning-form-byo-vnet.xlsx` (you bring an existing VNet) —
+[`discovery-resource-planning-form-managed-vnet.xlsx`](stage1-planning/discovery-resource-planning-form-managed-vnet.xlsx) (tool-provisioned network) and
+[`discovery-resource-planning-form-byo-vnet.xlsx`](stage1-planning/discovery-resource-planning-form-byo-vnet.xlsx) (customer-defined provisioning or existing-network validation) —
 `stage3-validation/dependency-spec.json` (per-profile check set, FR3.8),
 `examples/sample-config.json` (a filled reference config).
 
@@ -60,13 +59,49 @@ Supporting files: `lib/OnboardingCommon.psm1` (shared module), two planning form
 Run every command from this `scripts/` directory (the paths below are relative to it). First pick
 the planning form that matches your network model and fill in its yellow Value cells:
 
-- **Managed VNet** (the tool provisions the VNet): `stage1-planning/discovery-resource-planning-form-managed-vnet.xlsx`
-- **BYO existing VNet** (you pre-created the VNet; Stage 3 validates it): `stage1-planning/discovery-resource-planning-form-byo-vnet.xlsx`
+- **Managed worksheet:** use it for a new, dedicated Discovery network provisioned by the tool.
+  Its `network.model` dropdown contains only `managed`.
+- **BYO worksheet:** use it for an existing customer-prepared network, a customer-defined network
+  the tool should provision, or a Discovery spoke for an enterprise hub. Its dropdown contains
+  `byo`, `byo-spoke`, and `byo-existing`.
+
+| Worksheet | `network.model` | When to select it | Network provisioning in Stage 2 |
+|---|---|---|---|
+| Managed | `managed` | Let the tool provision the Discovery network layout using your settings. | Deploys the VNet, subnets, shared NSG, route tables when UDR is selected, and private DNS. |
+| BYO | `byo` | Supply your own network layout and let the tool provision it. | Same provisioning template as `managed`; not validation-only. |
+| BYO | `byo-spoke` | Provision a Discovery spoke intended to connect to your enterprise hub. | Same provisioning template; customer must arrange hub connectivity and firewall/NVA egress separately. |
+| BYO | `byo-existing` | Use an existing VNet and Discovery subnets prepared by your network team. | Skips VNet/network-template provisioning; Stage 1 checks existing resources and Stage 3 validates networking. Other Stage 2 steps still run. |
+
+**The selected value, not the filename, controls behavior.** Check `network.model` before
+running Stage 1, especially in a previously filled copy. `managed`, `byo`, and `byo-spoke` can
+modify an existing VNet: the template declares its address space and subnet collection, not
+just additional subnets. Use `byo-existing` when you do not want that network deployment.
+See [the user guide](USER-GUIDE.md#3-choose-your-network-model-and-planning-form)
+for preparation requirements.
+
+Both worksheets offer `network.outboundType=UserDefinedRouting` or `LoadBalancer`.
+UDR requires a real, reachable firewall/NVA private IP in `network.nvaNextHop`, customer-provided
+connectivity to it, firewall rules and SNAT. The tool does not create a firewall, NAT Gateway or
+hub peering; an example next-hop IP is not a working egress path. `LoadBalancer` selects AKS
+load-balancer-based outbound connectivity and does not require an NVA next hop; Stage 2 omits
+its UDR tables. Neither choice removes the need to verify required outbound connectivity.
+Both worksheets also require an existing customer-owned project storage account.
+
+Example JSON files contain illustrative names and placeholder subscription/identity IDs;
+replace them and review regions, subnet layout, storage and egress settings before use.
+Recorded POC reports are historical, not fresh validation of the edited examples.
+`examples/generated-config.json` is a historical serialization artifact, not a usable Stage 1
+config; generate a new config from a filled form or a valid example input.
 
 The `./out/` directory is created automatically, and Stage 1 only writes `config.json` once it
 reaches a `GO` verdict — Stages 2–5 consume that file, so resolve any failing Stage 1 checks (or add
 a `WAIVER` row) before continuing. Deny/audit policies are collected live from the subscription at
 runtime; add a `POLICY` row only to declare or override one.
+
+Run the commands from a `pwsh` (PowerShell 7+) prompt. On macOS/Linux they also run directly from
+bash/zsh: each stage script is executable and starts with `#!/usr/bin/env pwsh`. If the executable
+bit was lost (for example, after extracting a zip), run `chmod +x */*.ps1` here or use
+`pwsh ./<stage>/<script>.ps1`.
 
 ```powershell
 cd utilities/onboarding-tool/scripts   # all commands are relative to this directory
@@ -78,7 +113,7 @@ cd utilities/onboarding-tool/scripts   # all commands are relative to this direc
 # Stage 2 — prepare the landing zone (writes resources, idempotent).
 ./stage2-landing-zone/stage2_prepare.ps1 -ConfigPath ./config.json -JsonPath ./out/stage2.json
 
-# Stage 3 — validate readiness (read-only). Run both profiles; leave -WithVm off (temporarily disabled).
+# Stage 3 — static validation (read-only without -WithVm). Independently verify subnet egress.
 ./stage3-validation/stage3_validate.ps1 -ConfigPath ./config.json -Profile supercomputer -JsonPath ./out/stage3-supercomputer.json
 ./stage3-validation/stage3_validate.ps1 -ConfigPath ./config.json -Profile workspace -JsonPath ./out/stage3-workspace.json
 
@@ -108,7 +143,9 @@ embedded planning validation (FR1.0–FR1.8), and emits
 `config.json` — the single source of truth for Stages 2–5. The config is written only when all P0
 checks pass or carry a recorded waiver. Az-dependent checks degrade to Warn/Skip when not logged
 in, so the parser and local checks run offline. `.xlsx` forms are read natively (zip + XML); no
-`ImportExcel` module required.
+`ImportExcel` module required. A `.json` config gets the same defaults as the form for any field it
+omits (for example `network.model=byo`, which makes Stage 2 build the network); values present in
+the JSON always win.
 
 | Parameter | Required | Description |
 |---|---|---|
@@ -127,8 +164,8 @@ service principal, network provisioning via `network.bicep` (VNet,
 subnets with FR1.2 delegations, shared NSG allow-list, UDR route tables, privatelink DNS zones +
 links), BYO storage, and the firewall-request / quota-increase-request / policy-exemption-request
 files next to `-JsonPath`. Builds the
-network only when `network.model` is byo/byo-spoke/greenfield; byo-existing and managed skip
-provisioning. Idempotent; stops on the first hard failure with its remediation. **Writes platform
+network for the documented provisioning options managed/byo/byo-spoke; only byo-existing skips
+network-template provisioning. Idempotent; stops on the first hard failure with its remediation. **Writes platform
 resources — run against the intended subscription only.** Requires Owner, or Contributor plus
 User Access Administrator / RBAC Administrator, at subscription scope.
 
@@ -140,22 +177,28 @@ User Access Administrator / RBAC Administrator, at subscription scope.
 
 ### Stage 3 — Validation (`stage3-validation/stage3_validate.ps1`)
 
-Read-only readiness gate before deployment (FR3.1–FR3.8). Runs control-plane checks (subnet
-delegation, effective NSG rules, effective routes, DNS + private-endpoint resolution) and, with
-`-WithVm`, in-network probes from an ephemeral test VM (always torn down). The check set is driven
-per profile by `dependency-spec.json` (in this folder). Requires a green Stage 1 `config.json` and
-a provisioned landing zone (Stage 2); for `-WithVm`, rights to create/delete a VM in the target
-subnet.
+Validates network configuration before deployment (FR3.1–FR3.8). By default, runs read-only
+Azure control-plane checks for subnet delegation, NSG rules, routes, private DNS zone links and
+private-endpoint metadata. Where a NIC is available, checks use its effective NSG rules and
+routes; otherwise they inspect subnet configuration. These checks do not test live connectivity.
+The optional `-WithVm` probe harness has known limitations in this release; run Stage 3 without
+it and arrange independent in-network connectivity testing. Probe improvements are planned
+for the next version. The parameter remains available, but is not recommended for this release.
+The profile check sets are defined in
+[`dependency-spec.json`](stage3-validation/dependency-spec.json).
+Requires a Stage 1 `GO` config and the landing zone prepared in Stage 2; `-WithVm` also requires
+permission to create and delete probe resources in the target subnet.
 
-> Note: `-WithVm` in-network probing is temporarily skipped (see [TODO / known gaps](#todo--known-gaps)).
-> Run Stage 3 without `-WithVm` and rely on the control-plane checks until VM-based validation is
-> re-enabled.
+> **Before deployment:** verify required AKS bootstrap connectivity from the SC system-node
+> (`managedcluster`) and applicable nodepool subnets. A Stage 3 `GO` alone does not establish
+> working DNS, firewall rules or SNAT. See [Known limitations and deployment checks](#known-limitations-and-deployment-checks)
+> for probe restrictions and the checks your network team must complete.
 
 | Parameter | Required | Description |
 |---|---|---|
 | `-ConfigPath` | yes | Stage 1 `config.json`. |
 | `-Profile` | no | `supercomputer` (default), `workspace`, or `bookshelf`. |
-| `-WithVm` | no | Add the ephemeral probe VM and run in-network probes. |
+| `-WithVm` | no | Optional probe harness with known limitations in this release. Omit it; use independent subnet connectivity tests. Improvements are planned for the next version. |
 | `-JsonPath` | no | Write the machine-readable check report here. |
 | `-PassThru` | no | Return raw result objects instead of printing a report and exiting. |
 
@@ -168,7 +211,9 @@ state before each step so re-runs resume from the first incomplete resource. Dep
 `discovery-platform.bicep` by default (params generated from the Stage 1 config); `-NoBicep` uses
 the built-in per-resource ARM PUT sequence, `-Recovery` re-PUTs a stranded resource.
 `controlPlaneRegion` must equal the region of the BYO VNet holding the managedcluster/nodepool
-subnets. Supercomputer creation includes AKS provisioning and can take 15–30 minutes. **Writes
+subnets. Supercomputer creation includes AKS provisioning and typically takes 15–30 minutes;
+workspace creation can take up to about an hour, so plan for one to two hours end to end. Stage 4
+waits up to 120 minutes per resource before reporting a timeout. **Writes
 platform resources — run against the intended subscription only.**
 
 | Parameter | Required | Description |
@@ -177,7 +222,7 @@ platform resources — run against the intended subscription only.**
 | `-Recovery` | no | Re-PUT a failed/stranded resource to recover a partial deployment. |
 | `-NoBicep` | no | Use the built-in per-resource ARM PUT sequence instead of the default Bicep deploy. |
 | `-BicepPath` / `-ParametersPath` | no | Deploy via a custom Bicep template/params instead of the shipped `discovery-platform.bicep`. |
-| `-ReadinessReport` | no | Path to a Stage 3 report to gate on before deploying. |
+| `-ReadinessReport` | no | One or more Stage 3 report paths (comma-separated). Pass both supercomputer and workspace reports; supplied reports must be GO. Omitting reports or supercomputer coverage produces a warning rather than blocking deployment. |
 | `-Subscription` / `-ResourceGroup` / `-Workspace` | no | Override the config-derived targets. |
 | `-JsonPath` | no | Write the machine-readable deployment report here. |
 | `-PassThru` | no | Return raw result objects instead of printing a report and exiting. |
@@ -199,26 +244,35 @@ In-network connectivity probing is not part of Stage 5; it belongs to Stage 3.
 | `-Prompt` | no | Override the default scientific Q&A prompt. |
 | `-JsonPath` | no | Write the machine-readable certification report here. |
 
-## TODO / known gaps
+## Known limitations and deployment checks
 
-Tracked work not yet implemented in the scripts:
+Complete these checks before relying on the tool's reports for a customer deployment:
 
-- Stage 3 — test VM connectivity harness (`-WithVm`). The ephemeral probe VM and its in-network
-  probes (DNS, TCP 443, HTTPS/artifact, PE resolution, east-west 10250) plus the NIC-derived
-  effective-NSG/route lookups are temporarily disabled; `az vm create` trips an empty-arg binding
-  issue (`--public-ip-address ''` / `--nsg ''`). Re-enable once that call is fixed; until then
-  run Stage 3 without `-WithVm` and rely on the control-plane checks.
-- Stage 4 — Bookshelf content. Stage 4 creates the project storage container
-  (`Microsoft.Discovery/storageContainers`) but does not create or ingest a Bookshelf storage
-  asset (`names.storageAsset`). Add asset creation / knowledge-base content load.
-- Stage 5 — scenario validation. Stage 5 creates a Q&A agent (no tool) and checks the bookshelf
-  private endpoints, but does not validate end-to-end bookshelf retrieval (that an ingested asset
-  is queryable by the agent). Add that retrieval assertion.
-- All stages — automated tests. There are no unit tests and no CI workflow for this tool; changes
-  are validated only by parse checks and live runs against a test subscription. Add Pester tests
-  with `az` mocked (start with `lib/OnboardingCommon.psm1`, the Stage 1 local checks, Stage 2 role
-  and CORS logic, and Stage 4 error remediation), and a workflow that runs them plus a parse check
-  on pull requests that touch `utilities/onboarding-tool`.
+- **Stage 3 connectivity probes (current-release limitation):** omit `-WithVm` in this release
+  and arrange approved connectivity tests from the required SC subnets before deployment.
+  VM creation is blocked by the shared PowerShell wrapper rejecting the empty argument values
+  used to request no public IP and no additional NSG. The probe also prefers the nodepool subnet,
+  and incomplete output can use runner DNS or skip TCP/HTTPS checks. VM creation, lifecycle
+  reliability and probe validation improvements are planned for the next version.
+  If you attempted a probe, check for residual VM/NIC/disk resources.
+- **UDR egress:** next-hop checks confirm that an address is provided, not that it identifies a
+  reachable firewall/NVA. Have your network team verify the appliance IP, routing and hub
+  connectivity, forwarding where applicable, firewall rules and SNAT. Confirm required AKS
+  bootstrap endpoints are reachable from the actual SC node subnets before running Stage 4.
+- **Readiness reports:** pass current Stage 3 supercomputer and workspace reports through
+  `-ReadinessReport`. Stage 4 checks supplied reports for `GO`, but does not require reports
+  or verify that they match the current configuration. Regenerate them after relevant
+  configuration or infrastructure changes, and review warnings and skipped checks.
+- **Bookshelf scope:** Stage 4 registers project storage (`Microsoft.Discovery/storageContainers`)
+  but does not deploy Bookshelf or ingest its content. Arrange Bookshelf deployment separately
+  if your solution requires it.
+- **Scenario certification:** Stage 5 verifies a Q&A response and project-storage private-endpoint
+  metadata when `storage.access=privateEndpoint`; the endpoint check is skipped for
+  `serviceEndpoint`. Bookshelf retrieval and tool invocation require separate solution-specific
+  validation.
+- **Validation coverage:** this tool does not include an automated unit-test suite or CI
+  validation workflow. Validate your deployment configuration in an approved test environment
+  before production use.
 
 ## FR traceability
 

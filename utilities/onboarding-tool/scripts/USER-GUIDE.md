@@ -35,6 +35,11 @@ Install and sign in once:
    ```powershell
    pwsh --version   # expect 7.x
    ```
+   Run the stage commands in this guide from a `pwsh` prompt. On macOS or Linux you can also run
+   them directly from bash/zsh: the scripts are executable and start with `#!/usr/bin/env pwsh`, so
+   `pwsh` must be on your `PATH`. If a copy lost the executable bit (for example, files extracted
+   from a zip by a tool that drops permissions), restore it with
+   `chmod +x */*.ps1` from the `scripts` directory, or run a stage as `pwsh ./<stage>/<script>.ps1`.
 2. **Azure CLI**, logged in to the subscription you will deploy into:
    ```powershell
    az login
@@ -107,12 +112,49 @@ Install and sign in once:
 
 ## 3. Choose your network model and planning form
 
-There are **two** planning forms. Pick the one that matches how the VNet is provided:
+There are **two** planning forms. Pick the form, then explicitly select `network.model`:
 
-- **Managed VNet** — the tool provisions the VNet for you:
-  `stage1-planning/discovery-resource-planning-form-managed-vnet.xlsx`
-- **BYO (bring-your-own) existing VNet** — you pre-created the VNet; the tool validates it:
-  `stage1-planning/discovery-resource-planning-form-byo-vnet.xlsx`
+| Form | Available VNet options | Use this form when |
+|---|---|---|
+| [Managed VNet](stage1-planning/discovery-resource-planning-form-managed-vnet.xlsx) | `managed` only | You want the tool to provision a dedicated Discovery network layout. |
+| [BYO VNet](stage1-planning/discovery-resource-planning-form-byo-vnet.xlsx) | `byo`, `byo-spoke`, `byo-existing` | You want customer-defined provisioning, an enterprise-hub spoke, or validation of a customer-prepared existing network. |
+
+The same option sets apply to copies of these forms. A previously filled cell can retain an
+old value after a dropdown changes, so check the selected value before running Stage 1.
+**The value of `network.model`, not the worksheet filename, controls provisioning.**
+
+### What each VNet option means
+
+| Option | When to use it | What the tool does | What the customer prepares |
+|---|---|---|---|
+| `managed` (managed form) | The tool should provision the Discovery network layout. | Stage 2 deploys the VNet, configured subnets and delegations, shared NSG, route tables for UDR, and private DNS zones/links. | Approved address space, target resource group/name settings, and a working outbound architecture. |
+| `byo` (BYO form) | You supply the network layout and want the tool to provision it. | Uses the same Stage 2 network template as `managed`; it is not a read-only existing-VNet mode. | Customer-approved network settings and outbound connectivity. |
+| `byo-spoke` (BYO form) | You want a Discovery spoke connected to an enterprise hub. | Uses the same Stage 2 network template; it does not create hub peering or a firewall. | Nonoverlapping spoke addressing, hub connectivity, and firewall/NVA routing, rules and SNAT when using UDR. |
+| `byo-existing` (BYO form) | Your network team has already prepared the VNet and required Discovery subnets. | Stage 1 checks the existing VNet/subnets; Stage 2 skips network-template provisioning; Stage 3 validates networking. | Existing subnets, delegations, NSGs, routes, DNS zones/links and working outbound connectivity. |
+
+**Existing-network caution:** `managed`, `byo` and `byo-spoke` all deploy a template that declares
+the VNet address space and subnet collection. They can change an existing VNet and are not
+add-only subnet operations. Use `byo-existing` to avoid that deployment. Stage 2 still performs
+its other tasks, including RBAC and project-storage networking; `byo-existing` does not make
+the entire stage read-only.
+
+### Choose outbound connectivity separately
+
+Both forms offer two `network.outboundType` values, independently of `network.model`:
+
+- **`UserDefinedRouting`:** route outbound traffic through the real firewall/NVA private IP in
+  `network.nvaNextHop`. The customer must provide connectivity to that appliance, forwarding
+  where applicable, firewall allow rules and SNAT. Do not leave an example IP unless it is
+  genuinely the configured appliance. Stage 2 generates a firewall request but does not apply
+  the appliance rules or create hub peering.
+- **`LoadBalancer`:** select AKS load-balancer-based outbound connectivity. An NVA next-hop IP
+  is not required, and Stage 2 does not create UDR tables. This does not create a NAT Gateway
+  or guarantee that customer network controls permit all required endpoints.
+
+**Managed means tool-provisioned network layout, not managed firewall or guaranteed Internet
+access.** Verify required AKS bootstrap connectivity from the SC node subnets before deploying.
+Static Stage 3 checks alone do not prove that the outbound path works.
+Project storage is separate: both forms require an existing customer-owned StorageV2 account.
 
 Open the form, go to the **`Config`** sheet, and fill in every **yellow Value cell**. The form is
 organized into sections (identity & subscription, regions, network, storage, sizing, names, etc.).
@@ -124,8 +166,12 @@ Notes next to each field explain what to enter. A few that trip people up:
 | `deployingIdentity.objectId` | The identity that will deploy. If `principals` is empty, Stage 2 grants it the Discovery roles plus the Azure roles a Discovery administrator needs (Managed Identity Contributor and Operator, Storage Account Contributor, Storage Blob Data Contributor, Network Contributor, AcrPush) on the target resource groups plus Reader on the subscription, and Stage 4 grants it Foundry Owner on the workspace managed resource group. Enter the Entra **objectId (GUID)**, or — if you don't know it — an **email/UPN** of a user in the target tenant (or an app registration's appId/display name). Stage 1 resolves a non-GUID value to the objectId via `az` (run `az login` first). Find your own objectId with `az ad signed-in-user show --query id -o tsv`. |
 | `resourceGroup` | The platform resource group from prerequisite 5. |
 | `managedIdentity.id` | The UAMI resource id from prerequisite 6 (used by Stage 4). |
-| `network.networkResourceGroup` | The resource group that holds (managed: will hold) the VNet. Can be the platform RG or a separate network RG; it must exist before Stage 2. |
-| `network.vnetName` | **Managed form:** optional — leave blank and the tool names the VNet `vnet-<names.workspace>`. **BYO form:** the name of your **existing** VNet in `network.networkResourceGroup` (Stage 1 checks it exists and is in `controlPlaneRegion`). |
+| `network.model` | Choose one of the options described above. Only `byo-existing` skips Stage 2 network-template provisioning. |
+| `network.networkResourceGroup` | The resource group holding the existing VNet for `byo-existing`, or the target group for tool-provisioned networking. Stage 2 creates/uses the target network group for provisioning models. |
+| `network.vnetName` | For `byo-existing`, enter the existing VNet name (Stage 1 checks it exists and is in `controlPlaneRegion`). For `managed`, `byo` or `byo-spoke`, enter the VNet name to deploy; blank defaults to `vnet-<names.workspace>`. |
+| `network.existingSubnets` | BYO form: list existing subnet CIDRs outside the planned Discovery subnets so address planning can check for overlaps. This field does not make a provisioning model preserve unlisted subnets. |
+| `network.outboundType` | Select `UserDefinedRouting` for customer firewall/NVA egress, or `LoadBalancer` for AKS load-balancer-based egress. |
+| `network.nvaNextHop` | For UDR, enter the actual firewall/NVA private IP. It is not a NAT Gateway public IP. Not required for `LoadBalancer`. |
 | `controlPlaneRegion` / `workloadRegion` | Use a supported production region: **East US**, **Sweden Central**, or **UK South**. Keep resources for one deployment in the same region unless an approved architecture requires otherwise. |
 | `names.*` | The resource names (workspace, project, supercomputer, node pool, etc.). Keep them unique in the subscription. |
 | `storage.account` | Required for every project, independently of Bookshelf. The name of the storage account you pre-created (prerequisite 8); keep `storage.model=byo`. Stage 1 fails if the account doesn't exist. Stage 2 adds the Blob CORS rules and private endpoint. The account denies public network traffic, so users who open project outputs in Discovery Studio need network access to it: from the VNet (VPN or ExpressRoute), or through a client IP rule you add. |
@@ -135,17 +181,18 @@ Notes next to each field explain what to enter. A few that trip people up:
 Notes:
 - **Policies are collected live** from the subscription at runtime — you do not list deny/audit
   policies in the form. Add a `POLICY` row only to declare or override one.
-- For the **BYO** form, `controlPlaneRegion` must equal the region of the existing VNet that holds
+- For **`byo-existing`**, `controlPlaneRegion` must equal the region of the existing VNet that holds
   the `managedcluster` / `nodepool` subnets.
-- For the BYO form, the tool doesn't change your VNet. Before Stage 3, make sure that:
+- For **`byo-existing`**, Stage 2 skips the VNet/network-template deployment. Before Stage 3, make sure that:
   - Each SUBNET row's CIDR matches an existing subnet. Stage 1 maps rows to subnet names by CIDR
     and fails `byo-subnets` on a mismatch.
   - The workspace, agent and search subnets are delegated to `Microsoft.App/environments`, and the
     management subnet to `Microsoft.ContainerService/managedClusters`.
   - The `privatelink.*` zones listed under `privateDnsZones` in
     `stage3-validation/dependency-spec.json` exist in `network.dnsResourceGroup` (or the network
-    RG) and are linked to the VNet. Stage 2 creates only the blob zone, for the Bookshelf private
-    endpoint. Stage 3 prints the create and link commands for any missing zone.
+    RG) and are linked to the VNet. With `byo-existing`, Stage 2 skips the network-template DNS
+    deployment but creates the blob zone/link for the project-storage private endpoint when
+    `storage.access=privateEndpoint`. Stage 3 prints create/link commands for missing zones.
   - Any NSG you attach allows outbound 443 to Internet and traffic within the VNet. A subnet
     without an NSG passes, because the Azure default rules allow both.
 
@@ -210,12 +257,14 @@ networking in the target subscription / resource group. Run against the intended
 
 - Registers resource providers, assigns RBAC, creates the one-time NSP Perimeter Joiner role,
   assigns both that role and **Reader** to the Discovery control-plane service principal, and
-  (for managed / byo-spoke / greenfield network models) provisions the VNet, subnets with the
+  (for managed / byo / byo-spoke) provisions the VNet, subnets with the
   required delegations, shared NSG allow-list, route tables, and private DNS zones.
 - RBAC covers the Discovery roles and the administrator's Azure roles on the target resource
   groups, plus the UAMI roles from prerequisite 6 after the network and storage exist.
 - Also emits firewall-request, quota-increase-request, and policy-exemption-request files next to
-  `-JsonPath` (`./out/`); hand these to your network/governance team if required.
+  `-JsonPath` (`./out/`). For UDR, the network team must confirm the required rules are applied
+  and the appliance provides working egress; writing the firewall request is not that confirmation.
+  Resolve applicable quota/governance requests with the owning teams before deployment.
 - **Idempotent** — safe to re-run; it stops on the first hard failure with its remediation.
 
 > This stage writes to Azure. Make sure you are pointed at the intended subscription
@@ -223,25 +272,39 @@ networking in the target subscription / resource group. Run against the intended
 
 ### Stage 3 — Validate readiness (read-only)
 
-**Scope:** read-only control-plane checks. The only thing it can create is the optional `-WithVm`
-probe VM, which is always torn down — and that option is currently disabled (see below), so a plain
-run writes nothing.
+**Scope:** read-only Azure control-plane checks unless `-WithVm` is supplied. That option invokes
+the temporary probe VM lifecycle and attempts cleanup on exit. A plain run creates no Azure
+resources, but writes local reports when requested.
 
 ```powershell
 ./stage3-validation/stage3_validate.ps1 -ConfigPath ./config.json -Profile supercomputer -JsonPath ./out/stage3-supercomputer.json
 ./stage3-validation/stage3_validate.ps1 -ConfigPath ./config.json -Profile workspace     -JsonPath ./out/stage3-workspace.json
 ```
 
-- Read-only gate before deployment: subnet delegation, effective NSG rules, effective routes, DNS
-  and private-endpoint resolution.
+- Static checks before deployment: subnet delegation, NSG rules, routes, private DNS zone links
+  and private-endpoint metadata. Where a NIC is unavailable, NSG/route checks inspect subnet
+  configuration rather than effective NIC rules. These are not live DNS/endpoint tests.
 - `-Profile` selects the check set: `supercomputer` (default), `workspace`, or `bookshelf`. Run
   **both `supercomputer` and `workspace`**: Stage 4 deploys both, and each profile checks only its
   own subnets (supercomputer: managedcluster, nodepool, spare; workspace: container-app and
   private-endpoint subnets).
-- **Leave `-WithVm` off.** The in-network probe VM is temporarily disabled: `az vm create` trips an
-  empty-arg binding issue (`--public-ip-address ''` / `--nsg ''`), so the ephemeral VM and its
-  in-network probes (DNS, TCP 443, HTTPS/artifact, PE resolution, east-west 10250) are skipped. The
-  control-plane checks above still run and are sufficient to gate deployment.
+- **Omit `-WithVm` in this release.** The optional probe harness has a known VM-creation issue
+  and does not provide complete connectivity validation across the required SC subnets.
+  VM creation, lifecycle reliability and probe validation improvements are planned for the
+  next version. The commands above run static checks only; arrange independent in-network
+  connectivity tests before deployment. The parameter remains available, but is not
+  recommended for this release.
+- **A static `GO` is not sufficient evidence of working outbound connectivity.** Before Stage 4,
+  have the network team verify routing, appliance connectivity, firewall rules and SNAT, and
+  test required AKS bootstrap DNS/TCP/TLS and image downloads from the actual SC node subnets.
+  Use an approved existing node/VM or an explicitly approved temporary probe; do not test only
+  from your laptop or Cloud Shell. For troubleshooting, see
+  [AKS outbound connection failure guidance](https://learn.microsoft.com/en-us/troubleshoot/azure/azure-kubernetes/create-upgrade-delete/error-code-outboundconnfailvmextensionerror).
+- **Customer deployment checks:** confirm that the configured next-hop IP identifies your
+  reachable firewall/NVA and retain successful connectivity evidence from the required SC
+  subnets. Generate fresh Stage 3 reports after relevant configuration or network changes and
+  pass both profiles to Stage 4. The scripts do not require this connectivity evidence or
+  verify that readiness reports match the current configuration.
 
 ### Stage 4 — Deploy the platform (writes resources)
 
@@ -256,14 +319,23 @@ group. Re-runnable: it detects real resource state and resumes from the first in
   unless every one is `GO`, and warns if none covers the `supercomputer` profile.
   Without it, Stage 4 still runs but flags the missing gate as a warning.
 - Deploys in dependency order: **supercomputer → workspace → chatModel → project storage
-  container → project** (and Bookshelf-specific resources when in scope), using Discovery
+  container → project**, using Discovery
   api-version `2026-06-01` via `discovery-platform.bicep`.
+- Does not deploy Bookshelf or ingest Bookshelf content, even when `bookshelf.inScope=true`.
+  Project storage is required independently of Bookshelf. Its Discovery container name is
+  `names.storageContainer`, or `<workspace>-storage` when blank; reruns reuse an existing legacy
+  `<workspace>-bookshelf` container when no explicit name is supplied.
 - Detects real resource state before each step, so a re-run **resumes** from the first incomplete
   resource. Use `-Recovery` to re-PUT a stranded resource.
 - After the project, assigns Foundry roles on the workspace managed resource group: Foundry Owner
   to `principals` with Platform Administrator (else `deployingIdentity`), and Foundry User to
   Platform Contributor principals. A failure here is a warning.
-- **Supercomputer creation includes AKS provisioning and can take 15–30 minutes.** Be patient.
+- **Plan for Stage 4 to take one to two hours.** Supercomputer creation includes AKS provisioning
+  and typically takes 15–30 minutes. Workspace creation, which provisions its managed Foundry
+  account and model deployment, can take up to about an hour. Stage 4 waits up to 120 minutes for
+  each resource during resource-state polling; exceeding that limit is a timeout. Keep the session open
+  until it completes; if it's interrupted, re-run the same command and Stage 4 resumes from the
+  first incomplete resource.
 - Requires the Stage 4 config fields: `resourceGroup`, `managedIdentity.id` (your pre-created UAMI),
   and `storage`.
 
@@ -300,6 +372,9 @@ investigation/conversation used for the test. No tool is created.
   remaining steps are skipped. Run from inside the VNet, or set the field to `Enabled` and re-run
   Stage 4.
 - Override the prompt with `-Prompt "<your question>"` if you want to test a different question.
+- Verifies project storage for every deployment: an Approved blob private endpoint with DNS
+  when `storage.access=privateEndpoint`; the endpoint check is skipped for `serviceEndpoint`.
+  This is not a Bookshelf retrieval or tool-invocation test.
 
 ---
 
@@ -323,9 +398,9 @@ commands above; `<workspace>` is the workspace name from `config.json`.
 | Stage | Files | What to check |
 |---|---|---|
 | 1 | `stage1.md`, `stage1.json`; `config.json` is written to the `-OutConfig` path (`./config.json`), not `./out` | Verdict is GO and `config.json` exists. Read the remediation on any Fail; a Warn must not hide a real gap (quota, region, policy). Review `config.json` names, subnets, and identity before Stage 2. |
-| 2 | `stage2.md`, `stage2.json`, `firewall-request-<workspace>.md/.json`, `quota-increase-requests-<workspace>.md/.json`, `policy-exemption-requests-<workspace>.md/.json` | Verdict is GO. Hand each request file to the owning team (network, quota, governance) and wait for approval before Stage 3. A request file with an empty list means nothing needs approval. |
-| 3 | `stage3-supercomputer.md/.json`, `stage3-workspace.md/.json` | Both reports are GO. Check subnet delegation, NSG, and route rows; Skip rows must give a reason. Stage 4 reads these `.json` files through `-ReadinessReport`. |
-| 4 | `stage4.md`, `stage4.json` | Verdict is GO and every resource (supercomputer, node pool, workspace, chat model, project, Bookshelf if in scope) shows Succeeded with its resource id. On failure, the report includes the ARM error and remediation. |
+| 2 | `stage2.md`, `stage2.json`, `firewall-request-<workspace>.md/.json`, `quota-increase-requests-<workspace>.md/.json`, `policy-exemption-requests-<workspace>.md/.json` | Verdict is GO. Resolve applicable requests with the owning teams. For UDR, confirm firewall rules and working egress, not merely request approval. |
+| 3 | `stage3-supercomputer.md/.json`, `stage3-workspace.md/.json` | Both reports are GO. Review Warn/Skip rows and independently verify required subnet egress. Stage 4 reads supplied reports through `-ReadinessReport`, but does not require them or bind them to the current config. |
+| 4 | `stage4.md`, `stage4.json` | Verdict is GO and deployed resources (supercomputer, node pool, workspace, chat model, project storage container and project) show Succeeded with resource IDs. Bookshelf is not deployed. On failure, inspect the ARM error and remediation. |
 | 5 | `stage5.md`, `stage5.json`, `stage5-response-<timestamp>.json`, `stage5-state-<timestamp>.json` | Verdict is GO. The response file holds the agent's answer; confirm it is `completed` and the text answers the prompt. The state file records the agent, investigation, and conversation used by the test. |
 
 ---
@@ -341,6 +416,7 @@ commands above; `<workspace>` is the workspace name from `config.json`.
 | Stage 4 fails `managed identity role assignments` | The UAMI is missing a required role. Run the `az role assignment create` commands printed in the report, wait 5–10 minutes, then re-run Stage 4. |
 | Stage 4 fails `supercomputer subnet topology` | The `aksSubnet` is delegated, or `UserDefinedRouting` has no delegated `managementSubnet`. Run the `az network vnet subnet update` command printed in the report, re-run Stage 3, then Stage 4. |
 | Stage 4 supercomputer `InternalServerError` | Check the subnet-topology and UAMI-role checks first (see the Stage 4 caveat). Delete the Failed supercomputer, then re-run. If both pass, open a support case with the correlation id. |
+| AKS `VMExtensionError_OutboundConnFail`, exit 50, or failure reaching `mcr.microsoft.com` | Verify the real NVA next hop, routing/peering, DNS, firewall allows and SNAT from the system-node subnet. A Stage 3 static GO does not rule out this failure. Do not substitute a NAT public IP as the NVA next hop. |
 | Stage 4 `Insufficient quota for VM size` | Not enough vCPU quota for the supercomputer system pool. Raise the named quota (Subscriptions > Usage + quotas, or `az quota update`), then re-run Stage 4. |
 | Stage 4 partial / stranded resource | Re-run (state is detected and resumed); use `-Recovery` to re-PUT the stranded resource. |
 
@@ -359,7 +435,7 @@ az login; az account set --subscription <id>
 # 3. Validate
 ./stage3-validation/stage3_validate.ps1 -ConfigPath ./config.json -Profile supercomputer -JsonPath ./out/stage3-supercomputer.json
 ./stage3-validation/stage3_validate.ps1 -ConfigPath ./config.json -Profile workspace -JsonPath ./out/stage3-workspace.json
-# 4. Deploy (15–30 min for the supercomputer); gated on the Stage 3 GO reports
+# 4. Deploy (1–2 hours: supercomputer 15–30 min, workspace up to ~1 hour); gated on the Stage 3 GO reports
 ./stage4-deployment/stage4_deploy.ps1 -ConfigPath ./config.json -ReadinessReport ./out/stage3-supercomputer.json,./out/stage3-workspace.json -JsonPath ./out/stage4.json
 # 5. Certify a Q&A agent
 ./stage5-scenario-enablement/stage5_enable.ps1 -ConfigPath ./config.json -JsonPath ./out/stage5.json

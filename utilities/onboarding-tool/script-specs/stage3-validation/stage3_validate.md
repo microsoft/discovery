@@ -7,13 +7,24 @@ Script: `../../scripts/stage3-validation/stage3_validate.ps1`
 One engine that runs the control-plane checks and the optional test-VM harness per service profile, strictly read-only except the ephemeral test VM, and emits JSON plus a human report exiting non-zero on any failure.
 
 ## Inputs
-- `--config <config.json>`, `--profile supercomputer|workspace|bookshelf`, `--with-vm/--no-vm`.
+- `-ConfigPath <config.json>`, `-Profile supercomputer|workspace|bookshelf`, optional `-WithVm`.
 
 ## Behavior
 - Select the per-service dependency set for the chosen profile (see dependency_spec).
 - Run the control-plane checks (read-only), then optionally the test-VM harness.
 - Attach the remediation string to every failed check.
 - Emit JSON plus a human report; exit non-zero on any red.
+
+**Current-release limitation:** omit `-WithVm` and arrange independent subnet connectivity
+tests. VM creation is blocked by the shared PowerShell wrapper rejecting the empty argument
+values used to request no public IP and no additional NSG. VM creation, lifecycle reliability
+and probe validation improvements are planned for the next version; the parameter remains
+available but is not recommended for this release. Without it, checks are static and do not
+prove live subnet egress.
+The probe prefers the nodepool subnet; a successful probe there is not system-node subnet evidence.
+Missing DNS output may use runner DNS, and missing TCP/HTTPS output is skipped.
+Confirm the configured NVA is reachable and obtain successful connectivity evidence from the
+required SC subnets before Stage 4; these are customer checks, not enforced script gates.
 
 ## Output
 - JSON: per-check result with remediation.
@@ -39,8 +50,8 @@ Use `az network nic list-effective-nsg` to confirm the effective rules include t
 - Missing rule: add it in Stage 2 nsg_rules (or your own NSG for byo-existing) and re-validate.
 
 ### check_effective_routes — FR3.6c
-Use `az network nic show-effective-route-table` and `az network watcher show-next-hop` to assert the managed cluster subnet resolves to VnetLocal and other subnets to the NVA (read-only).
-- Managed cluster via NVA: set it to VnetLocal (delete+recreate the route).
+Use `az network nic show-effective-route-table` and `az network watcher show-next-hop` where a NIC/VM is available; otherwise inspect the subnet route table. In UDR mode, the managedcluster check verifies VnetLocal for its own CIDR and other subnet checks verify the default route points to the configured NVA. In LoadBalancer mode, checks allow system routing without those UDRs. These checks do not prove NVA reachability or working Internet egress.
+- Managedcluster local traffic via NVA: restore VnetLocal for its own CIDR; do not remove its required UDR Internet egress route.
 
 ### check_dns_and_pe — FR3.6d
 Confirm each FR2.5 privatelink zone exists and is linked, and private endpoints are Approved with non-empty DNS (Bookshelf expects 3 PEs approved; the Foundry endpoint carries 2 zones) — read-only.
@@ -51,9 +62,9 @@ Re-run the Stage 1 quota checks (shared `Get-VcpuQuotaResult` / `Get-ModelQuotaR
 - TPM shortfall: delete unused gpt-5.4 deployments, purge soft-deleted Foundry accounts, or request more quota.
 - vCPU shortfall: request a regional/family quota increase.
 ### testvm_lifecycle — FR3.7, FR3.7g
-Provision a disposable VM in the target subnet (no public IP, no NSG override, generated SSH keys), run `conntest.sh` via `az vm run-command invoke RunShellScript`, then always delete the VM, NIC, and disk on exit. This is the only write the toolbox performs.
+With `-WithVm`, provision a disposable VM in the target subnet (preferring nodepool; no public IP or NSG override, generated SSH keys), run the inline connectivity script via `az vm run-command invoke RunShellScript`, then attempt to delete the VM, NIC, and disk on exit. Check cleanup results/resources after failures; deletion is not guaranteed.
 - VM create fails on SKU: pick a region-allowed SKU (see quota_sku).
-- Leftover VM: the delete step is unconditional; re-run to clean up.
+- Leftover resources: inspect the reported VM/NIC/disk IDs and clean up approved probe resources.
 
 The test VM runs the following probes (results parsed by the consolidated script):
 

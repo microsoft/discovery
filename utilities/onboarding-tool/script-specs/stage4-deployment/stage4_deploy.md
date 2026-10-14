@@ -4,14 +4,14 @@ Stage 4 · single consolidated PowerShell 7 + Az CLI script · FR mapping: FR4.1
 Script: `../../scripts/stage4-deployment/stage4_deploy.ps1`
 
 ## Purpose
-Deploy the platform in dependency order and, when a step fails, surface the true cause with a specific remediation instead of a raw ARM error. Gated on a green Stage 3 report. Uses api-version 2026-06-01 for all `Microsoft.Discovery` ARM resources and the workspace data plane.
+Deploy the platform in dependency order and, when a step fails, surface the true cause with a specific remediation instead of a raw ARM error. Supplied Stage 3 reports must be GO; omitting the reports or supercomputer profile coverage only produces a warning. Reports are not bound to the current config, and static GO does not prove working egress. Uses api-version 2026-06-01 for all `Microsoft.Discovery` ARM resources and the workspace data plane.
 
 ## Inputs
-- `--config <config.json>`, the green readiness report. Optional `--no-bicep` to force the per-resource ARM PUT sequence, or a custom `--bicep-path` / `--parameters-path`.
-- Recovery mode: `--recovery --subscription --resource-group --workspace`.
+- `-ConfigPath <config.json>`, optional `-ReadinessReport` with one or more GO report paths. Optional `-NoBicep` to force the per-resource ARM PUT sequence, or a custom `-BicepPath` / `-ParametersPath`.
+- Recovery mode: `-Recovery -Subscription <id> -ResourceGroup <name> -Workspace <name>`.
 
 ## Deploy method
-Deploy via a Bicep template (`discovery-platform.bicep`) by default, with parameters generated from the config (subnet ids by role, managed identity, storage account, names, regions, workspace network settings, and `network.outboundType`). Every project is linked to a storage container regardless of Bookshelf scope. The per-resource ARM PUT sequence is retained behind `--no-bicep` and is also used to gate each resource on Succeeded and to drive true-state detection and remediation after the deployment.
+Deploy via a Bicep template (`discovery-platform.bicep`) by default, with parameters generated from the config (subnet ids by role, managed identity, storage account, names, regions, workspace network settings, and `network.outboundType`). Every project is linked to a storage container regardless of Bookshelf scope. The container is named `names.storageContainer`; when that's blank, it defaults to `<workspace>-storage` (or reuses an existing `<workspace>-bookshelf` container created by earlier releases, so reruns keep the same project container). The per-resource ARM PUT sequence is retained behind `-NoBicep` and is also used to gate each resource on Succeeded and to drive true-state detection and remediation after the deployment.
 
 The supercomputer `outboundType` comes from the Stage 1 planning decision `network.outboundType` (default `UserDefinedRouting`); it is passed straight through to the `outboundType` template parameter. `UserDefinedRouting` (forced tunneling) requires egress to route through the customer firewall/NVA and a separate management subnet (spare role / `managementSubnet`, delegated to `Microsoft.ContainerService/managedClusters`) passed as `managementSubnetId` for AKS API-server VNet integration. With `LoadBalancer`, `managementSubnetId` is omitted. The managedcluster subnet itself must never be delegated; the `deploy-subnet-topology` pre-flight enforces both rules before submit.
 
@@ -32,7 +32,7 @@ The supercomputer `outboundType` comes from the Stage 1 planning decision `netwo
 Each concern ran as a separate sub-script before consolidation; the logic now lives in `stage4_deploy.ps1`. This stage and Stage 2 are the only writers of platform resources.
 
 ### deploy_order — FR4.1, FR4.2
-Deploy in dependency order and gate each on Succeeded: supercomputer → workspace (`properties.supercomputerIds`) → chat model → project → bookshelf. If the supercomputer is Failed, do not touch the workspace. Create the validation chat-model deployment named `gpt-5-4` (model gpt-5.4) explicitly — the cognition deployment is auto-provisioned at workspace creation, but without gpt-5-4 the Discovery Engine cannot validate task results and will not start. Use api-version 2026-06-01 for all Discovery resources and the data plane; the tools-only 2026-02-01-preview is superseded.
+Deploy in dependency order and gate each on Succeeded: supercomputer → workspace (`properties.supercomputerIds`) → chat model → project storage container → project. The tool does not deploy Bookshelf or ingest its content, even when `bookshelf.inScope=true`. If the supercomputer is Failed, do not touch the workspace. Create the validation chat-model deployment named `gpt-5-4` (model gpt-5.4) explicitly — the cognition deployment is auto-provisioned at workspace creation, but without gpt-5-4 the Discovery Engine cannot validate task results and will not start. Use api-version 2026-06-01 for all Discovery resources and the data plane; the tools-only 2026-02-01-preview is superseded.
 - Supercomputer Failed: fix it before the workspace.
 - Engine will not start: confirm the manual gpt-5-4 deployment exists.
 
@@ -44,6 +44,8 @@ Region co-location (pre-flight): the supercomputer `location` (from `controlPlan
 - Creation not supported in region: the region is not Discovery-creatable for this resource type; place the BYO VNet and set controlPlaneRegion to a creatable region (eastus confirmed; eastus2 rejected despite being advertised).
 
 ### true_state_detection — FR4.3
+Allow 15-30 minutes for the supercomputer and up to about an hour for the workspace; plan one to two hours overall. Deployment/recovery callers use a 120-minute resource-state polling timeout per resource; this is not a guaranteed completion time.
+
 Catch the case where the ARM resource list shows Succeeded while a Foundry account is still Creating: confirm Foundry state with `az cognitiveservices account show`, and enforce a timeout that converts a stuck Accepted/Creating into a terminal failure. The Foundry state only tightens the gate: the step passes when both the ARM state and the Foundry state are Succeeded, and a Failed ARM state is never overridden by a Succeeded Foundry account.
 - Stuck Creating past timeout: treat as failed; purge/retry per the error-remediation mapping.
 - Workspace Failed: the RP returns a generic InternalServerError, so read the failed operations from the workspace managed RG activity log and match those against the remediation engine.

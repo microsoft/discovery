@@ -290,9 +290,17 @@ subscription scope. Without it, resource creation fails with NSP association err
 FR2.2 [P0] BYO network provisioning from config, deployed declaratively via `network.bicep`
 (one RG-scoped deployment covering FR2.2-FR2.5): VNet, subnets with the delegations from FR1.2,
 a shared NSG, route tables, and privatelink DNS zones. The step runs only when `network.model`
-is a build model (`byo`/`byo-spoke`/`greenfield`); `byo-existing` validates in Stage 3 and
-`managed` is RP-managed. Egress topology is switched by `network.outboundType`
+uses a documented provisioning option (`managed`/`byo`/`byo-spoke`); `byo-existing` skips this
+network deployment and validates existing networking in Stage 3. All build models use the
+same template and can modify an existing VNet's address space and subnet collection.
+The managed planning form offers `managed`; the BYO form offers `byo` (customer-defined
+provisioning), `byo-spoke` (spoke provisioning with customer-arranged hub connectivity), and
+`byo-existing` (customer-prepared existing network).
+See the [planning-form guide](scripts/USER-GUIDE.md#3-choose-your-network-model-and-planning-form).
+Egress topology is switched separately by `network.outboundType`
 (UserDefinedRouting builds NVA route tables; LoadBalancer omits user route tables).
+Neither form provisions a firewall/NVA, NAT Gateway or hub peering. UDR requires customer-provided
+appliance connectivity, firewall rules and SNAT.
 
 FR2.3 [P0] NSG rule set. Apply the required rules per subnet NSG:
 
@@ -374,6 +382,13 @@ deletes it.
 Convert "we think the network is ready" into a machine-checked, self-service yes/no that the
 customer can re-run without a Microsoft round trip. The networking confirmation runs from a
 disposable test VM created in the target resource group.
+
+**Deployment guidance for this release:** run Stage 3 without `-WithVm`. The optional probe
+harness has known VM-creation and connectivity-validation limitations; improvements are
+planned for the next version. Stage 3 runs static checks by default. Before deployment, confirm
+the configured firewall/NVA is reachable and verify required outbound connectivity from the SC
+node subnets; a static GO alone does not establish either. See
+[Known limitations and deployment checks](scripts/README.md#known-limitations-and-deployment-checks).
 
 ### Architecture requirements
 
@@ -597,7 +612,7 @@ response `output` must contain a `function_call` / `function_call_output` item, 
 must be visible in Foundry tracing. Absence of a tool-call item is a FAIL.
 
 FR5.7 [P1] Per-service verification summary: supercomputer/workspace/Foundry/project/chat-model
-all `Succeeded`; bookshelf (if in scope) BYO storage private endpoint approved with DNS; tool created; agent created;
+all `Succeeded`; project storage (BYO storage account behind the project's storage container) private endpoint approved with DNS; tool created; agent created;
 tool bound; conversation completed; tool actually invoked.
 
 ### Acceptance criteria
@@ -605,5 +620,11 @@ tool bound; conversation completed; tool actually invoked.
 - A run that completes without a `function_call` item is reported as not certified.
 - On success the script emits the per-service summary and a certification verdict.
 
----
+**Current implementation boundary:** FR5.6/FR5.7 tool-invocation requirements above describe
+the target scope, not the shipped Stage 5 behavior. The script creates a Q&A agent with no tool,
+requires a completed non-empty assistant answer, and checks project-storage endpoint metadata
+for privateEndpoint access (skipped for serviceEndpoint). It does not deploy Bookshelf or certify
+Bookshelf retrieval/tool invocation. See the
+[Stage 5 specification](script-specs/stage5-scenario-enablement/stage5_enable.md).
 
+---

@@ -1,4 +1,5 @@
-﻿#Requires -Version 7.0
+#!/usr/bin/env pwsh
+#Requires -Version 7.0
 <#
 .SYNOPSIS  Stage 2 / FR2.1-FR2.9 — prepare the Discovery landing zone.
 .DESCRIPTION
@@ -640,7 +641,8 @@ else {
 
     if (-not $account) {
         $results.Add((New-CheckResult -Id 'byo-storage-account-name' -Name 'BYO storage account name' -Status 'Fail' -Fr 'FR2.6' `
-                    -Detail 'config.storage.account/accountId is missing.' -Remediation 'Set config.storage.accountId (full resource id, as Stage 1 emits) or config.storage.account to the customer-owned storage account.'))
+                    -Detail 'No storage account is set (storage.account is empty).' `
+                    -Remediation "Set storage.account (the storage.account cell in the planning form) to the name of an existing StorageV2 account (the tool does not create it; create one with: az storage account create -g <rg> -n <globally-unique-name> -l $($cfg.workloadRegion) --sku Standard_LRS --kind StorageV2 --min-tls-version TLS1_2 --allow-blob-public-access false). Re-run Stage 1 to regenerate config.json, then re-run Stage 2."))
     }
     else {
         try {
@@ -652,7 +654,7 @@ else {
             if (-not $st) {
                 $results.Add((New-CheckResult -Id 'byo-storage-account' -Name "BYO storage account $account" -Status 'Fail' -Fr 'FR2.6' `
                             -Detail "Storage account '$(if ($stId) { $stId } else { $account })' was not found in subscription $($cfg.subscriptionId). The tool does not create it." `
-                            -Remediation 'Pre-create a StorageV2 account in the target subscription, set storage.account or storage.accountId, re-run Stage 1, then re-run Stage 2.'))
+                            -Remediation 'Pre-create a StorageV2 account in the target subscription and set storage.account (the storage.account cell in the planning form) to its name. Re-run Stage 1 to regenerate config.json, then re-run Stage 2.'))
                 return $results.ToArray()
             }
             if ($st.id -match '/resourceGroups/([^/]+)') { $storageRg = $Matches[1] }

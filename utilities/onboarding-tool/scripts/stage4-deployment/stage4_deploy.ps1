@@ -1,3 +1,4 @@
+#!/usr/bin/env pwsh
 #Requires -Version 7.0
 <#
 .SYNOPSIS  Stage 4 / FR4.1 - orchestrate Discovery platform deployment.
@@ -616,7 +617,7 @@ function Invoke-BicepDeploymentOnce {
 }
 
 function New-Stage4BicepParamFile {
-    param([object]$Config, [string]$ResourceGroup, [string]$Location)
+    param([object]$Config, [string]$ResourceGroup, [string]$Location, [string]$StorageContainerName)
 
     $names = Get-ObjProp -Object $Config -Name 'names'
     $p = [ordered]@{
@@ -626,7 +627,7 @@ function New-Stage4BicepParamFile {
         workspaceName           = [string](Get-ObjProp -Object $names -Name 'workspace')
         projectName             = [string](Get-ObjProp -Object $names -Name 'project')
         nodePoolName            = [string](Get-ObjProp -Object $names -Name 'nodePool')
-        storageContainerName    = [string](Get-ObjProp -Object $names -Name 'storageContainer')
+        storageContainerName    = $(if ($StorageContainerName) { $StorageContainerName } else { [string](Get-ObjProp -Object $names -Name 'storageContainer') })
         chatModelDeploymentName = 'gpt-5-4'
         chatModelName           = 'gpt-5.4'
         managedIdentityId       = Get-ManagedIdentityId -Config $Config -ResourceGroup $ResourceGroup
@@ -686,7 +687,12 @@ $workspaceName = Get-ConfigName -Config $cfg -Name 'workspace' -Default ''
 $projectName = Get-ConfigName -Config $cfg -Name 'project' -Default "$workspaceName-project"
 $supercomputerName = Get-ConfigName -Config $cfg -Name 'supercomputer' -Default ''
 $nodePoolName = Get-ConfigName -Config $cfg -Name 'nodePool' -Default ''
-$storageContainerName = Get-ConfigName -Config $cfg -Name 'storageContainer' -Default "$workspaceName-bookshelf"
+$storageContainerName = Get-ConfigName -Config $cfg -Name 'storageContainer' -Default "$workspaceName-storage"
+if (-not (Get-ConfigName -Config $cfg -Name 'storageContainer' -Default '')) {
+    # Earlier releases defaulted to '<workspace>-bookshelf'; keep using it on reruns so the project's container doesn't change.
+    $legacyContainerId = New-DiscoveryId -SubscriptionId $subscriptionId -ResourceGroup $resourceGroup -TypePath 'storageContainers' -NamePath "$workspaceName-bookshelf"
+    if ((Get-ArmState -ResourceId $legacyContainerId) -ne 'NotFound') { $storageContainerName = "$workspaceName-bookshelf" }
+}
 $managedIdentityId = Get-ManagedIdentityId -Config $cfg -ResourceGroup $resourceGroup
 if ([string]::IsNullOrWhiteSpace($managedIdentityId)) {
     $results.Add((New-CheckResult -Id 'deploy-managed-identity' -Name 'deployment managed identity' -Status 'Fail' -Fr 'FR4.1' `
@@ -866,7 +872,7 @@ if (-not $NoBicep -and -not $Recovery -and -not $BicepPath) {
                 $null = Write-OnboardingReport -Results $results.ToArray() -Title 'Stage 4 · deploy order (FR4.1-FR4.2)' -JsonPath $JsonPath
                 Complete-Stage -Results $results.ToArray()
             }
-            $generatedParamFile = New-Stage4BicepParamFile -Config $cfg -ResourceGroup $resourceGroup -Location $location
+            $generatedParamFile = New-Stage4BicepParamFile -Config $cfg -ResourceGroup $resourceGroup -Location $location -StorageContainerName $storageContainerName
             $ParametersPath = $generatedParamFile
         }
     }
@@ -1251,7 +1257,12 @@ if (-not @($results | Where-Object { $_.status -eq 'Fail' }).Count) {
 
 if (-not @($results | Where-Object { $_.status -eq 'Fail' }).Count) {
     $projectName = Get-ConfigName -Config $cfg -Name 'project' -Default "$Workspace-project"
-    $storageContainerName = Get-ConfigName -Config $cfg -Name 'storageContainer' -Default "$Workspace-bookshelf"
+    $storageContainerName = Get-ConfigName -Config $cfg -Name 'storageContainer' -Default "$Workspace-storage"
+    if (-not (Get-ConfigName -Config $cfg -Name 'storageContainer' -Default '')) {
+        # Earlier releases defaulted to '<workspace>-bookshelf'; recover against it if that's what exists.
+        $legacyContainerId = "/subscriptions/$Subscription/resourceGroups/$ResourceGroup/providers/Microsoft.Discovery/storageContainers/$Workspace-bookshelf"
+        if ((Get-ArmState -ResourceId $legacyContainerId) -ne 'NotFound') { $storageContainerName = "$Workspace-bookshelf" }
+    }
     $storageContainerId = "/subscriptions/$Subscription/resourceGroups/$ResourceGroup/providers/Microsoft.Discovery/storageContainers/$storageContainerName"
     $storageState = Get-ArmState -ResourceId $storageContainerId
     if ($storageState -ne 'Succeeded') {

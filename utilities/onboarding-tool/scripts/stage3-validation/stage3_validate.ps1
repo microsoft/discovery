@@ -1,3 +1,4 @@
+#!/usr/bin/env pwsh
 #Requires -Version 7.0
 <#
 .SYNOPSIS  Stage 3 / FR3.1-FR3.8 — run infra validation checks (single consolidated script).

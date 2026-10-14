@@ -12,7 +12,7 @@ Drive the planning sheet end to end: load the filled network-planning form, run 
 - `--waivers <waivers.json>` optional, justifications for overridden checks.
 
 ## Behavior
-- Parse the form into the in-memory config model (`config.schema.json`).
+- Parse the form into the in-memory config model (`config.schema.json`). A `.json` input is filled with the planning form's defaults for any missing field (for example `network.model=byo`, `network.outboundType=UserDefinedRouting`, `storage.model=byo`, `workspace.publicNetworkAccess=Enabled`), and a missing `resourceGroup` falls back to `network.networkResourceGroup`, so JSON and form input are validated and exported the same way. Values present in the JSON always win.
 - Run each folded check in order; collect per-check pass/fail plus remediation.
 - Block export if any P0 check fails without a matching waiver entry.
 - Write the validated config, stamped with schema version and content hash.
@@ -37,9 +37,9 @@ Confirm the subscription is allowlisted for Discovery, record the RP-registratio
 Capture and normalize control-plane region, workload region, VNet CIDR, per-service subnet CIDRs, BYO storage model, deploying identity, and policy set. Normalize regions to Azure short names and CIDRs to canonical form; flag any required field left blank.
 - Missing field: complete the corresponding cell in the planning sheet.
 
-### bookshelf_storage — FR1.1
+### project_storage — FR1.1
 Require `storage.model=byo` with `storage.account` or `storage.accountId` for every deployment. Every project requires a Discovery storage container backed by a customer storage account, independently of whether Bookshelf is in scope. The customer pre-creates the account; the tool doesn't create it. When logged in, look the account up in the target subscription, fail if it doesn't exist, and write its resource ID to `storage.accountId` in the exported config so Stages 2 and 4 target the right resource group.
-- Missing project storage: pre-create a StorageV2 account, then set `storage.model=byo` and `storage.account` or `storage.accountId`.
+- Missing project storage: enter the name of a pre-created StorageV2 account in the `storage.account` cell of the planning form (keep `storage.model=byo`; a blank or absent model defaults to `byo`). The remediation includes the `az storage account create` command. `storage.accountId` is for JSON configs only; the form doesn't expose it.
 
 ### workspace_public_access — FR1.2
 Validate `workspace.publicNetworkAccess` is `Enabled` (default) or `Disabled`. Stage 4 applies it to the workspace. `Disabled` is valid and reported as Pass, with a note that Stage 5 must run from inside the VNet.

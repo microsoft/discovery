@@ -270,65 +270,65 @@
       "timestamp": "2026-09-24T22:25:43.3354171Z"
     },
     {
-      "id": "rbac-contoso-rg1-platform-administrator-35644e08-c894-4013-9b03-e7fa82689870",
+      "id": "rbac-contoso-rg1-platform-administrator-11111111-1111-1111-1111-111111111111",
       "name": "Platform Administrator on contoso-rg1",
       "status": "Pass",
-      "detail": "Assigned to 35644e08-c894-4013-9b03-e7fa82689870.",
+      "detail": "Assigned to 11111111-1111-1111-1111-111111111111.",
       "remediation": "",
       "fr": "FR2.1",
       "data": {
         "role": "Platform Administrator",
         "state": "created",
-        "principal": "35644e08-c894-4013-9b03-e7fa82689870",
-        "scope": "/subscriptions/546ec9a3-31a2-4360-a459-7e628a08dcbb/resourceGroups/contoso-rg1",
+        "principal": "11111111-1111-1111-1111-111111111111",
+        "scope": "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/contoso-rg1",
         "roleDefinitionId": "7a2b6e6c-472e-4b39-8878-a26eb63d75c6"
       },
       "timestamp": "2026-09-24T22:25:57.1811453Z"
     },
     {
-      "id": "rbac-contoso-rg1-platform-contributor-35644e08-c894-4013-9b03-e7fa82689870",
+      "id": "rbac-contoso-rg1-platform-contributor-11111111-1111-1111-1111-111111111111",
       "name": "Platform Contributor on contoso-rg1",
       "status": "Pass",
-      "detail": "Assigned to 35644e08-c894-4013-9b03-e7fa82689870.",
+      "detail": "Assigned to 11111111-1111-1111-1111-111111111111.",
       "remediation": "",
       "fr": "FR2.1",
       "data": {
         "role": "Platform Contributor",
         "state": "created",
-        "principal": "35644e08-c894-4013-9b03-e7fa82689870",
-        "scope": "/subscriptions/546ec9a3-31a2-4360-a459-7e628a08dcbb/resourceGroups/contoso-rg1",
+        "principal": "11111111-1111-1111-1111-111111111111",
+        "scope": "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/contoso-rg1",
         "roleDefinitionId": "01288891-85ee-45a7-b367-9db3b752fc65"
       },
       "timestamp": "2026-09-24T22:26:05.3286244Z"
     },
     {
-      "id": "rbac-contoso-rg1-platform-reader-35644e08-c894-4013-9b03-e7fa82689870",
+      "id": "rbac-contoso-rg1-platform-reader-11111111-1111-1111-1111-111111111111",
       "name": "Platform Reader on contoso-rg1",
       "status": "Pass",
-      "detail": "Assigned to 35644e08-c894-4013-9b03-e7fa82689870.",
+      "detail": "Assigned to 11111111-1111-1111-1111-111111111111.",
       "remediation": "",
       "fr": "FR2.1",
       "data": {
         "role": "Platform Reader",
         "state": "created",
-        "principal": "35644e08-c894-4013-9b03-e7fa82689870",
-        "scope": "/subscriptions/546ec9a3-31a2-4360-a459-7e628a08dcbb/resourceGroups/contoso-rg1",
+        "principal": "11111111-1111-1111-1111-111111111111",
+        "scope": "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/contoso-rg1",
         "roleDefinitionId": "3bb7c424-af4e-436b-bfcc-8779c8934c31"
       },
       "timestamp": "2026-09-24T22:26:14.4120985Z"
     },
     {
-      "id": "rbac-contoso-rg1-bookshelf-index-data-reader-35644e08-c894-4013-9b03-e7fa82689870",
+      "id": "rbac-contoso-rg1-bookshelf-index-data-reader-11111111-1111-1111-1111-111111111111",
       "name": "Bookshelf Index Data Reader on contoso-rg1",
       "status": "Pass",
-      "detail": "Assigned to 35644e08-c894-4013-9b03-e7fa82689870.",
+      "detail": "Assigned to 11111111-1111-1111-1111-111111111111.",
       "remediation": "",
       "fr": "FR2.1",
       "data": {
         "role": "Bookshelf Index Data Reader",
         "state": "created",
-        "principal": "35644e08-c894-4013-9b03-e7fa82689870",
-        "scope": "/subscriptions/546ec9a3-31a2-4360-a459-7e628a08dcbb/resourceGroups/contoso-rg1",
+        "principal": "11111111-1111-1111-1111-111111111111",
+        "scope": "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/contoso-rg1",
         "roleDefinitionId": "8ec773c5-7ce6-4b78-91d1-182f8faa536d"
       },
       "timestamp": "2026-09-24T22:26:21.9183776Z"
@@ -345,12 +345,12 @@
           "Microsoft.Network/networkSecurityPerimeters/joinPerimeterRule/action",
           "Microsoft.Network/locations/networkSecurityPerimeterOperationStatuses/read"
         ],
-        "scope": "/subscriptions/546ec9a3-31a2-4360-a459-7e628a08dcbb",
+        "scope": "/subscriptions/00000000-0000-0000-0000-000000000000",
         "roleName": "Discovery NSP Perimeter Joiner",
         "appId": "92c174ac-8e41-4815-a1b7-d81b19ab03ce",
         "assigned": "exists",
-        "principalObjectId": "1ef0db83-ecd6-4944-8378-09bf099e77a0",
-        "roleDefinitionId": "436e1c8b-89bb-48a7-87f3-f479d29438c1"
+        "principalObjectId": "22222222-2222-2222-2222-222222222222",
+        "roleDefinitionId": "33333333-3333-3333-3333-333333333333"
       },
       "timestamp": "2026-09-24T22:26:37.0686806Z"
     },
@@ -363,7 +363,7 @@
       "fr": "FR2.2",
       "data": {
         "resourceGroup": "contoso-rg1",
-        "id": "/subscriptions/546ec9a3-31a2-4360-a459-7e628a08dcbb/resourceGroups/contoso-rg1/providers/Microsoft.Network/virtualNetworks/vnet-contoso-poc-ws",
+        "id": "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/contoso-rg1/providers/Microsoft.Network/virtualNetworks/vnet-contoso-poc-ws",
         "state": "created",
         "cidr": "10.46.252.0/23",
         "name": "vnet-contoso-poc-ws"
@@ -378,11 +378,11 @@
       "remediation": "If delegation cannot be set, ensure the subnet is empty or move workloads before patching.",
       "fr": "FR2.2",
       "data": {
-        "routeTableId": "/subscriptions/546ec9a3-31a2-4360-a459-7e628a08dcbb/resourceGroups/contoso-rg1/providers/Microsoft.Network/routeTables/rt-agent-containerapp",
+        "routeTableId": "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/contoso-rg1/providers/Microsoft.Network/routeTables/rt-agent-containerapp",
         "role": "agent-containerapp",
-        "subnetId": "/subscriptions/546ec9a3-31a2-4360-a459-7e628a08dcbb/resourceGroups/contoso-rg1/providers/Microsoft.Network/virtualNetworks/vnet-contoso-poc-ws/subnets/snet-agent-containerapp",
+        "subnetId": "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/contoso-rg1/providers/Microsoft.Network/virtualNetworks/vnet-contoso-poc-ws/subnets/snet-agent-containerapp",
         "cidr": "10.46.252.0/26",
-        "nsgId": "/subscriptions/546ec9a3-31a2-4360-a459-7e628a08dcbb/resourceGroups/contoso-rg1/providers/Microsoft.Network/networkSecurityGroups/nsg-agent-containerapp",
+        "nsgId": "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/contoso-rg1/providers/Microsoft.Network/networkSecurityGroups/nsg-agent-containerapp",
         "delegation": "Microsoft.App/environments",
         "subnetName": "snet-agent-containerapp"
       },
@@ -396,11 +396,11 @@
       "remediation": "If delegation cannot be set, ensure the subnet is empty or move workloads before patching.",
       "fr": "FR2.2",
       "data": {
-        "routeTableId": "/subscriptions/546ec9a3-31a2-4360-a459-7e628a08dcbb/resourceGroups/contoso-rg1/providers/Microsoft.Network/routeTables/rt-workspace-containerapp",
+        "routeTableId": "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/contoso-rg1/providers/Microsoft.Network/routeTables/rt-workspace-containerapp",
         "role": "workspace-containerapp",
-        "subnetId": "/subscriptions/546ec9a3-31a2-4360-a459-7e628a08dcbb/resourceGroups/contoso-rg1/providers/Microsoft.Network/virtualNetworks/vnet-contoso-poc-ws/subnets/snet-workspace-containerapp",
+        "subnetId": "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/contoso-rg1/providers/Microsoft.Network/virtualNetworks/vnet-contoso-poc-ws/subnets/snet-workspace-containerapp",
         "cidr": "10.46.252.64/26",
-        "nsgId": "/subscriptions/546ec9a3-31a2-4360-a459-7e628a08dcbb/resourceGroups/contoso-rg1/providers/Microsoft.Network/networkSecurityGroups/nsg-workspace-containerapp",
+        "nsgId": "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/contoso-rg1/providers/Microsoft.Network/networkSecurityGroups/nsg-workspace-containerapp",
         "delegation": "Microsoft.App/environments",
         "subnetName": "snet-workspace-containerapp"
       },
@@ -414,11 +414,11 @@
       "remediation": "If delegation cannot be set, ensure the subnet is empty or move workloads before patching.",
       "fr": "FR2.2",
       "data": {
-        "routeTableId": "/subscriptions/546ec9a3-31a2-4360-a459-7e628a08dcbb/resourceGroups/contoso-rg1/providers/Microsoft.Network/routeTables/rt-search-containerapp",
+        "routeTableId": "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/contoso-rg1/providers/Microsoft.Network/routeTables/rt-search-containerapp",
         "role": "search-containerapp",
-        "subnetId": "/subscriptions/546ec9a3-31a2-4360-a459-7e628a08dcbb/resourceGroups/contoso-rg1/providers/Microsoft.Network/virtualNetworks/vnet-contoso-poc-ws/subnets/snet-search-containerapp",
+        "subnetId": "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/contoso-rg1/providers/Microsoft.Network/virtualNetworks/vnet-contoso-poc-ws/subnets/snet-search-containerapp",
         "cidr": "10.46.253.32/27",
-        "nsgId": "/subscriptions/546ec9a3-31a2-4360-a459-7e628a08dcbb/resourceGroups/contoso-rg1/providers/Microsoft.Network/networkSecurityGroups/nsg-search-containerapp",
+        "nsgId": "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/contoso-rg1/providers/Microsoft.Network/networkSecurityGroups/nsg-search-containerapp",
         "delegation": "Microsoft.App/environments",
         "subnetName": "snet-search-containerapp"
       },
@@ -432,11 +432,11 @@
       "remediation": "If delegation cannot be set, ensure the subnet is empty or move workloads before patching.",
       "fr": "FR2.2",
       "data": {
-        "routeTableId": "/subscriptions/546ec9a3-31a2-4360-a459-7e628a08dcbb/resourceGroups/contoso-rg1/providers/Microsoft.Network/routeTables/rt-managedcluster",
+        "routeTableId": "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/contoso-rg1/providers/Microsoft.Network/routeTables/rt-managedcluster",
         "role": "managedcluster",
-        "subnetId": "/subscriptions/546ec9a3-31a2-4360-a459-7e628a08dcbb/resourceGroups/contoso-rg1/providers/Microsoft.Network/virtualNetworks/vnet-contoso-poc-ws/subnets/snet-managedcluster",
+        "subnetId": "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/contoso-rg1/providers/Microsoft.Network/virtualNetworks/vnet-contoso-poc-ws/subnets/snet-managedcluster",
         "cidr": "10.46.253.128/26",
-        "nsgId": "/subscriptions/546ec9a3-31a2-4360-a459-7e628a08dcbb/resourceGroups/contoso-rg1/providers/Microsoft.Network/networkSecurityGroups/nsg-managedcluster",
+        "nsgId": "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/contoso-rg1/providers/Microsoft.Network/networkSecurityGroups/nsg-managedcluster",
         "delegation": "Microsoft.ContainerService/managedClusters",
         "subnetName": "snet-managedcluster"
       },
@@ -450,11 +450,11 @@
       "remediation": "If delegation cannot be set, ensure the subnet is empty or move workloads before patching.",
       "fr": "FR2.2",
       "data": {
-        "routeTableId": "/subscriptions/546ec9a3-31a2-4360-a459-7e628a08dcbb/resourceGroups/contoso-rg1/providers/Microsoft.Network/routeTables/rt-nodepool",
+        "routeTableId": "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/contoso-rg1/providers/Microsoft.Network/routeTables/rt-nodepool",
         "role": "nodepool",
-        "subnetId": "/subscriptions/546ec9a3-31a2-4360-a459-7e628a08dcbb/resourceGroups/contoso-rg1/providers/Microsoft.Network/virtualNetworks/vnet-contoso-poc-ws/subnets/snet-nodepool",
+        "subnetId": "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/contoso-rg1/providers/Microsoft.Network/virtualNetworks/vnet-contoso-poc-ws/subnets/snet-nodepool",
         "cidr": "10.46.252.128/26",
-        "nsgId": "/subscriptions/546ec9a3-31a2-4360-a459-7e628a08dcbb/resourceGroups/contoso-rg1/providers/Microsoft.Network/networkSecurityGroups/nsg-nodepool",
+        "nsgId": "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/contoso-rg1/providers/Microsoft.Network/networkSecurityGroups/nsg-nodepool",
         "delegation": "none",
         "subnetName": "snet-nodepool"
       },
@@ -468,11 +468,11 @@
       "remediation": "If delegation cannot be set, ensure the subnet is empty or move workloads before patching.",
       "fr": "FR2.2",
       "data": {
-        "routeTableId": "/subscriptions/546ec9a3-31a2-4360-a459-7e628a08dcbb/resourceGroups/contoso-rg1/providers/Microsoft.Network/routeTables/rt-private-endpoints",
+        "routeTableId": "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/contoso-rg1/providers/Microsoft.Network/routeTables/rt-private-endpoints",
         "role": "private-endpoints",
-        "subnetId": "/subscriptions/546ec9a3-31a2-4360-a459-7e628a08dcbb/resourceGroups/contoso-rg1/providers/Microsoft.Network/virtualNetworks/vnet-contoso-poc-ws/subnets/snet-private-endpoints",
+        "subnetId": "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/contoso-rg1/providers/Microsoft.Network/virtualNetworks/vnet-contoso-poc-ws/subnets/snet-private-endpoints",
         "cidr": "10.46.253.0/27",
-        "nsgId": "/subscriptions/546ec9a3-31a2-4360-a459-7e628a08dcbb/resourceGroups/contoso-rg1/providers/Microsoft.Network/networkSecurityGroups/nsg-private-endpoints",
+        "nsgId": "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/contoso-rg1/providers/Microsoft.Network/networkSecurityGroups/nsg-private-endpoints",
         "delegation": "none",
         "subnetName": "snet-private-endpoints"
       },
@@ -486,11 +486,11 @@
       "remediation": "If delegation cannot be set, ensure the subnet is empty or move workloads before patching.",
       "fr": "FR2.2",
       "data": {
-        "routeTableId": "/subscriptions/546ec9a3-31a2-4360-a459-7e628a08dcbb/resourceGroups/contoso-rg1/providers/Microsoft.Network/routeTables/rt-spare",
+        "routeTableId": "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/contoso-rg1/providers/Microsoft.Network/routeTables/rt-spare",
         "role": "spare",
-        "subnetId": "/subscriptions/546ec9a3-31a2-4360-a459-7e628a08dcbb/resourceGroups/contoso-rg1/providers/Microsoft.Network/virtualNetworks/vnet-contoso-poc-ws/subnets/snet-spare",
+        "subnetId": "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/contoso-rg1/providers/Microsoft.Network/virtualNetworks/vnet-contoso-poc-ws/subnets/snet-spare",
         "cidr": "10.46.253.64/27",
-        "nsgId": "/subscriptions/546ec9a3-31a2-4360-a459-7e628a08dcbb/resourceGroups/contoso-rg1/providers/Microsoft.Network/networkSecurityGroups/nsg-spare",
+        "nsgId": "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/contoso-rg1/providers/Microsoft.Network/networkSecurityGroups/nsg-spare",
         "delegation": "none",
         "subnetName": "snet-spare"
       },
@@ -967,7 +967,7 @@
         "zoneState": "created",
         "linkName": "link-blob-core-windows-net",
         "zone": "privatelink.blob.core.windows.net",
-        "vnetId": "/subscriptions/546ec9a3-31a2-4360-a459-7e628a08dcbb/resourceGroups/contoso-rg1/providers/Microsoft.Network/virtualNetworks/vnet-contoso-poc-ws",
+        "vnetId": "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/contoso-rg1/providers/Microsoft.Network/virtualNetworks/vnet-contoso-poc-ws",
         "linkState": "created"
       },
       "timestamp": "2026-09-24T22:47:22.7872871Z"
@@ -983,7 +983,7 @@
         "zoneState": "created",
         "linkName": "link-queue-core-windows-net",
         "zone": "privatelink.queue.core.windows.net",
-        "vnetId": "/subscriptions/546ec9a3-31a2-4360-a459-7e628a08dcbb/resourceGroups/contoso-rg1/providers/Microsoft.Network/virtualNetworks/vnet-contoso-poc-ws",
+        "vnetId": "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/contoso-rg1/providers/Microsoft.Network/virtualNetworks/vnet-contoso-poc-ws",
         "linkState": "created"
       },
       "timestamp": "2026-09-24T22:48:41.1002560Z"
@@ -999,7 +999,7 @@
         "zoneState": "created",
         "linkName": "link-file-core-windows-net",
         "zone": "privatelink.file.core.windows.net",
-        "vnetId": "/subscriptions/546ec9a3-31a2-4360-a459-7e628a08dcbb/resourceGroups/contoso-rg1/providers/Microsoft.Network/virtualNetworks/vnet-contoso-poc-ws",
+        "vnetId": "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/contoso-rg1/providers/Microsoft.Network/virtualNetworks/vnet-contoso-poc-ws",
         "linkState": "created"
       },
       "timestamp": "2026-09-24T22:49:59.7867074Z"
@@ -1015,7 +1015,7 @@
         "zoneState": "created",
         "linkName": "link-table-core-windows-net",
         "zone": "privatelink.table.core.windows.net",
-        "vnetId": "/subscriptions/546ec9a3-31a2-4360-a459-7e628a08dcbb/resourceGroups/contoso-rg1/providers/Microsoft.Network/virtualNetworks/vnet-contoso-poc-ws",
+        "vnetId": "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/contoso-rg1/providers/Microsoft.Network/virtualNetworks/vnet-contoso-poc-ws",
         "linkState": "created"
       },
       "timestamp": "2026-09-24T22:51:17.4773731Z"
@@ -1031,7 +1031,7 @@
         "zoneState": "created",
         "linkName": "link-dfs-core-windows-net",
         "zone": "privatelink.dfs.core.windows.net",
-        "vnetId": "/subscriptions/546ec9a3-31a2-4360-a459-7e628a08dcbb/resourceGroups/contoso-rg1/providers/Microsoft.Network/virtualNetworks/vnet-contoso-poc-ws",
+        "vnetId": "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/contoso-rg1/providers/Microsoft.Network/virtualNetworks/vnet-contoso-poc-ws",
         "linkState": "created"
       },
       "timestamp": "2026-09-24T22:52:34.3324698Z"
@@ -1047,7 +1047,7 @@
         "zoneState": "created",
         "linkName": "link-vaultcore-azure-net",
         "zone": "privatelink.vaultcore.azure.net",
-        "vnetId": "/subscriptions/546ec9a3-31a2-4360-a459-7e628a08dcbb/resourceGroups/contoso-rg1/providers/Microsoft.Network/virtualNetworks/vnet-contoso-poc-ws",
+        "vnetId": "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/contoso-rg1/providers/Microsoft.Network/virtualNetworks/vnet-contoso-poc-ws",
         "linkState": "created"
       },
       "timestamp": "2026-09-24T22:53:52.1472647Z"
@@ -1063,7 +1063,7 @@
         "zoneState": "created",
         "linkName": "link-search-windows-net",
         "zone": "privatelink.search.windows.net",
-        "vnetId": "/subscriptions/546ec9a3-31a2-4360-a459-7e628a08dcbb/resourceGroups/contoso-rg1/providers/Microsoft.Network/virtualNetworks/vnet-contoso-poc-ws",
+        "vnetId": "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/contoso-rg1/providers/Microsoft.Network/virtualNetworks/vnet-contoso-poc-ws",
         "linkState": "created"
       },
       "timestamp": "2026-09-24T22:55:09.1583406Z"
@@ -1079,7 +1079,7 @@
         "zoneState": "created",
         "linkName": "link-cognitiveservices-azure-com",
         "zone": "privatelink.cognitiveservices.azure.com",
-        "vnetId": "/subscriptions/546ec9a3-31a2-4360-a459-7e628a08dcbb/resourceGroups/contoso-rg1/providers/Microsoft.Network/virtualNetworks/vnet-contoso-poc-ws",
+        "vnetId": "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/contoso-rg1/providers/Microsoft.Network/virtualNetworks/vnet-contoso-poc-ws",
         "linkState": "created"
       },
       "timestamp": "2026-09-24T22:56:25.9619414Z"
@@ -1095,7 +1095,7 @@
         "zoneState": "created",
         "linkName": "link-openai-azure-com",
         "zone": "privatelink.openai.azure.com",
-        "vnetId": "/subscriptions/546ec9a3-31a2-4360-a459-7e628a08dcbb/resourceGroups/contoso-rg1/providers/Microsoft.Network/virtualNetworks/vnet-contoso-poc-ws",
+        "vnetId": "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/contoso-rg1/providers/Microsoft.Network/virtualNetworks/vnet-contoso-poc-ws",
         "linkState": "created"
       },
       "timestamp": "2026-09-24T22:57:44.3183213Z"
@@ -1111,7 +1111,7 @@
         "zoneState": "created",
         "linkName": "link-services-ai-azure-com",
         "zone": "privatelink.services.ai.azure.com",
-        "vnetId": "/subscriptions/546ec9a3-31a2-4360-a459-7e628a08dcbb/resourceGroups/contoso-rg1/providers/Microsoft.Network/virtualNetworks/vnet-contoso-poc-ws",
+        "vnetId": "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/contoso-rg1/providers/Microsoft.Network/virtualNetworks/vnet-contoso-poc-ws",
         "linkState": "created"
       },
       "timestamp": "2026-09-24T22:59:02.1686728Z"
@@ -1127,7 +1127,7 @@
         "zoneState": "created",
         "linkName": "link-documents-azure-com",
         "zone": "privatelink.documents.azure.com",
-        "vnetId": "/subscriptions/546ec9a3-31a2-4360-a459-7e628a08dcbb/resourceGroups/contoso-rg1/providers/Microsoft.Network/virtualNetworks/vnet-contoso-poc-ws",
+        "vnetId": "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/contoso-rg1/providers/Microsoft.Network/virtualNetworks/vnet-contoso-poc-ws",
         "linkState": "created"
       },
       "timestamp": "2026-09-24T23:00:18.2887024Z"
@@ -1143,7 +1143,7 @@
         "zoneState": "created",
         "linkName": "link-azurecr-io",
         "zone": "privatelink.azurecr.io",
-        "vnetId": "/subscriptions/546ec9a3-31a2-4360-a459-7e628a08dcbb/resourceGroups/contoso-rg1/providers/Microsoft.Network/virtualNetworks/vnet-contoso-poc-ws",
+        "vnetId": "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/contoso-rg1/providers/Microsoft.Network/virtualNetworks/vnet-contoso-poc-ws",
         "linkState": "created"
       },
       "timestamp": "2026-09-24T23:01:34.4493568Z"

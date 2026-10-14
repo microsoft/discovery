@@ -1,3 +1,4 @@
+#!/usr/bin/env pwsh
 #Requires -Version 7.0
 <#
 .SYNOPSIS
@@ -207,7 +208,7 @@ function ConvertTo-ConfigModel {
             subnets              = $subnets
         }
         storage           = [ordered]@{
-            model  = (Val 'storage.model' 'managed')
+            model  = (Val 'storage.model' 'byo')
             account = (Val 'storage.account')
             accountId = (Val 'storage.accountId')
             access = (Val 'storage.access' 'privateEndpoint')
@@ -239,6 +240,21 @@ function ConvertTo-ConfigModel {
     }
     # prune empty-string leaf values so downstream required checks catch true blanks
     return $model
+}
+
+function Merge-ConfigDefaults {
+    <#
+    .SYNOPSIS Fill keys missing from a JSON-loaded config with the planning-form defaults, recursively,
+      so JSON and .xlsx input reach the checks in the same shape (StrictMode throws on absent properties).
+      Values present in the JSON always win.
+    #>
+    param([Parameter(Mandatory)][object]$Config, [Parameter(Mandatory)][object]$Defaults)
+    foreach ($p in $Defaults.PSObject.Properties) {
+        $existing = $Config.PSObject.Properties[$p.Name]
+        if (-not $existing) { $Config | Add-Member -NotePropertyName $p.Name -NotePropertyValue $p.Value }
+        elseif ($p.Value -is [pscustomobject] -and $existing.Value -is [pscustomobject]) { $null = Merge-ConfigDefaults -Config $existing.Value -Defaults $p.Value }
+    }
+    return $Config
 }
 
 # ===========================================================================
@@ -544,7 +560,7 @@ function Invoke-Stage1Checks {
         $R.Add((New-CheckResult -Id 'workspace-public-access' -Name 'Workspace public network access' -Status 'Pass' -Fr 'FR1.2' -Detail "publicNetworkAccess=$pna; $note"))
     }
 
-    $networkIsolation = if ($Cfg.workspace -and $null -ne $Cfg.workspace.networkIsolation) { [bool]$Cfg.workspace.networkIsolation } else { $true }
+    $networkIsolation = if ($null -ne $Cfg.workspace.networkIsolation) { [bool]$Cfg.workspace.networkIsolation } else { $true }
     $isolationNote = if ($networkIsolation) {
         'Workbench access requires VPN or ExpressRoute connectivity to the workspace VNet; publicNetworkAccess controls the workspace data plane separately.'
     }
@@ -671,17 +687,18 @@ function Invoke-Stage1Checks {
     }
 
     # ---- Project storage: every Discovery project needs a storage container ----
-    $stModel = if ($Cfg.storage -and $Cfg.storage.model) { [string]$Cfg.storage.model } else { 'managed' }
-    $stAccount = if ($Cfg.storage) { @($Cfg.storage.account, $Cfg.storage.accountId) | Where-Object { Test-Field $_ } | Select-Object -First 1 } else { $null }
-    $stPrecreate = 'Pre-create a StorageV2 account in the target subscription (the tool does not create it), then set storage.model=byo and storage.account (name) or storage.accountId (resource ID). Stage 2 adds the CORS rules, containers, and private endpoint.'
+    $stModel = if (Test-Field $Cfg.storage.model) { [string]$Cfg.storage.model } else { 'byo' }
+    $stAccount = @($Cfg.storage.account, $Cfg.storage.accountId) | Where-Object { Test-Field $_ } | Select-Object -First 1
+    $stCreateCmd = "az storage account create -g <rg> -n <globally-unique-name> -l $($Cfg.workloadRegion) --sku Standard_LRS --kind StorageV2 --min-tls-version TLS1_2 --allow-blob-public-access false"
+    $stPrecreate = "Set storage.account (the storage.account cell in the planning form) to the name of an existing StorageV2 account in this subscription; the tool does not create it. To create one, run: $stCreateCmd. Then re-run Stage 1."
     if ($stModel -ne 'byo') {
         $R.Add((New-CheckResult -Id 'project-storage' -Name 'Project storage account' -Status 'Fail' -Fr 'FR1.1' `
                     -Detail "storage.model=$stModel. Every Discovery project needs a storage container backed by a storage account you own, so only storage.model=byo is supported." `
-                    -Remediation $stPrecreate))
+                    -Remediation "Set storage.model to byo. $stPrecreate"))
     }
     elseif (-not $stAccount) {
         $R.Add((New-CheckResult -Id 'project-storage' -Name 'Project storage account' -Status 'Fail' -Fr 'FR1.1' `
-                    -Detail 'storage.account and storage.accountId are both empty. Every Discovery project needs a storage container backed by a storage account you own.' `
+                    -Detail 'storage.account is empty. Every Discovery project needs a storage container backed by a storage account you own.' `
                     -Remediation $stPrecreate))
     }
     elseif (-not $loggedIn) {
@@ -702,7 +719,7 @@ function Invoke-Stage1Checks {
         else {
             $R.Add((New-CheckResult -Id 'project-storage' -Name 'Project storage account' -Status 'Fail' -Fr 'FR1.1' `
                         -Detail "Storage account '$stAccount' was not found in subscription $($Cfg.subscriptionId)." `
-                        -Remediation $stPrecreate))
+                        -Remediation "Check the storage.account name for typos and that the account is in subscription $($Cfg.subscriptionId). $stPrecreate"))
         }
     }
 
@@ -889,6 +906,10 @@ $ext = [System.IO.Path]::GetExtension($FormPath).ToLowerInvariant()
 
 if ($ext -eq '.json') {
     $cfgModel = Get-Content -LiteralPath $FormPath -Raw | ConvertFrom-Json
+    $formDefaults = ConvertTo-ConfigModel -Parsed ([pscustomobject]@{ Scalars = @{}; Subnets = @(); Policies = @(); Waivers = @() }) | ConvertTo-Json -Depth 20 | ConvertFrom-Json
+    $cfgModel = Merge-ConfigDefaults -Config $cfgModel -Defaults $formDefaults
+    # Same fallback the planning form applies: resourceGroup defaults to the network resource group.
+    if (-not (Test-Field $cfgModel.resourceGroup) -and (Test-Field $cfgModel.network.networkResourceGroup)) { $cfgModel.resourceGroup = $cfgModel.network.networkResourceGroup }
     Write-Host "Loaded config model from JSON: $FormPath"
 }
 elseif ($ext -eq '.xlsx') {

@@ -1,3 +1,4 @@
+#!/usr/bin/env pwsh
 #Requires -Version 7.0
 <#
 .SYNOPSIS  Stage 5 / FR5.3-FR5.7 — run agent Q&A certification end to end.
@@ -368,18 +369,28 @@ function Invoke-Stage5VerificationSummary {
         }
     }
 
-    if ($cfg.PSObject.Properties.Name -contains 'bookshelf' -and $cfg.bookshelf -and $cfg.bookshelf.inScope) {
-        # Bookshelf here is the BYO storage account behind the storage container; Stage 2 creates its blob PE.
-        $stAccount = Get-CfgString $cfg.storage 'account'
-        if (-not $stAccount) { $stAccount = ((Get-CfgString $cfg.storage 'accountId') -split '/')[-1] }
+    # Project storage: the BYO account behind the project's storage container. Required for every
+    # deployment (not just Bookshelf); Stage 2 creates its blob PE in the storage account's RG.
+    $stAccountId = Get-CfgString $cfg.storage 'accountId'
+    $stAccount = Get-CfgString $cfg.storage 'account'
+    if (-not $stAccount -and $stAccountId) { $stAccount = ($stAccountId -split '/')[-1] }
+    $stAccess = Get-CfgString $cfg.storage 'access' 'privateEndpoint'
+    if (-not $stAccount) {
+        Add-Result 'fr5-7-project-storage' 'project storage private endpoint' 'Fail' 'storage.account/accountId is not set in config.' 'Set storage.account (the storage.account cell in the planning form) and re-run Stages 1 and 2.'
+    }
+    elseif ($stAccess -ne 'privateEndpoint') {
+        Add-Result 'fr5-7-project-storage' 'project storage private endpoint' 'Skip' "storage.access=$stAccess; no private endpoint expected for storageAccount=$stAccount."
+    }
+    else {
+        $stRg = if ($stAccountId -match '/resourceGroups/([^/]+)') { $Matches[1] } else { Get-CfgString $cfg.storage 'resourceGroup' }
         $approved = 0
         $dns = 0
         $qualified = 0
         $found = 0
-        foreach ($rg in @($ResourceGroup, (Get-CfgString $cfg.network 'networkResourceGroup')) | Where-Object { $_ } | Sort-Object -Unique) {
+        foreach ($rg in @($stRg, $ResourceGroup, (Get-CfgString $cfg.network 'networkResourceGroup')) | Where-Object { $_ } | Sort-Object -Unique) {
             $pes = @(Get-AzJson -Args @('network', 'private-endpoint', 'list', '-g', $rg) -AllowFail)
             foreach ($pe in $pes) {
-                $conns = @(@($pe.privateLinkServiceConnections) + @($pe.manualPrivateLinkServiceConnections) | Where-Object { $_ -and $stAccount -and "$($_.privateLinkServiceId)" -match "/storageAccounts/$([regex]::Escape($stAccount))$" })
+                $conns = @(@($pe.privateLinkServiceConnections) + @($pe.manualPrivateLinkServiceConnections) | Where-Object { $_ -and "$($_.privateLinkServiceId)" -match "/storageAccounts/$([regex]::Escape($stAccount))$" })
                 if (-not $conns.Count) { continue }
                 $found++
                 $peApproved = @($conns | Where-Object { $_.privateLinkServiceConnectionState.status -eq 'Approved' }).Count -gt 0
@@ -390,10 +401,7 @@ function Invoke-Stage5VerificationSummary {
             }
         }
         $ok = $qualified -ge 1
-        $detail = if ($stAccount) { "storageAccount=$stAccount privateEndpoints=$found approved=$approved dns=$dns" } else { 'storage.account/accountId is not set in config.' }
-        Add-Result 'fr5-7-bookshelf' 'bookshelf private endpoints' ($ok ? 'Pass' : 'Fail') $detail ($ok ? '' : 'Re-run Stage 2 to create the Bookshelf storage private endpoint, and approve it if it is Pending.')
-    } else {
-        Add-Result 'fr5-7-bookshelf' 'bookshelf private endpoints' 'Skip' 'Bookshelf is out of scope for this config.'
+        Add-Result 'fr5-7-project-storage' 'project storage private endpoint' ($ok ? 'Pass' : 'Fail') "storageAccount=$stAccount privateEndpoints=$found approved=$approved dns=$dns" ($ok ? '' : 'Re-run Stage 2 to create the project storage private endpoint, and approve it if it is Pending.')
     }
 
     foreach ($item in @(

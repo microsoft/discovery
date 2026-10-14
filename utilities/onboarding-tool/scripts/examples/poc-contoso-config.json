@@ -1,16 +1,16 @@
 {
   "schemaVersion": "1.0",
   "contentHash": "bb6b3b748fc733f570385d3bbdd1bfc48b2116fa0d2841e043d7801284199a90",
-  "subscriptionId": "546ec9a3-31a2-4360-a459-7e628a08dcbb",
+  "subscriptionId": "00000000-0000-0000-0000-000000000000",
   "environment": "devtest",
   "resourceGroup": "contoso-disc-rg1",
   "managedIdentity": {
-    "id": "/subscriptions/546ec9a3-31a2-4360-a459-7e628a08dcbb/resourceGroups/contoso-disc-rg1/providers/Microsoft.ManagedIdentity/userAssignedIdentities/id-contoso-disc"
+    "id": "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/contoso-disc-rg1/providers/Microsoft.ManagedIdentity/userAssignedIdentities/id-contoso-disc"
   },
   "controlPlaneRegion": "eastus2",
   "workloadRegion": "eastus2",
   "deployingIdentity": {
-    "objectId": "35644e08-c894-4013-9b03-e7fa82689870",
+    "objectId": "11111111-1111-1111-1111-111111111111",
     "type": "user",
     "canRegisterProviders": true
   },
@@ -74,14 +74,15 @@
         "name": "snet-spare",
         "cidr": "10.46.253.64/27",
         "requiredPrefix": "/27",
-        "delegation": "none"
+        "delegation": "Microsoft.ContainerService/managedClusters"
       }
     ]
   },
   "storage": {
-    "model": "managed",
+    "model": "byo",
+    "account": "stcontosodiscpoc1",
     "access": "privateEndpoint",
-    "accountId": "/subscriptions/546ec9a3-31a2-4360-a459-7e628a08dcbb/resourceGroups/contoso-disc-rg1/providers/Microsoft.Storage/storageAccounts/stcontosodiscpoc1"
+    "accountId": "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/contoso-disc-rg1/providers/Microsoft.Storage/storageAccounts/stcontosodiscpoc1"
   },
   "sizingTier": "Small",
   "bookshelf": {
