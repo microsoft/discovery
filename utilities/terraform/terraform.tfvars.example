@@ -7,14 +7,12 @@ location            = "uksouth"
 # Optional human-user access; prefer an Entra group object ID in this tenant.
 # workspace_contributor_principal_ids = ["00000000-0000-0000-0000-000000000001"]
 
-# Discovery control-plane resources remain in `location`. Their managed
-# infrastructure can use other Azure regions through resource-specific MRG
-# overrides. This example keeps the Supercomputer in UK South.
-supercomputer_managed_resource_group_location = "uksouth"
-
-# Optional MRG overrides for other managed-resource-group producers.
-# workspace_managed_resource_group_location = "uksouth"
-# bookshelf_managed_resource_group_location = "uksouth"
+# Managed infrastructure defaults to `location`; no overrides are needed for
+# same-region deployment. For intentional cross-region placement, replace null
+# with a verified region and uncomment the relevant override.
+# supercomputer_managed_resource_group_location = null
+# workspace_managed_resource_group_location     = null
+# bookshelf_managed_resource_group_location     = null
 
 # Tags can be applied globally and overridden per Discovery resource.
 # common_tags = {

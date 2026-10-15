@@ -31,12 +31,16 @@ cp -n terraform.tfvars.example terraform.tfvars
 
 Edit the copied values, then complete [Prerequisite validation](#prerequisite-validation).
 The example uses `rg-discovery-terraform` and `uksouth` for both control-plane
-resources and managed infrastructure. Match the resource
-group command below to your configuration before running it.
+resources and managed infrastructure. Match `RG_NAME` and `LOCATION` below to
+`resource_group_name` and `location` in your configuration before running it.
+Managed infrastructure follows `location` unless you explicitly set an override.
 
 ```bash
+RG_NAME="rg-discovery-terraform"
+LOCATION="uksouth"
+
 # 1. create the RG (kept out of Terraform state on purpose)
-az group create --name rg-discovery-terraform --location uksouth
+az group create --name "$RG_NAME" --location "$LOCATION"
 
 # 2. grant yourself blob data access on the RG (needed because the storage account disables shared keys)
 MY_OID=$(az ad signed-in-user show --query id -o tsv)
@@ -44,13 +48,13 @@ SUB_ID=$(az account show --query id -o tsv)
 export ARM_SUBSCRIPTION_ID="$SUB_ID"
 az role assignment create --assignee "$MY_OID" \
   --role "Storage Blob Data Owner" \
-  --scope "/subscriptions/$SUB_ID/resourceGroups/rg-discovery-terraform"
+  --scope "/subscriptions/$SUB_ID/resourceGroups/$RG_NAME"
 
 # 3. init / validate / plan / apply
 terraform init
 terraform validate
-terraform plan  -out=tfplan
-terraform apply tfplan
+terraform plan -out=deployment.tfplan
+terraform apply deployment.tfplan
 ```
 
 Wall time is ~20-45 minutes, dominated by the supercomputer + workspace creates.
@@ -231,14 +235,16 @@ and all its data, not when migrating a live deployment to another region.
 
 3. Configure a new customer resource-group name and the desired region in
    `terraform.tfvars`. Create the new group outside Terraform and grant the
-   signed-in Terraform runner blob data access:
+   signed-in Terraform runner blob data access. Match `$rg` and `$location` to
+   the new configuration; use a group name not occupied by an earlier attempt:
 
    ```powershell
    $sub = az account show --query id -o tsv
    if ($LASTEXITCODE -ne 0) { throw "Cannot determine subscription" }
    $env:ARM_SUBSCRIPTION_ID = $sub
-   $rg = "rg-discovery-uksouth" # Match resource_group_name in terraform.tfvars.
-   az group create --subscription $sub --name $rg --location uksouth
+   $rg = "rg-discovery-terraform"
+   $location = "uksouth"
+   az group create --subscription $sub --name $rg --location $location
    if ($LASTEXITCODE -ne 0) { throw "Resource group creation failed" }
    $oid = az ad signed-in-user show --query id -o tsv
    if ($LASTEXITCODE -ne 0) { throw "Cannot determine runner object ID" }
@@ -262,23 +268,23 @@ and all its data, not when migrating a live deployment to another region.
    ```powershell
    terraform init
    if ($LASTEXITCODE -ne 0) { throw "Terraform initialization failed" }
-   terraform workspace new discovery-uksouth
+   terraform workspace new discovery-clean
    if ($LASTEXITCODE -ne 0) { throw "Fresh workspace creation failed; inspect existing workspaces" }
    terraform validate
    if ($LASTEXITCODE -ne 0) { throw "Terraform validation failed" }
-   terraform plan '-out=uksouth.tfplan' -no-color
+   terraform plan '-out=deployment.tfplan' -no-color
    if ($LASTEXITCODE -ne 0) { throw "Terraform plan failed" }
    ```
 
    Review the plan: a clean deployment should create resources in the new
    group, not destroy resources from an earlier attempt. Only after reviewing
-   it, run `terraform apply uksouth.tfplan`. New workspaces do not migrate or
+   it, run `terraform apply deployment.tfplan`. New workspaces do not migrate or
    clean up resources belonging to the old state.
 
    In PowerShell, quote the entire `-out=...` argument when the filename contains
    a dot; otherwise it can be split into multiple native-command arguments.
    An existing workspace can be selected with `terraform workspace select
-   discovery-uksouth`; do not recreate it. If needed, the global `-chdir=...`
+   discovery-clean`; do not recreate it. If needed, the global `-chdir=...`
    option goes before the Terraform subcommand, not after the workspace name.
 
 ## Common issues
@@ -474,7 +480,7 @@ the relevant placement and workload-pool choices, not the complete historical
 configuration:
 
 ```hcl
-resource_group_name                          = "rg-discovery-lifecycle-demo"
+resource_group_name                          = "rg-discovery-terraform"
 location                                     = "uksouth"
 supercomputer_managed_resource_group_location = "uksouth"
 workspace_managed_resource_group_location     = "uksouth"
@@ -558,7 +564,7 @@ those areas fully validated. Mocked tests cover role assignment intent, regional
 input resolution, and opt-in user access; they do not test Azure deletion races
 or prove prerequisite propagation.
 
-Local snapshot checks on October 15, 2026 passed: `terraform fmt -check -recursive`,
+Initial snapshot checks on October 15, 2026 passed: `terraform fmt -check -recursive`,
 `terraform validate -no-color`, `terraform test -no-color` (three mocked runs
 passed, zero failed), and `git diff --cached --check`. Terraform commands were
 run with this utility as the working directory via `-chdir`. These checks did

@@ -127,6 +127,28 @@ run "all_uk_south" {
   }
 }
 
+run "managed_regions_follow_location" {
+  command = plan
+
+  variables {
+    resource_group_name                           = "rg-discovery-test"
+    location                                      = "eastus"
+    managed_resource_group_location               = null
+    supercomputer_managed_resource_group_location = null
+    workspace_managed_resource_group_location     = null
+    bookshelf_managed_resource_group_location     = null
+  }
+
+  assert {
+    condition = (
+      module.platform.location == "eastus" &&
+      module.platform.supercomputer_infrastructure_location == "eastus" &&
+      alltrue([for location in values(local.managed_resource_group_locations) : location == "eastus"])
+    )
+    error_message = "Without overrides, managed infrastructure regions must follow location rather than stay pinned to UK South."
+  }
+}
+
 run "workspace_user_access" {
   command = plan
 
