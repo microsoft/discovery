@@ -51,6 +51,21 @@ variable "bookshelf_managed_resource_group_location" {
 
 # ---- tags -------------------------------------------------------------------
 
+variable "workspace_contributor_principal_ids" {
+  description = "Entra user or group object IDs in the deployment tenant to grant Discovery data access at workspace scope"
+  type        = set(string)
+  default     = []
+  nullable    = false
+
+  validation {
+    condition = alltrue([
+      for id in var.workspace_contributor_principal_ids :
+      can(regex("^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$", id))
+    ])
+    error_message = "Workspace contributor principal IDs must be Entra object IDs in GUID format."
+  }
+}
+
 variable "common_tags" {
   description = "Tags applied to every Microsoft Discovery resource"
   type        = map(string)
@@ -268,6 +283,7 @@ variable "node_pool_vm_size" {
       "Standard_NV36ads_A10_v5",
       "Standard_NV36adms_A10_v5",
       "Standard_NV72ads_A10_v5",
+      "Standard_D4s_v6",
     ], var.node_pool_vm_size)
     error_message = "node_pool_vm_size must be a VM SKU supported by Discovery node pools."
   }

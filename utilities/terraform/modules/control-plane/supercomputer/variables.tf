@@ -73,6 +73,7 @@ variable "node_pools" {
         "Standard_NV36ads_A10_v5",
         "Standard_NV36adms_A10_v5",
         "Standard_NV72ads_A10_v5",
+        "Standard_D4s_v6",
       ], node_pool.vm_size) &&
       node_pool.max_node_count >= 1 &&
       (node_pool.min_node_count == null || node_pool.min_node_count >= 0) &&

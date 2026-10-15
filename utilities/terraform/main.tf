@@ -35,6 +35,8 @@ module "platform" {
 module "supercomputer" {
   source = "./modules/control-plane/supercomputer"
 
+  depends_on = [module.platform]
+
   name              = local.supercomputer_name
   location          = var.location
   resource_group_id = module.platform.resource_group_id
@@ -64,6 +66,8 @@ module "supercomputer" {
 
 module "workspace" {
   source = "./modules/control-plane/workspace"
+
+  depends_on = [module.platform]
 
   name              = local.workspace_name
   location          = var.location
@@ -104,9 +108,21 @@ module "workspace" {
   )
 }
 
+data "azurerm_client_config" "current" {}
+
+resource "azurerm_role_assignment" "workspace_contributor" {
+  for_each = var.workspace_contributor_principal_ids
+
+  scope              = module.workspace.id
+  role_definition_id = "/subscriptions/${data.azurerm_client_config.current.subscription_id}/providers/Microsoft.Authorization/roleDefinitions/01288891-85ee-45a7-b367-9db3b752fc65"
+  principal_id       = each.value
+}
+
 module "bookshelf" {
   source = "./modules/control-plane/bookshelf"
   count  = var.enable_bookshelf ? 1 : 0
+
+  depends_on = [module.platform]
 
   name              = local.bookshelf_name
   location          = var.location

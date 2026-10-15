@@ -4,10 +4,13 @@
 resource_group_name = "rg-discovery-terraform"
 location            = "uksouth"
 
+# Optional human-user access; prefer an Entra group object ID in this tenant.
+# workspace_contributor_principal_ids = ["00000000-0000-0000-0000-000000000001"]
+
 # Discovery control-plane resources remain in `location`. Their managed
 # infrastructure can use other Azure regions through resource-specific MRG
-# overrides. This example places the GPU-bearing Supercomputer in Sweden.
-supercomputer_managed_resource_group_location = "swedencentral"
+# overrides. This example keeps the Supercomputer in UK South.
+supercomputer_managed_resource_group_location = "uksouth"
 
 # Optional MRG overrides for other managed-resource-group producers.
 # workspace_managed_resource_group_location = "uksouth"
