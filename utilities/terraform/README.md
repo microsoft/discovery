@@ -57,7 +57,9 @@ terraform plan -out=deployment.tfplan
 terraform apply deployment.tfplan
 ```
 
-Wall time is ~20-45 minutes, dominated by the supercomputer + workspace creates.
+Provisioning can take over an hour, dominated by the supercomputer and workspace
+creates. The logged validation run below took about 74 minutes for Terraform apply;
+allow additional time for prerequisites, verification, and cleanup.
 
 ### Workspace user access
 
@@ -75,7 +77,13 @@ Use Entra user or group **object IDs in the deployment tenant**, not application
 IDs or guest users' home-tenant IDs. Prefer a security group. The default is empty;
 the deployer receives no automatic access. Each configured principal receives
 Microsoft Discovery Platform Contributor at the workspace scope only. This
-does not grant access to separate storage, Foundry, or Bookshelf resources.
+does not grant access to sibling tools or supercomputers, or to separate storage,
+Foundry, or Bookshelf resources. It is not a complete Scientist-persona setup.
+In the logged compute test below, submission initially returned HTTP 403 and
+succeeded after a separate, approved resource-group-scoped Discovery Platform
+Contributor grant. Review the
+[persona role-assignment guidance](../rbac-roles-assignment/README.md) for broader
+access requirements; this option does not automatically broaden user access.
 Allow time for role propagation and sign out/in to Discovery after assignment.
 
 If the same assignment already exists outside Terraform, configure its principal
@@ -466,17 +474,20 @@ or RBAC propagation.
 This branch captures local changes developed from commit
 `fa9047884ddaa6bfd9dda2a49cbf39aa7bc08f5b` of the Terraform contribution in
 [microsoft/discovery#103](https://github.com/microsoft/discovery/pull/103).
-The UK South deployment used uncommitted changes, not a historical deployment
-commit. This snapshot also includes subsequent user-access code and tests; it
-must not be described as an exact commit that was live-applied.
+An earlier trial used uncommitted changes. The results below instead describe
+the fully logged October 15, 2026 rerun of exact commit
+`3ae7166db1d7b9691308adab1f2b7a593c5cd8c8`, including its optional user-access
+implementation and four mocked tests. All 34 archived candidate files were
+verified byte-for-byte unchanged after teardown. Subsequent documentation
+updates are not part of that live-applied commit.
 
 ### Live-tested configuration
 
-The October 2026 run used Terraform 1.16.5, AzureRM 4.81.0, AzAPI 2.11.0, and
+The October 15 run used Terraform 1.16.5, AzureRM 4.81.0, AzAPI 2.11.0, and
 random 3.9.0 with Discovery API version `2026-06-01`. Control-plane resources,
 workspace-managed infrastructure, and supercomputer-managed infrastructure were
 all in UK South. Bookshelf was disabled. The following sanitized inputs capture
-the relevant placement and workload-pool choices, not the complete historical
+the relevant placement and workload-pool choices, not the complete private
 configuration:
 
 ```hcl
@@ -495,11 +506,12 @@ quickstart. This example is not a capacity or product-support guarantee.
 
 | Area | Observed result | Limitation |
 | --- | --- | --- |
-| Provisioning | Workspace, project, chat model, supercomputer, and CPU workload pool were provisioned. | No post-deployment no-change plan was captured; drift-free operation is not established. |
-| Workspace access | Workspace UI access worked after a manual workspace-scoped Microsoft Discovery Platform Contributor assignment. | The optional `workspace_contributor_principal_ids` implementation was added afterward and has mocked plan coverage, not live-apply evidence. |
-| Workload pool | `Standard_D4s_v6` pool creation and deletion were accepted. | The pool was idle with a zero minimum; no tool/workload execution was verified. |
+| Provisioning | Apply succeeded: 37 added, zero changed, zero destroyed, in about 74 minutes. | One environment and configuration; not a capacity or general reliability guarantee. |
+| Drift | A normal post-apply `plan -detailed-exitcode` returned zero: no changes. | Captured before the separately approved smoke-test tool and extra user grant; not a claim that no out-of-state resources existed later. |
+| Workspace access | The optional Terraform-managed workspace user grant was verified; the user reported that the UI appeared to work without a manual workspace-access fix. | Basic UI smoke only, not full workflow or compute-user access validation. |
+| Workload execution | One 1-CPU, 512-MiB, single-replica job with no data mounts succeeded in about 129 seconds on `Standard_D4s_v6`, with verified arithmetic output and success marker. AKS snapshots showed workload nodes scale from zero to one and later back to zero. | Submission required a separate temporary test-RG Discovery Platform Contributor grant after an initial 403. No GPU or scientific workflow was tested; official SKU support remains unconfirmed. |
 | Regions | The tested deployment was same-region UK South. | Cross-region deployment and Bookshelf were not validated by this run. |
-| Teardown | Staged teardown completed, final Terraform state had zero resources, all four associated managed groups were removed, and the customer group was confirmed absent. | This was not a single-pass full destroy; workspace deletion needed a fresh-plan retry. |
+| Teardown | Final state had zero resources; all four managed groups, the customer group, temporary tool, and both temporary group-scoped user grants were confirmed removed. | This was not a single-pass full destroy; workspace deletion needed a fresh-plan retry, and service-side RBAC cleanup needed to be accounted for. |
 
 ### Identity mapping and workload SKU questions
 
@@ -509,7 +521,7 @@ identity on the cluster identity. This follows the
 [AKS pre-created kubelet identity guidance](https://learn.microsoft.com/azure/aks/managed-identity-overview#pre-created-kubelet-managed-identity).
 Discovery-specific guidance reported during review describes the reverse
 mapping; that discrepancy remains to be reconciled with the product owners.
-Successful provisioning and mocked assertions do not establish that every
+Successful provisioning, one CPU smoke job, and mocked assertions do not establish that every
 permission is necessary or sufficient. No reverse or additional grant has been
 added to resolve the discrepancy speculatively.
 
@@ -517,58 +529,83 @@ added to resolve the discrepancy speculatively.
 configuration accepted in this run. It is outside the published workload VM
 size enumeration in the
 [2026-06-01 node-pool reference](https://learn.microsoft.com/azure/templates/microsoft.discovery/2026-06-01/supercomputers/nodepools).
-Official workload-pool support remains unconfirmed; system-node support and
-successful idle-pool creation are not proof of workload execution support.
+Official workload-pool support remains unconfirmed. The successful CPU smoke
+demonstrates one small workload on this configuration, not product support or
+certification for other workloads.
+
+The job's top-level status and operation history reported Succeeded, with a
+completion timestamp and verified output, while nested `result.status` remained
+TaskAccepted and `percentageComplete` remained zero. This API progress
+inconsistency is recorded separately from the successful execution.
 
 ### Observed staged teardown
 
 The run used reviewed, saved destroy plans for these stages, checking Azure
 cleanup between stages:
 
-1. Delete workspace children and their workspace. The first parent delete
-   returned HTTP 409 `CannotDeleteResource`, identifying a chat-model child.
-   Terraform had removed the children from state. After Azure child listings
+1. Delete the workspace-scoped user grant, workspace children, and workspace.
+   The reviewed targets included both `module.workspace` and the root
+   `azurerm_role_assignment.workspace_contributor` resource. The first parent
+   delete returned HTTP 409 `CannotDeleteResource`, identifying chat-model and
+   project children. Terraform had removed the children from state. After Azure child listings
    were verified empty, a fresh workspace-only destroy plan completed deletion.
    The workspace-managed group and its nested Container Apps group disappeared.
-2. Delete the workload pool through Terraform/Discovery. Verify its removal
-   from Terraform state, Discovery, AKS, and the backing VM scale set.
-3. Delete the supercomputer. Verify the Discovery resource is absent and both
-   AKS-managed groups have disappeared.
+2. Delete the workload pool through Terraform/Discovery. Its removal was
+   verified in Terraform state, Discovery, AKS, and the backing VM scale set.
+3. Delete the supercomputer. The Discovery resource and both associated
+   managed groups were verified absent before removing the platform.
 4. Destroy the remaining platform resources. The reviewed plan contained 28
    delete actions and completed with empty Terraform state.
-5. Inspect remaining customer-group resources. Six unattached service-created
-   network security groups remained; the customer group was deleted last and
-   its absence verified.
+5. Inspect remaining customer-group resources. Six service-created network
+   security groups were verified unattached; these and the temporary smoke
+   tool remained outside Terraform. The customer group was deleted last, and
+   its absence and removal of both temporary user grants were verified.
+
+Azure activity tied three Terraform-managed role-assignment deletions to
+Discovery cleanup: the cluster's workload-subnet Network Contributor grant
+during pool deletion, then its system-subnet Network Contributor and
+cluster-to-kubelet Managed Identity Operator grants during supercomputer
+deletion. Subsequent refreshes accounted for these already-absent resources.
+The run therefore had 34 explicit Terraform destroys plus three service-side
+role removals, accounting for all 37 originally created managed instances.
+The counts include two local random-string resources, not just Azure resources.
 
 These are observations and recovery checkpoints, not an automatic teardown
 implementation. Do not reuse historical plans. Targeted destroy is an
 exceptional recovery technique: review each fresh plan, stop on errors, and
 verify the full remaining state afterward. Do not apply the normal configuration
 between teardown stages, because it can recreate resources already removed.
-Preserve identities, permissions, networking, and storage until their service
+Preserve remaining identities, permissions, networking, and storage until their service
 owners finish cleanup.
 
 Earlier, separate manual deployments had stuck cleanup involving missing
 identities and failed managed-service operations. Those incidents were not
 caused by this Terraform contribution, but motivate the owner-first precautions.
-No support incident details, raw state, binary plans, or personal configuration
-are included here.
+Exact command arguments, UTC timings, exit codes, stdout/stderr, source archive,
+plans, state snapshots, failures, and recovery attempts are retained privately.
+Raw diagnostics can contain sensitive configuration and identity metadata; do
+not attach them to public issues or PRs without sanitization. No support incident
+details, raw state, binary plans, or personal configuration are included here.
 
 ### Remaining acceptance checks
 
-Validate an agreed candidate commit with a new apply, workspace-access check,
-product-supported functional workload, normal post-apply plan, and documented
-teardown. In particular, live-test the optional Terraform-managed user grants
-and resolve the identity-mapping and CPU workload-SKU questions before claiming
-those areas fully validated. Mocked tests cover role assignment intent, regional
-input resolution, and opt-in user access; they do not test Azure deletion races
-or prove prerequisite propagation.
+Before claiming broader validation:
 
-Initial snapshot checks on October 15, 2026 passed: `terraform fmt -check -recursive`,
-`terraform validate -no-color`, `terraform test -no-color` (three mocked runs
-passed, zero failed), and `git diff --cached --check`. Terraform commands were
-run with this utility as the working directory via `-chdir`. These checks did
-not provision Azure resources.
+* Reconcile Discovery-specific identity guidance with the tested
+  cluster-to-kubelet Managed Identity Operator mapping.
+* Confirm an officially supported workload SKU and validate a representative
+  scientific workload, including its storage and data-access requirements.
+* Agree the intended compute-user role scope; the opt-in workspace-only grant
+  must not be presented as complete Scientist-persona access.
+* Validate any changed integration candidate separately from this tested commit.
+  Mocked tests do not exercise Azure deletion races or prove prerequisite
+  propagation.
+
+Before the logged apply, pinned-provider initialization,
+`terraform fmt -check -recursive`, `terraform validate -no-color`, and
+`terraform test -no-color` passed (four mocked runs, zero failed). Terraform
+commands used the isolated archived utility via `-chdir`; the developer's
+original state and plans were not used for this run.
 
 ## References
 
