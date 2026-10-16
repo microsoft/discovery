@@ -118,7 +118,7 @@ jobs:
 
       - name: Upload audit report
         if: always()
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
           name: full-catalog-audit
           path: /tmp/full-audit.txt
@@ -190,7 +190,7 @@ jobs:
 
       - name: Upload URL reputation report
         if: always()
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
           name: url-reputation-audit
           path: |
@@ -284,7 +284,7 @@ jobs:
 
       - name: Upload scan output
         if: always()
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
           name: scout-${{ strategy.job-index }}
           path: /tmp/scout.md
@@ -335,7 +335,7 @@ jobs:
       - name: Upload results to the Security tab
         if: ${{ !inputs.dry_run && steps.msdo.outputs.sarifFile != '' }}
         continue-on-error: true
-        uses: github/codeql-action/upload-sarif@2892aa5e19bbd11bc0cff5427e3b750a04d9e3c2 # v4
+        uses: github/codeql-action/upload-sarif@24c54180a607b1449ed407dd24f251e4e9147c8d # v4
         with:
           sarif_file: ${{ steps.msdo.outputs.sarifFile }}
           category: msdo
@@ -401,7 +401,7 @@ jobs:
 
       - name: Upload MSDO SARIF
         if: always()
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
           name: msdo-sarif
           path: ${{ steps.msdo.outputs.sarifFile }}
