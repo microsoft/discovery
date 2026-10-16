@@ -12,7 +12,8 @@
     "network",
     "sizingTier",
     "names",
-    "deployingIdentity"
+    "deployingIdentity",
+    "rbac"
   ],
   "properties": {
     "schemaVersion": {
@@ -53,6 +54,34 @@
     "workloadRegion": {
       "type": "string"
     },
+    "systemSku": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Optional Stage 4 system-pool VM SKU override. Defaults to Standard_D4s_v6."
+    },
+    "nodePoolVmSize": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Optional Stage 4 node-pool VM SKU override. Defaults to Standard_D4ds_v6."
+    },
+    "nodePoolMinNodeCount": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Optional Stage 4 node-pool minimum node count override. Defaults to 0."
+    },
+    "nodePoolMaxNodeCount": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Optional Stage 4 node-pool maximum node count override. Defaults to 3."
+    },
+    "nodePoolScaleSetPriority": {
+      "type": "string",
+      "enum": [
+        "Regular",
+        "Spot"
+      ],
+      "description": "Optional Stage 4 node-pool scale-set priority override. Defaults to Regular."
+    },
     "deployingIdentity": {
       "type": "object",
       "required": [
@@ -76,6 +105,67 @@
         }
       }
     },
+    "rbac": {
+      "type": "object",
+      "required": [
+        "humanAccessMode"
+      ],
+      "properties": {
+        "humanAccessMode": {
+          "type": "string",
+          "enum": [
+            "permanent-role-assignments",
+            "customer-jit-managed"
+          ],
+          "description": "Controls only User-principal assignments. Workload identity RBAC assignments remain persistent and tool-created."
+        },
+        "jitEligibilityDurationDays": {
+          "type": "integer",
+          "minimum": 7,
+          "maximum": 3650,
+          "description": "Requested duration in days for newly created PIM eligibility. Required only for customer-jit-managed; existing valid eligibility can be reused, and users must activate eligible roles before use."
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "humanAccessMode": {
+                "const": "customer-jit-managed"
+              }
+            },
+            "required": [
+              "humanAccessMode"
+            ]
+          },
+          "then": {
+            "required": [
+              "jitEligibilityDurationDays"
+            ]
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "humanAccessMode": {
+                "const": "permanent-role-assignments"
+              }
+            },
+            "required": [
+              "humanAccessMode"
+            ]
+          },
+          "then": {
+            "not": {
+              "required": [
+                "jitEligibilityDurationDays"
+              ]
+            }
+          }
+        }
+      ],
+      "additionalProperties": false
+    },
     "network": {
       "type": "object",
       "required": [
@@ -98,6 +188,10 @@
         },
         "networkResourceGroup": {
           "type": "string"
+        },
+        "dnsResourceGroup": {
+          "type": "string",
+          "description": "Resource group containing the private DNS zones linked to the Discovery VNet. Defaults to networkResourceGroup when omitted."
         },
         "vnetName": {
           "type": "string",

@@ -32,14 +32,31 @@ Run `az provider register --namespace Microsoft.Discovery`, then verify each dep
 
 ### rbac_assign — FR2.1
 Assign Discovery built-in roles at RG scope, creating any missing target resource group first (in `workloadRegion`) so the assignment has a scope: Platform Administrator `7a2b6e6c-472e-4b39-8878-a26eb63d75c6` (deploying identity), Platform Contributor `01288891-85ee-45a7-b367-9db3b752fc65`, Platform Reader `3bb7c424-af4e-436b-bfcc-8779c8934c31`, Bookshelf Index Data Reader `8ec773c5-7ce6-4b78-91d1-182f8faa536d`. Platform Administrator principals also get the Azure roles Learn lists for the Discovery administrator, on the same resource groups: Managed Identity Contributor, Managed Identity Operator, Storage Account Contributor, Storage Blob Data Contributor, Network Contributor, AcrPush, plus Reader `acdd72a7-3385-48ef-bd42-f606fba81ae7` at subscription scope. Foundry Owner is assigned by Stage 4 on the workspace managed RG, which doesn't exist yet; Stage 2 reports it as a Skip. Pair project-scoped users with Tools Reader, Chat Model Reader, Storage Container Reader/Contributor; add Storage Blob Data Reader/Contributor on the backing storage scope (container roles do not grant blob access). Platform Administrator cannot assign roles to others.
+
+Human user assignments follow `rbac.humanAccessMode`:
+
+- `permanent-role-assignments`: create standard role assignments.
+- `customer-jit-managed`: reuse an active or eligible assignment when available; otherwise create
+  time-bound PIM eligibility through `Microsoft.Authorization/roleEligibilityScheduleRequests`
+  with `requestType=AdminAssign`. New eligibility uses `rbac.jitEligibilityDurationDays`
+  (minimum 7).
+
+Eligible-but-inactive is a successful RBAC result, so Stage 2 continues. The report and
+`human-pim-eligibility-<workspace>.md/.json` tell customers which roles to activate. Service
+principals and managed identities always receive persistent assignments.
+
+- PIM prerequisites: Microsoft Entra ID P2 or Microsoft Entra ID Governance licensing, plus
+  permission to write `Microsoft.Authorization/roleEligibilityScheduleRequests` at every
+  requested scope.
 - Assignment denied: run as Owner, or Contributor plus User Access Administrator/RBAC Administrator, at subscription scope.
+- User assignment denied by JIT policy: select `customer-jit-managed`; do not treat Owner as an override for Azure Policy.
 
 ### nsp_perimeter_joiner_role — FR2.1a
 Create the one-time-per-subscription custom role with exactly `Microsoft.Network/networkSecurityPerimeters/joinPerimeterRule/action` and `Microsoft.Network/locations/networkSecurityPerimeterOperationStatuses/read`, and assign it at subscription scope to the Discovery control-plane SP app id `92c174ac-8e41-4815-a1b7-d81b19ab03ce`. Network hardening is on by default, so this must exist before the first workspace/supercomputer/bookshelf deploy.
 - Missing role: resource creation fails with NSP association errors; create and assign the role, then retry.
 
 ### network_provision — FR2.2-FR2.5 (network.bicep)
-Deploy `network.bicep` (one RG-scoped deployment) to lay out the VNet, subnets, a shared NSG, route tables and private DNS zones declaratively. The documented provisioning options are `managed`, `byo` and `byo-spoke`; only `byo-existing` skips this deployment and validates existing networking in Stage 3. All provisioning options use the same template, which declares the VNet address space and subnet collection and can modify an existing VNet; this is not an add-only subnet operation. The managed worksheet offers only `managed`; the BYO worksheet offers `byo`, `byo-spoke` and `byo-existing`. See the [worksheet selection guide](../../scripts/USER-GUIDE.md#3-choose-your-network-model-and-planning-form).
+Deploy `network.bicep` (one network-RG-scoped deployment) to lay out the VNet, subnets, a shared NSG and route tables. When `network.dnsResourceGroup` is blank or equals the network RG, the same deployment creates the private DNS zones and links. When a distinct centralized DNS RG is configured, Bicep DNS creation is disabled and Stage 2 idempotently creates or reuses every required zone and exact VNet link in that DNS RG. The documented provisioning options are `managed`, `byo` and `byo-spoke`; only `byo-existing` skips this deployment and validates existing networking in Stage 3. All provisioning options use the same template, which declares the VNet address space and subnet collection and can modify an existing VNet; this is not an add-only subnet operation. The managed worksheet offers only `managed`; the BYO worksheet offers `byo`, `byo-spoke` and `byo-existing`. See the [worksheet selection guide](../../scripts/USER-GUIDE.md#3-complete-the-planning-form-choices).
 
 Egress topology is switched separately by `network.outboundType` (`UserDefinedRouting` or `LoadBalancer` in both worksheets). The tool does not create a firewall/NVA, NAT Gateway or hub peering. For UDR, customers must provide a reachable appliance and configure connectivity, forwarding where applicable, firewall rules and SNAT; generating the firewall request does not apply those rules.
 - Delegation conflict: ensure the subnet is empty before setting delegation.
@@ -52,11 +69,16 @@ Egress topology is switched separately by `network.outboundType` (`UserDefinedRo
 **FR2.4 route tables** — `outboundType=UserDefinedRouting`: a spoke route table sends 0.0.0.0/0 and 10.0.0.0/8 to the NVA, and the managedcluster subnet gets its own route table adding `<managedcluster-CIDR> → VnetLocal`. `outboundType=LoadBalancer`: no user route tables (Azure system routes + NSG allow-list govern egress).
 - AKS NotReady: confirm the managedcluster subnet CIDR is VnetLocal, not NVA (handled by network.bicep).
 
-**FR2.5 private DNS** — create and link the privatelink zones: cognitiveservices.azure.com, openai.azure.com, services.ai.azure.com, search.windows.net, vaultcore.azure.net, blob/queue/file/table/dfs.core.windows.net, documents.azure.com, azurecr.io. Each is VNet-linked (registrationEnabled=false).
+**FR2.5 private DNS** — create or reuse the privatelink zones in `network.dnsResourceGroup` (falling back to `network.networkResourceGroup`): cognitiveservices.azure.com, openai.azure.com, services.ai.azure.com, search.windows.net, vaultcore.azure.net, blob/queue/file/table/dfs.core.windows.net, documents.azure.com, azurecr.io. Each is linked to the configured VNet with `registrationEnabled=false`; Stage 2 verifies the exact VNet id rather than accepting any link.
 - Zone unlinked: private endpoints resolve to public IPs; re-run the deploy.
 
 ### byo_storage — FR2.6
 Verify the customer's pre-created BYO storage account (looked up by `storage.accountId`, else by name in the subscription) and fail if it doesn't exist; the tool doesn't create it. Create/verify the containers per the config model, and apply the access model (private endpoint vs service endpoint). Set the Blob CORS rule Discovery Studio needs (origins `https://studio.discovery.microsoft.com`, `https://vscode.dev`, `https://*.vscode-cdn.net`; methods GET, HEAD, DELETE, OPTIONS, PUT; headers `*`; max age 200) with a PUT on `blobServices/default` that keeps the other service properties and unrelated CORS rules. PATCH isn't supported on that resource.
+- For `privateEndpoint`, reuse `privatelink.blob.core.windows.net` from
+  `network.dnsResourceGroup` (or the network RG), verify its succeeded link to the configured VNet,
+  and associate that cross-resource-group zone with the storage endpoint's blob DNS zone group.
+  Do not create a duplicate same-name zone in the storage RG. A missing/failed VNet link or zone
+  group fails Stage 2.
 - Public-access policy deny: see quota_exemption_requests for the Bookshelf MRG storage waiver.
 
 ### managed_identity_roles — FR2.1

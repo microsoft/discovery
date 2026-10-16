@@ -13,9 +13,13 @@
     "type": "user",
     "canRegisterProviders": true
   },
+  "rbac": {
+    "humanAccessMode": "permanent-role-assignments"
+  },
   "network": {
     "model": "byo",
     "networkResourceGroup": "rg-discovery-net",
+    "dnsResourceGroup": "rg-discovery-net",
     "vnetCidr": "10.10.0.0/23",
     "corpDns": ["10.20.0.10"],
     "nvaNextHop": "10.20.0.4",

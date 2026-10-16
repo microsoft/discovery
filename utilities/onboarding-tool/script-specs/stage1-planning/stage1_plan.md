@@ -12,7 +12,9 @@ Drive the planning sheet end to end: load the filled network-planning form, run 
 - `--waivers <waivers.json>` optional, justifications for overridden checks.
 
 ## Behavior
-- Parse the form into the in-memory config model (`config.schema.json`). A `.json` input is filled with the planning form's defaults for any missing field (for example `network.model=byo`, `network.outboundType=UserDefinedRouting`, `storage.model=byo`, `workspace.publicNetworkAccess=Enabled`), and a missing `resourceGroup` falls back to `network.networkResourceGroup`, so JSON and form input are validated and exported the same way. Values present in the JSON always win.
+- Parse the form into the in-memory config model (`config.schema.json`). A `.json` input is filled with the planning form's defaults for any missing field (for example `network.model=byo`, `network.outboundType=UserDefinedRouting`, `storage.model=byo`, `workspace.publicNetworkAccess=Enabled`). A missing `resourceGroup` falls back to `network.networkResourceGroup`; a missing `network.dnsResourceGroup` tells later stages to use `network.networkResourceGroup` for private DNS. Values present in JSON always win.
+- Require `rbac.humanAccessMode`. `permanent-role-assignments` creates standard User assignments. `customer-jit-managed` requires `rbac.jitEligibilityDurationDays` to be a whole number from 7 through 3650 and makes Stages 2 and 4 create PIM eligibility with `AdminAssign`.
+- Treat eligibility and activation separately. The tool creates eligibility; customers activate user roles. Workload-identity assignments remain persistent.
 - Run each folded check in order; collect per-check pass/fail plus remediation.
 - Block export if any P0 check fails without a matching waiver entry.
 - Write the validated config, stamped with schema version and content hash.
@@ -72,14 +74,28 @@ Confirm the workload region offers required features, and distinguish capacity f
 
 ### quota_sku — FR1.5
 Expand the sizing tier (Small|Medium|Large) into concrete resource counts and required quota, then validate:
-- VM SKUs offered in-region (`Standard_D4s_v6` not in eastus/eastus2; use `Standard_D4ds_v6`).
+- Effective Stage 4 VM SKUs are offered in-region and unrestricted for the configured subscription. Defaults are a 3-node `Standard_D4s_v6` system pool and a node pool scaling from 0 to 3 `Standard_D4ds_v6` nodes; advanced JSON configs can override `systemSku`, `nodePoolVmSize`, and `nodePoolMaxNodeCount`.
+- Total Regional and VM-family quota are calculated from the live vCPU/family metadata of those effective SKUs. System-pool shortfalls fail the gate; node-pool scale-out shortfalls warn because initial deployment can still succeed.
 - Cosmos autoscale RU/s: workspace 2,400 (max 4,000); each project 400 (max 4,000); sized 2,400 + 400 × projects.
-- Model TPM: GPT-5.4 cognition 250k min, gpt-5-4 validation 200k min, Agents 200k min, ≥500k GPT-5.4 free. Bookshelf per instance: GPT-5.2 200k, GPT-5 Mini 2M, Text Embedding 3 Small 2M.
+- Model TPM: GPT-5.4 workspace/cognition 250K plus gpt-5-4 validation chat 200K, requiring 450K free for a fresh deployment; resumed deployments count only missing allocations. Bookshelf planning estimates per instance are GPT-5.2 200K, GPT-5 Mini 2M and Text Embedding 3 Small 2M, but the current quota check validates only GPT-5.4.
 - Bookshelf on-demand nodepool by tier (Small D48s_v6, Medium D128s_v6, Large D192s_v6) plus always-on AI Search S1 and an ACA dedicated profile.
 - Global Standard vs Data Zone Standard where the config requires data residency.
 - Quota gap: file the increase (feeds Stage 2 quota_exemption_requests).
 - SKU not in region: switch to the in-region SKU.
-- TPM shortfall: raise the deployment TPM or free existing capacity. Check `model-quota` reads `OpenAI.GlobalStandard.gpt-5.4` usage in the workload region and fails when less than 450K is free (workspace 250K + chat model 200K). Soft-deleted Foundry accounts keep their quota until purged.
+- TPM shortfall: raise the deployment TPM or free existing capacity. Check `model-quota` confirms
+  that the regional model catalog exposes an OpenAI gpt-5.4 version with a GlobalStandard SKU whose
+  usage name is `OpenAI.GlobalStandard.gpt-5.4`. Selection mirrors the deployment resolver: filter
+  by model and SKU first, prefer a compatible default version, then fall back to the latest
+  compatible version. The workspace can use a service-pinned version independently. The check
+  confirms from SKU rate-limit metadata that each quota capacity unit represents 1,000 tokens per
+  minute before interpreting usage values as K TPM. Every query is pinned to `subscriptionId` and
+  forces JSON output. A fresh deployment needs 450K (workspace 250K + chat model 200K); a resumed
+  deployment counts only allocations whose Discovery resources are not already `Succeeded`.
+  Quota is scoped by subscription, region, model, and deployment type. A numeric quota row by
+  itself does not prove deployability. `Blocked` and `InOverage` are failures; unknown statuses and
+  unreadable/malformed results are unverified warnings during planning and blocking failures in
+  Stage 3 unless explicitly waived. Soft-deleted Foundry accounts can keep regional quota, but
+  purging is permanent and requires owner confirmation.
 
 ### naming_validation — FR1.6
 Enforce per-type naming rules (lowercase alphanumeric + hyphens, start with a letter, no consecutive separators) and length limits (workspace 3–24, project 3–12, supercomputer 3–24, node pool 3–12, tool 3–24, agent 3–63, storage container 3–24, storage asset 3–24, investigation 1–20). Reserve MRG names (`mrg-dwsp-<workspace>-<6char>`, `mrg-dscmp-<supercomputer>-<6char>`, `mrg-dbksf-<bookshelf>-<6char>`) and call `Microsoft.Discovery/checkNameAvailability` for workspace uniqueness (the workspace name is the endpoint subdomain).

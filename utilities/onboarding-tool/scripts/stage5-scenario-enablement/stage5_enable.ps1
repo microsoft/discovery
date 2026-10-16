@@ -32,6 +32,88 @@ function Write-State {
     [pscustomobject]$State | ConvertTo-Json -Depth 20 | Set-Content -LiteralPath $Path -Encoding utf8
 }
 
+function Get-Stage5VNetId {
+    param(
+        [Parameter(Mandatory)][object]$Config,
+        [Parameter(Mandatory)][string]$DefaultResourceGroup,
+        [Parameter(Mandatory)][string]$DefaultWorkspace
+    )
+
+    $networkResourceGroup = Get-CfgString $Config.network 'networkResourceGroup' (
+        Get-CfgString $Config.network 'resourceGroup' (
+            Get-CfgString $Config.network 'rg' $DefaultResourceGroup
+        )
+    )
+    $vnetName = Get-CfgString $Config.network 'vnetName' (
+        Get-CfgString $Config.network 'virtualNetworkName' (
+            Get-CfgString $Config.names 'vnet' (
+                Get-CfgString $Config.names 'virtualNetwork' "vnet-$DefaultWorkspace"
+            )
+        )
+    )
+    return "/subscriptions/$($Config.subscriptionId)/resourceGroups/$networkResourceGroup/providers/Microsoft.Network/virtualNetworks/$vnetName"
+}
+
+function Test-StorageBlobPrivateLinkConnection {
+    param(
+        [Parameter(Mandatory)][object]$Connection,
+        [Parameter(Mandatory)][string]$StorageAccountName
+    )
+
+    $targetsAccount = $Connection.privateLinkServiceId -and
+        "$($Connection.privateLinkServiceId)" -match "/storageAccounts/$([regex]::Escape($StorageAccountName))$"
+    $targetsBlob = @($Connection.groupIds) -contains 'blob'
+    return $targetsAccount -and $targetsBlob
+}
+
+function Test-StoragePrivateEndpointDns {
+    param(
+        [Parameter(Mandatory)][object]$PrivateEndpoint,
+        [Parameter(Mandatory)][string]$ResourceGroup,
+        [Parameter(Mandatory)][string]$VNetId
+    )
+
+    $zoneGroups = @(Get-AzJson -Args @(
+            'network', 'private-endpoint', 'dns-zone-group', 'list',
+            '-g', $ResourceGroup, '--endpoint-name', [string]$PrivateEndpoint.name
+        ) -AllowFail)
+    $blobZoneIds = @(
+        foreach ($group in $zoneGroups) {
+            if ($group.provisioningState -ne 'Succeeded') { continue }
+            foreach ($config in @($group.privateDnsZoneConfigs)) {
+                if ($config.privateDnsZoneId -match '/privateDnsZones/privatelink\.blob\.core\.windows\.net$') {
+                    [string]$config.privateDnsZoneId
+                }
+            }
+        }
+    )
+
+    $linkedZoneIds = @(
+        foreach ($zoneId in $blobZoneIds | Sort-Object -Unique) {
+            if ($zoneId -notmatch '/resourceGroups/([^/]+)/providers/Microsoft\.Network/privateDnsZones/([^/]+)$') { continue }
+            $zoneResourceGroup = $Matches[1]
+            $zoneName = $Matches[2]
+            $links = @(Get-AzJson -Args @(
+                    'network', 'private-dns', 'link', 'vnet', 'list',
+                    '-g', $zoneResourceGroup, '-z', $zoneName
+                ) -AllowFail)
+            $matchingLinks = @($links | Where-Object {
+                    $_.virtualNetwork.id -and
+                    $_.virtualNetwork.id -eq $VNetId -and
+                    $_.provisioningState -eq 'Succeeded'
+                })
+            if ($matchingLinks.Count) { $zoneId }
+        }
+    )
+
+    return [pscustomobject]@{
+        zoneGroupConfigured = $blobZoneIds.Count -gt 0
+        vnetLinked          = $linkedZoneIds.Count -gt 0
+        blobZoneIds         = $blobZoneIds
+        linkedZoneIds       = $linkedZoneIds
+    }
+}
+
 <#
 .SYNOPSIS  Stage 5 / FR5.3 — create a Discovery agent (no tool bound).
 .DESCRIPTION Upserts the data-plane Q&A agent with an empty tools[] and scientist instructions. Spec: ../../script-specs/stage5-scenario-enablement/stage5_enable.md
@@ -275,6 +357,7 @@ function Invoke-Stage5AssertResponse {
     begin {
         $cfg = Get-OnboardingConfig -Path $ConfigPath
         $null = $cfg
+        $script:responseObject = $null
         $results = [System.Collections.Generic.List[object]]::new()
     }
     process {
@@ -383,25 +466,33 @@ function Invoke-Stage5VerificationSummary {
     }
     else {
         $stRg = if ($stAccountId -match '/resourceGroups/([^/]+)') { $Matches[1] } else { Get-CfgString $cfg.storage 'resourceGroup' }
+        $vnetId = Get-Stage5VNetId -Config $cfg -DefaultResourceGroup $ResourceGroup -DefaultWorkspace $Workspace
         $approved = 0
-        $dns = 0
+        $succeeded = 0
+        $zoneGroups = 0
+        $vnetLinks = 0
         $qualified = 0
         $found = 0
         foreach ($rg in @($stRg, $ResourceGroup, (Get-CfgString $cfg.network 'networkResourceGroup')) | Where-Object { $_ } | Sort-Object -Unique) {
             $pes = @(Get-AzJson -Args @('network', 'private-endpoint', 'list', '-g', $rg) -AllowFail)
             foreach ($pe in $pes) {
-                $conns = @(@($pe.privateLinkServiceConnections) + @($pe.manualPrivateLinkServiceConnections) | Where-Object { $_ -and "$($_.privateLinkServiceId)" -match "/storageAccounts/$([regex]::Escape($stAccount))$" })
+                $conns = @(@($pe.privateLinkServiceConnections) + @($pe.manualPrivateLinkServiceConnections) | Where-Object {
+                        $_ -and (Test-StorageBlobPrivateLinkConnection -Connection $_ -StorageAccountName $stAccount)
+                    })
                 if (-not $conns.Count) { continue }
                 $found++
+                $peSucceeded = $pe.provisioningState -eq 'Succeeded'
                 $peApproved = @($conns | Where-Object { $_.privateLinkServiceConnectionState.status -eq 'Approved' }).Count -gt 0
-                $peDns = @($pe.customDnsConfigs).Count -gt 0
+                $peDns = Test-StoragePrivateEndpointDns -PrivateEndpoint $pe -ResourceGroup $rg -VNetId $vnetId
+                if ($peSucceeded) { $succeeded++ }
                 if ($peApproved) { $approved++ }
-                if ($peDns) { $dns++ }
-                if ($peApproved -and $peDns) { $qualified++ }
+                if ($peDns.zoneGroupConfigured) { $zoneGroups++ }
+                if ($peDns.vnetLinked) { $vnetLinks++ }
+                if ($peSucceeded -and $peApproved -and $peDns.zoneGroupConfigured -and $peDns.vnetLinked) { $qualified++ }
             }
         }
         $ok = $qualified -ge 1
-        Add-Result 'fr5-7-project-storage' 'project storage private endpoint' ($ok ? 'Pass' : 'Fail') "storageAccount=$stAccount privateEndpoints=$found approved=$approved dns=$dns" ($ok ? '' : 'Re-run Stage 2 to create the project storage private endpoint, and approve it if it is Pending.')
+        Add-Result 'fr5-7-project-storage' 'project storage private endpoint' ($ok ? 'Pass' : 'Fail') "storageAccount=$stAccount privateEndpoints=$found succeeded=$succeeded approved=$approved dnsZoneGroups=$zoneGroups vnetLinks=$vnetLinks" ($ok ? '' : 'Re-run Stage 2 to create the project storage private endpoint, its blob private DNS zone group, and the zone link to the configured VNet; wait for provisioning to succeed and approve the connection if it is Pending.')
     }
 
     foreach ($item in @(
@@ -488,4 +579,3 @@ $results.Add((New-CheckResult -Id 'fr5-certification-verdict' -Name 'Stage 5 cer
 $extra = [pscustomobject]@{ verdict = ($certified ? 'CERTIFIED' : 'NOT CERTIFIED'); stateFile = $statePath; responsePath = $responsePath }
 $null = Write-OnboardingReport -Results $results.ToArray() -Title 'Stage 5 · agent Q&A certification (FR5.3-FR5.7)' -JsonPath $JsonPath -Extra $extra
 Complete-Stage -Results $results.ToArray()
-

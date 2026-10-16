@@ -43,6 +43,27 @@ function Get-WorkspaceNetworkIsolation {
     return $true
 }
 
+function Get-DefaultStorageContainerName {
+    param([Parameter(Mandatory)][string]$WorkspaceName)
+
+    $suffix = '-storage'
+    $prefixLength = 24 - $suffix.Length
+    $prefix = $WorkspaceName.Substring(0, [Math]::Min($WorkspaceName.Length, $prefixLength)).TrimEnd('-')
+    if (-not $prefix) {
+        throw "Workspace name '$WorkspaceName' cannot produce a valid default storage-container name."
+    }
+    return "$prefix$suffix"
+}
+
+function Get-Stage4WorkspaceConfigFailure {
+    param([AllowEmptyString()][string]$WorkspaceName)
+
+    if (-not [string]::IsNullOrWhiteSpace($WorkspaceName)) { return $null }
+    return New-CheckResult -Id 'deploy-config-workspace' -Name 'deployment workspace name' -Status 'Fail' -Fr 'FR4.1' `
+        -Detail 'Config does not include a nonblank names.workspace value.' `
+        -Remediation 'Add names.workspace to the onboarding config, rerun Stage 1 validation, and then rerun Stage 4.'
+}
+
 function Resolve-DiscoveryError {
     [CmdletBinding()]
     param([Parameter(Mandatory)][AllowEmptyString()][string]$ErrorText)
@@ -466,18 +487,58 @@ function Grant-FoundryRolesOnManagedRg {
     }
 
     $out = @()
+    $pimEligibilityCount = 0
     foreach ($pr in $principals) {
         $roleId = $foundryRoleIds[$pr.Role]
         $name = "$($pr.Role) on workspace managed RG"
         $id = "foundry-$($pr.Role.Split(' ')[1].ToLowerInvariant())-mrg-$($pr.ObjectId)"
-        $data = [pscustomobject]@{ principal = $pr.ObjectId; role = $pr.Role; roleDefinitionId = $roleId; scope = $scope }
-        $exists = Get-AzJson -Args @('role', 'assignment', 'list', '--assignee', $pr.ObjectId, '--role', $roleId, '--scope', $scope) -AllowFail
+        $ptype = switch -Regex ($pr.Type) { '^user$' { 'User' } 'servicePrincipal|managedIdentity' { 'ServicePrincipal' } 'group' { 'Group' } default { $null } }
+        $data = @{ principal = $pr.ObjectId; role = $pr.Role; roleDefinitionId = $roleId; scope = $scope }
+        $isJitUser = Test-CustomerJitManagedUser -Config $Config -PrincipalType $ptype
+        try {
+            $exists = Get-AzJson -Args @('role', 'assignment', 'list', '--assignee', $pr.ObjectId, '--role', $roleId, '--scope', $scope) -AllowFail:(-not $isJitUser)
+        }
+        catch {
+            $out += New-CheckResult -Id $id -Name $name -Status 'Warn' -Fr 'FR4.1' `
+                -Detail "Could not check active Foundry role assignments for $($pr.ObjectId) on ${mrg}: $($_.Exception.Message)" `
+                -Remediation "Grant permission to read role assignments at $scope, then rerun Stage 4 before creating or changing this user's access." `
+                -Data $data
+            continue
+        }
         if ($exists -and @($exists).Count) {
+            $data.state = 'exists'
             $out += New-CheckResult -Id $id -Name $name -Status 'Pass' -Fr 'FR4.1' -Detail "Already assigned to $($pr.ObjectId) on $mrg." -Data $data
             continue
         }
+        if ($isJitUser) {
+            try {
+                $durationDays = [int]$Config.rbac.jitEligibilityDurationDays
+                $eligibility = Set-PimRoleEligibility -SubscriptionId $Config.subscriptionId -PrincipalId $pr.ObjectId `
+                    -RoleId $roleId -Scope $scope -DurationDays $durationDays `
+                    -Justification "Discovery onboarding: $($pr.Role) on workspace managed resource group"
+                foreach ($property in $eligibility.PSObject.Properties) { $data[$property.Name] = $property.Value }
+                $eligibilityDetail = if ($eligibility.state -eq 'eligible-created') {
+                    "Created PIM eligibility for $($pr.ObjectId) for $durationDays days."
+                }
+                else {
+                    $expires = if ($eligibility.eligibilityEndDateTime) { " until $($eligibility.eligibilityEndDateTime)" } else { '' }
+                    "Reused existing PIM eligibility for $($pr.ObjectId)$expires."
+                }
+                $out += New-CheckResult -Id $id -Name $name -Status 'Pass' -Fr 'FR4.1' `
+                    -Detail "$eligibilityDetail The role is eligible, not active." `
+                    -Remediation "Customer must activate $($pr.Role) on $scope in PIM before using it." `
+                    -Data $data
+                $pimEligibilityCount++
+            }
+            catch {
+                $out += New-CheckResult -Id $id -Name $name -Status 'Warn' -Fr 'FR4.1' `
+                    -Detail "Could not create or verify PIM eligibility for $($pr.Role) and $($pr.ObjectId) on ${mrg}: $($_.Exception.Message)" `
+                    -Remediation "Use an identity permitted to write Microsoft.Authorization/roleEligibilityScheduleRequests at $scope, create the eligible assignment in PIM, and then activate it." `
+                    -Data $data
+            }
+            continue
+        }
         $azArgs = @('role', 'assignment', 'create', '--assignee-object-id', $pr.ObjectId, '--role', $roleId, '--scope', $scope)
-        $ptype = switch -Regex ($pr.Type) { '^user$' { 'User' } 'servicePrincipal|managedIdentity' { 'ServicePrincipal' } 'group' { 'Group' } default { $null } }
         if ($ptype) { $azArgs += @('--assignee-principal-type', $ptype) }
         try {
             Invoke-Az -Args $azArgs | Out-Null
@@ -489,6 +550,11 @@ function Grant-FoundryRolesOnManagedRg {
                 -Remediation "Have an Owner or User Access Administrator run: az role assignment create --assignee-object-id $($pr.ObjectId) --role $roleId --scope $scope" `
                 -Data $data
         }
+    }
+    if ($pimEligibilityCount) {
+        $out += New-CheckResult -Id 'foundry-roles-pim-activation' -Name 'Foundry PIM activation required' -Status 'Warn' -Fr 'FR4.1' `
+            -Detail "$pimEligibilityCount Foundry user role assignment(s) are eligible but not activated." `
+            -Remediation 'Each customer user must activate the required Foundry role in PIM before opening or editing the workspace.'
     }
     return $out
 }
@@ -684,14 +750,29 @@ Invoke-Az -Args @('account', 'set', '--subscription', $subscriptionId) | Out-Nul
 
 $location = [string]$cfg.controlPlaneRegion
 $workspaceName = Get-ConfigName -Config $cfg -Name 'workspace' -Default ''
+$workspaceConfigFailure = Get-Stage4WorkspaceConfigFailure -WorkspaceName $workspaceName
+if ($workspaceConfigFailure) {
+    $results.Add($workspaceConfigFailure)
+    if ($PassThru) { return $results.ToArray() }
+    $null = Write-OnboardingReport -Results $results.ToArray() -Title 'Stage 4 · deploy order (FR4.1-FR4.2)' -JsonPath $JsonPath
+    Complete-Stage -Results $results.ToArray()
+}
 $projectName = Get-ConfigName -Config $cfg -Name 'project' -Default "$workspaceName-project"
 $supercomputerName = Get-ConfigName -Config $cfg -Name 'supercomputer' -Default ''
 $nodePoolName = Get-ConfigName -Config $cfg -Name 'nodePool' -Default ''
-$storageContainerName = Get-ConfigName -Config $cfg -Name 'storageContainer' -Default "$workspaceName-storage"
-if (-not (Get-ConfigName -Config $cfg -Name 'storageContainer' -Default '')) {
+$configuredStorageContainerName = Get-ConfigName -Config $cfg -Name 'storageContainer' -Default ''
+$storageContainerName = if ($configuredStorageContainerName) {
+    $configuredStorageContainerName
+} else {
+    Get-DefaultStorageContainerName -WorkspaceName $workspaceName
+}
+if (-not $configuredStorageContainerName) {
     # Earlier releases defaulted to '<workspace>-bookshelf'; keep using it on reruns so the project's container doesn't change.
-    $legacyContainerId = New-DiscoveryId -SubscriptionId $subscriptionId -ResourceGroup $resourceGroup -TypePath 'storageContainers' -NamePath "$workspaceName-bookshelf"
-    if ((Get-ArmState -ResourceId $legacyContainerId) -ne 'NotFound') { $storageContainerName = "$workspaceName-bookshelf" }
+    $legacyContainerName = "$workspaceName-bookshelf"
+    if ($legacyContainerName.Length -le 24) {
+        $legacyContainerId = New-DiscoveryId -SubscriptionId $subscriptionId -ResourceGroup $resourceGroup -TypePath 'storageContainers' -NamePath $legacyContainerName
+        if ((Get-ArmState -ResourceId $legacyContainerId) -ne 'NotFound') { $storageContainerName = $legacyContainerName }
+    }
 }
 $managedIdentityId = Get-ManagedIdentityId -Config $cfg -ResourceGroup $resourceGroup
 if ([string]::IsNullOrWhiteSpace($managedIdentityId)) {
@@ -1257,11 +1338,14 @@ if (-not @($results | Where-Object { $_.status -eq 'Fail' }).Count) {
 
 if (-not @($results | Where-Object { $_.status -eq 'Fail' }).Count) {
     $projectName = Get-ConfigName -Config $cfg -Name 'project' -Default "$Workspace-project"
-    $storageContainerName = Get-ConfigName -Config $cfg -Name 'storageContainer' -Default "$Workspace-storage"
+    $storageContainerName = Get-ConfigName -Config $cfg -Name 'storageContainer' -Default (Get-DefaultStorageContainerName -WorkspaceName $Workspace)
     if (-not (Get-ConfigName -Config $cfg -Name 'storageContainer' -Default '')) {
         # Earlier releases defaulted to '<workspace>-bookshelf'; recover against it if that's what exists.
-        $legacyContainerId = "/subscriptions/$Subscription/resourceGroups/$ResourceGroup/providers/Microsoft.Discovery/storageContainers/$Workspace-bookshelf"
-        if ((Get-ArmState -ResourceId $legacyContainerId) -ne 'NotFound') { $storageContainerName = "$Workspace-bookshelf" }
+        $legacyContainerName = "$Workspace-bookshelf"
+        if ($legacyContainerName.Length -le 24) {
+            $legacyContainerId = "/subscriptions/$Subscription/resourceGroups/$ResourceGroup/providers/Microsoft.Discovery/storageContainers/$legacyContainerName"
+            if ((Get-ArmState -ResourceId $legacyContainerId) -ne 'NotFound') { $storageContainerName = $legacyContainerName }
+        }
     }
     $storageContainerId = "/subscriptions/$Subscription/resourceGroups/$ResourceGroup/providers/Microsoft.Discovery/storageContainers/$storageContainerName"
     $storageState = Get-ArmState -ResourceId $storageContainerId

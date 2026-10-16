@@ -11,7 +11,11 @@ Deploy the platform in dependency order and, when a step fails, surface the true
 - Recovery mode: `-Recovery -Subscription <id> -ResourceGroup <name> -Workspace <name>`.
 
 ## Deploy method
-Deploy via a Bicep template (`discovery-platform.bicep`) by default, with parameters generated from the config (subnet ids by role, managed identity, storage account, names, regions, workspace network settings, and `network.outboundType`). Every project is linked to a storage container regardless of Bookshelf scope. The container is named `names.storageContainer`; when that's blank, it defaults to `<workspace>-storage` (or reuses an existing `<workspace>-bookshelf` container created by earlier releases, so reruns keep the same project container). The per-resource ARM PUT sequence is retained behind `-NoBicep` and is also used to gate each resource on Succeeded and to drive true-state detection and remediation after the deployment.
+Deploy via a Bicep template (`discovery-platform.bicep`) by default, with parameters generated from the config (subnet ids by role, managed identity, storage account, names, regions, workspace network settings, and `network.outboundType`). Every project is linked to a storage container regardless of Bookshelf scope. The container is named `names.storageContainer`; when that's blank, Stage 4 appends `-storage` to a workspace-name prefix and truncates that prefix as needed to keep the derived name within 24 characters. It reuses an existing valid `<workspace>-bookshelf` container created by earlier releases, so reruns keep the same project container. The per-resource ARM PUT sequence is retained behind `-NoBicep` and is also used to gate each resource on Succeeded and to drive true-state detection and remediation after the deployment.
+
+Stage 4 validates that `names.workspace` is nonblank before deriving any default resource name or
+submitting a deployment. A missing workspace is returned as the structured
+`deploy-config-workspace` failure, including under `-PassThru`.
 
 The supercomputer `outboundType` comes from the Stage 1 planning decision `network.outboundType` (default `UserDefinedRouting`); it is passed straight through to the `outboundType` template parameter. `UserDefinedRouting` (forced tunneling) requires egress to route through the customer firewall/NVA and a separate management subnet (spare role / `managementSubnet`, delegated to `Microsoft.ContainerService/managedClusters`) passed as `managementSubnetId` for AKS API-server VNet integration. With `LoadBalancer`, `managementSubnetId` is omitted. The managedcluster subnet itself must never be delegated; the `deploy-subnet-topology` pre-flight enforces both rules before submit.
 
@@ -36,7 +40,16 @@ Deploy in dependency order and gate each on Succeeded: supercomputer → workspa
 - Supercomputer Failed: fix it before the workspace.
 - Engine will not start: confirm the manual gpt-5-4 deployment exists.
 
-After the project step, assign roles on the workspace managed resource group (`properties.managedResourceGroup`): Foundry Owner (`c883944f-8b7b-4483-af10-35834be79c4a`) to `principals` with Platform Administrator, or to `deployingIdentity` when none are configured, and Foundry User (`53ca6127-db72-4b80-b1b0-d745d6d5456d`) to Platform Contributor principals. This is the RG-scoped equivalent of the Learn admin role set; a failed assignment is a Warn with the `az role assignment create` command.
+After the project step, grant Foundry roles on the workspace managed resource group
+(`properties.managedResourceGroup`):
+
+- Foundry Owner (`c883944f-8b7b-4483-af10-35834be79c4a`) to Platform Administrator principals,
+  or to `deployingIdentity` when none are configured.
+- Foundry User (`53ca6127-db72-4b80-b1b0-d745d6d5456d`) to Platform Contributor principals.
+
+With `customer-jit-managed`, Stage 4 creates or reuses PIM eligibility for users and reminds them
+to activate the role. Eligible-but-inactive does not fail the completed deployment. Service
+principals and managed identities keep standard assignments. Other assignment failures are Warn.
 The workspace `publicNetworkAccess` comes from `workspace.publicNetworkAccess` (default `Enabled`) and is applied on the bicep deploy, the direct workspace PUT, and the recovery re-PUT.
 The immutable `NetworkIsolation` tag comes from `workspace.networkIsolation` (default `true`) and is applied by both Bicep and direct workspace deployment.
 Region co-location (pre-flight): the supercomputer `location` (from `controlPlaneRegion`) must equal the region of the BYO VNet that holds the managedcluster/nodepool subnets. Discovery validates the node pool `SubnetId` against the supercomputer's primary region, and `discovery.overridemrgregion` (workloadRegion) does not relax that check. The chosen region must also be a Discovery-creatable region: creation is rejected in some regions (e.g. eastus2 returns "Creation of new Supercomputer resources is not supported in region") even though the ARM provider location list advertises them; eastus is confirmed creatable. So the BYO VNet must live in a creatable region. The script resolves the VNet region from the subnet id and fails fast with a RegionMismatch remediation before the PUT. Region is immutable, so a mismatch requires setting `controlPlaneRegion` to a creatable VNet region, deleting the failed supercomputer, and re-running (a plain re-PUT cannot move it).

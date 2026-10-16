@@ -46,10 +46,37 @@ Install and sign in once:
    az account set --subscription <your-subscription-id>
    az account show --query '{name:name, id:id}' -o table
    ```
-3. **Permissions** at subscription scope: **Owner**, or **Contributor** plus **User Access
-   Administrator** or **RBAC Administrator**. Stage 2 registers providers and creates resource
-   groups and the VNet, and configures the storage account (Contributor), and it creates role assignments
-   (User Access Administrator or RBAC Administrator). Either role alone isn't enough.
+3. **Confirm the operator has the roles for each stage.** Do not use one subscription-wide
+   administrator identity for the entire onboarding flow. Activate elevated access only for the
+   stage that needs it, then return to the narrower role shown below.
+
+   ### Stage-by-stage permissions
+
+   These are the roles for the **signed-in person running the script**. They are different from the
+   roles Stage 2 assigns to users and the roles assigned to the platform managed identity. If a role
+   is PIM-eligible, activate it before starting the applicable stage; eligibility alone is not active
+   access.
+
+   In this guide, **Reader at target-subscription scope** means the Azure built-in **Reader** role
+   (`acdd72a7-3385-48ef-bd42-f606fba81ae7`) assigned at
+   `/subscriptions/<target-subscription-id>`, or inherited from a parent management group that
+   covers that subscription. Reader on only the platform or network resource group is insufficient:
+   the scripts also read subscription/location-scoped providers, quotas, model catalogs and policies.
+   Microsoft Discovery Platform Reader is a different role and does not replace this subscription
+   Reader requirement. Owner or Contributor at subscription scope includes the required reads, but
+   Reader is the least-privilege built-in choice for these read operations.
+
+   | Stage and execution path | Required operator access | Required scope | Checks or actions performed |
+   |---|---|---|---|
+   | 1 — Core planning and Azure readiness | Azure built-in **Reader at target-subscription scope** | Target subscription | <ul><li>Required form fields and RBAC mode</li><li>Subnet sizing, delegation, fit, and overlap</li><li>Egress and workspace network settings</li><li>Discovery provider, UAMI, VNet, and storage existence</li><li>Required VM SKUs and regional/VM-family vCPU quota</li><li>GPT-5.4 catalog and TPM quota</li><li>Cosmos sizing and naming syntax</li><li>Policy assignments visible at subscription scope</li></ul>Cognitive Services Usages Reader alone is insufficient. |
+   | 1 — Additional checks when additional access is granted | Add: a custom role with `Microsoft.Discovery/checkNameAvailability/action`, or **Microsoft Discovery Platform Administrator**; parent-scope **Reader** or **Resource Policy Reader** when inherited policy definitions apply; customer-approved Microsoft Entra directory read access only when resolving a principal name | Target subscription; applicable parent management group; target tenant | <ul><li>Workspace-name availability</li><li>Inherited policy definitions and effective deny behavior</li><li>User or service-principal name resolution to an Entra object ID</li></ul>Supplying an object ID avoids directory lookup. Without an additional permission, only its corresponding check is unavailable. |
+   | 2 — Landing-zone preparation | **Owner**, **or** **Contributor** plus **User Access Administrator** | Target subscription | <ul><li>Register required resource providers</li><li>Create or update the NSP Perimeter Joiner custom role</li><li>Assign customer and workload-identity RBAC or PIM eligibility</li><li>Create the managed VNet, subnets, and delegations</li><li>Prepare quota-exemption requests</li></ul>**Contributor** plus **Role Based Access Control Administrator** is sufficient only when the custom role already exists and permanent assignments are selected. Customer-managed JIT requires Owner or Contributor plus User Access Administrator and the required tenant license. |
+   | 3 — Baseline configuration and Azure readiness (default) | Azure built-in **Reader at target-subscription scope** | Target subscription | <ul><li>Subnet sizing and delegation</li><li>Configured NSG rules and route tables</li><li>Private DNS zones and VNet links</li><li>Private endpoints</li><li>Discovery resource state</li><li>Required VM SKUs and compute quota</li><li>GPT-5.4 model catalog and quota</li></ul>Always runs. Uses configuration evidence; it does not create resources or prove packet-level connectivity. An unreadable quota check fails the stage. |
+   | 3 — Live effective-network checks (automatically added when a usable NIC exists) | Baseline **Reader** plus **Network Contributor**, or a custom role with the three required actions | **Reader:** target subscription. **Network Contributor/custom role:** only the resource group or resource scopes containing the existing NIC and Network Watcher; subscription scope is not required. | <ul><li>Azure-calculated effective NSG rules</li><li>Azure-calculated effective routes</li><li>Network Watcher next hop</li></ul>Uses the existing NIC and creates no VM. Required actions: <code>networkInterfaces/effectiveNetworkSecurityGroups/action</code>, <code>networkInterfaces/effectiveRouteTable/action</code>, and <code>networkWatchers/nextHop/action</code>. |
+   | 3 — Active in-VNet connectivity probe (optional `-WithVm`) | Baseline **Reader** plus **Contributor** on the probe RG | **Reader:** target subscription. **Contributor:** probe resource group only. If the VNet is in another RG, **Network Contributor:** VNet or subnet scope only. Contributor and Network Contributor do not need subscription scope. | <ul><li>DNS resolution from inside the VNet</li><li>HTTPS reachability</li><li>Route and next-hop behavior</li><li>Private-endpoint reachability</li><li>Temporary VM, NIC, and disk creation and cleanup</li></ul>Keep access active through cleanup. This mode is not recommended in this release. |
+   | 4 — Platform deployment | Assign every role listed for the **Platform Administrator persona** under [Roles required by persona](https://learn.microsoft.com/en-us/azure/microsoft-discovery/concept-role-assignments#roles-required-by-persona). Do not treat one Discovery role as the complete permission set. | Use each scope specified by Microsoft Learn for the Platform Administrator persona, including scopes covering referenced network and UAMI resources. | <ul><li>Deploy the supercomputer, workspace, model, storage container, and project</li><li>Assign Foundry roles in the workspace managed RG when authorized</li></ul>Permanent Foundry assignments require role-assignment authority; JIT eligibility requires User Access Administrator or Owner. A missing Foundry assignment is a warning rather than a platform-deployment failure. |
+   | 5 — Scenario enablement | Assign every role listed for the **Scientist persona** under [Roles required by persona](https://learn.microsoft.com/en-us/azure/microsoft-discovery/concept-role-assignments#roles-required-by-persona). Do not treat one Discovery role as the complete permission set. | Use each scope specified by Microsoft Learn for the Scientist persona. | <ul><li>Create the Q&amp;A agent</li><li>Create a temporary investigation and conversation</li><li>Send a validation prompt and verify a completed non-empty answer</li><li>Validate project storage private-endpoint DNS</li></ul>Run from a network location that can reach the workspace data plane when public access is disabled. |
+
 4. **A subscription enabled (allow-listed) for Microsoft Discovery.** If
    `Microsoft.Discovery` is not visible in the subscription, contact your Microsoft account
    representative to request access. Stage 1 treats an invisible provider as a blocking failure.
@@ -89,14 +116,20 @@ Install and sign in once:
    ```
    Allow 5–10 minutes for role propagation. Stage 4 checks every role and stops before deploying
    if any is missing, printing the exact `az` commands to fix it.
-7. **Compute and model quota** in the deployment region. The supercomputer's system pool runs 3 ×
-   `Standard_D4s_v6` (12 vCPUs) and is checked when you submit, so you need at least **12 free Total
-   Regional vCPUs and 12 free Standard DSv6 Family vCPUs**. The node pool can scale out to 3 ×
-   `Standard_D4ds_v6` (12 more vCPUs, DDSv6 Family). Check with
-   `az vm list-usage -l <region> -o table`. Each workspace also uses 450K GPT-5.4 GlobalStandard
+7. **Compute and model quota** in the deployment region. By default, the supercomputer system pool
+   runs 3 × `Standard_D4s_v6` (12 vCPUs), and the node pool can scale to 3 ×
+   `Standard_D4ds_v6` (12 more vCPUs). Advanced JSON configs can override `systemSku`,
+   `nodePoolVmSize`, and `nodePoolMaxNodeCount`. Stage 1 reads the selected subscription's live SKU
+   metadata to calculate the effective Total Regional and VM-family vCPU requirements; Stage 3
+   repeats the same check before deployment. Check current usage with
+   `az vm list-usage -l <region> --subscription <subscription-id> -o table`. Each workspace also uses 450K GPT-5.4 GlobalStandard
    TPM (250K for the built-in deployment plus 200K for the validation chat model). GlobalStandard
-   quota is shared across all regions in the subscription. Stage 1 checks vCPU and TPM quota, and
-   Stage 3 re-checks them before Stage 4. AI Search capacity for Bookshelf isn't checked.
+   quota is scoped by subscription, region, model, and deployment type. Stage 1 verifies the
+   required model/SKU and free TPM; Stage 3 re-checks them before Stage 4. On a resumed deployment,
+   the check counts only allocations that still need to be created. Subscription **Reader** covers
+   both quota usage and regional model-catalog reads. **Cognitive Services Usages Reader** covers
+   quota usage only and is not sufficient for the complete Stage 1 check. A missing portal row is
+   not equivalent to zero quota. AI Search capacity for Bookshelf isn't checked.
 8. **A storage account** for project data, required for every deployment. The tool doesn't
    create it. Create a StorageV2 account in the target subscription and put its name in
    `storage.account` (or its resource ID in `storage.accountId`):
@@ -110,7 +143,7 @@ Install and sign in once:
 
 ---
 
-## 3. Choose your network model and planning form
+## 3. Complete the planning form choices
 
 There are **two** planning forms. Pick the form, then explicitly select `network.model`:
 
@@ -156,6 +189,18 @@ access.** Verify required AKS bootstrap connectivity from the SC node subnets be
 Static Stage 3 checks alone do not prove that the outbound path works.
 Project storage is separate: both forms require an existing customer-owned StorageV2 account.
 
+### Choose how human role assignments are managed
+
+Both forms require `rbac.humanAccessMode`:
+
+| Option | What the tool creates for users | What the customer does |
+|---|---|---|
+| `permanent-role-assignments` | Standard Azure role assignments in Stages 2 and 4. | No PIM activation is required for these assignments. |
+| `customer-jit-managed` | Time-bound PIM eligibility in Stages 2 and 4. For new eligibility, `rbac.jitEligibilityDurationDays` must be from 7 through 3650. | After Stage 2, activate the required roles before Stage 3/4 or interactive use. Activate Foundry roles created by Stage 4 before using the workspace. |
+
+This choice applies only to users. The tool continues to create persistent role assignments for
+service principals and managed identities.
+
 Open the form, go to the **`Config`** sheet, and fill in every **yellow Value cell**. The form is
 organized into sections (identity & subscription, regions, network, storage, sizing, names, etc.).
 Notes next to each field explain what to enter. A few that trip people up:
@@ -166,8 +211,11 @@ Notes next to each field explain what to enter. A few that trip people up:
 | `deployingIdentity.objectId` | The identity that will deploy. If `principals` is empty, Stage 2 grants it the Discovery roles plus the Azure roles a Discovery administrator needs (Managed Identity Contributor and Operator, Storage Account Contributor, Storage Blob Data Contributor, Network Contributor, AcrPush) on the target resource groups plus Reader on the subscription, and Stage 4 grants it Foundry Owner on the workspace managed resource group. Enter the Entra **objectId (GUID)**, or — if you don't know it — an **email/UPN** of a user in the target tenant (or an app registration's appId/display name). Stage 1 resolves a non-GUID value to the objectId via `az` (run `az login` first). Find your own objectId with `az ad signed-in-user show --query id -o tsv`. |
 | `resourceGroup` | The platform resource group from prerequisite 5. |
 | `managedIdentity.id` | The UAMI resource id from prerequisite 6 (used by Stage 4). |
+| `rbac.humanAccessMode` | Select `permanent-role-assignments` or `customer-jit-managed` as described above. |
+| `rbac.jitEligibilityDurationDays` | Required only for `customer-jit-managed`. Enter the requested duration for new eligibility as a whole number from 7 through 3650. This is not an activation window. |
 | `network.model` | Choose one of the options described above. Only `byo-existing` skips Stage 2 network-template provisioning. |
 | `network.networkResourceGroup` | The resource group holding the existing VNet for `byo-existing`, or the target group for tool-provisioned networking. Stage 2 creates/uses the target network group for provisioning models. |
+| `network.dnsResourceGroup` | Resource group containing the private DNS zones linked to the Discovery VNet. Leave it blank when DNS zones live in `network.networkResourceGroup`; specify it for centralized DNS in another resource group. Stage 2 creates/reuses the required zones and exact VNet links there and includes this RG in its RBAC targets. |
 | `network.vnetName` | For `byo-existing`, enter the existing VNet name (Stage 1 checks it exists and is in `controlPlaneRegion`). For `managed`, `byo` or `byo-spoke`, enter the VNet name to deploy; blank defaults to `vnet-<names.workspace>`. |
 | `network.existingSubnets` | BYO form: list existing subnet CIDRs outside the planned Discovery subnets so address planning can check for overlaps. This field does not make a provisioning model preserve unlisted subnets. |
 | `network.outboundType` | Select `UserDefinedRouting` for customer firewall/NVA egress, or `LoadBalancer` for AKS load-balancer-based egress. |
@@ -190,9 +238,11 @@ Notes:
     management subnet to `Microsoft.ContainerService/managedClusters`.
   - The `privatelink.*` zones listed under `privateDnsZones` in
     `stage3-validation/dependency-spec.json` exist in `network.dnsResourceGroup` (or the network
-    RG) and are linked to the VNet. With `byo-existing`, Stage 2 skips the network-template DNS
-    deployment but creates the blob zone/link for the project-storage private endpoint when
-    `storage.access=privateEndpoint`. Stage 3 prints create/link commands for missing zones.
+    RG) and are linked to the exact VNet resolved from `network.networkResourceGroup`. With
+    `byo-existing`, Stage 2 skips the network-template DNS
+    deployment. For `storage.access=privateEndpoint`, it reuses the blob zone in that DNS/network
+    RG, verifies its VNet link, and associates the storage endpoint's DNS zone group with it.
+    Stage 3 prints create/link commands for missing zones.
   - Any NSG you attach allows outbound 443 to Internet and traffic within the VNet. A subnet
     without an NSG passes, because the Azure default rules allow both.
 
@@ -220,6 +270,12 @@ writes a machine-readable report you can keep or feed into a pipeline.
 
 **Scope:** read-only. Touches nothing in Azure except read-only lookups (region availability,
 quota/SKU, policy pre-flight). Its only output is `config.json` plus the JSON report.
+
+**Operator access:** **Reader** on the target subscription plus the conditional action, policy and
+directory access in [Stage-by-stage permissions](#stage-by-stage-permissions).
+
+Run this command from the `utilities/onboarding-tool/scripts` directory. If your prompt is at the
+repository root, run `cd utilities/onboarding-tool/scripts` first.
 
 ```powershell
 # Managed VNet form (swap in the byo-vnet form for the BYO path):
@@ -251,6 +307,10 @@ A `policy-preflight` failure means a deny policy will block Discovery provisioni
 **Scope:** **writes to Azure.** Registers resource providers, assigns RBAC roles, and provisions
 networking in the target subscription / resource group. Run against the intended subscription only.
 
+**Operator access:** **Owner**, or **Contributor** plus **User Access Administrator**, at
+target-subscription scope. **Role Based Access Control Administrator** is a narrower alternative
+only when the NSP custom role already exists and `permanent-role-assignments` is selected.
+
 ```powershell
 ./stage2-landing-zone/stage2_prepare.ps1 -ConfigPath ./config.json -JsonPath ./out/stage2.json
 ```
@@ -261,6 +321,9 @@ networking in the target subscription / resource group. Run against the intended
   required delegations, shared NSG allow-list, route tables, and private DNS zones.
 - RBAC covers the Discovery roles and the administrator's Azure roles on the target resource
   groups, plus the UAMI roles from prerequisite 6 after the network and storage exist.
+- With `customer-jit-managed`, creates or reuses PIM eligibility for user roles and writes
+  `human-pim-eligibility-<workspace>.md/.json`. Eligible roles are not active until each customer
+  user activates them in PIM. This reminder is a warning, not a Stage 2 failure.
 - Also emits firewall-request, quota-increase-request, and policy-exemption-request files next to
   `-JsonPath` (`./out/`). For UDR, the network team must confirm the required rules are applied
   and the appliance provides working egress; writing the firewall request is not that confirmation.
@@ -275,6 +338,10 @@ networking in the target subscription / resource group. Run against the intended
 **Scope:** read-only Azure control-plane checks unless `-WithVm` is supplied. That option invokes
 the temporary probe VM lifecycle and attempts cleanup on exit. A plain run creates no Azure
 resources, but writes local reports when requested.
+
+**Operator access:** **Reader** on the target subscription for the recommended no-VM path. See
+[Stage-by-stage permissions](#stage-by-stage-permissions) for the conditional
+effective-network actions and additional `-WithVm` roles.
 
 ```powershell
 ./stage3-validation/stage3_validate.ps1 -ConfigPath ./config.json -Profile supercomputer -JsonPath ./out/stage3-supercomputer.json
@@ -311,6 +378,14 @@ resources, but writes local reports when requested.
 **Scope:** **writes to Azure.** Creates the Discovery platform resources in the target resource
 group. Re-runnable: it detects real resource state and resumes from the first incomplete resource.
 
+**Operator access:** assign every role listed for the **Platform Administrator persona** under
+[Roles required by persona](https://learn.microsoft.com/en-us/azure/microsoft-discovery/concept-role-assignments#roles-required-by-persona),
+using the scopes documented there and covering referenced network and UAMI dependencies. Do not
+treat Microsoft Discovery Platform Administrator as the complete permission set by itself.
+Stage 2's subscription-level **Owner** or **Contributor** access is not required for platform
+deployment. Separate role-assignment authority is needed only if this runner must also assign
+Foundry roles in the new workspace managed resource group.
+
 ```powershell
 ./stage4-deployment/stage4_deploy.ps1 -ConfigPath ./config.json -ReadinessReport ./out/stage3-supercomputer.json,./out/stage3-workspace.json -JsonPath ./out/stage4.json
 ```
@@ -323,8 +398,9 @@ group. Re-runnable: it detects real resource state and resumes from the first in
   api-version `2026-06-01` via `discovery-platform.bicep`.
 - Does not deploy Bookshelf or ingest Bookshelf content, even when `bookshelf.inScope=true`.
   Project storage is required independently of Bookshelf. Its Discovery container name is
-  `names.storageContainer`, or `<workspace>-storage` when blank; reruns reuse an existing legacy
-  `<workspace>-bookshelf` container when no explicit name is supplied.
+  `names.storageContainer`; when blank, Stage 4 appends `-storage` to a workspace-name prefix and
+  truncates that prefix as needed to stay within the 24-character limit. Reruns reuse an existing
+  valid legacy `<workspace>-bookshelf` container when no explicit name is supplied.
 - Detects real resource state before each step, so a re-run **resumes** from the first incomplete
   resource. Use `-Recovery` to re-PUT a stranded resource.
 - After the project, assigns Foundry roles on the workspace managed resource group: Foundry Owner
@@ -357,6 +433,11 @@ or try a confirmed region such as **`eastus`**.
 
 **Scope:** **writes to Azure** — one Discovery agent (`scientistQnAAgent`) plus a throw-away
 investigation/conversation used for the test. No tool is created.
+
+**Operator access:** assign every role listed for the **Scientist persona** under
+[Roles required by persona](https://learn.microsoft.com/en-us/azure/microsoft-discovery/concept-role-assignments#roles-required-by-persona),
+using the scopes documented there. Do not treat Microsoft Discovery Platform Contributor as the
+complete permission set by itself.
 
 ```powershell
 ./stage5-scenario-enablement/stage5_enable.ps1 -ConfigPath ./config.json -JsonPath ./out/stage5.json
@@ -398,7 +479,7 @@ commands above; `<workspace>` is the workspace name from `config.json`.
 | Stage | Files | What to check |
 |---|---|---|
 | 1 | `stage1.md`, `stage1.json`; `config.json` is written to the `-OutConfig` path (`./config.json`), not `./out` | Verdict is GO and `config.json` exists. Read the remediation on any Fail; a Warn must not hide a real gap (quota, region, policy). Review `config.json` names, subnets, and identity before Stage 2. |
-| 2 | `stage2.md`, `stage2.json`, `firewall-request-<workspace>.md/.json`, `quota-increase-requests-<workspace>.md/.json`, `policy-exemption-requests-<workspace>.md/.json` | Verdict is GO. Resolve applicable requests with the owning teams. For UDR, confirm firewall rules and working egress, not merely request approval. |
+| 2 | `stage2.md`, `stage2.json`, `firewall-request-<workspace>.md/.json`, `quota-increase-requests-<workspace>.md/.json`, `policy-exemption-requests-<workspace>.md/.json`; with JIT, `human-pim-eligibility-<workspace>.md/.json` | Verdict is GO. Resolve applicable requests with the owning teams. With JIT, activate required user roles. For UDR, confirm firewall rules and working egress, not merely request approval. |
 | 3 | `stage3-supercomputer.md/.json`, `stage3-workspace.md/.json` | Both reports are GO. Review Warn/Skip rows and independently verify required subnet egress. Stage 4 reads supplied reports through `-ReadinessReport`, but does not require them or bind them to the current config. |
 | 4 | `stage4.md`, `stage4.json` | Verdict is GO and deployed resources (supercomputer, node pool, workspace, chat model, project storage container and project) show Succeeded with resource IDs. Bookshelf is not deployed. On failure, inspect the ARM error and remediation. |
 | 5 | `stage5.md`, `stage5.json`, `stage5-response-<timestamp>.json`, `stage5-state-<timestamp>.json` | Verdict is GO. The response file holds the agent's answer; confirm it is `completed` and the text answers the prompt. The state file records the agent, investigation, and conversation used by the test. |
@@ -411,7 +492,9 @@ commands above; `<workspace>` is the workspace name from `config.json`.
 |---|---|
 | Stage 1 won't write `config.json` | One or more required checks failed. Fix the flagged yellow cell (or add a `WAIVER`/`POLICY` row), then re-run. |
 | "Not logged in" / Az checks skipped | `az login` and `az account set --subscription <id>`, then re-run. |
-| Stage 2 RBAC failure | You lack role-assignment rights. Get **Owner**, or **Contributor** plus **User Access Administrator / RBAC Administrator**, at subscription scope. |
+| Stage 2 RBAC failure | For a clean subscription or JIT mode, get **Owner**, or **Contributor** plus **User Access Administrator**, at subscription scope. **Role Based Access Control Administrator** works only for permanent assignments after the NSP custom role exists. |
+| Stage 2 reports customer PIM activation required | Give the customer IAM team the generated `human-pim-eligibility-<workspace>.md` artifact. Stage 2 has created or verified eligibility and intentionally does not fail because the role is not active yet. Each user must activate the required role before the next operation that depends on it. |
+| `RequestDisallowedByPolicy` while assigning a user | Do not disable the policy as routine remediation. Select `customer-jit-managed` and use the customer PIM/JIT process, or obtain a policy-approved exception. |
 | Stage 4 fails on `managedIdentity` | `managedIdentity.id` is missing or wrong. Pre-create the UAMI (prerequisite 6) and set its resource id in the form, re-run Stage 1, then Stage 4. |
 | Stage 4 fails `managed identity role assignments` | The UAMI is missing a required role. Run the `az role assignment create` commands printed in the report, wait 5–10 minutes, then re-run Stage 4. |
 | Stage 4 fails `supercomputer subnet topology` | The `aksSubnet` is delegated, or `UserDefinedRouting` has no delegated `managementSubnet`. Run the `az network vnet subnet update` command printed in the report, re-run Stage 3, then Stage 4. |
@@ -419,27 +502,3 @@ commands above; `<workspace>` is the workspace name from `config.json`.
 | AKS `VMExtensionError_OutboundConnFail`, exit 50, or failure reaching `mcr.microsoft.com` | Verify the real NVA next hop, routing/peering, DNS, firewall allows and SNAT from the system-node subnet. A Stage 3 static GO does not rule out this failure. Do not substitute a NAT public IP as the NVA next hop. |
 | Stage 4 `Insufficient quota for VM size` | Not enough vCPU quota for the supercomputer system pool. Raise the named quota (Subscriptions > Usage + quotas, or `az quota update`), then re-run Stage 4. |
 | Stage 4 partial / stranded resource | Re-run (state is detected and resumed); use `-Recovery` to re-PUT the stranded resource. |
-
----
-
-## 8. Quick end-to-end recap
-
-```powershell
-cd utilities/onboarding-tool/scripts
-az login; az account set --subscription <id>
-
-# 1. Plan
-./stage1-planning/stage1_plan.ps1 -FormPath ./stage1-planning/discovery-resource-planning-form-managed-vnet.xlsx -OutConfig ./config.json -JsonPath ./out/stage1.json
-# 2. Landing zone
-./stage2-landing-zone/stage2_prepare.ps1 -ConfigPath ./config.json -JsonPath ./out/stage2.json
-# 3. Validate
-./stage3-validation/stage3_validate.ps1 -ConfigPath ./config.json -Profile supercomputer -JsonPath ./out/stage3-supercomputer.json
-./stage3-validation/stage3_validate.ps1 -ConfigPath ./config.json -Profile workspace -JsonPath ./out/stage3-workspace.json
-# 4. Deploy (1–2 hours: supercomputer 15–30 min, workspace up to ~1 hour); gated on the Stage 3 GO reports
-./stage4-deployment/stage4_deploy.ps1 -ConfigPath ./config.json -ReadinessReport ./out/stage3-supercomputer.json,./out/stage3-workspace.json -JsonPath ./out/stage4.json
-# 5. Certify a Q&A agent
-./stage5-scenario-enablement/stage5_enable.ps1 -ConfigPath ./config.json -JsonPath ./out/stage5.json
-```
-
-When Stage 5 prints `GO`, your Discovery environment is deployed and a `scientistQnAAgent` has
-answered a live prompt end to end.

@@ -17,6 +17,7 @@ param(
     [switch]$PassThru
 )
 Import-Module (Join-Path $PSScriptRoot '..\lib\OnboardingCommon.psm1') -Force
+$script:Stage3ScriptRoot = $PSScriptRoot
 $cfg = Get-OnboardingConfig -Path $ConfigPath
 $results = [System.Collections.Generic.List[object]]::new()
 
@@ -547,7 +548,7 @@ function Invoke-CheckDnsAndPe {
     }
     function Get-Zones {
         param([string]$ProfileName)
-        $specPath = Join-Path $PSScriptRoot 'dependency-spec.json'
+        $specPath = Join-Path $script:Stage3ScriptRoot 'dependency-spec.json'
         if (Test-Path -LiteralPath $specPath) {
             try {
                 $spec = Get-Content -LiteralPath $specPath -Raw | ConvertFrom-Json -ErrorAction Stop
@@ -557,14 +558,21 @@ function Invoke-CheckDnsAndPe {
         return $defaultZones
     }
     function Get-PrivateEndpointsResourceGroups {
-        param([object]$Config, [string]$DefaultRg)
-        $groups = @($DefaultRg)
+        param([object]$Config, [string]$NetworkRg)
+        $groups = @($NetworkRg)
+        if ($Config.PSObject.Properties.Name -contains 'resourceGroup' -and $Config.resourceGroup) { $groups += $Config.resourceGroup }
         if ($Config.PSObject.Properties.Name -contains 'privateEndpointResourceGroups' -and $Config.privateEndpointResourceGroups) { $groups += @($Config.privateEndpointResourceGroups) }
         if ($Config.PSObject.Properties.Name -contains 'managedResourceGroup' -and $Config.managedResourceGroup) { $groups += $Config.managedResourceGroup }
+        if ($Config.network.PSObject.Properties.Name -contains 'privateEndpointResourceGroups' -and $Config.network.privateEndpointResourceGroups) { $groups += @($Config.network.privateEndpointResourceGroups) }
+        if ($Config.PSObject.Properties.Name -contains 'storage' -and $Config.storage) {
+            if ($Config.storage.PSObject.Properties.Name -contains 'resourceGroup' -and $Config.storage.resourceGroup) { $groups += $Config.storage.resourceGroup }
+            if ($Config.storage.PSObject.Properties.Name -contains 'accountId' -and $Config.storage.accountId -match '/resourceGroups/([^/]+)') { $groups += $Matches[1] }
+        }
         return @($groups | Where-Object { $_ } | Sort-Object -Unique)
     }
     $rg = Get-DnsResourceGroup -Config $Config
-    $vnetId = Get-VnetId -Config $Config -Rg $rg
+    $networkRg = Get-NetworkResourceGroup -Config $Config
+    $vnetId = Get-VnetId -Config $Config -Rg $networkRg
     $zones = Get-Zones -ProfileName $Profile
     foreach ($zoneName in $zones) {
         $id = "private-dns-zone-$zoneName"
@@ -582,13 +590,13 @@ function Invoke-CheckDnsAndPe {
             continue
         }
         $links = @(Get-AzJson -Args @('network', 'private-dns', 'link', 'vnet', 'list', '-g', $rg, '-z', $zoneName) -AllowFail)
-        $linked = if ($vnetId) { [bool]($links | Where-Object { $_.PSObject.Properties.Name -contains 'virtualNetwork' -and $_.virtualNetwork -and $_.virtualNetwork.id -eq $vnetId }) } else { @($links).Count -gt 0 }
+        $linked = [bool]($vnetId -and ($links | Where-Object { $_.PSObject.Properties.Name -contains 'virtualNetwork' -and $_.virtualNetwork -and $_.virtualNetwork.id -eq $vnetId }))
         $out.Add((New-CheckResult -Id $id -Name "private DNS $zoneName" -Status ($linked ? 'Pass' : 'Fail') -Fr 'FR3.6d' `
                     -Detail ($linked ? "linked to VNet" : "zone exists but no matching VNet link for $vnetId") `
                     -Remediation ($linked ? '' : "Link the zone to the VNet: az network private-dns link vnet create -g $rg -z $zoneName -n link-discovery --virtual-network $(if ($vnetId) { $vnetId } else { '<vnet-resource-id>' }) --registration-enabled false") `
                     -Data ([pscustomobject]@{ zone = $zoneName; linked = $linked; exists = $true; linkCount = @($links).Count })))
     }
-    $peGroups = Get-PrivateEndpointsResourceGroups -Config $Config -DefaultRg $rg
+    $peGroups = Get-PrivateEndpointsResourceGroups -Config $Config -NetworkRg $networkRg
     $pes = @()
     foreach ($peRg in $peGroups) {
         $pes += @(Get-AzJson -Args @('network', 'private-endpoint', 'list', '-g', $peRg) -AllowFail | ForEach-Object { $_ })
@@ -1001,7 +1009,7 @@ function Invoke-CheckQuota {
         if ($t.name) {
             $rid = "/subscriptions/$($Config.subscriptionId)/resourceGroups/$($Config.resourceGroup)/providers/Microsoft.Discovery/$($t.type)/$($t.name)"
             $state = Invoke-Az -Args @('resource', 'show', '--ids', $rid, '--api-version', '2026-06-01', '--query', 'properties.provisioningState', '-o', 'tsv') -AllowFail
-            if ("$state".Trim() -eq 'Succeeded') {
+            if ($t.id -eq 'vcpu-quota' -and "$state".Trim() -eq 'Succeeded') {
                 $out.Add((New-CheckResult -Id $t.id -Name ($t.id -eq 'vcpu-quota' ? 'Compute vCPU quota' : 'Model TPM quota') -Status 'Skip' -Fr 'FR3.6e' `
                             -Detail "$($t.type.TrimEnd('s')) '$($t.name)' already exists (Succeeded) and holds its quota, so no new quota is needed."))
                 continue

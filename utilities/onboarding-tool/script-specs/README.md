@@ -35,4 +35,5 @@ Data files: `config.schema.json` (the Stage 1 config model),
 
 Each spec's header names its FR mapping. Read a stage's requirements and acceptance criteria
 in `../Onboarding-Tooling-Requirements.md`, then the per-stage spec here for the contract, and
-the matching `../scripts/stageN-*/README.md` for how to run the script.
+the [`../scripts/README.md`](../scripts/README.md) implementation index. Customers should use the
+[`../scripts/USER-GUIDE.md`](../scripts/USER-GUIDE.md) for commands and troubleshooting.

@@ -13,9 +13,13 @@
     "type": "user",
     "canRegisterProviders": true
   },
+  "rbac": {
+    "humanAccessMode": "permanent-role-assignments"
+  },
   "network": {
     "model": "byo",
     "networkResourceGroup": "contoso-rg1",
+    "dnsResourceGroup": "contoso-rg1",
     "vnetCidr": "10.46.252.0/23",
     "corpDns": [],
     "nvaNextHop": "10.100.0.4",

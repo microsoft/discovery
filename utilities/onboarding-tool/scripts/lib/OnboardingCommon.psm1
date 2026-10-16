@@ -67,7 +67,7 @@ function Get-OnboardingConfig {
     .DESCRIPTION
         Accepts a JSON path. Performs a lightweight required-field check against the
         Stage 1 schema (schemaVersion, subscriptionId, regions, network, sizingTier,
-        names, deployingIdentity). Throws on missing required fields.
+        names, deployingIdentity, rbac). Throws on missing or invalid required fields.
     #>
     [CmdletBinding()]
     param([Parameter(Mandatory)][string]$Path)
@@ -83,7 +83,7 @@ function Get-OnboardingConfig {
         throw "Config is not valid JSON ($Path): $($_.Exception.Message)"
     }
 
-    $required = @('schemaVersion', 'subscriptionId', 'controlPlaneRegion', 'workloadRegion', 'network', 'sizingTier', 'names', 'deployingIdentity')
+    $required = @('schemaVersion', 'subscriptionId', 'controlPlaneRegion', 'workloadRegion', 'network', 'sizingTier', 'names', 'deployingIdentity', 'rbac')
     $missing = @()
     foreach ($f in $required) {
         if (-not ($cfg.PSObject.Properties.Name -contains $f) -or $null -eq $cfg.$f) { $missing += $f }
@@ -91,7 +91,37 @@ function Get-OnboardingConfig {
     if ($missing.Count) {
         throw "Config missing required field(s): $($missing -join ', ')"
     }
+
+    $humanAccessMode = if ($cfg.rbac.PSObject.Properties.Name -contains 'humanAccessMode') { [string]$cfg.rbac.humanAccessMode } else { '' }
+    if (@('permanent-role-assignments', 'customer-jit-managed') -notcontains $humanAccessMode) {
+        throw "Config rbac.humanAccessMode must be 'permanent-role-assignments' or 'customer-jit-managed'."
+    }
+
+    $hasDuration = $cfg.rbac.PSObject.Properties.Name -contains 'jitEligibilityDurationDays'
+    if ($humanAccessMode -eq 'permanent-role-assignments' -and $hasDuration -and $null -ne $cfg.rbac.jitEligibilityDurationDays) {
+        throw 'Config rbac.jitEligibilityDurationDays must be omitted when rbac.humanAccessMode is permanent-role-assignments.'
+    }
+    if ($humanAccessMode -eq 'customer-jit-managed') {
+        [int]$durationDays = 0
+        if (-not $hasDuration -or
+            -not [int]::TryParse([string]$cfg.rbac.jitEligibilityDurationDays, [Globalization.NumberStyles]::Integer, [Globalization.CultureInfo]::InvariantCulture, [ref]$durationDays) -or
+            $durationDays -lt 7 -or $durationDays -gt 3650) {
+            throw 'Config rbac.jitEligibilityDurationDays must be a whole number from 7 through 3650 when rbac.humanAccessMode is customer-jit-managed.'
+        }
+        $cfg.rbac.jitEligibilityDurationDays = $durationDays
+    }
     return $cfg
+}
+
+function Test-CustomerJitManagedUser {
+    param(
+        [Parameter(Mandatory)][object]$Config,
+        [string]$PrincipalType
+    )
+    if ($PrincipalType -notmatch '^user$') { return $false }
+    if (-not ($Config.PSObject.Properties.Name -contains 'rbac') -or $null -eq $Config.rbac) { return $false }
+    if (-not ($Config.rbac.PSObject.Properties.Name -contains 'humanAccessMode')) { return $false }
+    return [string]$Config.rbac.humanAccessMode -eq 'customer-jit-managed'
 }
 
 function Test-ConfigWaiver {
@@ -161,6 +191,146 @@ function Get-AzJson {
     if ([string]::IsNullOrWhiteSpace($text)) { return $null }
     try { return $text | ConvertFrom-Json }
     catch { return $null }
+}
+
+function Set-PimRoleEligibility {
+    <#
+    .SYNOPSIS Create or reuse a time-bound Azure RBAC PIM eligible assignment.
+    #>
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory)][string]$SubscriptionId,
+        [Parameter(Mandatory)][string]$PrincipalId,
+        [Parameter(Mandatory)][string]$RoleId,
+        [Parameter(Mandatory)][string]$Scope,
+        [Parameter(Mandatory)][ValidateRange(7, 3650)][int]$DurationDays,
+        [string]$Justification = 'Discovery onboarding customer-managed JIT access',
+        [ValidateRange(0, 300)][int]$PollingIntervalSeconds = 2,
+        [ValidateRange(0, 120)][int]$MaxPollingAttempts = 30
+    )
+
+    $roleDefinitionId = if ($RoleId -match '^/') {
+        $RoleId
+    }
+    else {
+        "/subscriptions/$SubscriptionId/providers/Microsoft.Authorization/roleDefinitions/$RoleId"
+    }
+    $filter = [uri]::EscapeDataString("principalId eq '$PrincipalId' and roleDefinitionId eq '$roleDefinitionId'")
+    $instancesUrl = "https://management.azure.com$scope/providers/Microsoft.Authorization/roleEligibilityScheduleInstances?api-version=2020-10-01&%24filter=$filter"
+    $instanceResponse = Get-AzJson -Args @('rest', '--method', 'get', '--url', $instancesUrl)
+    if ($null -eq $instanceResponse) {
+        throw "Could not read PIM role eligibility schedule instances for $PrincipalId at $Scope."
+    }
+
+    $instances = if ($instanceResponse.PSObject.Properties.Name -contains 'value') { @($instanceResponse.value) } else { @($instanceResponse) }
+    $now = [DateTimeOffset]::UtcNow
+    foreach ($instance in $instances) {
+        if (-not $instance) { continue }
+        $properties = if ($instance.PSObject.Properties.Name -contains 'properties') { $instance.properties } else { $instance }
+        if ($null -eq $properties) {
+            throw "PIM returned a malformed eligibility schedule instance for $PrincipalId at $Scope."
+        }
+        $endValue = if ($properties.PSObject.Properties.Name -contains 'endDateTime') { [string]$properties.endDateTime } else { '' }
+        if (-not $endValue) {
+            return [pscustomobject]@{
+                state                       = 'eligible-existing'
+                roleDefinitionId            = $roleDefinitionId
+                scope                       = $Scope
+                eligibilityEndDateTime      = $null
+                requestedEligibilityDurationDays = $DurationDays
+                requiresActivation          = $true
+            }
+        }
+        [DateTimeOffset]$endDateTime = [DateTimeOffset]::MinValue
+        if (-not [DateTimeOffset]::TryParse($endValue, [Globalization.CultureInfo]::InvariantCulture, [Globalization.DateTimeStyles]::AssumeUniversal, [ref]$endDateTime)) {
+            throw "PIM returned an invalid eligibility endDateTime '$endValue' for $PrincipalId at $Scope."
+        }
+        if ($endDateTime -gt $now) {
+            return [pscustomobject]@{
+                state                       = 'eligible-existing'
+                roleDefinitionId            = $roleDefinitionId
+                scope                       = $Scope
+                eligibilityEndDateTime      = $endDateTime.ToUniversalTime().ToString('o')
+                requestedEligibilityDurationDays = $DurationDays
+                requiresActivation          = $true
+            }
+        }
+    }
+
+    $requestId = [guid]::NewGuid().ToString()
+    $requestUrl = "https://management.azure.com$scope/providers/Microsoft.Authorization/roleEligibilityScheduleRequests/${requestId}?api-version=2020-10-01"
+    $body = [ordered]@{
+        properties = [ordered]@{
+            principalId     = $PrincipalId
+            roleDefinitionId = $roleDefinitionId
+            requestType     = 'AdminAssign'
+            justification   = $Justification
+            scheduleInfo    = [ordered]@{
+                startDateTime = $now.ToString('o')
+                expiration    = [ordered]@{
+                    type     = 'AfterDuration'
+                    duration = "P${DurationDays}D"
+                }
+            }
+        }
+    } | ConvertTo-Json -Depth 8 -Compress
+    $created = Get-AzJson -Args @('rest', '--method', 'put', '--url', $requestUrl, '--body', $body)
+    if ($null -eq $created) {
+        throw "PIM eligibility request $requestId returned no readable response for $PrincipalId at $Scope."
+    }
+
+    $createdProperties = if ($created.PSObject.Properties.Name -contains 'properties') { $created.properties } else { $created }
+    if ($null -eq $createdProperties) {
+        throw "PIM eligibility request $requestId returned malformed properties for $PrincipalId at $Scope."
+    }
+    $createdStatusProperty = $createdProperties.PSObject.Properties['status']
+    $createdStatus = if ($createdStatusProperty) { [string]$createdStatusProperty.Value } else { '' }
+    $pendingStatuses = @('Accepted', 'Granted', 'PendingApproval', 'PendingAdminDecision', 'PendingProvisioning', 'ProvisioningStarted')
+    $failedStatuses = @('Failed', 'Denied', 'Canceled', 'Cancelled', 'Revoked', 'TimedOut', 'Invalid')
+    if ($failedStatuses -contains $createdStatus) {
+        throw "PIM eligibility request $requestId ended with status '$createdStatus' for $PrincipalId at $Scope."
+    }
+    if ([string]::IsNullOrWhiteSpace($createdStatus)) {
+        throw "PIM eligibility request $requestId returned no status for $PrincipalId at $Scope."
+    }
+    if ($createdStatus -ne 'Provisioned' -and $createdStatus -notin $pendingStatuses) {
+        throw "PIM eligibility request $requestId returned unrecognized status '$createdStatus' for $PrincipalId at $Scope."
+    }
+    if ($createdStatus -in $pendingStatuses) {
+        for ($attempt = 1; $attempt -le $MaxPollingAttempts -and $createdStatus -in $pendingStatuses; $attempt++) {
+            if ($PollingIntervalSeconds -gt 0) { Start-Sleep -Seconds $PollingIntervalSeconds }
+            $request = Get-AzJson -Args @('rest', '--method', 'get', '--url', $requestUrl)
+            if ($null -eq $request) {
+                throw "PIM eligibility request $requestId could not be read while waiting for provisioning for $PrincipalId at $Scope."
+            }
+            $requestProperties = if ($request.PSObject.Properties.Name -contains 'properties') { $request.properties } else { $request }
+            $requestStatusProperty = if ($null -ne $requestProperties) { $requestProperties.PSObject.Properties['status'] } else { $null }
+            if (-not $requestStatusProperty) {
+                throw "PIM eligibility request $requestId returned no status while waiting for provisioning for $PrincipalId at $Scope."
+            }
+            $createdStatus = [string]$requestStatusProperty.Value
+            if ($failedStatuses -contains $createdStatus) {
+                throw "PIM eligibility request $requestId ended with status '$createdStatus' for $PrincipalId at $Scope."
+            }
+            if ($createdStatus -ne 'Provisioned' -and $createdStatus -notin $pendingStatuses) {
+                throw "PIM eligibility request $requestId returned unrecognized status '$createdStatus' for $PrincipalId at $Scope."
+            }
+        }
+    }
+    if ($createdStatus -ne 'Provisioned') {
+        $displayStatus = if ([string]::IsNullOrWhiteSpace($createdStatus)) { '<missing>' } else { $createdStatus }
+        throw "PIM eligibility request $requestId was not provisioned after $MaxPollingAttempts polling attempts; last status '$displayStatus' for $PrincipalId at $Scope."
+    }
+    return [pscustomobject]@{
+        state                       = 'eligible-created'
+        requestId                   = $requestId
+        requestStatus               = $createdStatus
+        roleDefinitionId            = $roleDefinitionId
+        scope                       = $Scope
+        eligibilityEndDateTime      = $now.AddDays($DurationDays).ToString('o')
+        requestedEligibilityDurationDays = $DurationDays
+        requiresActivation          = $true
+    }
 }
 
 function Assert-AzLogin {
@@ -463,51 +633,194 @@ function Test-CanonicalSubnetRole {
 function Get-VcpuQuotaResult {
     <#
     .SYNOPSIS Check compute quota for the supercomputer pools Stage 4 deploys (check id vcpu-quota).
-    .DESCRIPTION The service-default system pool (3 x Standard_D4s_v6) is validated at submit time, so
-    a shortfall rejects the deployment ("Insufficient quota ... Total Regional vCPUs"). The node pool
-    (min 0, max 3 x Standard_D4ds_v6) only needs headroom when it autoscales. Quota is shared across
-    the subscription, so Stage 1 checks it at planning time and Stage 3 re-checks it before deploy.
+    .DESCRIPTION The configured system pool is validated at submit time, so a shortfall rejects the
+    deployment ("Insufficient quota ... Total Regional vCPUs"). The configured node pool only needs
+    headroom when it autoscales. Quota is shared across the subscription, so Stage 1 checks it at
+    planning time and Stage 3 re-checks it before deploy.
     #>
     param(
         [Parameter(Mandatory)][object]$Config,
         [Parameter(Mandatory)][string]$Fr,
-        [string]$RerunStage = 'this stage'
+        [string]$RerunStage = 'this stage',
+        [object[]]$SkuCatalog
     )
-    $region = $Config.workloadRegion
-    $sysNeed = 12; $npNeed = 12
-    $usage = Get-AzJson -Args @('vm', 'list-usage', '--location', $region) -AllowFail
+    $region = [string]$Config.workloadRegion
+    $subscriptionId = [string]$Config.subscriptionId
+    $systemSku = if ($Config.PSObject.Properties.Name -contains 'systemSku' -and $Config.systemSku) { [string]$Config.systemSku } else { 'Standard_D4s_v6' }
+    $nodePoolSku = if ($Config.PSObject.Properties.Name -contains 'nodePoolVmSize' -and $Config.nodePoolVmSize) { [string]$Config.nodePoolVmSize } else { 'Standard_D4ds_v6' }
+    $nodePoolMax = if ($Config.PSObject.Properties.Name -contains 'nodePoolMaxNodeCount' -and $null -ne $Config.nodePoolMaxNodeCount) { [int]$Config.nodePoolMaxNodeCount } else { 3 }
+    if ($nodePoolMax -lt 0) {
+        return New-CheckResult -Id 'vcpu-quota' -Name 'Compute vCPU quota' -Status 'Fail' -Fr $Fr `
+            -Detail "nodePoolMaxNodeCount=$nodePoolMax is invalid; it must be zero or greater." `
+            -Remediation 'Correct nodePoolMaxNodeCount and re-run Stage 1.'
+    }
+
+    if (-not $SkuCatalog) {
+        $SkuCatalog = @(Get-AzJson -Args @('vm', 'list-skus', '--location', $region, '--resource-type', 'virtualMachines', '--subscription', $subscriptionId) -AllowFail)
+    }
+    $requirements = @(
+        [pscustomobject]@{ sku = $systemSku; count = 3; purpose = 'system pool'; blocking = $true }
+    )
+    if ($nodePoolMax -gt 0) {
+        $requirements += [pscustomobject]@{ sku = $nodePoolSku; count = $nodePoolMax; purpose = 'node-pool autoscale'; blocking = $false }
+    }
+    $resolved = @()
+    foreach ($requirement in $requirements) {
+        $record = @($SkuCatalog | Where-Object { $_.name -eq $requirement.sku } | Select-Object -First 1)
+        $restrictions = @(if ($record.Count -and $record[0].PSObject.Properties.Name -contains 'restrictions') {
+                $record[0].restrictions | Where-Object { $null -ne $_ }
+            })
+        if (-not $record.Count -or $restrictions.Count) {
+            $reason = if (-not $record.Count) { 'not offered' } else { 'restricted for this subscription' }
+            return New-CheckResult -Id 'vcpu-quota' -Name 'Compute vCPU quota' -Status 'Fail' -Fr $Fr `
+                -Detail "$($requirement.sku) required for the $($requirement.purpose) is $reason in $region." `
+                -Remediation "Choose an available SKU or region, resolve the subscription restriction, and re-run $RerunStage."
+        }
+        $family = [string]$record[0].family
+        $vcpuCapability = @($record[0].capabilities | Where-Object { $_.name -eq 'vCPUs' } | Select-Object -First 1)
+        $vcpuPerNode = 0
+        if ([string]::IsNullOrWhiteSpace($family) -or -not $vcpuCapability.Count -or
+            -not [int]::TryParse([string]$vcpuCapability[0].value, [ref]$vcpuPerNode) -or $vcpuPerNode -le 0) {
+            return New-CheckResult -Id 'vcpu-quota' -Name 'Compute vCPU quota' -Status 'Fail' -Fr $Fr `
+                -Detail "$($requirement.sku) returned incomplete family/vCPU metadata in $region; quota requirements cannot be calculated." `
+                -Remediation "Confirm the VM SKU metadata and re-run $RerunStage."
+        }
+        $resolved += [pscustomobject]@{
+            sku      = $requirement.sku
+            family   = $family
+            count    = $requirement.count
+            purpose  = $requirement.purpose
+            blocking = $requirement.blocking
+            vcpus    = $vcpuPerNode * $requirement.count
+        }
+    }
+
+    $sysNeed = [int]($resolved | Where-Object purpose -eq 'system pool' | Select-Object -ExpandProperty vcpus -First 1)
+    $npNeed = 0
+    foreach ($requirement in @($resolved | Where-Object purpose -eq 'node-pool autoscale')) {
+        $npNeed += [int]$requirement.vcpus
+    }
+    $usage = Get-AzJson -Args @('vm', 'list-usage', '--location', $region, '--subscription', $subscriptionId) -AllowFail
     if (-not $usage) {
         return New-CheckResult -Id 'vcpu-quota' -Name 'Compute vCPU quota' -Status 'Warn' -Fr $Fr `
             -Detail "Could not read compute usage/quota for $region (az vm list-usage failed), so the supercomputer's $sysNeed-vCPU system pool requirement was not verified." `
-            -Remediation "Confirm in the portal (Subscriptions > Usage + quotas) that '$region' has at least $sysNeed free Total Regional vCPUs and $sysNeed free Standard DSv6 Family vCPUs (plus $npNeed DDSv6 for node-pool autoscale)."
+            -Remediation "Confirm in the portal (Subscriptions > Usage + quotas) that subscription $subscriptionId has enough Total Regional and VM-family vCPUs for the configured SKUs, then re-run $RerunStage."
     }
-    $avail = @{}
-    foreach ($u in @($usage)) { $avail[[string]$u.name.value] = [int]$u.limit - [int]$u.currentValue }
-    $needs = @(
-        [pscustomobject]@{ quota = 'cores'; label = 'Total Regional vCPUs'; hard = $sysNeed; soft = $sysNeed + $npNeed }
-        [pscustomobject]@{ quota = 'StandardDsv6Family'; label = 'Standard DSv6 Family vCPUs (system pool)'; hard = $sysNeed; soft = $sysNeed }
-        [pscustomobject]@{ quota = 'StandardDdsv6Family'; label = 'Standard DDSv6 Family vCPUs (node pool autoscale)'; hard = 0; soft = $npNeed }
-    )
+    $quotaValues = @{}
+    foreach ($u in @($usage)) {
+        $current = [int]$u.currentValue
+        $limit = [int]$u.limit
+        $quotaValues[[string]$u.name.value] = [pscustomobject]@{
+            current   = $current
+            limit     = $limit
+            available = $limit - $current
+        }
+    }
+    $needs = [System.Collections.Generic.List[object]]::new()
+    $needs.Add([pscustomobject]@{ quota = 'cores'; label = 'Total Regional vCPUs'; hard = $sysNeed; soft = $sysNeed + $npNeed })
+    foreach ($familyGroup in @($resolved | Group-Object family)) {
+        $systemVcpus = 0
+        $allVcpus = 0
+        foreach ($requirement in @($familyGroup.Group)) {
+            $allVcpus += [int]$requirement.vcpus
+            if ($requirement.blocking) { $systemVcpus += [int]$requirement.vcpus }
+        }
+        $purposes = ($familyGroup.Group | ForEach-Object { "$($_.sku) $($_.purpose)" }) -join ', '
+        $needs.Add([pscustomobject]@{
+                quota = $familyGroup.Name
+                label = "$($familyGroup.Name) vCPUs ($purposes)"
+                hard  = $systemVcpus
+                soft  = $allVcpus
+            })
+    }
     $short = @(foreach ($n in $needs) {
-            $a = if ($avail.ContainsKey($n.quota)) { $avail[$n.quota] } else { 0 }
+            $a = if ($quotaValues.ContainsKey($n.quota)) { $quotaValues[$n.quota].available } else { 0 }
             if ($a -lt $n.soft) {
                 [pscustomobject]@{ service = "Microsoft.Compute/$($n.quota)"; label = $n.label; region = $region; available = $a; required = $n.soft; blocking = ($a -lt $n.hard) }
             }
         })
     $summary = ($short | ForEach-Object { "$($_.label): available $($_.available), need $($_.required)" }) -join '; '
-    $fix = "Request a quota increase for $region (Subscriptions > Usage + quotas, or: az quota update --resource-name <quota> --scope /subscriptions/$($Config.subscriptionId)/providers/Microsoft.Compute/locations/$region --limit-object value=<new-limit> --resource-type dedicated), then re-run $RerunStage."
+    $fix = "Request a quota increase for $region (Subscriptions > Usage + quotas, or: az quota update --resource-name <quota> --scope /subscriptions/$subscriptionId/providers/Microsoft.Compute/locations/$region --limit-object value=<new-limit> --resource-type dedicated), then re-run $RerunStage."
     if (@($short | Where-Object blocking).Count) {
         return New-CheckResult -Id 'vcpu-quota' -Name 'Compute vCPU quota' -Status 'Fail' -Fr $Fr `
-            -Detail "Not enough compute quota for the supercomputer system pool (3 x Standard_D4s_v6 = $sysNeed vCPUs). Stage 4 would be rejected with 'Insufficient quota'. $summary." `
+            -Detail "Not enough compute quota for the supercomputer system pool (3 x $systemSku = $sysNeed vCPUs). Stage 4 would be rejected with 'Insufficient quota'. $summary." `
             -Remediation "$fix Or record a WAIVER row (check=vcpu-quota + justification) if the increase is already in flight." -Data $short
     }
     if ($short.Count) {
         return New-CheckResult -Id 'vcpu-quota' -Name 'Compute vCPU quota' -Status 'Warn' -Fr $Fr `
-            -Detail "Enough quota to deploy the supercomputer system pool ($sysNeed vCPUs), but not for the node pool to autoscale to 3 x Standard_D4ds_v6 ($npNeed vCPUs); jobs that need the node pool to scale out will stay pending. $summary." `
+            -Detail "Enough quota to deploy the supercomputer system pool ($sysNeed vCPUs), but not for the node pool to autoscale to $nodePoolMax x $nodePoolSku ($npNeed vCPUs); jobs that need the node pool to scale out will stay pending. $summary." `
             -Remediation $fix -Data $short
     }
+    $quotaData = @($needs | ForEach-Object {
+            $value = $quotaValues[$_.quota]
+            [pscustomobject]@{
+                quota     = $_.quota
+                label     = $_.label
+                current   = $value.current
+                limit     = $value.limit
+                available = $value.available
+                required  = $_.soft
+            }
+        })
+    $detailParts = @($quotaData | ForEach-Object {
+            "$($_.label) $($_.available) available ($($_.limit) limit - $($_.current) used; need $($_.required))"
+        })
     New-CheckResult -Id 'vcpu-quota' -Name 'Compute vCPU quota' -Status 'Pass' -Fr $Fr `
-        -Detail "$region has room for the system pool ($sysNeed vCPUs DSv6) and node-pool autoscale ($npNeed vCPUs DDSv6); Total Regional vCPUs available: $($avail['cores'])."
+        -Detail "$region quota headroom for the effective Stage 4 configuration: $($detailParts -join '; ')." `
+        -Data ([pscustomobject]@{ requirements = $resolved; quotas = $quotaData })
+}
+
+function Get-AzJsonResult {
+    param([Parameter(Mandatory)][string[]]$Args)
+
+    $argList = @($Args)
+    if ($argList -notcontains '-o' -and $argList -notcontains '--output') {
+        $argList += @('-o', 'json')
+    }
+    try {
+        $text = Invoke-Az -Args $argList
+    }
+    catch {
+        return [pscustomobject]@{ succeeded = $false; data = $null; error = $_.Exception.Message }
+    }
+    if ([string]::IsNullOrWhiteSpace($text)) {
+        return [pscustomobject]@{ succeeded = $false; data = $null; error = "az $($argList -join ' ') returned no output." }
+    }
+    try {
+        return [pscustomobject]@{ succeeded = $true; data = ($text | ConvertFrom-Json -ErrorAction Stop); error = '' }
+    }
+    catch {
+        return [pscustomobject]@{ succeeded = $false; data = $null; error = "az $($argList -join ' ') returned invalid JSON: $($_.Exception.Message)" }
+    }
+}
+
+function Get-OptionalPropertyValue {
+    param([object]$Object, [string]$Name)
+
+    if ($null -ne $Object -and $Object.PSObject.Properties.Name -contains $Name) {
+        return $Object.$Name
+    }
+    return $null
+}
+
+function Get-DiscoveryResourceStateForQuota {
+    param([string]$ResourceId, [string]$SubscriptionId)
+
+    if ([string]::IsNullOrWhiteSpace($ResourceId)) { return 'NotConfigured' }
+    $result = Get-AzJsonResult -Args @(
+        'resource', 'show', '--ids', $ResourceId, '--api-version', '2026-06-01',
+        '--subscription', $SubscriptionId
+    )
+    if (-not $result.succeeded) {
+        if ($result.error -match '(?i)ResourceNotFound|could not be found|was not found') { return 'NotFound' }
+        return 'Unknown'
+    }
+    $properties = Get-OptionalPropertyValue -Object $result.data -Name 'properties'
+    $state = Get-OptionalPropertyValue -Object $properties -Name 'provisioningState'
+    if ($state) {
+        return [string]$state
+    }
+    return 'Unknown'
 }
 
 function Get-ModelQuotaResult {
@@ -515,36 +828,208 @@ function Get-ModelQuotaResult {
     .SYNOPSIS Check gpt-5.4 GlobalStandard TPM quota for the workspace (check id model-quota).
     .DESCRIPTION The workspace creates gpt-5.4 (250K TPM) in its managed Foundry account and Stage 4
     adds chat model gpt-5-4 (200K TPM). A shortfall fails the workspace ~20 min into Stage 4 with a
-    generic InternalServerError. Soft-deleted Foundry accounts keep their quota until purged.
+    generic InternalServerError. A usage row alone does not prove deployability, so this check also
+    confirms that gpt-5.4 exposes the GlobalStandard SKU in the workload region. Soft-deleted
+    Foundry accounts keep their regional quota until purged.
     #>
     param(
         [Parameter(Mandatory)][object]$Config,
         [Parameter(Mandatory)][string]$Fr,
         [string]$RerunStage = 'this stage'
     )
-    $region = $Config.workloadRegion
-    $tpmNeed = 450
-    $quotaName = 'OpenAI.GlobalStandard.gpt-5.4'
-    $usage = @(Get-AzJson -Args @('cognitiveservices', 'usage', 'list', '-l', $region) -AllowFail)
-    $q = @($usage | Where-Object { $_ -and $_.name.value -eq $quotaName }) | Select-Object -First 1
-    if (-not $q) {
-        return New-CheckResult -Id 'model-quota' -Name 'Model TPM quota' -Status 'Warn' -Fr $Fr `
-            -Detail "Could not read $quotaName usage in $region (az cognitiveservices usage list returned nothing), so the ${tpmNeed}K TPM the workspace and chat model need was not verified." `
-            -Remediation "Confirm in the Foundry portal (Quotas) that $region has at least ${tpmNeed}K free GlobalStandard gpt-5.4 TPM."
+    $region = [string]$Config.workloadRegion
+    $subscriptionId = [string]$Config.subscriptionId
+    $unverifiedStatus = if ($Fr -eq 'FR3.6e') { 'Fail' } else { 'Warn' }
+    $workspaceNeed = 250
+    $chatModelNeed = 200
+    $workspaceState = 'NotConfigured'
+    $chatModelState = 'NotConfigured'
+    if ($Config.PSObject.Properties.Name -contains 'resourceGroup' -and $Config.resourceGroup -and
+        $Config.PSObject.Properties.Name -contains 'names' -and $Config.names -and
+        $Config.names.PSObject.Properties.Name -contains 'workspace' -and $Config.names.workspace) {
+        $workspaceId = "/subscriptions/$subscriptionId/resourceGroups/$($Config.resourceGroup)/providers/Microsoft.Discovery/workspaces/$($Config.names.workspace)"
+        $workspaceState = Get-DiscoveryResourceStateForQuota -ResourceId $workspaceId -SubscriptionId $subscriptionId
+        $chatModelState = Get-DiscoveryResourceStateForQuota -ResourceId "$workspaceId/chatModelDeployments/gpt-5-4" -SubscriptionId $subscriptionId
+        if ($workspaceState -eq 'Succeeded') { $workspaceNeed = 0 }
+        if ($chatModelState -eq 'Succeeded') { $chatModelNeed = 0 }
     }
-    $free = [int]$q.limit - [int]$q.currentValue
-    $data = [pscustomobject]@{ quota = $quotaName; region = $region; used = [int]$q.currentValue; limit = [int]$q.limit; available = $free; required = $tpmNeed }
+    $tpmNeed = $workspaceNeed + $chatModelNeed
+    if ($tpmNeed -eq 0) {
+        return New-CheckResult -Id 'model-quota' -Name 'Model TPM quota' -Status 'Skip' -Fr $Fr `
+            -Detail 'Workspace and validation chat model already exist in Succeeded state; the resumed deployment needs no additional GPT-5.4 TPM allocation.' `
+            -Data ([pscustomobject]@{ region = $region; workspaceState = $workspaceState; chatModelState = $chatModelState; required = 0 })
+    }
+
+    $quotaName = 'OpenAI.GlobalStandard.gpt-5.4'
+    $usageResult = Get-AzJsonResult -Args @(
+        'cognitiveservices', 'usage', 'list', '-l', $region, '--subscription', $subscriptionId
+    )
+    if (-not $usageResult.succeeded) {
+        return New-CheckResult -Id 'model-quota' -Name 'Model TPM quota' -Status $unverifiedStatus -Fr $Fr `
+            -Detail "Could not read $quotaName usage in $region for subscription $subscriptionId. $($usageResult.error)" `
+            -Remediation "Confirm Azure sign-in and Cognitive Services Usages Reader (or Reader) at subscription scope, then re-run $RerunStage. An unverified Stage 3 quota check must be resolved or explicitly waived before deployment."
+    }
+    $usage = @($usageResult.data)
+    $q = @($usage | Where-Object {
+            $name = Get-OptionalPropertyValue -Object $_ -Name 'name'
+            (Get-OptionalPropertyValue -Object $name -Name 'value') -eq $quotaName
+        }) | Select-Object -First 1
+    if (-not $q) {
+        return New-CheckResult -Id 'model-quota' -Name 'Model TPM quota' -Status 'Fail' -Fr $Fr `
+            -Detail "Azure returned Cognitive Services usage for $region, but it did not contain the required metric $quotaName." `
+            -Remediation "Verify that gpt-5.4 GlobalStandard quota is enabled for subscription $subscriptionId in $region, then re-run $RerunStage."
+    }
+
+    $modelsResult = Get-AzJsonResult -Args @(
+        'cognitiveservices', 'model', 'list', '-l', $region, '--subscription', $subscriptionId
+    )
+    if (-not $modelsResult.succeeded) {
+        return New-CheckResult -Id 'model-quota' -Name 'Model TPM quota' -Status $unverifiedStatus -Fr $Fr `
+            -Detail "$quotaName reports quota in $region, but regional model availability could not be verified for subscription $subscriptionId. $($modelsResult.error)" `
+            -Remediation "Resolve the Azure CLI, authorization, network, or API error and re-run $RerunStage. An unverified Stage 3 quota check must be resolved or explicitly waived before deployment."
+    }
+    $models = @($modelsResult.data)
+
+    $compatibleModels = @(foreach ($record in $models) {
+            $kind = [string](Get-OptionalPropertyValue -Object $record -Name 'kind')
+            $model = Get-OptionalPropertyValue -Object $record -Name 'model'
+            $modelName = [string](Get-OptionalPropertyValue -Object $model -Name 'name')
+            if ($kind -ne 'OpenAI' -or $modelName -ne 'gpt-5.4') { continue }
+            $compatibleSku = @(Get-OptionalPropertyValue -Object $model -Name 'skus' | Where-Object {
+                    (Get-OptionalPropertyValue -Object $_ -Name 'name') -eq 'GlobalStandard' -and
+                    (Get-OptionalPropertyValue -Object $_ -Name 'usageName') -eq $quotaName
+                }) | Select-Object -First 1
+            if ($compatibleSku) {
+                [pscustomobject]@{ record = $record; model = $model; sku = $compatibleSku }
+            }
+        })
+    if (-not $compatibleModels.Count) {
+        return New-CheckResult -Id 'model-quota' -Name 'Model TPM quota' -Status 'Fail' -Fr $Fr `
+            -Detail "$quotaName reports quota in $region, but the regional catalog contains no OpenAI gpt-5.4 version with a matching GlobalStandard SKU." `
+            -Remediation "Choose a region with an OpenAI gpt-5.4 GlobalStandard version whose usageName is '$quotaName', or have the subscription/model enabled there, then re-run $RerunStage."
+    }
+    $defaultModels = @($compatibleModels | Where-Object {
+            (Get-OptionalPropertyValue -Object $_.model -Name 'isDefaultVersion') -eq $true
+        })
+    $selectionPool = if ($defaultModels.Count) { $defaultModels } else { $compatibleModels }
+    $selectedModel = $selectionPool | Sort-Object {
+        [string](Get-OptionalPropertyValue -Object $_.model -Name 'version')
+    } -Descending | Select-Object -First 1
+    $modelRecord = $selectedModel.record
+    $model = $selectedModel.model
+    $sku = $selectedModel.sku
+    $modelVersion = [string](Get-OptionalPropertyValue -Object $model -Name 'version')
+    if ([string]::IsNullOrWhiteSpace($modelVersion)) {
+        return New-CheckResult -Id 'model-quota' -Name 'Model TPM quota' -Status $unverifiedStatus -Fr $Fr `
+            -Detail 'The resolver-compatible OpenAI gpt-5.4 GlobalStandard catalog record did not report a version; deployment support is unverified.' `
+            -Remediation "Resolve the incomplete regional model metadata, then re-run $RerunStage."
+    }
+
+    $lifecycleStatus = [string](Get-OptionalPropertyValue -Object $model -Name 'lifecycleStatus')
+    if ([string]::IsNullOrWhiteSpace($lifecycleStatus)) {
+        return New-CheckResult -Id 'model-quota' -Name 'Model TPM quota' -Status $unverifiedStatus -Fr $Fr `
+            -Detail "Resolver-compatible OpenAI gpt-5.4 version $modelVersion in $region did not report lifecycleStatus, so deployment support is unverified." `
+            -Remediation "Confirm the target version is supported by Discovery, then re-run $RerunStage."
+    }
+    if ($lifecycleStatus -ne 'GenerallyAvailable') {
+        return New-CheckResult -Id 'model-quota' -Name 'Model TPM quota' -Status 'Fail' -Fr $Fr `
+            -Detail "Resolver-compatible OpenAI gpt-5.4 version $modelVersion is present in $region, but lifecycleStatus is '$lifecycleStatus'. This onboarding flow supports GenerallyAvailable versions only." `
+            -Remediation "Use a GenerallyAvailable version supported by Discovery, then re-run $RerunStage."
+    }
+
+    $quotaStatus = [string](Get-OptionalPropertyValue -Object $q -Name 'status')
+    if ($quotaStatus -in @('Blocked', 'InOverage')) {
+        return New-CheckResult -Id 'model-quota' -Name 'Model TPM quota' -Status 'Fail' -Fr $Fr `
+            -Detail "$quotaName in $region has blocking quota status '$quotaStatus'; its numeric limit is not usable evidence that Stage 4 can allocate TPM." `
+            -Remediation "Resolve the $quotaStatus quota status for gpt-5.4 GlobalStandard in $region, then re-run $RerunStage."
+    }
+    if ($quotaStatus -and $quotaStatus -notin @('Included', 'Blocked', 'InOverage')) {
+        return New-CheckResult -Id 'model-quota' -Name 'Model TPM quota' -Status $unverifiedStatus -Fr $Fr `
+            -Detail "$quotaName in $region returned unrecognized quota status '$quotaStatus'; deployment readiness is unverified." `
+            -Remediation "Confirm the meaning of quota status '$quotaStatus' and that allocation is allowed, then re-run $RerunStage."
+    }
+
+    $numberStyle = [Globalization.NumberStyles]::Float
+    $culture = [Globalization.CultureInfo]::InvariantCulture
+    $tokenRate = $null
+    $tokenRateCount = 0.0
+    $malformedTokenRate = $null
+    foreach ($rate in @(Get-OptionalPropertyValue -Object $sku -Name 'rateLimits')) {
+        $rateKey = [string](Get-OptionalPropertyValue -Object $rate -Name 'key')
+        $rules = @(Get-OptionalPropertyValue -Object $rate -Name 'rules')
+        $tokenRule = @($rules | Where-Object {
+                (Get-OptionalPropertyValue -Object $_ -Name 'key') -eq 'token'
+            } | Select-Object -First 1)
+        if ($rateKey -ne 'token' -and -not $tokenRule.Count) { continue }
+        $rawRenewalPeriod = Get-OptionalPropertyValue -Object $rate -Name 'renewalPeriod'
+        $rawTokenRateCount = Get-OptionalPropertyValue -Object $rate -Name 'count'
+        $renewalPeriod = 0.0
+        $parsedTokenRateCount = 0.0
+        $hasRenewalPeriod = $null -ne $rawRenewalPeriod -and
+            [double]::TryParse([string]$rawRenewalPeriod, $numberStyle, $culture, [ref]$renewalPeriod)
+        $hasTokenRateCount = $null -ne $rawTokenRateCount -and
+            [double]::TryParse([string]$rawTokenRateCount, $numberStyle, $culture, [ref]$parsedTokenRateCount)
+        if (-not $hasRenewalPeriod -or -not $hasTokenRateCount) {
+            $malformedTokenRate = [pscustomobject]@{ renewalPeriod = $rawRenewalPeriod; count = $rawTokenRateCount }
+            continue
+        }
+        if ($renewalPeriod -eq 60) {
+            $tokenRate = $rate
+            $tokenRateCount = $parsedTokenRateCount
+            break
+        }
+    }
+    if (-not $tokenRate -and $malformedTokenRate) {
+        return New-CheckResult -Id 'model-quota' -Name 'Model TPM quota' -Status $unverifiedStatus -Fr $Fr `
+            -Detail "$quotaName returned malformed token rate-limit metadata (renewalPeriod='$($malformedTokenRate.renewalPeriod)', count='$($malformedTokenRate.count)'); quota-unit conversion is unverified." `
+            -Remediation "Resolve the malformed regional model metadata, then re-run $RerunStage."
+    }
+    if (-not $tokenRate -or $tokenRateCount -ne 1000) {
+        return New-CheckResult -Id 'model-quota' -Name 'Model TPM quota' -Status $unverifiedStatus -Fr $Fr `
+            -Detail "$quotaName did not expose the expected conversion of one capacity unit to 1,000 tokens per minute; numeric quota values cannot be safely interpreted as K TPM." `
+            -Remediation "Confirm the current GlobalStandard gpt-5.4 quota-unit conversion in the regional model metadata, then re-run $RerunStage."
+    }
+
+    $currentValue = 0.0
+    $limit = 0.0
+    $rawCurrentValue = Get-OptionalPropertyValue -Object $q -Name 'currentValue'
+    $rawLimit = Get-OptionalPropertyValue -Object $q -Name 'limit'
+    $hasCurrent = $null -ne $rawCurrentValue -and
+        [double]::TryParse([string]$rawCurrentValue, $numberStyle, $culture, [ref]$currentValue)
+    $hasLimit = $null -ne $rawLimit -and
+        [double]::TryParse([string]$rawLimit, $numberStyle, $culture, [ref]$limit)
+    if (-not $hasCurrent -or -not $hasLimit -or $currentValue -lt 0 -or $limit -lt 0 -or $currentValue -gt $limit) {
+        return New-CheckResult -Id 'model-quota' -Name 'Model TPM quota' -Status $unverifiedStatus -Fr $Fr `
+            -Detail "$quotaName returned invalid usage values (currentValue='$rawCurrentValue', limit='$rawLimit'); deployment readiness is unverified." `
+            -Remediation "Resolve the malformed or inconsistent Cognitive Services usage response, then re-run $RerunStage."
+    }
+
+    $free = $limit - $currentValue
+    $data = [pscustomobject]@{
+        quota          = $quotaName
+        quotaStatus    = $quotaStatus
+        quotaUnit      = '1K TPM'
+        region         = $region
+        modelVersion   = $modelVersion
+        lifecycleStatus = $lifecycleStatus
+        workspaceState = $workspaceState
+        chatModelState = $chatModelState
+        used           = $currentValue
+        limit          = $limit
+        available      = $free
+        required       = $tpmNeed
+    }
     if ($free -lt $tpmNeed) {
         return New-CheckResult -Id 'model-quota' -Name 'Model TPM quota' -Status 'Fail' -Fr $Fr `
-            -Detail "$quotaName in ${region}: ${free}K TPM free ($($q.currentValue)/$($q.limit) used), need ${tpmNeed}K (workspace gpt-5.4 250K + chat model gpt-5-4 200K). Stage 4 would fail the workspace with InsufficientQuota." `
-            -Remediation "GlobalStandard quota is reported the same in every region, so deployments in other regions count against it too. List them with: az cognitiveservices account list, then account deployment list per account. Free TPM by deleting unused gpt-5.4 deployments or purging soft-deleted Foundry accounts (az cognitiveservices account list-deleted, then account purge), or request more quota in the Foundry portal, then re-run $RerunStage. Or record a WAIVER row (check=model-quota + justification) if the increase is in flight." -Data $data
+            -Detail "$quotaName in ${region}: ${free}K TPM free ($currentValue/$limit used), need ${tpmNeed}K (workspace remaining=${workspaceNeed}K, chat model remaining=${chatModelNeed}K). Stage 4 would fail with InsufficientQuota." `
+            -Remediation "GlobalStandard quota is scoped by subscription, region, model, and deployment type. Identify unused gpt-5.4 allocations in $region or request more quota in Foundry > Manage > Quota, then re-run $RerunStage. Soft-deleted accounts can retain quota; purge one only after its owner confirms it is unrecoverable and accepts permanent data loss. Or record a WAIVER row (check=model-quota + justification) if the increase is already in flight." -Data $data
     }
     New-CheckResult -Id 'model-quota' -Name 'Model TPM quota' -Status 'Pass' -Fr $Fr `
-        -Detail "$quotaName in ${region}: ${free}K TPM free, need ${tpmNeed}K." -Data $data
+        -Detail "Catalog and quota prerequisites satisfied at check time for resolver-compatible OpenAI gpt-5.4 version $modelVersion GlobalStandard in ${region}: ${free}K TPM free, need ${tpmNeed}K. The additional chat deployment resolves a compatible default version, or the latest compatible version when no default exists; the workspace may use a service-pinned version. This does not prove live capacity, deployment permission, policy compliance, or successful inference; recheck immediately before allocation." -Data $data
 }
 
 Export-ModuleMember -Function `
-    New-CheckResult, Test-AnyFailure, Get-OnboardingConfig, Test-ConfigWaiver, `
-    Invoke-Az, Get-AzJson, Assert-AzLogin, Write-OnboardingReport, Complete-Stage, `
+    New-CheckResult, Test-AnyFailure, Get-OnboardingConfig, Test-CustomerJitManagedUser, Test-ConfigWaiver, `
+    Invoke-Az, Get-AzJson, Set-PimRoleEligibility, Assert-AzLogin, Write-OnboardingReport, Complete-Stage, `
     ConvertTo-UInt32Ip, Get-CidrInfo, Test-CidrContains, Test-CidrOverlap, `
     Resolve-SubnetRole, Test-CanonicalSubnetRole, Get-VcpuQuotaResult, Get-ModelQuotaResult
