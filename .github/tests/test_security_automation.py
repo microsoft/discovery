@@ -97,10 +97,7 @@ def test_codeql_matrix_keeps_scopes_separate_and_supported():
         "/language:${{ matrix.language }}/scope:${{ matrix.scope }}"
     )
     assert analyze_step["with"]["output"] == "codeql-results"
-    assert analyze_step["with"]["upload"] == (
-        "${{ github.event_name != 'pull_request' || "
-        "github.event.pull_request.head.repo.full_name == github.repository }}"
-    )
+    assert analyze_step["with"]["upload"] == "false"
     artifact_step = next(
         step for step in codeql_job["steps"]
         if step.get("name") == "Upload CodeQL SARIF artifact"

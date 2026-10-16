@@ -15,9 +15,9 @@ name: Code Scan
 #
 # Rollout posture: reporting, not gating. Pointing three new analyzers at 46
 # pre-existing agents would produce a flood of findings that blocks unrelated
-# contributions. Results land in the Security tab and the job summary; promote
-# to blocking once the backlog is triaged, the same way the rule engine's
-# ratchet works.
+# contributions. Findings are retained as downloadable artifacts; promote to
+# blocking once the backlog is triaged, the same way the rule engine's ratchet
+# works.
 
 on:
   pull_request:
@@ -77,7 +77,10 @@ jobs:
         with:
           category: "/language:${{ matrix.language }}/scope:${{ matrix.scope }}"
           output: codeql-results
-          upload: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository }}
+          # This repository has CodeQL default setup enabled, which rejects
+          # SARIF uploads from advanced configurations. Keep the scoped scan
+          # and publish its SARIF through the artifact step below instead.
+          upload: false
 
       - name: Upload CodeQL SARIF artifact
         if: always()
