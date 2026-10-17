@@ -1,0 +1,27 @@
+{
+  "ring": "stable",
+  "latestVersion": "0.0.0",
+  "minimumVersion": "0.0.0",
+  "schemaVersion": 1,
+  "platforms": {
+    "osx-arm64": {
+      "installerUrl": "PLACEHOLDER_PENDING_PUBLISH",
+      "sha256": "c129a73469438360f6749f1617c308abcd48726670bfa5804537fe84aa7c60c3"
+    },
+    "rhel-x64": {
+      "installerUrl": "PLACEHOLDER_PENDING_PUBLISH",
+      "sha256": "a24813d05b6e221b22754cd3b5c94faa7f8e7f473b5b63b8aa57897a9ad61dfb"
+    },
+    "win-arm64": {
+      "installerUrl": "PLACEHOLDER_PENDING_PUBLISH",
+      "sha256": "91302f94771999b34cc7dab3ff088cb9262077ed74c165a686871a522509223a"
+    },
+    "win-x64": {
+      "installerUrl": "PLACEHOLDER_PENDING_PUBLISH",
+      "sha256": "2de942274c7a739646ccf82f56c5ef530009a06a733bb6ab2f5eb288ea0f21aa"
+    }
+  },
+  "releaseNotesUrl": "",
+  "releaseNotesSummary": "",
+  "releasedAt": "2026-10-17T06:05:25Z"
+}
