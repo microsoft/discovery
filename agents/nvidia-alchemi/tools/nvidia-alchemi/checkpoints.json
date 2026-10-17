@@ -1,0 +1,26 @@
+{
+  "source": "Hashes recorded from the validated 1.1.0 image",
+  "checkpoints": [
+    {
+      "loader": "mace",
+      "name": "small-0b",
+      "path": "/opt/cache/mace/mace_agnesi_smallmodel",
+      "size": 67603120,
+      "sha256": "7e3a0abcaf41e03a80e69f778e1b11b29de1cca704783dc25917a736392f8cf0"
+    },
+    {
+      "loader": "mace",
+      "name": "medium-0b2",
+      "path": "/opt/cache/mace/macemediumdensityagnesistressmodel",
+      "size": 79462798,
+      "sha256": "a90be07c8aa6623c390fcc4653d3e319c4a356f8b4a53d323f96b2012d375caf"
+    },
+    {
+      "loader": "aimnet2",
+      "name": "aimnet2",
+      "path": "/root/.cache/aimnet/aimnet2_wb97m_d3_0.pt",
+      "size": 8836941,
+      "sha256": "f0f7c054539ad3261bd36f9b11c56d12f87cb723e25bea7521755bbd3ec24e28"
+    }
+  ]
+}

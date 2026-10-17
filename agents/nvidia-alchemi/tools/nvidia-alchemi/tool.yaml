@@ -1,0 +1,85 @@
+name: nvidiaAlchemi
+description: >
+  NVIDIA ALCHEMI Toolkit for high-throughput, GPU-first AI atomic simulation.
+  Runs batched geometry relaxation and molecular dynamics (NVE, NVT, NPT, NPH)
+  driven by machine-learned interatomic potentials (MACE, AIMNet2) composed with
+  classical terms (Lennard-Jones, DFT-D3(BJ) dispersion, Ewald and PME
+  electrostatics). Supports multi-stage fused pipelines, inflight batching for
+  screening campaigns, Zarr trajectory capture, MLIP training and fine-tuning,
+  and multi-GPU execution via DistributedPipeline and domain decomposition.
+  GPU required for inference.
+version: 1.1.2
+category: "AI & Machine Learning"
+license: Apache-2.0
+
+infra:
+  - name: worker
+    infra_type: container
+    image:
+      acr: "{name}.azurecr.io/nvidia-alchemi:1.1.2"
+    compute:
+      min_resources:
+        cpu: 8
+        ram: "64Gi"
+        gpu: 1
+        storage: "0Gi"
+      max_resources:
+        cpu: 96
+        ram: "1800Gi"
+        gpu: 8
+        storage: "0Gi"
+      # InfiniBand is NOT required. ALCHEMI's DistributedPipeline and
+      # DomainParallel operate within a single node (NVLink/PCIe). RDMA would
+      # only matter for multi-node NCCL, which this tool does not launch.
+      # Setting this true acts as a hard scheduler filter and excludes
+      # non-RDMA GPU pools such as Standard_NC40ads_H100_v5.
+      infiniband: false
+      recommended_sku:
+        - Standard_NC40ads_H100_v5      # Single-GPU relaxation and MD
+        - Standard_NC80adis_H100_v5     # 2-GPU pipelines
+        - Standard_ND96isr_H100_v5      # 8-GPU screening / domain decomposition
+        - Standard_NC24ads_A100_v4      # Single-GPU A100 alternative
+        - Standard_NC48ads_A100_v4      # 2-GPU A100 alternative
+      pool_type: static
+      pool_size: 1
+
+code_environments:
+  - language: python3
+    command: 'python3 -u "/{{scriptName}}" > {{output_directory}}/logs.out 2>&1; code=$?; tail -n 100 {{output_directory}}/logs.out; exit "$code"'
+    description: |
+      Python code environment with the NVIDIA ALCHEMI Toolkit for batched AI
+      atomic simulation. GPU required -- there is no CPU fallback for the
+      accelerated neighbor-list and interaction kernels.
+
+      Key capabilities:
+        - Batched geometry and cell relaxation (FIRE, FIRE2) with convergence hooks
+        - Molecular dynamics: NVE, NVT Langevin, NVT Nose-Hoover, NPT (MTK barostat), NPH
+        - Multi-stage fused pipelines (relax -> equilibrate -> production) sharing
+          a single model forward pass per step
+        - High-throughput screening with inflight batching and SizeAwareSampler
+        - Zarr trajectory capture and CUDA-stream-prefetching data loading
+        - MLIP training and fine-tuning (energy/force/stress losses, EMA, checkpoints)
+        - Multi-GPU DistributedPipeline and single-system domain decomposition,
+          launched with torchrun
+
+      Bundled potentials: MACE (foundation checkpoints baked into the image),
+      AIMNet2, Lennard-Jones, DFT-D3(BJ), Ewald, PME. Models compose with the
+      `+` operator or an explicit PipelineModelWrapper.
+
+      Not included: UMA / fairchem-core. Its `uma` extra is mutually exclusive
+      with the `mace` and CUDA extras this image is built on, and its checkpoints
+      require gated HuggingFace access.
+
+      Python libraries: nvalchemi, torch (CUDA 13), ase, pymatgen, zarr, numpy,
+      scipy, pandas, matplotlib, seaborn, rich, alchemi_utils, alchemi_artifacts,
+      alchemi_validators. Fixed-geometry energies/forces: alchemi_utils.single_point;
+      per-step dynamics records: alchemi_utils.step_recorder.
+
+      Outputs: declare every deliverable in save_final_results; files of any
+      type are copied and hash-verified under /output. Match screening results
+      to inputs by input_index, not the sampler's admission-order system_id.
+      /app/release-manifest.json lists package versions, checkpoint paths and
+      hashes by model name, and source hashes. Sample structures are in
+      /app/example-input-files.
+
+    infra_node: worker
