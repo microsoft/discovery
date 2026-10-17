@@ -1,0 +1,35 @@
+name: flow-qc
+description: >
+  Python environment for deterministic flow-cytometry FCS quality checks, compensation metadata inspection,
+  channel summaries, and optional unsupervised event outlier scoring.
+version: 1.0.0
+category: Scientific Computing
+license: MIT
+infra:
+  - name: worker
+    infra_type: container
+    image:
+      acr: '{name}.azurecr.io/flow-qc:latest'
+    compute:
+      min_resources:
+        cpu: 2
+        ram: '8Gi'
+        storage: '10Gi'
+      max_resources:
+        cpu: 8
+        ram: '32Gi'
+        storage: '30Gi'
+      infiniband: false
+      recommended_sku:
+        - Standard_D4s_v6
+        - Standard_D8s_v6
+      pool_type: static
+      pool_size: 1
+code_environments:
+  - language: python3
+    command: 'python3 -u "/{{scriptName}}" > {{output_directory}}/logs.out 2>&1; cp -r /workdir/* {{output_directory}}/ 2>/dev/null || true; tail -n 100 {{output_directory}}/logs.out'
+    description: >
+      Python environment with flowio, NumPy, pandas, scikit-learn, and flow_qc_utils. It reads standard FCS
+      files and produces technical QC metrics. It is not a clinical classifier or a substitute for validated
+      laboratory analysis.
+    infra_node: worker
