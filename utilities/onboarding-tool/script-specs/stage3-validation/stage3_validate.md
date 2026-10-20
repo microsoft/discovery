@@ -61,8 +61,8 @@ Use `az network nic show-effective-route-table` and `az network watcher show-nex
 - Managedcluster local traffic via NVA: restore VnetLocal for its own CIDR; do not remove its required UDR Internet egress route.
 
 ### check_dns_and_pe — FR3.6d
-Confirm each FR2.5 privatelink zone exists and is linked, and private endpoints are Approved with non-empty DNS (Bookshelf expects 3 PEs approved; the Foundry endpoint carries 2 zones) — read-only.
-- Zone unlinked or PE not Approved: fix the link / approve the PE (Stage 2 private_dns; Stage 4 PE approval). For byo-existing the customer owns the zones; the remediation prints the `az network private-dns zone create` and `link vnet create` commands.
+Confirm each FR2.5 privatelink zone exists and is linked to the configured VNet. Private endpoints must be Succeeded and Approved, with either a Succeeded private DNS zone group that references at least one zone or valid custom DNS metadata (Bookshelf expects 3 PEs approved; the Foundry endpoint carries 2 zones) — read-only. Azure can legitimately return `customDnsConfigs=[]` when DNS integration is managed by a private DNS zone group, so that field alone is not a failure.
+- Zone unlinked, PE not Succeeded/Approved, or no usable DNS zone group/custom DNS metadata: fix the link, endpoint, or approval (Stage 2 private_dns; Stage 4 PE approval). For byo-existing the customer owns the zones; the remediation prints the `az network private-dns zone create` and `link vnet create` commands.
 
 ### check_quota — FR3.6e
 Re-run the Stage 1 quota checks (shared `Get-VcpuQuotaResult` / `Get-ModelQuotaResult` in `lib/OnboardingCommon.psm1`) as a blocking gate. The supercomputer profile emits `vcpu-quota`; the workspace profile emits `model-quota` (gpt-5.4 GlobalStandard, 450K TPM). Skipped when the target supercomputer or workspace already exists and is Succeeded. Waivable with the same check id.
