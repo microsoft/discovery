@@ -12,7 +12,7 @@
       <a href="https://aka.ms/discovery/download/rhel/current"><strong>RHEL</strong></a>
     </td>
     <td valign="middle">
-      A self-contained desktop app - no SDK, no cloud setup. Current release: <strong>v0.15.19</strong>.<br>
+      A self-contained desktop app - no SDK, no cloud setup. Current release: <strong>v0.15.20</strong>.<br>
       <sub>Windows x64, Windows ARM64, macOS, and RHEL x64 (RPM) installers are available today.</sub><br><br>
       🛠️ <a href="docs/discovery-app/install.md">Install guide</a> - setup, verification, and upgrade steps.
     </td>
@@ -23,10 +23,10 @@
 
 | Version | Date | Platform | Installer |
 | --- | --- | --- | --- |
-| v0.15.18 _(previous)_ | 2026-10-06 | Windows x64 | [`Discovery-app-0.15.18-preview-win-x64.exe`](https://aka.ms/discovery/download/previous) |
-| v0.15.18 _(previous)_ | 2026-10-06 | Windows Arm64 | [`Discovery-app-0.15.18-preview-win-arm64.exe`](https://aka.ms/discovery/download/arm64/previous) |
-| v0.15.18 _(previous)_ | 2026-10-06 | macOS | [`Discovery-app-0.15.18-preview-osx-arm64.dmg`](https://aka.ms/discovery/download/osx/previous) |
-| v0.15.18 _(previous)_ | 2026-10-06 | RHEL x64 | [`discovery-app-preview-0.15.18-1.el9.x86_64.rpm`](https://aka.ms/discovery/download/rhel/previous) |
+| v0.15.19 _(previous)_ | 2026-10-13 | Windows x64 | [`Discovery-app-0.15.19-preview-win-x64.exe`](https://aka.ms/discovery/download/previous) |
+| v0.15.19 _(previous)_ | 2026-10-13 | Windows Arm64 | [`Discovery-app-0.15.19-preview-win-arm64.exe`](https://aka.ms/discovery/download/arm64/previous) |
+| v0.15.19 _(previous)_ | 2026-10-13 | macOS | [`Discovery-app-0.15.19-preview-osx-arm64.dmg`](https://aka.ms/discovery/download/osx/previous) |
+| v0.15.19 _(previous)_ | 2026-10-13 | RHEL x64 | [`discovery-app-preview-0.15.19-1.el9.x86_64.rpm`](https://aka.ms/discovery/download/rhel/previous) |
 
 ---
 
