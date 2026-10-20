@@ -1056,13 +1056,27 @@ function Get-ModelQuotaResult {
     $tokenRate = $null
     $tokenRateCount = 0.0
     $malformedTokenRate = $null
-    foreach ($rate in @(Get-OptionalPropertyValue -Object $sku -Name 'rateLimits')) {
-        $rateKey = [string](Get-OptionalPropertyValue -Object $rate -Name 'key')
-        $rules = @(Get-OptionalPropertyValue -Object $rate -Name 'rules')
-        $tokenRule = @($rules | Where-Object {
-                (Get-OptionalPropertyValue -Object $_ -Name 'key') -eq 'token'
-            } | Select-Object -First 1)
-        if ($rateKey -ne 'token' -and -not $tokenRule.Count) { continue }
+    $rateLimits = @(Get-OptionalPropertyValue -Object $sku -Name 'rateLimits')
+    $explicitTokenRates = @($rateLimits | Where-Object {
+            $rateKey = [string](Get-OptionalPropertyValue -Object $_ -Name 'key')
+            $rules = @(Get-OptionalPropertyValue -Object $_ -Name 'rules')
+            $rateKey -eq 'token' -or @($rules | Where-Object {
+                    (Get-OptionalPropertyValue -Object $_ -Name 'key') -eq 'token'
+                }).Count
+        })
+    $candidateTokenRates = if ($explicitTokenRates.Count) {
+        $explicitTokenRates
+    }
+    else {
+        @($rateLimits | Where-Object {
+                $rateKey = [string](Get-OptionalPropertyValue -Object $_ -Name 'key')
+                $ruleKeys = @(Get-OptionalPropertyValue -Object $_ -Name 'rules' | ForEach-Object {
+                        [string](Get-OptionalPropertyValue -Object $_ -Name 'key')
+                    } | Where-Object { -not [string]::IsNullOrWhiteSpace($_) })
+                [string]::IsNullOrWhiteSpace($rateKey) -and -not $ruleKeys.Count
+            })
+    }
+    foreach ($rate in @($candidateTokenRates)) {
         $rawRenewalPeriod = Get-OptionalPropertyValue -Object $rate -Name 'renewalPeriod'
         $rawTokenRateCount = Get-OptionalPropertyValue -Object $rate -Name 'count'
         $renewalPeriod = 0.0
@@ -1075,7 +1089,7 @@ function Get-ModelQuotaResult {
             $malformedTokenRate = [pscustomobject]@{ renewalPeriod = $rawRenewalPeriod; count = $rawTokenRateCount }
             continue
         }
-        if ($renewalPeriod -eq 60) {
+        if ($renewalPeriod -eq 60 -and $parsedTokenRateCount -eq 1000) {
             $tokenRate = $rate
             $tokenRateCount = $parsedTokenRateCount
             break
