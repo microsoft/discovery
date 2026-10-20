@@ -1,0 +1,20 @@
+name: aqpotency
+type: agent
+version: 1.0.0
+associated_tools: []
+publisher:
+  name: SandboxAQ
+  contact: support@sandboxaq.com
+  support_url: https://www.sandboxaq.com/contact
+  party: 3p
+description: >
+  Small-molecule potency agent backed by SandboxAQ AQPotency. Predicts binding
+  potency with uncertainty for a molecule against a protein target, scans
+  molecules against predefined safety, kinome, and proteome panels, and checks
+  selectivity against named off-targets. Reached over the SandboxAQ AI
+  Simulation Platform MCP endpoint.
+tags:
+  - drug-discovery
+  - binding-affinity
+  - safety-screening
+  - bioactivity

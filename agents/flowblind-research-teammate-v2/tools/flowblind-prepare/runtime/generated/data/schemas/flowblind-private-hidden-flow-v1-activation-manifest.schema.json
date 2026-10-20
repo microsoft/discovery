@@ -1,0 +1,154 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://flowblind.local/schemas/flowblind-private-hidden-flow-v1-activation-manifest.schema.json",
+  "title": "FlowBlind private hidden-flow v1 activation manifest",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "$schema",
+    "schemaVersion",
+    "id",
+    "enabled",
+    "advertiseToScientist",
+    "activationClass",
+    "liveActivationEligible",
+    "route",
+    "retainedTreeSha256",
+    "retainedPackage",
+    "liveImageManifestDigests",
+    "exactNativeBytePreservation",
+    "bridgeExtension",
+    "maximumVerifiedRunBytes",
+    "runtimeNetworkRequired"
+  ],
+  "properties": {
+    "$schema": {
+      "const": "https://flowblind.local/schemas/flowblind-private-hidden-flow-v1-activation-manifest.schema.json"
+    },
+    "schemaVersion": {
+      "const": 1
+    },
+    "id": {
+      "const": "flowblind-private-hidden-flow-v1-activation-manifest-v1"
+    },
+    "enabled": {
+      "const": true
+    },
+    "advertiseToScientist": {
+      "const": false
+    },
+    "activationClass": {
+      "const": "package-local-retained-conformance"
+    },
+    "liveActivationEligible": {
+      "const": false
+    },
+    "route": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "familyId",
+        "methodId",
+        "methodVersion"
+      ],
+      "properties": {
+        "familyId": {
+          "const": "hidden-flow"
+        },
+        "methodId": {
+          "const": "finite-basis-hidden-flow-v1"
+        },
+        "methodVersion": {
+          "const": "1.1.0"
+        }
+      }
+    },
+    "retainedTreeSha256": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "retainedPackage": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "lockSha256",
+        "runtimeSha256",
+        "verifierSha256"
+      ],
+      "properties": {
+        "lockSha256": {
+          "const": "5adde457ed53ece29eec6bfffedfc835807ac16f276a786bd5dc19c71290c0c4"
+        },
+        "runtimeSha256": {
+          "const": "162d466c18735d9c362396eb21770094a66fa5bd2682b833b5dd68fbf2774840"
+        },
+        "verifierSha256": {
+          "const": "1e0a3b59d10d65140958ee91cd1e911c4a68750e3f4b0cd4dded5ee4c666c44f"
+        }
+      }
+    },
+    "liveImageManifestDigests": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "prepare",
+        "run"
+      ],
+      "properties": {
+        "prepare": {
+          "const": "REQUIRED_BEFORE_LIVE_ACTIVATION"
+        },
+        "run": {
+          "const": "REQUIRED_BEFORE_LIVE_ACTIVATION"
+        }
+      }
+    },
+    "exactNativeBytePreservation": {
+      "const": "versioned-package-source-extension"
+    },
+    "bridgeExtension": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "acceptedBridgeSource",
+        "acceptedBridgeSha256",
+        "extensionSource",
+        "extensionByteLength",
+        "extensionSha256",
+        "behavior"
+      ],
+      "properties": {
+        "id": {
+          "const": "flowblind-hidden-bridge-stable-json-bytes-v2"
+        },
+        "acceptedBridgeSource": {
+          "const": "tools/catalogResearchV2/integrations/hiddenFlowV1.ts"
+        },
+        "acceptedBridgeSha256": {
+          "const": "f61326fd42415d02d03686dad4bb1d9e5b3098225c5eebf37a2aa4fffc987122"
+        },
+        "extensionSource": {
+          "const": "tools/catalogResearchV2/package/hiddenFlowV1PortableBridge.ts"
+        },
+        "extensionByteLength": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "extensionSha256": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "behavior": {
+          "const": "accept-compact-or-stable-pretty-json-without-reencoding-and-preserve-reconciliation-detail"
+        }
+      }
+    },
+    "maximumVerifiedRunBytes": {
+      "const": 67108864
+    },
+    "runtimeNetworkRequired": {
+      "const": false
+    }
+  }
+}

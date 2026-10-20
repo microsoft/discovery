@@ -1,0 +1,137 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://flowblind.local/schemas/flowblind-catalog-research-v2-package-lock.schema.json",
+  "title": "FlowBlind catalog-native research v2 package lock",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "id",
+    "packageId",
+    "packageVersion",
+    "publicActions",
+    "advertisedMethods",
+    "privateHiddenMethod",
+    "defaultOffMethods",
+    "unregisteredMethods",
+    "runtimeNetworkRequired",
+    "publicRuntime",
+    "sourceModuleManifest",
+    "releasePolicy",
+    "contract",
+    "canonicalSchemas",
+    "scenarioCoverage",
+    "retainedPackageManifest",
+    "retainedPackageManifests",
+    "files"
+  ],
+  "properties": {
+    "schemaVersion": {
+      "const": 1
+    },
+    "id": {
+      "const": "flowblind-catalog-research-v2-package-lock-v1"
+    },
+    "packageId": {
+      "const": "flowblind-research-teammate-v2"
+    },
+    "packageVersion": {
+      "const": "2.0.0"
+    },
+    "publicActions": {
+      "type": "array",
+      "minItems": 2,
+      "maxItems": 2
+    },
+    "advertisedMethods": {
+      "type": "array",
+      "minItems": 2,
+      "maxItems": 2
+    },
+    "privateHiddenMethod": {
+      "type": "object"
+    },
+    "defaultOffMethods": {
+      "const": [
+        "flowblind-finite-sensor-placement-v1@2.0.0",
+        "generic-planar-external-validation-v1@1.0.0"
+      ]
+    },
+    "unregisteredMethods": {
+      "const": [
+        "home-qc"
+      ]
+    },
+    "runtimeNetworkRequired": {
+      "const": false
+    },
+    "publicRuntime": {
+      "$ref": "#/$defs/file"
+    },
+    "sourceModuleManifest": {
+      "$ref": "#/$defs/file"
+    },
+    "releasePolicy": {
+      "$ref": "#/$defs/file"
+    },
+    "contract": {
+      "$ref": "#/$defs/file"
+    },
+    "canonicalSchemas": {
+      "type": "array",
+      "minItems": 10,
+      "maxItems": 10,
+      "items": {
+        "$ref": "#/$defs/file"
+      }
+    },
+    "scenarioCoverage": {
+      "$ref": "#/$defs/file"
+    },
+    "retainedPackageManifest": {
+      "$ref": "#/$defs/file"
+    },
+    "retainedPackageManifests": {
+      "type": "array",
+      "minItems": 2,
+      "maxItems": 2
+    },
+    "files": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/file"
+      }
+    }
+  },
+  "$defs": {
+    "file": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "reference",
+        "byteLength",
+        "sha256",
+        "role"
+      ],
+      "properties": {
+        "reference": {
+          "type": "string",
+          "minLength": 1
+        },
+        "byteLength": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "sha256": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "role": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    }
+  }
+}

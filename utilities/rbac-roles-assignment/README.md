@@ -16,7 +16,7 @@ The script is cross-platform (Windows / macOS / Linux), validates the executor's
 | Sign-in | The script handles sign-in automatically (see [Authentication](#authentication)) |
 | Target users | Must already exist in the tenant (guest users must be invited first) |
 
-> The Microsoft Discovery Platform Administrator (Preview) role alone is **not** sufficient for the executor — that role cannot grant the Azure built-in roles (Storage, Network, Managed Identity, Azure AI, etc.) that each persona requires.
+> The Microsoft Discovery Platform Administrator role alone is **not** sufficient for the executor — that role cannot grant the Azure built-in roles (Storage, Network, Managed Identity, Azure AI, etc.) that each persona requires.
 
 ---
 
@@ -28,7 +28,7 @@ Sets up and manages the Discovery platform.
 
 | Role | Scope |
 |---|---|
-| Microsoft Discovery Platform Administrator (Preview) | Subscription or RG |
+| Microsoft Discovery Platform Administrator | Subscription or RG |
 | Managed Identity Contributor | Subscription or RG |
 | Managed Identity Operator | Subscription or RG |
 | Storage Account Contributor | Subscription or RG |
@@ -37,7 +37,7 @@ Sets up and manages the Discovery platform.
 | AcrPush | Subscription or RG |
 | Reader | **Always Subscription** |
 | Azure AI Owner | Subscription, or Workspace Managed RG (when Scope=ResourceGroup) |
-| Microsoft Discovery Bookshelf Index Data Reader - Preview | Subscription or RG |
+| Microsoft Discovery Bookshelf Index Data Reader | Subscription or RG |
 
 ### Scientist
 
@@ -45,13 +45,13 @@ Performs research using Discovery workflows.
 
 | Role | Scope |
 |---|---|
-| Microsoft Discovery Platform Contributor (Preview) | Subscription or RG |
+| Microsoft Discovery Platform Contributor | Subscription or RG |
 | Storage Account Contributor | Subscription or RG |
 | Storage Blob Data Contributor | Subscription or RG |
 | AcrPush | Subscription or RG |
 | Reader | **Always Subscription** |
 | Azure AI User | Subscription, or Workspace Managed RG (when Scope=ResourceGroup) |
-| Microsoft Discovery Bookshelf Index Data Reader - Preview | Subscription or RG |
+| Microsoft Discovery Bookshelf Index Data Reader | Subscription or RG |
 
 ---
 
@@ -250,7 +250,7 @@ Long UPNs are aliased (`U1`, `U2`, …) with a legend printed below the tables t
 | Symptom | Likely cause / fix |
 |---|---|
 | `FATAL: -ResourceGroupName is required when -Scope is 'ResourceGroup'.` | Pass `-ResourceGroupName <name>` or choose `-Scope Subscription`. |
-| `Role 'Microsoft Discovery Bookshelf Index Data Reader - Preview' not found in this tenant.` | The role hasn't propagated to the tenant yet. The run continues; rerun later to pick it up. |
+| `Role 'Microsoft Discovery Bookshelf Index Data Reader' not found in this tenant.` | The role hasn't propagated to the tenant yet. The run continues; rerun later to pick it up. |
 | `Azure AI Owner/User ... [-WorkspaceManagedRGName not provided; ...]` | Workspace not created yet. Follow the two-step workflow above, or use `-Scope Subscription`. |
 | `Permission denied` from `New-AzRoleAssignment` | Executor lacks Owner / User Access Administrator / RBAC Administrator at the target scope. |
 | Wrong role got assigned in earlier runs (Platform Reader instead of Bookshelf) | Older versions of the script had a hardcoded GUID bug. Remove the stale assignment with `Remove-AzRoleAssignment` and rerun. |

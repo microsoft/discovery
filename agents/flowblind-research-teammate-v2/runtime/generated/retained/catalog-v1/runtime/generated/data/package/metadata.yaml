@@ -1,0 +1,22 @@
+name: flowblind-research-teammate
+type: agent
+version: 1.0.0
+associated_tools:
+  - agents/flowblind-research-teammate/tools/flowblind-prepare-study
+  - agents/flowblind-research-teammate/tools/flowblind-run-and-verify-study
+publisher:
+  name: Microsoft
+  contact: discovery-catalog@microsoft.com
+  support_url: https://github.com/microsoft/discovery/issues
+  party: 1p
+description: >-
+  A reusable restart-safe research teammate that selects, prepares, and, after
+  a separate real confirmation, verifies one narrowly reviewed regional
+  agreement or vector/time readiness study without saving source datasets.
+tags:
+  - scientific-validation
+  - reproducibility
+  - regional-agreement
+  - vector-time-readiness
+  - deterministic-reporting
+  - research-data

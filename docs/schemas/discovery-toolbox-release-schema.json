@@ -1,0 +1,31 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "discovery-toolbox-release-schema.json",
+  "title": "Discovery Toolbox VSIX Release Pointer",
+  "description": "Schema for utilities/discovery-toolbox/vsix/latest.json. The validator additionally verifies that the referenced VSIX is the only published VSIX and that its SHA-256 digest matches.",
+  "type": "object",
+  "required": ["version", "vsixPath", "sha256", "publishedAt"],
+  "additionalProperties": false,
+  "properties": {
+    "version": {
+      "type": "string",
+      "maxLength": 64,
+      "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+(?:-[0-9A-Za-z.-]+)?(?:\\+[0-9A-Za-z.-]+)?$"
+    },
+    "vsixPath": {
+      "type": "string",
+      "pattern": "^vsix/DiscoveryToolbox-v[0-9]+\\.[0-9]+\\.[0-9]+(?:-[0-9A-Za-z.-]+)?(?:\\+[0-9A-Za-z.-]+)?\\.vsix$",
+      "maxLength": 160
+    },
+    "sha256": {
+      "type": "string",
+      "maxLength": 64,
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "publishedAt": {
+      "type": "string",
+      "maxLength": 40,
+      "format": "date-time"
+    }
+  }
+}

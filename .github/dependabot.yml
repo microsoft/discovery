@@ -5,10 +5,125 @@ updates:
     directory: "/"
     schedule:
       interval: "weekly"
-    open-pull-requests-limit: 5
+    open-pull-requests-limit: 3
+    groups:
+      actions-minor-patch:
+        patterns:
+          - "*"
+        update-types:
+          - "minor"
+          - "patch"
+      actions-security:
+        applies-to: "security-updates"
+        patterns:
+          - "*"
     labels:
       - "automated-dep-update"
     commit-message:
       prefix: "chore(actions)"
     cooldown:
       default-days: 7
+
+  # The root local tool manifest pins Application Inspector for code scanning.
+  - package-ecosystem: "nuget"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "tuesday"
+      time: "07:00"
+      timezone: "Etc/UTC"
+    open-pull-requests-limit: 3
+    groups:
+      nuget-minor-patch:
+        patterns:
+          - "*"
+        update-types:
+          - "minor"
+          - "patch"
+      nuget-security:
+        applies-to: "security-updates"
+        patterns:
+          - "*"
+    labels:
+      - "automated-dep-update"
+    commit-message:
+      prefix: "chore(dotnet)"
+
+  # Python dependencies used by catalog validation and contributed agents.
+  - package-ecosystem: "pip"
+    directories:
+      - "/.github"
+      - "/agents/gwp-predictor/training"
+      - "/agents/zinc/tools/zinc"
+    schedule:
+      interval: "weekly"
+      day: "tuesday"
+      time: "08:00"
+      timezone: "Etc/UTC"
+    open-pull-requests-limit: 3
+    groups:
+      pip-minor-patch:
+        patterns:
+          - "*"
+        update-types:
+          - "minor"
+          - "patch"
+      pip-security:
+        applies-to: "security-updates"
+        patterns:
+          - "*"
+    labels:
+      - "automated-dep-update"
+    commit-message:
+      prefix: "chore(python)"
+
+  # Track base images in catalog tools.
+  - package-ecosystem: "docker"
+    directories:
+      - "/agents/*/tools/*"
+    schedule:
+      interval: "weekly"
+      day: "wednesday"
+      time: "07:00"
+      timezone: "Etc/UTC"
+    open-pull-requests-limit: 3
+    groups:
+      docker-minor-patch:
+        patterns:
+          - "*"
+        update-types:
+          - "minor"
+          - "patch"
+      docker-security:
+        applies-to: "security-updates"
+        patterns:
+          - "*"
+    labels:
+      - "automated-dep-update"
+    commit-message:
+      prefix: "chore(images)"
+
+  # The Supercomputer CLI uses uv and has active security advisories.
+  - package-ecosystem: "uv"
+    directory: "/utilities/supercomputer-cli/discovery"
+    schedule:
+      interval: "weekly"
+      day: "wednesday"
+      time: "08:00"
+      timezone: "Etc/UTC"
+    open-pull-requests-limit: 3
+    groups:
+      uv-minor-patch:
+        patterns:
+          - "*"
+        update-types:
+          - "minor"
+          - "patch"
+      uv-security:
+        applies-to: "security-updates"
+        patterns:
+          - "*"
+    labels:
+      - "automated-dep-update"
+    commit-message:
+      prefix: "chore(uv)"

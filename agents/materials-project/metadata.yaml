@@ -1,0 +1,18 @@
+name: materials-project
+type: agent
+version: 1.0.0
+associated_tools:
+  - agents/materials-project/tools/materials-project
+publisher:
+  name: Microsoft
+  contact: discovery-catalog@microsoft.com
+  support_url: https://techcommunity.microsoft.com/category/azure/discussions/microsoft-discovery-discussions
+  party: 1p
+description: >
+  Query the Materials Project database for computed properties of inorganic materials via the mp-api client.
+tags:
+  - materials-science
+  - properties
+  - database
+  - materials-project
+  - api

@@ -1,0 +1,108 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://flowblind.local/schemas/flowblind-catalog-research-v2-scenario-coverage.schema.json",
+  "title": "FlowBlind catalog-native research v2 scenario coverage",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "$schema",
+    "schemaVersion",
+    "id",
+    "packageVersion",
+    "coveragePolicy",
+    "scenarios"
+  ],
+  "properties": {
+    "$schema": {
+      "const": "https://flowblind.local/schemas/flowblind-catalog-research-v2-scenario-coverage.schema.json"
+    },
+    "schemaVersion": {
+      "const": 1
+    },
+    "id": {
+      "const": "flowblind-catalog-research-v2-scenario-coverage-v1"
+    },
+    "packageVersion": {
+      "const": "2.0.0"
+    },
+    "coveragePolicy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "packageLocalExecutable",
+        "externalDriverRequired",
+        "contractOnly",
+        "partial",
+        "manualLive"
+      ],
+      "properties": {
+        "packageLocalExecutable": {
+          "$ref": "#/$defs/text"
+        },
+        "externalDriverRequired": {
+          "$ref": "#/$defs/text"
+        },
+        "contractOnly": {
+          "$ref": "#/$defs/text"
+        },
+        "partial": {
+          "$ref": "#/$defs/text"
+        },
+        "manualLive": {
+          "$ref": "#/$defs/text"
+        }
+      }
+    },
+    "scenarios": {
+      "type": "array",
+      "minItems": 30,
+      "maxItems": 30,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "coverageStatus",
+          "evidence",
+          "gaps"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^V2-(REG|VEC|HID|OPS|PKG|LIVE)-[0-9]{3}$"
+          },
+          "coverageStatus": {
+            "enum": [
+              "package-local-executable",
+              "external-driver-required",
+              "contract-only",
+              "partial",
+              "manual-live"
+            ]
+          },
+          "evidence": {
+            "type": "array",
+            "uniqueItems": true,
+            "items": {
+              "$ref": "#/$defs/text"
+            }
+          },
+          "gaps": {
+            "type": "array",
+            "uniqueItems": true,
+            "items": {
+              "$ref": "#/$defs/text"
+            }
+          }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "text": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 4096
+    }
+  }
+}

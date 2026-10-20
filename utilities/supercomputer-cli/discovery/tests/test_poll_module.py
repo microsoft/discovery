@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 from typing import Any, cast
+from unittest.mock import MagicMock
 
 import pytest
 
@@ -194,6 +195,52 @@ def test_poll_operation_until_success(
 
     final = dataplane_api.poll_operation("proj", "op123", "https://workspace", poll_interval=0, api_version="2025-07-01-preview")
     assert final.status == "Succeeded"
+
+
+def test_poll_operation_displays_runtime_details_only_when_changed(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    pending_message = (
+        "Pending: a node scale-up attempt did not complete; scheduling will retry."
+    )
+    responses = []
+    for status, runtime_details in (
+        ("Running", pending_message),
+        ("Running", pending_message),
+        ("Running", "Pending: waiting for compute pods to become ready."),
+        ("Succeeded", "Pending: waiting for compute pods to become ready."),
+    ):
+        response = MagicMock()
+        response.status = status
+        response.result.runtime_details = runtime_details
+        response.result.tool_report = None
+        responses.append(response)
+
+    monkeypatch.setattr(
+        dataplane_api,
+        "get_operation_status",
+        lambda *args, **kwargs: responses.pop(0),
+    )
+    monkeypatch.setattr(dataplane_api.time, "sleep", lambda _: None)
+    info_mock = MagicMock()
+    monkeypatch.setattr(dataplane_api, "info", info_mock)
+
+    dataplane_api.poll_operation(
+        "proj",
+        "op123",
+        "https://workspace",
+        poll_interval=0,
+    )
+
+    runtime_messages = [
+        call.args[0]
+        for call in info_mock.call_args_list
+        if call.args[0].startswith("Runtime details:")
+    ]
+    assert runtime_messages == [
+        f"Runtime details: {pending_message}",
+        "Runtime details: Pending: waiting for compute pods to become ready.",
+    ]
 
 
 def test_cancel_operation_posts_cancel(monkeypatch: pytest.MonkeyPatch) -> None:

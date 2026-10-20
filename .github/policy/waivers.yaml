@@ -1,0 +1,18 @@
+# Rule waivers
+#
+# A waiver suppresses one rule for one path. Waivers are CODEOWNERS-gated and
+# must expire: `expires` is mandatory and an expired waiver fails the build, so
+# suppressions cannot quietly become permanent.
+#
+# Fields:
+#   rule_id   Rule to suppress, e.g. POL-008. Required.
+#   path      Repo-relative path or glob the waiver covers. Required.
+#   reason    Why the exception is justified. Required, min 20 chars.
+#   approver  GitHub handle of the CODEOWNER who approved it. Required.
+#   expires   ISO date (YYYY-MM-DD). Required. Max 180 days out.
+#
+# A waiver is NOT the mechanism for legacy debt — that is what the Phase 0
+# ratchet baseline handles (.github/policy/baseline.json). Waivers are for
+# genuine, reviewed exceptions.
+
+waivers: []

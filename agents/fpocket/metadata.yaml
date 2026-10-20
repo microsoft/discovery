@@ -1,0 +1,18 @@
+name: fpocket
+type: agent
+version: 1.0.0
+associated_tools:
+  - agents/fpocket/tools/fpocket
+publisher:
+  name: Microsoft
+  contact: discovery-catalog@microsoft.com
+  support_url: https://techcommunity.microsoft.com/category/azure/discussions/microsoft-discovery-discussions
+  party: 1p
+description: >
+  Geometry-based detection of ligand-binding pockets and cavities on protein structures using Voronoi
+  tessellation and alpha spheres.
+tags:
+  - structural-biology
+  - binding-site
+  - druggability
+  - fpocket

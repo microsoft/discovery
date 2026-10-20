@@ -1,0 +1,18 @@
+name: cobrapy
+type: agent
+version: 1.0.0
+associated_tools:
+  - agents/cobrapy/tools/cobrapy
+publisher:
+  name: Microsoft
+  contact: discovery-catalog@microsoft.com
+  support_url: https://techcommunity.microsoft.com/category/azure/discussions/microsoft-discovery-discussions
+  party: 1p
+description: >
+  Constraint-based reconstruction and analysis of genome-scale metabolic models: flux-balance analysis, FVA, and
+  gene knockouts.
+tags:
+  - systems-biology
+  - metabolic-modeling
+  - flux-balance
+  - cobrapy

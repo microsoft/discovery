@@ -1,0 +1,58 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://flowblind.local/schemas/flowblind-trusted-source-sidecar-v2.schema.json",
+  "title": "FlowBlind candidate-bound trusted source sidecar v2",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "candidateReference",
+    "candidateByteLength",
+    "candidateSha256",
+    "quantity",
+    "sourceMeaning",
+    "referenceRole",
+    "referenceMeaning",
+    "candidateRole",
+    "candidateMeaning",
+    "coordinateUnit",
+    "valueUnit",
+    "provenance",
+    "license",
+    "coordinateDimensionality",
+    "singleFrame"
+  ],
+  "properties": {
+    "schemaVersion": { "const": 2 },
+    "candidateReference": { "$ref": "#/$defs/declaration" },
+    "candidateByteLength": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 16777216
+    },
+    "candidateSha256": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "quantity": { "$ref": "#/$defs/declaration" },
+    "sourceMeaning": { "$ref": "#/$defs/declaration" },
+    "referenceRole": { "const": "reference" },
+    "referenceMeaning": { "$ref": "#/$defs/declaration" },
+    "candidateRole": { "const": "candidate" },
+    "candidateMeaning": { "$ref": "#/$defs/declaration" },
+    "coordinateUnit": { "$ref": "#/$defs/declaration" },
+    "valueUnit": { "$ref": "#/$defs/declaration" },
+    "provenance": { "$ref": "#/$defs/declaration" },
+    "license": { "$ref": "#/$defs/declaration" },
+    "coordinateDimensionality": { "const": 2 },
+    "singleFrame": { "const": true }
+  },
+  "$defs": {
+    "declaration": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 4096,
+      "pattern": "^(?=\\S)(?=.*\\S$)[^\\u0000-\\u001F\\u007F-\\u009F\\u00AD\\u061C\\u200B-\\u200F\\u2028-\\u202E\\u2060-\\u206F\\uFEFF\\uFFF9-\\uFFFB]+$"
+    }
+  }
+}

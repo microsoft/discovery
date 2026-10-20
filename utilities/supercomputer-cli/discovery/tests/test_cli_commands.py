@@ -51,12 +51,8 @@ class TestConfigureCommand:
         # `resource-graph`.
         with (
             patch.object(cli_configure.shutil, "which", return_value="/usr/local/bin/az"),
-            patch.object(
-                cli_configure, "run_az", return_value=MagicMock(returncode=0)
-            ),
-            patch.object(
-                cli_configure, "ensure_required_extensions", return_value=[bad_result]
-            ),
+            patch.object(cli_configure, "run_az", return_value=MagicMock(returncode=0)),
+            patch.object(cli_configure, "ensure_required_extensions", return_value=[bad_result]),
         ):
             result = runner.invoke(app, ["configure"])
 
@@ -80,6 +76,7 @@ class TestStartCommand:
         result = runner.invoke(app, ["job", "start", "--help"])
         assert result.exit_code == 0
         assert "COMMAND" in result.output or "command" in result.output.lower()
+        assert "--shm" in result.output
 
     def test_start_with_mocked_deps(self, tmp_path):
         """Test start with mocked dependencies."""
@@ -100,6 +97,8 @@ class TestStartCommand:
             mock_cfg.tool_id = "tool-123"
             mock_cfg.nodepool_id = "nodepool-123"
             mock_cfg.datacontainer_id = "dc-123"
+            mock_cfg.storagecontainer_id = "sc-123"
+            mock_cfg.api_version = "2026-06-01"
             mock_cfg.project_ready = True
             mock_run_cfg.return_value = mock_cfg
 
@@ -110,17 +109,24 @@ class TestStartCommand:
                             with patch.object(
                                 cli_submit, "prepare_command", return_value="echo test"
                             ):
-                                with patch.object(cli_submit, "start_tool_run") as mock_start, \
-                                     patch.object(cli_submit, "poll_operation") as mock_poll:
+                                with (
+                                    patch.object(cli_submit, "start_tool_run") as mock_start,
+                                    patch.object(cli_submit, "poll_operation") as mock_poll,
+                                ):
                                     mock_start.return_value = MagicMock(id="op-test")
                                     mock_result = MagicMock()
                                     mock_result.status = "Completed"
                                     mock_result.result = MagicMock(runtime_details="details")
                                     mock_poll.return_value = mock_result
 
-                                    result = runner.invoke(app, ["job", "start", "echo test"])
+                                    result = runner.invoke(
+                                        app,
+                                        ["job", "start", "--shm", "1Gi", "echo test"],
+                                    )
 
         assert result.exit_code == 0
+        payload = mock_start.call_args.args[1]
+        assert payload.infra_overrides.shm == "1Gi"
 
 
 # =============================================================================
@@ -136,6 +142,7 @@ class TestBatchCommand:
         result = runner.invoke(app, ["job", "batch", "--help"])
         assert result.exit_code == 0
         assert "SIZE" in result.output
+        assert "--shm" in result.output
 
     def test_batch_with_mocked_deps(self, tmp_path):
         """Test batch with mocked dependencies and verify mapping table."""
@@ -245,11 +252,7 @@ class TestBatchCommand:
         # 80-char truncation point and one well past it. Both must appear.
         early_marker = "EARLY42X"
         late_marker = "LATE99XY"
-        long_command = (
-            f"echo {early_marker} "
-            + ("x" * 100)
-            + f" {late_marker} done"
-        )
+        long_command = f"echo {early_marker} " + ("x" * 100) + f" {late_marker} done"
         assert len(long_command) > 120
         assert long_command.index(late_marker) > 80, "late marker must sit past old 80-char cutoff"
 
@@ -263,13 +266,15 @@ class TestBatchCommand:
         mock_response = MagicMock()
         mock_response.id = "op-long-1"
 
-        with patch.object(cli_submit, "load_project_config", return_value=mock_cfg), \
-             patch.object(cli_submit, "load_tool_config"), \
-             patch.object(cli_submit, "ensure_datacontainer"), \
-             patch.object(cli_submit, "emit_env"), \
-             patch.object(cli_submit, "prepare_command", side_effect=lambda c, *a, **kw: c), \
-             patch.object(cli_submit, "get_azure_username", return_value="testuser"), \
-             patch.object(cli_submit, "start_tool_run", return_value=mock_response):
+        with (
+            patch.object(cli_submit, "load_project_config", return_value=mock_cfg),
+            patch.object(cli_submit, "load_tool_config"),
+            patch.object(cli_submit, "ensure_datacontainer"),
+            patch.object(cli_submit, "emit_env"),
+            patch.object(cli_submit, "prepare_command", side_effect=lambda c, *a, **kw: c),
+            patch.object(cli_submit, "get_azure_username", return_value="testuser"),
+            patch.object(cli_submit, "start_tool_run", return_value=mock_response),
+        ):
             result = runner.invoke(app, ["job", "batch", "1", long_command])
 
         assert result.exit_code == 0, result.output
@@ -297,6 +302,7 @@ class TestVSCodeCommand:
         result = runner.invoke(app, ["job", "vscode", "--help"])
         assert result.exit_code == 0
         assert "--image" in result.output
+        assert "--shm" in result.output
 
     def test_vscode_with_mocked_deps(self, tmp_path):
         """Test vscode with mocked dependencies."""

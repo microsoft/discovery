@@ -1,0 +1,18 @@
+name: p2rank
+type: agent
+version: 1.0.0
+associated_tools:
+  - agents/p2rank/tools/p2rank
+publisher:
+  name: Microsoft
+  contact: discovery-catalog@microsoft.com
+  support_url: https://techcommunity.microsoft.com/category/azure/discussions/microsoft-discovery-discussions
+  party: 1p
+description: >
+  Machine-learning prediction of ligand-binding sites from protein structure. Fast, template-free, and CPU-only
+  (Java).
+tags:
+  - structural-biology
+  - binding-site
+  - machine-learning
+  - p2rank

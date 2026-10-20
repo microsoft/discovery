@@ -1,0 +1,17 @@
+name: rxnmapper
+type: agent
+version: 1.0.0
+associated_tools:
+  - agents/rxnmapper/tools/rxnmapper
+publisher:
+  name: Microsoft
+  contact: discovery-catalog@microsoft.com
+  support_url: https://techcommunity.microsoft.com/category/azure/discussions/microsoft-discovery-discussions
+  party: 1p
+description: >
+  Atom-atom mapping of chemical reactions using an attention-based transformer. Runs on CPU for reaction SMILES.
+tags:
+  - cheminformatics
+  - reactions
+  - atom-mapping
+  - rxnmapper

@@ -12,7 +12,7 @@
   },
   "license": "MIT",
   "category": "Silicon",
-  "homepage": "https://github.com/microsoft/discovery/tree/main/starter-kits/microsoft/chip-synthesis-timing",
+  "homepage": "https://github.com/microsoft/discovery/tree/main/starter-kits/chip-synthesis-timing",
   "party": "1p",
   "lifecycle": "active",
   "keywords": ["chip", "synthesis", "timing", "verilog", "rtl", "sta", "asic", "sdc"],

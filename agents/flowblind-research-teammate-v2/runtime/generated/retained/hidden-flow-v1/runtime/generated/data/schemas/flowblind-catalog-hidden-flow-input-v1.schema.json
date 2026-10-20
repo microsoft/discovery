@@ -1,0 +1,22 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://flowblind.local/schemas/flowblind-catalog-hidden-flow-input-v1.schema.json",
+  "title": "FlowBlind catalog hidden-flow scientist input v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["goal"],
+  "properties": {
+    "goal": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 4096,
+      "description": "Ordinary-language scientific goal for the already selected canonical hidden-flow problem."
+    },
+    "details": {
+      "type": ["string", "null"],
+      "minLength": 1,
+      "maxLength": 4096,
+      "description": "Optional ordinary-language interpretation context."
+    }
+  }
+}

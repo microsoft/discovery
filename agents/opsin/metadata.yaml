@@ -1,0 +1,17 @@
+name: opsin
+type: agent
+version: 1.0.0
+associated_tools:
+  - agents/opsin/tools/opsin
+publisher:
+  name: Microsoft
+  contact: discovery-catalog@microsoft.com
+  support_url: https://techcommunity.microsoft.com/category/azure/discussions/microsoft-discovery-discussions
+  party: 1p
+description: >
+  Open Parser for Systematic IUPAC Nomenclature: convert chemical names into structures (SMILES/InChI/CML).
+tags:
+  - cheminformatics
+  - name-to-structure
+  - iupac
+  - opsin

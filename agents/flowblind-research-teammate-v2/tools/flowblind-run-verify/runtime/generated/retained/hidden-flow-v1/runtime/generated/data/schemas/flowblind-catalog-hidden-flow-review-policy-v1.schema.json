@@ -1,0 +1,106 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://flowblind.local/schemas/flowblind-catalog-hidden-flow-review-policy-v1.schema.json",
+  "title": "FlowBlind generic hidden-flow review policy v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "$schema",
+    "schemaVersion",
+    "id",
+    "policyVersion",
+    "authorityVersion",
+    "reviewScope",
+    "subject",
+    "runtime",
+    "claimBoundary",
+    "assertions",
+    "authorityInput"
+  ],
+  "properties": {
+    "$schema": {
+      "const": "https://flowblind.local/schemas/flowblind-catalog-hidden-flow-review-policy-v1.schema.json"
+    },
+    "schemaVersion": { "const": 1 },
+    "id": {
+      "const": "flowblind-catalog-hidden-flow-generic-review-policy-v1"
+    },
+    "policyVersion": { "const": "1.0.0" },
+    "authorityVersion": {
+      "const": "attested-generic-hidden-flow-problem-authority-v1"
+    },
+    "reviewScope": {
+      "const": "generic-problem-contract-parser-and-executable-preflight-only"
+    },
+    "subject": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "capabilityId",
+        "capabilityVersion",
+        "methodFamily",
+        "problemSchemaVersion",
+        "genericProblemSchema",
+        "genericProblemSchemaRole",
+        "problemAcceptanceSchema",
+        "parser",
+        "canonicalization",
+        "allowedObservationTypes",
+        "allowedTargetTypes",
+        "resourceLimits",
+        "executablePreflight"
+      ],
+      "properties": {
+        "capabilityId": {
+          "const": "finite-basis-hidden-flow-v1"
+        },
+        "capabilityVersion": { "const": "1.1.0" },
+        "methodFamily": {
+          "const": "finite-basis-observation-compatible-hidden-flow-v1"
+        },
+        "problemSchemaVersion": { "const": 1 },
+        "genericProblemSchema": {
+          "const": "https://flowblind.local/schemas/hidden-flow-problem.schema.json"
+        },
+        "genericProblemSchemaRole": {
+          "const": "syntactic-prefilter-only"
+        },
+        "problemAcceptanceSchema": {
+          "const": "https://flowblind.local/schemas/flowblind-catalog-hidden-flow-problem-acceptance-v1.schema.json"
+        },
+        "parser": { "const": "parseHiddenFlowProblem" },
+        "canonicalization": { "const": "stable-json-v1" },
+        "allowedObservationTypes": {
+          "const": ["point-component", "point-direction"]
+        },
+        "allowedTargetTypes": {
+          "const": [
+            "point-component",
+            "point-direction",
+            "point-speed-envelope",
+            "region-component",
+            "point-strain-component"
+          ]
+        },
+        "resourceLimits": {
+          "$ref": "flowblind-catalog-hidden-flow-review-attestation-v1.schema.json#/$defs/resourceLimits"
+        },
+        "executablePreflight": {
+          "const": "compile-basis-and-all-solver-requests-without-solving"
+        }
+      }
+    },
+    "runtime": {
+      "$ref": "flowblind-catalog-hidden-flow-review-attestation-v1.schema.json#/$defs/runtime"
+    },
+    "claimBoundary": {
+      "const": "finite-basis-declared-model-only-no-physical-truth-source-validity-or-clinical-inference"
+    },
+    "assertions": {
+      "$ref": "flowblind-catalog-hidden-flow-review-attestation-v1.schema.json#/$defs/assertions"
+    },
+    "authorityInput": {
+      "const": "host-selected-canonical-problem-bytes-only"
+    }
+  }
+}

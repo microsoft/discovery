@@ -1,0 +1,110 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://flowblind.local/schemas/flowblind-catalog-vector-source-sidecar-v1.schema.json",
+  "title": "FlowBlind catalog vector source sidecar v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "recordType",
+    "candidateReference",
+    "candidateByteLength",
+    "candidateSha256",
+    "quantity",
+    "sourceMeaning",
+    "sourceKind",
+    "coordinateUnit",
+    "valueUnit",
+    "timeUnit",
+    "samplingKind",
+    "selectedTime",
+    "exposureDuration",
+    "exposureOperator",
+    "timestampAnchor",
+    "cycleStartTime",
+    "cycleEndTime",
+    "cyclePeriod",
+    "cyclePhaseOrigin",
+    "coordinateDimensionality",
+    "topology",
+    "componentX",
+    "componentY",
+    "provenance",
+    "license"
+  ],
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "recordType": {
+      "const": "flowblind-catalog-vector-source-v1"
+    },
+    "candidateReference": { "$ref": "#/$defs/text" },
+    "candidateByteLength": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 16777216
+    },
+    "candidateSha256": { "$ref": "#/$defs/sha256" },
+    "quantity": { "$ref": "#/$defs/text" },
+    "sourceMeaning": { "$ref": "#/$defs/text" },
+    "sourceKind": {
+      "enum": ["generated", "measured", "simulation"]
+    },
+    "coordinateUnit": { "enum": ["m", "cm", "mm"] },
+    "valueUnit": { "enum": ["m/s", "cm/s", "mm/s"] },
+    "timeUnit": { "enum": ["s", "ms"] },
+    "samplingKind": {
+      "enum": [
+        "instantaneous",
+        "steady-state",
+        "frame-average"
+      ]
+    },
+    "selectedTime": {
+      "type": ["number", "null"]
+    },
+    "exposureDuration": {
+      "type": ["number", "null"],
+      "exclusiveMinimum": 0
+    },
+    "exposureOperator": {
+      "enum": [
+        "uniform-window-average",
+        "unspecified",
+        null
+      ]
+    },
+    "timestampAnchor": {
+      "enum": [
+        "start",
+        "midpoint",
+        "end",
+        "unspecified",
+        null
+      ]
+    },
+    "cycleStartTime": { "type": ["number", "null"] },
+    "cycleEndTime": { "type": ["number", "null"] },
+    "cyclePeriod": {
+      "type": ["number", "null"],
+      "exclusiveMinimum": 0
+    },
+    "cyclePhaseOrigin": { "type": ["number", "null"] },
+    "coordinateDimensionality": { "const": 2 },
+    "topology": { "const": "complete-rectilinear-grid" },
+    "componentX": { "const": "u" },
+    "componentY": { "const": "v" },
+    "provenance": { "$ref": "#/$defs/text" },
+    "license": { "$ref": "#/$defs/text" }
+  },
+  "$defs": {
+    "text": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 4096
+    },
+    "sha256": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    }
+  }
+}

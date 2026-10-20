@@ -13,13 +13,12 @@ The boundaries encoded here mirror the server contracts in the upstream service
     2025-07-01-preview     ``uri`` → dataassets       required     nested (resources/poolSize/imageUri)
     2025-12-01-preview     ``uri`` → dataassets       required     flat (cpu/ram/gpu/replicaCount/imageUri)
     2026-02-01-preview     ``storageUri`` → storageassets  omitted      flat (+ maxCpu/maxRam/maxGpu)
-    2026-06-01 (GA)        ``storageUri`` → storageassets  omitted      flat (same as 2026-02-01-preview)
+    2026-06-01 (GA)        ``storageUri`` → storageassets  omitted      flat (+ shm)
     =====================  =========================  ===========  =====================
 
-The 2026-06-01 GA contract is a strict superset of 2026-02-01-preview: the only wire
-delta is an optional ``mountProtocol`` enum field on ``InputDataMount`` / ``OutputDataMount``
-(values: ``NFS`` | ``BlobfuseCaching``). The CLI does not surface ``mountProtocol``
-as a user-facing argument today; both versions therefore share the same capability flags.
+The 2026-06-01 GA contract is a strict superset of 2026-02-01-preview. It adds the
+optional ``mountProtocol`` field on data mounts and the optional ``shm`` field on
+flat ``infraOverrides``.
 
 Unknown / future versions fall through to the latest known member so that new
 api versions do not immediately break the CLI between releases.
@@ -27,8 +26,8 @@ api versions do not immediately break the CLI between releases.
 
 from __future__ import annotations
 
+from collections.abc import Iterator
 from enum import Enum
-from typing import Iterator
 
 
 class ApiVersion(str, Enum):
@@ -42,7 +41,7 @@ class ApiVersion(str, Enum):
     # ---- parsing / defaults -------------------------------------------------
 
     @classmethod
-    def latest(cls) -> "ApiVersion":
+    def latest(cls) -> ApiVersion:
         """Return the newest known API version (forward-compat fallback).
 
         Returning the GA version (rather than a later preview) is safe as a
@@ -53,7 +52,7 @@ class ApiVersion(str, Enum):
         return cls.V2026_06_01
 
     @classmethod
-    def parse(cls, value: str | "ApiVersion" | None) -> "ApiVersion":
+    def parse(cls, value: str | ApiVersion | None) -> ApiVersion:
         """Coerce a string (or None) to an :class:`ApiVersion`.
 
         Unknown values fall back to :meth:`latest` so the CLI keeps working against
@@ -120,6 +119,20 @@ class ApiVersion(str, Enum):
         ``JsonUnmappedMemberHandling.Disallow``, so this is gated as a deny-list of
         pre-GA versions — any future version added to :class:`ApiVersion` is assumed
         to support it (forward-compat).
+        """
+        return self not in (
+            ApiVersion.V2025_07_01_PREVIEW,
+            ApiVersion.V2025_12_01_PREVIEW,
+            ApiVersion.V2026_02_01_PREVIEW,
+        )
+
+    @property
+    def supports_shm_override(self) -> bool:
+        """True when the api-version accepts ``infraOverrides.shm``.
+
+        Shared-memory overrides were added in 2026-06-01. Unknown future
+        versions fall back to the latest known version and therefore inherit
+        support.
         """
         return self not in (
             ApiVersion.V2025_07_01_PREVIEW,

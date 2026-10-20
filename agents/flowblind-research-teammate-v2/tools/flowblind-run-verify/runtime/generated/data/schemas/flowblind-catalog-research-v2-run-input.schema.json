@@ -1,0 +1,38 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://flowblind.local/schemas/flowblind-catalog-research-v2-run-input.schema.json",
+  "title": "FlowBlind catalog-native research v2 run input",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "researchGoal"
+  ],
+  "properties": {
+    "researchGoal": {
+      "$ref": "#/$defs/text"
+    },
+    "decisionQuestion": {
+      "$ref": "#/$defs/optionalText"
+    },
+    "nextEvidenceIntent": {
+      "$ref": "#/$defs/optionalText"
+    }
+  },
+  "$defs": {
+    "text": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 4096
+    },
+    "optionalText": {
+      "oneOf": [
+        {
+          "$ref": "#/$defs/text"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    }
+  }
+}

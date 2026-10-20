@@ -17,40 +17,68 @@ permissions:
 jobs:
   check-impact:
     name: Check if agent removal breaks starter kits
-    runs-on: ubuntu-latest
-    timeout-minutes: 20
+    runs-on: ubuntu-slim
+    timeout-minutes: 15
     steps:
       - name: Detect relevant changes
         id: changes
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          set -euo pipefail
-          FILES=$(gh api \
-            "repos/${GITHUB_REPOSITORY}/pulls/${{ github.event.pull_request.number }}/files" \
-            --paginate --jq '.[].filename')
-          if echo "$FILES" | grep -E '^agents/' >/dev/null; then
-            echo "relevant=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "relevant=false" >> "$GITHUB_OUTPUT"
-            echo "::notice::No agents/** paths changed; reporting success without running the impact check."
-          fi
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const files = await github.paginate(github.rest.pulls.listFiles, {
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: context.issue.number,
+              per_page: 100,
+            });
+            const relevant = files.some(({ filename }) => filename.startsWith('agents/'));
+            core.setOutput('relevant', String(relevant));
+            if (!relevant) {
+              core.notice('No agents/** paths changed; reporting success without running the impact check.');
+            }
 
-      - name: Checkout PR branch
+      - name: Checkout trusted base
         if: steps.changes.outputs.relevant == 'true'
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
+          ref: ${{ github.event.pull_request.base.sha }}
+          fetch-depth: 1
+          persist-credentials: false
+          path: trusted
+
+      - name: Checkout PR head as data
+        if: steps.changes.outputs.relevant == 'true'
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: ${{ github.event.pull_request.head.repo.full_name }}
+          ref: ${{ github.event.pull_request.head.sha }}
+          allow-unsafe-pr-checkout: true
           fetch-depth: 0
+          persist-credentials: false
+          path: pr
 
       - name: Set up Python
         if: steps.changes.outputs.relevant == 'true'
         uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
-          python-version: "3.11"
+          python-version: "3.12"
 
-      - name: Install dependencies
+      - name: Install trusted validator dependencies
         if: steps.changes.outputs.relevant == 'true'
-        run: pip install pyyaml
+        run: |
+          # check_agent_removal_impact.py imports update_registry, which
+          # requires PyYAML; pin from the trusted base checkout when present.
+          # During the bootstrap window - before this constraints file exists
+          # on the base branch - install unpinned rather than reading the
+          # untrusted PR copy. Self-heals to the pinned path once the PR merges.
+          constraint="trusted/.github/requirements-ci.txt"
+          if [ -f "$constraint" ]; then
+            python -m pip install -c "$constraint" pyyaml
+          else
+            echo "::notice::trusted constraints file absent on base (bootstrap); installing unpinned"
+            python -m pip install pyyaml
+          fi
 
       - name: Detect fork PR
         if: steps.changes.outputs.relevant == 'true'
@@ -69,8 +97,9 @@ jobs:
           if [ "${{ steps.fork.outputs.is_fork }}" = "true" ]; then
             FORK_FLAG="--is-fork"
           fi
-          python .github/scripts/check_agent_removal_impact.py \
-            --repo-root . \
+          python trusted/.github/scripts/check_agent_removal_impact.py \
+            --repo-root pr \
+            --base-registry-root trusted \
             --base-sha "${{ github.event.pull_request.base.sha }}" \
             --pr-number "${{ github.event.pull_request.number }}" \
             --github-token "${{ secrets.GITHUB_TOKEN }}" \

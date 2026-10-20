@@ -8,21 +8,20 @@ This directory contains standalone helper scripts for operators standing up or m
 
 | Utility | What it does | When to run |
 |---|---|---|
-| [`resource-provider-registration/`](resource-provider-registration/) | Registers every Azure resource provider Microsoft Discovery (and its dependencies) needs in a target subscription. Cross-platform PowerShell, auto-installs `Az.Accounts` / `Az.Resources`. | **First step when onboarding a new subscription** to Discovery services. |
-| [`rbac-roles-assignment/`](rbac-roles-assignment/) | Assigns the complete set of Azure RBAC roles required for a Discovery persona (Platform Administrator or Scientist) to one or more users. Validates the executor's permissions, supports batch assignment, handles guest users. | After resource-provider registration, when granting users access to a Discovery services environment. |
+| [`onboarding-tool/`](onboarding-tool/) | Five-stage customer onboarding flow for planning, landing-zone preparation, validation, platform deployment and scenario certification. | Start here for a new Microsoft Discovery customer deployment. Follow the [`USER-GUIDE.md`](onboarding-tool/scripts/USER-GUIDE.md); maintainers use the [`scripts/README.md`](onboarding-tool/scripts/README.md). |
+| [`resource-provider-registration/`](resource-provider-registration/) | Standalone registration of the Azure resource providers Microsoft Discovery needs. Cross-platform PowerShell; auto-installs `Az.Accounts` / `Az.Resources`. | Use when registering providers outside the onboarding tool. Stage 2 already performs this step. |
+| [`rbac-roles-assignment/`](rbac-roles-assignment/) | Standalone assignment of the Azure RBAC roles for a Discovery Platform Administrator or Scientist persona. | Use for access maintenance outside onboarding. Stage 2 and Stage 4 handle onboarding-time assignments. |
 | [`dataasset-migration/`](dataasset-migration/) | Migrates a Discovery v1 `DataContainer` + child `DataAssets` to the v2 `StorageContainer` + `StorageAssets` shape (API `2025-07-01-preview` → `2026-02-01-preview`). Control-plane metadata only — does **not** move blobs. | One-time migration for tenants that onboarded before the v2 storage model. |
 | [`Supercomputer CLI/`](supercomputer-cli/) | Toolkit provides basic access to the Discovery Supercomputer API for submitting and running jobs directly on Supercomputer | Submit jobs directly to the supercomputer |
+| [`agent-evaluation/`](agent-evaluation/) | Copyable Python sample for evaluating a Discovery / Foundry agent: drives the online agent against curated query datasets, captures each response through the workspace data-plane, and scores it with Azure AI Foundry evaluators (retrieval, tool-calling, and shared quality/safety scopes). | Building an automated evaluation pipeline for your own Discovery / Foundry agents. |
 | [`delete-discovery-deployment/`](delete-discovery-deployment/) | Deletes all `Microsoft.Discovery` and supporting Azure resources in a resource group using the `2026-06-01` GA API, in strict dependency order, then removes the empty resource group. Bash script (`az` CLI / `jq` / `curl`), not PowerShell. | Tearing down a Discovery services deployment. **Destructive — deletes resources.** |
 | [`terraform/`](terraform/) | End-to-end Terraform module for a Microsoft Discovery services environment (VNet, UAMI, storage, role assignments, supercomputer, workspace, chat model, project). Uses `hashicorp/azurerm` for platform primitives and `Azure/azapi` (pinned to `Microsoft.Discovery/*@2026-02-01-preview`) for Discovery resources. | Provision a Discovery environment as Infrastructure-as-Code with Terraform instead of the Bicep sample. |
 
-## Common prerequisites
+## Prerequisites
 
-| Requirement | Details |
-|---|---|
-| **PowerShell** | 5.1+ on Windows, 7.x on macOS / Linux. All three utilities are cross-platform. |
-| **Az PowerShell modules** | `Az.Accounts >= 3.0.0`, `Az.Resources >= 7.0.0`. Each script auto-installs them unless `-SkipModuleInstall` is passed. |
-| **Azure sign-in** | Each script invokes `Connect-AzAccount` if no session exists. |
-| **Azure permissions** | Vary per utility — see each tool's README for the exact role required (typically Owner / User Access Administrator for RBAC; Contributor / Owner for provider registration). |
+The utilities do not share one runtime or permission model. Some use PowerShell modules, some use
+Azure CLI, and the deletion utility uses Bash. Open the selected utility's README or user guide
+before signing in or granting access; do not infer onboarding permissions from another utility.
 
 ## Deleting a Discovery deployment
 

@@ -17,7 +17,7 @@
 # ============================================================
 # Stage 1: Builder
 # ============================================================
-FROM ubuntu:24.04 AS builder
+FROM ubuntu:26.04 AS builder
 
 ENV DEBIAN_FRONTEND=noninteractive
 ENV TRILINOS_VERSION=trilinos-release-14-4-0
@@ -104,7 +104,7 @@ RUN mkdir -p /src/xyce-build && cd /src/xyce-build && \
 # ============================================================
 # Stage 2: Runtime
 # ============================================================
-FROM ubuntu:24.04
+FROM ubuntu:26.04
 
 ENV DEBIAN_FRONTEND=noninteractive
 
