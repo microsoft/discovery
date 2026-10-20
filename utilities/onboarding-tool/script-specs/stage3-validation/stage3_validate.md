@@ -7,9 +7,14 @@ Script: `../../scripts/stage3-validation/stage3_validate.ps1`
 One engine that runs the control-plane checks and the optional test-VM harness per service profile, strictly read-only except the ephemeral test VM, and emits JSON plus a human report exiting non-zero on any failure.
 
 ## Inputs
+- `-DryRun` optionally previews actions offline; `-JsonPath` writes plan reports unless `-PassThru` is set.
 - `-ConfigPath <config.json>`, `-Profile supercomputer|workspace|bookshelf`, optional `-WithVm`.
 
 ## Behavior
+- `-DryRun` describes the selected profile's dependency checks and optional `-WithVm`
+  lifecycle offline. No Azure calls, checks or VM operations run. Optional `-JsonPath`
+  writes JSON and Markdown with verdict `PLAN` and `Skip` results; `-PassThru` returns
+  plan results only. Exit 0 means plan generation, not readiness; Stage 4 rejects a plan as a readiness report.
 - Select the per-service dependency set for the chosen profile (see dependency_spec).
 - Run the control-plane checks (read-only), then optionally the test-VM harness.
 - Attach the remediation string to every failed check.
@@ -27,12 +32,14 @@ Confirm the configured NVA is reachable and obtain successful connectivity evide
 required SC subnets before Stage 4; these are customer checks, not enforced script gates.
 
 ## Output
+- Dry run: `Skip` results and optional JSON/Markdown reports with verdict `PLAN`; no VM or readiness evidence.
 - JSON: per-check result with remediation.
 - Human: green/red readiness report naming each failing fix.
 
 ## Exit codes
-- 0 = all checks green.
-- Non-zero = at least one failure (see report).
+- 0 = all live checks green, or offline plan generation succeeds with `-DryRun`.
+- Dry run doesn't prove readiness.
+- Non-zero = a live check fails, or config loading or report writing fails. Config errors appear on the console without a plan.
 
 ## Folded checks
 Each check ran as a separate sub-script before consolidation; the logic now lives in `stage3_validate.ps1`. It reads the profile dependency set from `../../scripts/stage3-validation/dependency-spec.json`.

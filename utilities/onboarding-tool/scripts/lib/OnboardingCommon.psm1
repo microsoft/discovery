@@ -356,7 +356,8 @@ function ConvertTo-OnboardingMarkdown {
     param([Parameter(Mandatory)][object]$Summary)
 
     $emoji = @{ 'Pass' = '✅'; 'Fail' = '❌'; 'Warn' = '⚠️'; 'Skip' = '⏭️'; 'Waived' = '🟡' }
-    $verdictLine = if ($Summary.verdict -eq 'GO') { '✅ **GO** — all checks passed (or were waived).' }
+    $verdictLine = if ($Summary.verdict -eq 'PLAN') { 'PLAN - offline dry run only. No Azure calls were made; readiness and certification are not evaluated.' }
+    elseif ($Summary.verdict -eq 'GO') { '✅ **GO** — all checks passed (or were waived).' }
     else { '❌ **NO-GO** — resolve the failed checks below, then re-run this stage.' }
 
     $sb = [System.Text.StringBuilder]::new()
@@ -452,6 +453,7 @@ function Write-OnboardingReport {
         [Parameter(Mandatory)][string]$Title,
         [string]$JsonPath,
         [string]$ReportPath,
+        [switch]$DryRun,
         [object]$Extra
     )
     $summary = [ordered]@{
@@ -463,7 +465,7 @@ function Write-OnboardingReport {
         warn      = @($Results | Where-Object status -eq 'Warn').Count
         skip      = @($Results | Where-Object status -eq 'Skip').Count
         waived    = @($Results | Where-Object status -eq 'Waived').Count
-        verdict   = if (Test-AnyFailure $Results) { 'NO-GO' } else { 'GO' }
+        verdict   = if ($DryRun) { 'PLAN' } elseif (Test-AnyFailure $Results) { 'NO-GO' } else { 'GO' }
         results   = $Results
     }
     if ($Extra) { $summary['extra'] = $Extra }
@@ -515,6 +517,106 @@ function Write-OnboardingReport {
     }
     if ($ReportPath) { Write-Host ''; Write-Host ("Report: {0}" -f $ReportPath) }
     return $summaryObj
+}
+
+function Write-OnboardingPlan {
+    <#
+    .SYNOPSIS Describe a stage offline without entering its Azure execution path.
+    #>
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory)][ValidateRange(2, 5)][int]$Stage,
+        [Parameter(Mandatory)][string]$ConfigPath,
+        [System.Collections.IDictionary]$Options = @{},
+        [string]$JsonPath,
+        [switch]$PassThru
+    )
+
+    $cfg = Get-OnboardingConfig -Path $ConfigPath
+    $selected = [ordered]@{}
+    foreach ($key in $Options.Keys) {
+        if ($key -notin @('ConfigPath', 'JsonPath', 'PassThru', 'DryRun')) {
+            $value = $Options[$key]
+            $selected[$key] = if ($value -is [System.Management.Automation.SwitchParameter]) { [bool]$value } else { $value }
+        }
+    }
+    $subscription = if ($Stage -eq 4 -and $Options['Recovery'] -and $Options['Subscription']) { $Options['Subscription'] } else { $cfg.subscriptionId }
+    $resourceGroup = Get-OptionalPropertyValue $cfg 'resourceGroup'
+    if (-not $resourceGroup) { $resourceGroup = Get-OptionalPropertyValue (Get-OptionalPropertyValue $cfg 'deployment') 'resourceGroup' }
+    if ($Stage -eq 5 -and -not $resourceGroup) { $resourceGroup = Get-OptionalPropertyValue $cfg 'deploymentResourceGroup' }
+    if (($Stage -eq 5 -or ($Stage -eq 4 -and $Options['Recovery'])) -and $Options['ResourceGroup']) { $resourceGroup = $Options['ResourceGroup'] }
+    $names = [ordered]@{}
+    foreach ($property in $cfg.names.PSObject.Properties) { $names[$property.Name] = $property.Value }
+    foreach ($key in @('Workspace', 'Project', 'ChatModel')) {
+        if (($Stage -eq 5 -or ($Stage -eq 4 -and $Options['Recovery'] -and $key -eq 'Workspace')) -and $Options[$key]) {
+            $names[$key.Substring(0, 1).ToLowerInvariant() + $key.Substring(1)] = $Options[$key]
+        }
+    }
+    $target = [ordered]@{
+        subscriptionId = $subscription
+        resourceGroup = $resourceGroup
+        controlPlaneRegion = $cfg.controlPlaneRegion
+        workloadRegion = $cfg.workloadRegion
+        names = $names
+        network = $cfg.network
+        storage = Get-OptionalPropertyValue $cfg 'storage'
+        rbac = $cfg.rbac
+        options = $selected
+    }
+    $actions = [ordered]@{}
+    switch ($Stage) {
+        2 {
+            $actions['providers'] = 'Register required resource providers and wait for registration.'
+            $actions['rbac'] = "Ensure target resource groups and assign configured roles; human access mode: $($cfg.rbac.humanAccessMode)."
+            $actions['nsp'] = 'Create or update the NSP Perimeter Joiner custom role and assign the Discovery service principal.'
+            $actions['network'] = if ($cfg.network.model -eq 'byo-existing') {
+                'Skip network deployment for byo-existing; existing network readiness is checked in Stage 3.'
+            } else { 'Deploy network.bicep for the configured VNet, subnets, NSG and egress routes; prepare private DNS zones and links.' }
+            $actions['storage'] = 'Validate the pre-created storage account; configure network access, CORS, containers and the selected endpoint model.'
+            $actions['identity'] = 'Assign platform and network roles to the configured managed identity.'
+            $actions['artifacts'] = 'Generate firewall, quota, policy-exemption and any human PIM activation request artifacts during a live run only.'
+        }
+        3 {
+            $profile = if ($Options['Profile']) { [string]$Options['Profile'] } else { 'supercomputer' }
+            $selected['Profile'] = $profile
+            $spec = Get-Content -LiteralPath (Join-Path $PSScriptRoot '..\stage3-validation\dependency-spec.json') -Raw | ConvertFrom-Json -ErrorAction Stop
+            $dependency = $spec.profiles.$profile
+            $target['dependencySet'] = $dependency
+            $actions['dependencies'] = "Load and check the dependency spec for profile '$profile'."
+            foreach ($check in $dependency.checks) { $actions[$check] = "Run $check for profile '$profile'; no check is executed in this plan." }
+            if ($Options['WithVm']) {
+                $actions['testvm'] = "Create a temporary VM, run $($dependency.probeChecks -join ', '), then attempt VM/NIC/disk cleanup. The live -WithVm path has documented release limitations."
+            } else { $actions['testvm'] = 'Skip the test VM harness; -WithVm was not selected.' }
+        }
+        4 {
+            if ($Options['Recovery']) {
+                $actions['recovery'] = 'Inspect the existing workspace and supercomputer, re-PUT the workspace, and poll true state. No other deployment steps are planned.'
+            } else {
+                $actions['readiness'] = 'Evaluate supplied Stage 3 reports and live identity, region and subnet prerequisites before deployment; not evaluated offline.'
+                $actions['deploy'] = 'Deploy supercomputer -> workspace -> chat model -> project storage container -> project, gated on Succeeded. Bookshelf deployment is out of scope.'
+                $actions['foundry'] = 'Assign Foundry roles in the workspace managed resource group using the configured human access mode.'
+                $actions['state'] = 'Verify ARM and Foundry true state; report failures and targeted workspace recovery guidance.'
+            }
+        }
+        5 {
+            $actions['connectivity'] = 'Read workspace public-network access and probe the workspace data plane.'
+            $actions['agent'] = 'Upsert the Q&A agent with no tools, using the selected workspace, project and chat model.'
+            $actions['conversation'] = 'Create an investigation and conversation.'
+            $actions['prompt'] = 'Send the selected scientific prompt and poll for a completed response; live inference can incur charges.'
+            $actions['certification'] = 'Verify non-empty assistant text, service provisioning and project storage DNS; write state, response and certification artifacts during a live run only.'
+        }
+    }
+    $results = @(
+        New-CheckResult -Id "plan-stage$Stage-target" -Name 'Offline plan target' -Status 'Skip' `
+            -Detail "subscription=$subscription; resourceGroup=$resourceGroup; names=$($names | ConvertTo-Json -Compress). No Azure calls; no readiness or certification evidence." -Data $target
+        foreach ($action in $actions.GetEnumerator()) {
+            New-CheckResult -Id "plan-stage$Stage-$($action.Key)" -Name $action.Key -Status 'Skip' `
+                -Detail $action.Value -Data @{ dryRun = $true; executed = $false }
+        }
+    )
+    if ($PassThru) { return $results }
+    $null = Write-OnboardingReport -Results $results -Title "Stage $Stage - offline dry-run plan" -JsonPath $JsonPath -DryRun `
+        -Extra @{ dryRun = $true; stage = $Stage; target = $target; limitations = 'Intent only, not Azure what-if. Existing state, permissions, quota, policy, capacity, connectivity and readiness are not evaluated.' }
 }
 
 function Complete-Stage {
@@ -1030,6 +1132,6 @@ function Get-ModelQuotaResult {
 
 Export-ModuleMember -Function `
     New-CheckResult, Test-AnyFailure, Get-OnboardingConfig, Test-CustomerJitManagedUser, Test-ConfigWaiver, `
-    Invoke-Az, Get-AzJson, Set-PimRoleEligibility, Assert-AzLogin, Write-OnboardingReport, Complete-Stage, `
+    Invoke-Az, Get-AzJson, Set-PimRoleEligibility, Assert-AzLogin, Write-OnboardingReport, Write-OnboardingPlan, Complete-Stage, `
     ConvertTo-UInt32Ip, Get-CidrInfo, Test-CidrContains, Test-CidrOverlap, `
     Resolve-SubnetRole, Test-CanonicalSubnetRole, Get-VcpuQuotaResult, Get-ModelQuotaResult

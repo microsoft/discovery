@@ -10,9 +10,9 @@ no other files are required reading.
 
 ## 1. What the tool does
 
-The tool is a **five-stage pipeline**. Each stage is one PowerShell script. You run them in order,
-and each one either prints a green **GO** verdict and exits `0`, or prints a red **NO-GO** verdict
-with an exact remediation string and exits non-zero.
+The tool is a **five-stage pipeline**. Each stage is one PowerShell script. Run the stages in order.
+Live runs report **GO** with exit `0`, or **NO-GO** with remediation and a non-zero exit.
+Offline dry runs of Stages 2-5 report `PLAN`, not a readiness or certification verdict.
 
 | Stage | Script | What it does | Writes resources? |
 |---|---|---|---|
@@ -28,6 +28,37 @@ anything Stage 1 already captured. Fix Stage 1 before moving on — a bad plan c
 ---
 
 ## 2. Before you start (prerequisites)
+
+### Preview a stage offline
+
+Stages 2-5 accept `-DryRun` with a Stage 1 `config.json`. This mode requires only
+PowerShell 7: no Azure CLI, login or Azure permissions. It reads the config and lists
+intended actions without Azure calls, resource changes, VM creation or inference.
+The tool writes local JSON and Markdown plan reports only when you supply `-JsonPath`.
+
+From the `scripts` directory:
+
+```powershell
+.\stage2-landing-zone\stage2_prepare.ps1 -ConfigPath .\config.json -DryRun -JsonPath .\out\stage2-plan.json
+.\stage3-validation\stage3_validate.ps1 -ConfigPath .\config.json -Profile workspace -DryRun -JsonPath .\out\stage3-plan.json
+.\stage4-deployment\stage4_deploy.ps1 -ConfigPath .\config.json -DryRun -JsonPath .\out\stage4-plan.json
+.\stage5-scenario-enablement\stage5_enable.ps1 -ConfigPath .\config.json -DryRun -JsonPath .\out\stage5-plan.json
+```
+
+The verdict is `PLAN`, not `GO` or certification. Results are `Skip` because nothing
+was executed. Exit `0` means the plan was generated, not that the environment is ready;
+invalid or missing config fails. A Stage 3 plan cannot satisfy Stage 4's readiness gate.
+This is an intent summary, not Azure what-if: existing state, permissions, quota, policy,
+capacity and connectivity are not evaluated. Remove `-DryRun` to execute the stage.
+
+The plan includes stage options such as `-Profile`, `-WithVm`, Stage 4 `-Recovery` and Stage 5 target overrides.
+`-WithVm -DryRun` only describes the VM lifecycle.
+Use `-PassThru` to return plan result objects without printing or writing reports.
+`-PassThru` takes precedence over `-JsonPath` in dry-run mode.
+Dry run checks required config fields and the RBAC mode, not every deployment prerequisite.
+Stage 1 already performs planning and does not accept `-DryRun`.
+
+### Live execution prerequisites
 
 Install and sign in once:
 

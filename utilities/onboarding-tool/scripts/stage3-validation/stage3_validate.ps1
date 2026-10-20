@@ -1,12 +1,19 @@
 #!/usr/bin/env pwsh
 #Requires -Version 7.0
+
 <#
-.SYNOPSIS  Stage 3 / FR3.1-FR3.8 — run infra validation checks (single consolidated script).
+.SYNOPSIS
+    Stage 3 / FR3.1-FR3.8 — run infra validation checks (single consolidated script).
 .DESCRIPTION
     Self-contained headless CLI for read-only control-plane checks, with opt-in test VM probes.
     Consolidates the former dependency_spec / check_* / testvm_lifecycle / probe_* sub-scripts
     into one file. Read-only except the opt-in -WithVm ephemeral probe VM (always torn down).
-    Spec: ../../script-specs/stage3-validation/stage3_validate.md
+.PARAMETER DryRun
+    List profile checks and the selected VM lifecycle offline without Azure calls.
+    Reports use PLAN, not readiness. PassThru returns objects without reports.
+
+.LINK
+    ../../script-specs/stage3-validation/stage3_validate.md
 #>
 [CmdletBinding()]
 param(
@@ -14,9 +21,14 @@ param(
     [string]$JsonPath,
     [ValidateSet('supercomputer', 'workspace', 'bookshelf')][string]$Profile = 'supercomputer',
     [switch]$WithVm,
+    [switch]$DryRun,
     [switch]$PassThru
 )
 Import-Module (Join-Path $PSScriptRoot '..\lib\OnboardingCommon.psm1') -Force
+if ($DryRun) {
+    Write-OnboardingPlan -Stage 3 -ConfigPath $ConfigPath -Options $PSBoundParameters -JsonPath $JsonPath -PassThru:$PassThru -ErrorAction Stop
+    return
+}
 $script:Stage3ScriptRoot = $PSScriptRoot
 $cfg = Get-OnboardingConfig -Path $ConfigPath
 $results = [System.Collections.Generic.List[object]]::new()

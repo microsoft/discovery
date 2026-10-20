@@ -77,6 +77,11 @@ define the behavior that makes those permissions necessary.
 
 These apply to every tool below.
 
+- Stages 2-5 provide an offline `-DryRun` intent plan from the Stage 1 config, without
+  Azure CLI, HTTP calls, resource mutations or inference. Explicit report paths may
+  write local plan reports. Missing or invalid config fails; a generated plan exits 0
+  with `Skip` results and verdict `PLAN`, never `GO` or certification. It cannot satisfy
+  the Stage 3 readiness gate and does not evaluate live state or replace Azure what-if.
 - Config flows forward. Stage 1 emits one machine-readable config (the single source of
   truth); Stages 2–5 consume it. No stage re-asks for what Stage 1 captured.
 - Every failure returns the exact remediation, not just a red mark.
@@ -88,6 +93,17 @@ These apply to every tool below.
   and macOS.
 - Per-service scoping. Supercomputer, workspace, and bookshelf have different
   dependencies; checks and deploys are scoped by service profile, never one blanket pass.
+
+### Offline dry-run acceptance criteria
+
+- Each Stage 2-5 entry point supports `-DryRun` without Azure CLI, authentication or HTTP calls.
+- Plans preserve profile, VM, recovery and target options without executing those actions.
+- `-JsonPath` writes JSON and sibling Markdown with `PLAN`, zero passes and `Skip` results.
+- `-PassThru` returns plan objects without reports, even when `-JsonPath` is supplied.
+- Dry run doesn't create request, state or response artifacts, provision a VM, or submit inference.
+- Missing, malformed or invalid config exits non-zero; successful plan generation exits 0.
+- Stage 4 rejects a Stage 3 `PLAN` report as readiness evidence.
+- Live `GO`/`NO-GO` reporting and existing stage behavior remain unchanged.
 
 ## Requirement priorities
 

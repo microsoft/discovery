@@ -7,6 +7,7 @@ Script: `../../scripts/stage4-deployment/stage4_deploy.ps1`
 Deploy the platform in dependency order and, when a step fails, surface the true cause with a specific remediation instead of a raw ARM error. Supplied Stage 3 reports must be GO; omitting the reports or supercomputer profile coverage only produces a warning. Reports are not bound to the current config, and static GO does not prove working egress. Uses api-version 2026-06-01 for all `Microsoft.Discovery` ARM resources and the workspace data plane.
 
 ## Inputs
+- `-DryRun` optionally previews deployment or recovery offline; `-JsonPath` writes plan reports unless `-PassThru` is set.
 - `-ConfigPath <config.json>`, optional `-ReadinessReport` with one or more GO report paths. Optional `-NoBicep` to force the per-resource ARM PUT sequence, or a custom `-BicepPath` / `-ParametersPath`.
 - Recovery mode: `-Recovery -Subscription <id> -ResourceGroup <name> -Workspace <name>`.
 
@@ -20,17 +21,23 @@ submitting a deployment. A missing workspace is returned as the structured
 The supercomputer `outboundType` comes from the Stage 1 planning decision `network.outboundType` (default `UserDefinedRouting`); it is passed straight through to the `outboundType` template parameter. `UserDefinedRouting` (forced tunneling) requires egress to route through the customer firewall/NVA and a separate management subnet (spare role / `managementSubnet`, delegated to `Microsoft.ContainerService/managedClusters`) passed as `managementSubnetId` for AKS API-server VNet integration. With `LoadBalancer`, `managementSubnetId` is omitted. The managedcluster subnet itself must never be delegated; the `deploy-subnet-topology` pre-flight enforces both rules before submit.
 
 ## Behavior
+- `-DryRun` describes deployment or targeted `-Recovery` offline, before login, readiness
+  gates, Bicep or ARM execution. It makes no Azure calls and is not Azure what-if.
+  Optional `-JsonPath` writes JSON and Markdown with verdict `PLAN` and `Skip` results;
+  `-PassThru` returns plan results only. Exit 0 means plan generation, not deployment success.
 - Deploy in order, gating each on Succeeded, then run true-state detection and, on failure, the error-remediation engine.
 - Log resource, provisioning state, and matched remediation; exit non-zero (FR4.6).
 - Offer the targeted re-PUT recovery path for a workspace-only failure.
 
 ## Output
+- Dry run: `Skip` results and optional JSON/Markdown reports with verdict `PLAN`; no Bicep submission or ARM changes.
 - JSON: per-step resource + state + remediation.
 - Human: ordered deploy log with the go/no-go at each gate.
 
 ## Exit codes
-- 0 = all steps green.
-- Non-zero = at least one failure (see report).
+- 0 = all live steps green, or offline plan generation succeeds with `-DryRun`.
+- Dry run doesn't prove deployment success.
+- Non-zero = a live step fails, or config loading or report writing fails. Config errors appear on the console without a plan.
 
 ## Folded steps
 Each concern ran as a separate sub-script before consolidation; the logic now lives in `stage4_deploy.ps1`. This stage and Stage 2 are the only writers of platform resources.

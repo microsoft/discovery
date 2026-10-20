@@ -1,13 +1,26 @@
 #!/usr/bin/env pwsh
 #Requires -Version 7.0
+
 <#
-.SYNOPSIS  Stage 5 / FR5.3-FR5.7 — run agent Q&A certification end to end.
-.DESCRIPTION Orchestrates agent creation (no tool), investigation/conversation, prompt polling, response verification, and summary. Spec: ../../script-specs/stage5-scenario-enablement/stage5_enable.md
+.SYNOPSIS
+    Stage 5 / FR5.3-FR5.7 — run agent Q&A certification end to end.
+.DESCRIPTION
+    Orchestrates agent creation (no tool), investigation/conversation, prompt polling,
+    response verification, and summary.
+.PARAMETER DryRun
+    List intended actions offline without Azure calls, inference or state artifacts.
+    Reports use PLAN, never certification. PassThru returns objects without reports.
+.PARAMETER PassThru
+    Return result objects instead of writing the final report or invoking the exit gate.
+.LINK
+    ../../script-specs/stage5-scenario-enablement/stage5_enable.md
 #>
 [CmdletBinding()]
 param(
     [Parameter(Mandatory)][string]$ConfigPath,
     [string]$JsonPath,
+    [switch]$DryRun,
+    [switch]$PassThru,
     [string]$ResourceGroup,
     [string]$Workspace,
     [string]$Project,
@@ -15,6 +28,10 @@ param(
     [string]$Prompt
 )
 Import-Module (Join-Path $PSScriptRoot '..\lib\OnboardingCommon.psm1') -Force
+if ($DryRun) {
+    Write-OnboardingPlan -Stage 5 -ConfigPath $ConfigPath -Options $PSBoundParameters -JsonPath $JsonPath -PassThru:$PassThru -ErrorAction Stop
+    return
+}
 
 function Get-CfgString { param([object]$Object, [string]$Name, [string]$Default = '') if ($Object -and $Object.PSObject.Properties.Name -contains $Name -and $Object.$Name) { [string]$Object.$Name } else { $Default } }
 function Add-Many { param([object[]]$Items) foreach ($i in @($Items)) { $results.Add($i) } }
@@ -577,5 +594,6 @@ $certified = -not (Has-Fail $results.ToArray()) -and [bool]$state.responseReceiv
 $results.Add((New-CheckResult -Id 'fr5-certification-verdict' -Name 'Stage 5 certification verdict' -Status ($certified ? 'Pass' : 'Fail') -Fr 'FR5.3-FR5.7' -Detail ($certified ? 'CERTIFIED' : 'NOT CERTIFIED') -Remediation ($certified ? '' : 'Any failed check blocks certification; a run without an agent answer is not certified.') -Data ([pscustomobject]@{ verdict = ($certified ? 'CERTIFIED' : 'NOT CERTIFIED'); stateFile = $statePath; responsePath = $responsePath })))
 
 $extra = [pscustomobject]@{ verdict = ($certified ? 'CERTIFIED' : 'NOT CERTIFIED'); stateFile = $statePath; responsePath = $responsePath }
+if ($PassThru) { return $results.ToArray() }
 $null = Write-OnboardingReport -Results $results.ToArray() -Title 'Stage 5 · agent Q&A certification (FR5.3-FR5.7)' -JsonPath $JsonPath -Extra $extra
 Complete-Stage -Results $results.ToArray()

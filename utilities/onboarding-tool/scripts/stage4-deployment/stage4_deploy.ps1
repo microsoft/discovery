@@ -1,18 +1,26 @@
 #!/usr/bin/env pwsh
 #Requires -Version 7.0
+
 <#
-.SYNOPSIS  Stage 4 / FR4.1 - orchestrate Discovery platform deployment.
+.SYNOPSIS
+    Stage 4 / FR4.1 - orchestrate Discovery platform deployment.
 .DESCRIPTION
     Gates on Stage 3 readiness when provided, asserts Azure login, runs the
     ordered Stage 4 deployer, and surfaces recovery guidance for workspace-only
     failures. Single self-contained Stage 4 script folding in deploy_order.ps1,
     error_remediation_engine.ps1, true_state_detection.ps1, and recovery_reput.ps1.
-    Spec: ../../script-specs/stage4-deployment/stage4_deploy.md
+.PARAMETER DryRun
+    List deployment or Recovery actions offline without Azure calls or Bicep execution.
+    Reports use PLAN, not GO. PassThru returns objects without reports.
+
+.LINK
+    ../../script-specs/stage4-deployment/stage4_deploy.md
 #>
 [CmdletBinding()]
 param(
     [Parameter(Mandatory)][string]$ConfigPath,
     [string]$JsonPath,
+    [switch]$DryRun,
     [switch]$PassThru,
     [string]$BicepPath,
     [string]$ParametersPath,
@@ -24,6 +32,10 @@ param(
     [string]$Workspace
 )
 Import-Module (Join-Path $PSScriptRoot '..\lib\OnboardingCommon.psm1') -Force
+if ($DryRun) {
+    Write-OnboardingPlan -Stage 4 -ConfigPath $ConfigPath -Options $PSBoundParameters -JsonPath $JsonPath -PassThru:$PassThru -ErrorAction Stop
+    return
+}
 $script:DiscoveryApiVersion = '2026-06-01'
 
 function Get-WorkspacePublicNetworkAccess {
