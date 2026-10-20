@@ -257,7 +257,7 @@ resource "azapi_resource" "outputs_container" {
 }
 
 # -----------------------------------------------------------------------------
-# Role assignments (seven, least-privilege)
+# Role assignments (eight, least-privilege)
 # -----------------------------------------------------------------------------
 resource "azurerm_role_assignment" "workspace_discovery_platform_contributor" {
   scope              = data.azurerm_resource_group.rg.id
@@ -286,10 +286,19 @@ resource "azurerm_role_assignment" "cluster_network_contributor" {
   depends_on = [azurerm_user_assigned_identity.cluster]
 }
 
+resource "azurerm_role_assignment" "cluster_nodepool_network_contributor" {
+  scope              = azurerm_subnet.supercomputer_nodepool.id
+  role_definition_id = "${local.subscription_id_scope}/providers/Microsoft.Authorization/roleDefinitions/${local.role_id_network_contributor}"
+  principal_id       = azurerm_user_assigned_identity.cluster.principal_id
+  principal_type     = "ServicePrincipal"
+
+  depends_on = [azurerm_user_assigned_identity.cluster]
+}
+
 resource "azurerm_role_assignment" "kubelet_managed_identity_operator" {
-  scope              = azurerm_user_assigned_identity.cluster.id
+  scope              = azurerm_user_assigned_identity.kubelet.id
   role_definition_id = "${local.subscription_id_scope}/providers/Microsoft.Authorization/roleDefinitions/${local.role_id_managed_identity_operator}"
-  principal_id       = azurerm_user_assigned_identity.kubelet.principal_id
+  principal_id       = azurerm_user_assigned_identity.cluster.principal_id
   principal_type     = "ServicePrincipal"
 
   depends_on = [
