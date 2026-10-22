@@ -181,7 +181,7 @@ def test_corrupt_base_registry_is_blocking(tmp_path: Path):
 
 @pytest.mark.parametrize("resolution,expected", [
     ("blocked", "blocked"), ("no_removal", "success"), ("deleted_kit", "success"),
-    ("archived", "success"), ("optional", "success"), ("flag_removed", "success"),
+    ("archived", "success"), ("optional", "success"), ("flag_removed", "error"),
     ("replacement", "success"),
     ("renamed_agent", "blocked"), ("rename_replacement", "success"),
 ])
@@ -190,12 +190,29 @@ def test_real_gate_decisions_and_report_contract(tmp_path, monkeypatch, resoluti
     code, report = invoke_gate(monkeypatch, trusted, head)
     assert validate_report(report) is report
     assert report["outcome"] == expected
-    assert code == report["exit_code"] == (1 if expected == "blocked" else 0)
+    assert code == report["exit_code"] == (0 if expected == "success" else 1)
     if expected == "blocked":
         assert report["removed_paths"] == ["agents/old"]
         assert report["impacted_kits"] == [{
             "path": "starter-kits/example", "required_refs": ["agents/old"],
         }]
+
+
+@pytest.mark.parametrize("required", [None, "true", "false", 0, 1, [], {}])
+def test_non_boolean_required_flags_fail_closed(tmp_path, monkeypatch, capsys, required):
+    trusted, head = make_catalog(tmp_path)
+    kit_path = head / "starter-kits" / "example" / "kit.json"
+    manifest = json.loads(kit_path.read_text(encoding="utf-8"))
+    manifest["agentRefs"][0]["required"] = required
+    kit_path.write_text(json.dumps(manifest), encoding="utf-8")
+
+    code, report = invoke_gate(monkeypatch, trusted, head)
+
+    assert validate_report(report) is report
+    assert code == report["exit_code"] == 1
+    assert report["outcome"] == "error"
+    assert str(kit_path) in report["issues"][0]
+    assert "invalid starter-kit manifest" in capsys.readouterr().err
 
 
 @pytest.mark.parametrize("problem", ["missing", "json", "shape", "head", "metadata_io", "kit", "checkout"])

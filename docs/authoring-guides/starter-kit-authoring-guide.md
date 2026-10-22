@@ -231,6 +231,8 @@ When agent paths change, **Check Agent Removal Impact** compares the trusted bas
 registry with valid PR-head metadata and checks the PR's active starter kits.
 Removing or renaming an agent still required by an active kit fails the gate.
 Optional references and archived/deleted kits do not block removal.
+Each reference must have a boolean `required` value. Omitting it or using a
+non-boolean value fails validation; it does not make the reference optional.
 
 Resolve the impact in the same PR by replacing required refs with valid agents,
 making a reference optional where the kit schema permits, or archiving/deleting

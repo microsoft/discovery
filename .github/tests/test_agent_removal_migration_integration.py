@@ -112,9 +112,10 @@ def test_actual_gate_bytes_survive_workflow_handoff_and_reporter(tmp_path, monke
     api.artifacts[0]["size_in_bytes"] = len(api.archive)
     api.jobs[0]["conclusion"] = api.run["conclusion"] = "failure" if code else "success"
     api.publish()
-    expected_failure = case in {"blocked", "fork_override", "error"}
+    expected_error = case in {"flag_removed", "error"}
+    expected_failure = case in {"blocked", "fork_override"} or expected_error
     assert code == (1 if expected_failure else 0)
-    assert report["outcome"] == ("error" if case == "error" else "blocked" if expected_failure else "success")
+    assert report["outcome"] == ("error" if expected_error else "blocked" if expected_failure else "success")
     assert [(method, path) for method, path, _ in api.writes] == (
         [("POST", f"{ROOT}/issues/17/comments")] if expected_failure else []
     )

@@ -211,6 +211,7 @@ def get_active_kits(repo_root: Path) -> list[tuple[str, dict]]:
         if not plugin_path.exists():
             continue
         manifest = load_json(plugin_path)
+        if (
             not isinstance(manifest, dict)
             or not isinstance(manifest.get("agentRefs", []), list)
             or not all(
