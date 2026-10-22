@@ -216,7 +216,10 @@ def test_cancelled_and_superseded_runs_do_not_publish(change):
     elif change == "deleted_fork":
         api.run["head_repository"] = None
     else:
-        api.runs.append({**api.run, "id": 13, "run_number": 11, "status": "in_progress"})
+        api.runs.append({
+            **api.run, "id": 13, "run_number": 11, "status": "in_progress",
+            "pull_requests": [{"number": 17, "base": {"ref": "main"}}],
+        })
     api.publish()
     assert not api.writes
 
@@ -225,6 +228,21 @@ def test_newer_run_from_another_fork_cannot_suppress_reporting():
     api = FakeGitHub()
     api.runs.append({
         **api.run, "id": 13, "run_number": 11, "head_repository": {"id": 999},
+    })
+    api.publish()
+    assert api.writes
+
+
+@pytest.mark.parametrize("association", [
+    {"number": 18, "base": {"ref": "main"}},
+    {"number": 17, "base": {"ref": "release/catalog"}},
+    {},
+])
+def test_newer_run_for_another_pr_or_base_cannot_suppress_reporting(association):
+    api = FakeGitHub()
+    api.runs.append({
+        **api.run, "id": 13, "run_number": 11,
+        "pull_requests": [association],
     })
     api.publish()
     assert api.writes
@@ -242,7 +260,10 @@ def test_freshness_is_rechecked_after_downloading_untrusted_data(change):
         elif change == "attempt":
             api.run["run_attempt"] = 2
         else:
-            api.runs.append({**api.run, "id": 13, "run_number": 11})
+            api.runs.append({
+                **api.run, "id": 13, "run_number": 11,
+                "pull_requests": [{"number": 17, "base": {"ref": "main"}}],
+            })
 
     api.on_download = supersede
     api.publish()

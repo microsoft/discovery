@@ -204,6 +204,12 @@ def is_current(
         candidate["run_number"] > run["run_number"]
         and (candidate.get("head_repository") or {}).get("id") == run["head_repository"]["id"]
         and candidate["head_branch"] == run["head_branch"]
+        and any(
+            association.get("number") == pr["number"]
+            and (association.get("base") or {}).get("ref") == pr["base"]["ref"]
+            for association in candidate.get("pull_requests", [])
+            if isinstance(association, dict)
+        )
         for candidate in runs
     ):
         print("::notice::Skipping feedback because a newer validation run exists.")

@@ -166,7 +166,10 @@ def test_stale_sources_skip_without_writes(change, after_download):
         elif change == "deleted":
             api.run["head_repository"] = None
         else:
-            api.runs.append({**api.run, "id": 13, "run_number": 11})
+            api.runs.append({
+                **api.run, "id": 13, "run_number": 11,
+                "pull_requests": [{"number": 17, "base": {"ref": "main"}}],
+            })
     if after_download:
         api.on_download = supersede
     else:
