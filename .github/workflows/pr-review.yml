@@ -1,7 +1,7 @@
 name: PR Review
 
 on:
-  pull_request_target:
+  pull_request:
     branches: [main]
     types: [opened, synchronize, reopened]
 
@@ -10,7 +10,8 @@ concurrency:
   group: pr-review-${{ github.event.pull_request.number }}
   cancel-in-progress: true
 
-# Read-only by default. Only post-results receives PR/issue write access.
+# Read-only validation of PR data; fork-run approval policies still apply.
+# Diagnostic PR writes live in the separate pr-review-report.yml workflow.
 permissions:
   contents: read
   pull-requests: read
@@ -29,8 +30,7 @@ jobs:
       author_permission: ${{ steps.author_permission.outputs.permission }}
       author_association: ${{ steps.author_permission.outputs.association }}
     steps:
-      # Do not check out attacker-controlled PR content in this privileged
-      # pull_request_target workflow. The API supplies the authoritative list.
+      # The API supplies the authoritative changed-file list without a checkout.
       - name: Get and classify changed files
         id: changed
         uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
@@ -121,13 +121,9 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     needs: classify
-    outputs:
-      passed: ${{ steps.run_validator.outputs.passed }}
-      results_json: ${{ steps.run_validator.outputs.results_json }}
     steps:
-      # B11 hardening: under `pull_request_target` the workflow runs with a
-      # token that can write to the repo. We never want to execute code from
-      # the PR with that token. Two-checkout pattern:
+      # Keep validator code separate from the PR content even with a read-only
+      # token. Two-checkout pattern:
       #   1. `trusted/` — base SHA, source of the validator scripts.
       #   2. `pr/`      — PR head, the untrusted *content* the validator scans.
       # The runner only ever invokes Python that lives under `trusted/`.
@@ -144,7 +140,6 @@ jobs:
         with:
           repository: ${{ github.event.pull_request.head.repo.full_name }}
           ref: ${{ github.event.pull_request.head.sha }}
-          allow-unsafe-pr-checkout: true
           fetch-depth: 0
           lfs: true
           path: pr
@@ -157,10 +152,9 @@ jobs:
 
       - name: Install dependencies
         run: |
-          # Pin CI dependency versions from the trusted base checkout. During
-          # the bootstrap window - before this constraints file exists on the
-          # base branch - install unpinned rather than reading the untrusted PR
-          # copy. This self-heals to the pinned path once the PR merges.
+          # Use trusted base constraints, never the PR's requirements. The
+          # legacy fallback is unpinned if that base lacks the constraints file;
+          # prepare the trusted base before deploying validator changes.
           constraint="trusted/.github/requirements-ci.txt"
           if [ -f "$constraint" ]; then
             python -m pip install -c "$constraint" codespell dnspython jsonschema onnx picklescan pyyaml referencing
@@ -215,16 +209,8 @@ jobs:
           fi
 
           PASSED=$(python -c "import json; d=json.load(open('/tmp/validation-results.json')); print('true' if d['passed'] else 'false')")
-          RESULTS=$(cat /tmp/validation-results.json)
-          {
-            echo "passed=$PASSED"
-            echo "results_json<<EOF"
-            echo "$RESULTS"
-            echo "EOF"
-          } >> "$GITHUB_OUTPUT"
-
           # Fail the job so the GitHub check shows red when validation issues are found.
-          # post-results uses if: !cancelled() so it still runs to post feedback comments on failure.
+          # post-results still hands failure diagnostics to the reporting workflow.
           if [[ "$PASSED" == "false" ]]; then
             exit 1
           fi
@@ -260,6 +246,8 @@ jobs:
         with:
           name: validation-results
           path: /tmp/validation-results.json
+          overwrite: true
+          if-no-files-found: error
 
       - name: Upload spellcheck results
         if: always()
@@ -268,6 +256,7 @@ jobs:
           name: spellcheck-results
           path: /tmp/spellcheck-results.json
           if-no-files-found: ignore
+          overwrite: true
 
   # ── Stage 5: Secret scan ───────────────────────────────────────────────────
   secret-scan:
@@ -354,245 +343,32 @@ jobs:
           name: trufflehog-audit-results
           path: /tmp/trufflehog-audit.json
           if-no-files-found: ignore
+          overwrite: true
 
-  # ── Post results: labels + inline comments + summary ──────────────────────
+  # Keep this required check on the PR: workflow_run checks attach to the
+  # default branch. Unlike removal's optional upload, this handoff must fail
+  # if its validation report cannot be downloaded or uploaded.
   post-results:
     name: Post Results
     runs-on: ubuntu-latest
     timeout-minutes: 20
     needs: [classify, validate, secret-scan]
-    # Use !cancelled() instead of always() to avoid zombie queued jobs when a run is cancelled.
-    # always() causes Post Results to queue even for cancelled runs, exhausting the runner pool.
+    # Hand off failures from non-cancelled runs, but do not queue for cancellation.
     if: ${{ !cancelled() }}
-    permissions:
-      contents: read
-      pull-requests: write
-      issues: write
     steps:
       - name: Download validation results
-        id: download
-        continue-on-error: true
         uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           name: validation-results
-          path: /tmp
+          path: ${{ runner.temp }}/pr-review-report
 
-      - name: Create fallback results if artifact missing
-        if: steps.download.outcome == 'failure'
-        run: |
-          echo '{"passed":false,"failure_count":1,"has_agents":false,"has_markdown_only":false,"has_dockerfile":false,"has_code":false,"failures":[{"rule_id":"INTERNAL","file":"(workflow)","line":1,"message":"Validation job was skipped or did not produce results — check the Validate PR job logs for details."}]}' \
-            > /tmp/validation-results.json
-
-      - name: Manage labels and post PR feedback
-        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
+      - name: Publish attempt-scoped reporting data
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          script: |
-            const fs = require('fs');
-            const results = JSON.parse(fs.readFileSync('/tmp/validation-results.json', 'utf8'));
-            const secretScanPassed = '${{ needs.secret-scan.result }}' === 'success';
-            const allPassed = results.passed && secretScanPassed;
-            const hasCatalog = '${{ needs.classify.outputs.has_catalog }}' === 'true';
-            const hasDocsOnly = '${{ needs.classify.outputs.has_docs_only }}' === 'true';
+          name: pr-review-report-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/pr-review-report/validation-results.json
+          if-no-files-found: error
 
-            const pr = context.payload.pull_request;
-            const owner = context.repo.owner;
-            const repo = context.repo.repo;
-            const prNumber = pr.number;
-
-            // ── 1. Refresh bot-managed labels ──────────────────────
-            const BOT_LABELS = [
-              'pr-validation-passed',
-              'pr-validation-failed',
-              '1p-contribution',
-              '3p-contribution',
-              'docs-only',
-              'markdown-only',
-              'contains-dockerfile',
-              'contains-code',
-              'needs-image-review',
-            ];
-
-            const currentLabels = await github.rest.issues.listLabelsOnIssue({
-              owner, repo, issue_number: prNumber
-            });
-            for (const label of currentLabels.data) {
-              if (BOT_LABELS.includes(label.name)) {
-                await github.rest.issues.removeLabel({
-                  owner, repo, issue_number: prNumber, name: label.name
-                });
-              }
-            }
-
-            // ── Helper: ensure a label exists in the repo ──────────
-            const LABEL_DEFS = {
-              'pr-validation-passed':  { color: '0e8a16', description: "The pr-review workflow's validator passed. Other status checks report separately." },
-              'pr-validation-failed':  { color: 'd93f0b', description: "The pr-review workflow's validator failed; see inline comments." },
-              '1p-contribution':          { color: '1d76db', description: "Authored by Microsoft (party='1p' in metadata)" },
-              '3p-contribution':          { color: 'bfd4f2', description: "Authored by a third-party partner (party='3p' in metadata)" },
-              'docs-only':                { color: 'cfd3d7', description: 'PR only modifies files in docs/schemas/' },
-              'markdown-only':             { color: '8250df', description: 'Every file changed by this PR is Markdown' },
-              'contains-dockerfile':       { color: '2496ed', description: 'PR adds, modifies, renames, or removes a Dockerfile' },
-              'contains-code':             { color: '1f883d', description: 'PR includes source-code changes' },
-              'needs-image-review':       { color: 'd4c5f9', description: 'PR adds or modifies image files — a maintainer must inspect them before merge' },
-            };
-            async function ensureLabel(name) {
-              try {
-                await github.rest.issues.getLabel({ owner, repo, name });
-              } catch (e) {
-                if (e.status === 404) {
-                  const def = LABEL_DEFS[name] || { color: 'ededed', description: '' };
-                  await github.rest.issues.createLabel({ owner, repo, name, color: def.color, description: def.description });
-                }
-              }
-            }
-
-            // ── 2. Apply classification labels ─────────────────────
-            // 1p / 3p come from the `party` field inside metadata.yaml / kit.json,
-            // not from folder location.
-            const labelsToAdd = [];
-            if (hasCatalog) {
-              if (results.has_1p) labelsToAdd.push('1p-contribution');
-              if (results.has_3p) labelsToAdd.push('3p-contribution');
-              if (results.has_markdown_only) labelsToAdd.push('markdown-only');
-              if (results.has_dockerfile) labelsToAdd.push('contains-dockerfile');
-              if (results.has_code) labelsToAdd.push('contains-code');
-            } else if (hasDocsOnly) {
-              labelsToAdd.push('docs-only');
-            }
-
-            // Images always get a human look. POL-016 proves a file is the
-            // format it claims to be; it cannot judge whether the picture is
-            // appropriate, correctly licensed, or carries unreviewed text.
-            if (hasCatalog && results.has_images) labelsToAdd.push('needs-image-review');
-
-            // ── 3. Apply pass/fail labels ──────────────────────────
-            if (allPassed) {
-              labelsToAdd.push('pr-validation-passed');
-            } else {
-              labelsToAdd.push('pr-validation-failed');
-            }
-
-            if (labelsToAdd.length > 0) {
-              for (const label of labelsToAdd) { await ensureLabel(label); }
-              await github.rest.issues.addLabels({
-                owner, repo, issue_number: prNumber, labels: labelsToAdd
-              });
-            }
-
-            // ── 4. Post inline review comments (one per failure) ───
-            const failures = results.failures || [];
-            if (failures.length > 0) {
-              const guidanceUrl = (failure) => {
-                if (!failure.docs) return '';
-                return `${context.serverUrl}/${owner}/${repo}/blob/${pr.base.sha}/${failure.docs}`;
-              };
-              const remediation = (failure) => failure.remediation ||
-                'Correct the issue described above, then push the fix to rerun validation.';
-
-              // Create a PR review with inline comments for each failure
-              // We batch all comments into a single review submission so
-              // the submitter gets everything in one pass (DC-AUTO-001).
-              const comments = failures.map(f => ({
-                path: f.file,
-                line: f.line || 1,
-                side: 'RIGHT',
-                body: [
-                  `**[${f.rule_id}]** ${f.message}`,
-                  '',
-                  `**How to fix:** ${remediation(f)}`,
-                  guidanceUrl(f) ? `\n**Guidance:** ${guidanceUrl(f)}` : '',
-                ].filter(Boolean).join('\n')
-              }));
-
-              // GitHub review comments require the file to be in the diff.
-              // Filter to files actually in the diff; remainder go in the summary.
-              const diffFiles = new Set(
-                (await github.rest.pulls.listFiles({ owner, repo, pull_number: prNumber, per_page: 100 }))
-                  .data.map(f => f.filename)
-              );
-
-              const inlineComments = comments.filter(c => diffFiles.has(c.path));
-              const summaryOnlyFailures = failures.filter(f => !diffFiles.has(f.file));
-
-              if (inlineComments.length > 0) {
-                try {
-                  await github.rest.pulls.createReview({
-                    owner,
-                    repo,
-                    pull_number: prNumber,
-                    commit_id: pr.head.sha,
-                    // The required Validate PR status check is the authoritative
-                    // blocker. Use a comment review for inline diagnostics so a
-                    // stale bot review cannot remain as a second merge gate.
-                    event: 'COMMENT',
-                    body: '',
-                    comments: inlineComments
-                  });
-                } catch (e) {
-                  console.log(`Could not post inline review (PR may be locked): ${e.message}`);
-                }
-              }
-
-              // ── 5. Post single summary comment with all issues ──
-              const tableCell = (value) => String(value)
-                .replaceAll('|', '\\|')
-                .replaceAll(/\r?\n/g, '<br>');
-              const rows = failures.map(f => {
-                const location = `${f.file}:${f.line || 1}`;
-                const guidance = guidanceUrl(f)
-                  ? `<br><br>**Guidance:** [Open the authoring guide](${guidanceUrl(f)})`
-                  : '';
-                return `| \`${tableCell(f.rule_id)}\` | \`${tableCell(location)}\` | ${tableCell(f.message)}<br><br>**How to fix:** ${tableCell(remediation(f))}${guidance} |`;
-              }).join('\n');
-
-              const secretRow = !secretScanPassed
-                ? `| \`SEC-SCAN\` | _(repository)_ | Secret scan failed — potential credentials detected. Check the TruffleHog job for details. |`
-                : '';
-
-              const tableRows = [secretRow, rows].filter(Boolean).join('\n');
-              const summary = [
-                `## ❌ Automated Check Results — ${failures.length + (!secretScanPassed ? 1 : 0)} issue(s) found`,
-                '',
-                'All issues are listed below. Please address **all** of them before requesting human review.',
-                '',
-                '| Rule ID | Location | Details |',
-                '|---------|----------|---------|',
-                tableRows,
-                '',
-                '---',
-                'Once all issues are resolved, push a new commit to re-trigger this check.',
-                'When the pr-review validator passes, the `pr-validation-passed` label will be applied and the maintainers will be auto-requested for review. Note: other status checks (unit-tests, schema regression, etc.) report separately — see the full status rollup at the bottom of this PR.',
-                '',
-                '> See the [authoring guides](https://github.com/microsoft/discovery/tree/main/docs/authoring-guides) for end-to-end walkthroughs.',
-              ].join('\n');
-
-              try {
-                await github.rest.issues.createComment({
-                  owner, repo, issue_number: prNumber, body: summary
-                });
-              } catch (e) {
-                // Log but don't fail the job — PR may be locked or bot lacks write access.
-                console.log(`Could not post summary comment (PR may be locked): ${e.message}`);
-              }
-
-            } else if (allPassed) {
-              // ── 5b. Dismiss any previous bot "Request changes" reviews ──
-              try {
-                const reviews = await github.rest.pulls.listReviews({
-                  owner, repo, pull_number: prNumber, per_page: 100
-                });
-                for (const review of reviews.data) {
-                  if (review.state === 'CHANGES_REQUESTED' && review.user.type === 'Bot') {
-                    await github.rest.pulls.dismissReview({
-                      owner, repo, pull_number: prNumber,
-                      review_id: review.id,
-                      message: 'All automated checks now pass — dismissing previous review.'
-                    });
-                  }
-                }
-              } catch (e) {
-                console.log(`Could not dismiss bot reviews: ${e.message}`);
-              }
-
-            }
+      - name: Summarize reporting handoff
+        run: |
+          echo "PR feedback will be published by the separate **PR Review Report** workflow after verifying this run and the current PR head. Required validation checks remain authoritative." >> "$GITHUB_STEP_SUMMARY"

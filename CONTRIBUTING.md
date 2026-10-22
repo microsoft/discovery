@@ -1,148 +1,62 @@
 # Contributing
 
-Thanks for your interest in contributing to **Microsoft Discovery**!
+Thanks for helping improve Microsoft Discovery! You can contribute catalog
+agents, starter kits, and documentation here. The Discovery app's source code
+is not in this repository.
 
-This repository serves **two purposes**:
+## Choose your contribution
 
-1. **Discovery App distribution & community hub.** This repo is the home for the Microsoft Discovery app installer and product documentation. _Source code for Microsoft Discovery itself is not in this repository._
-2. **Discovery Catalog.** This repo is the canonical metadata catalog for AI research **agents** (`agents/<name>/`) and **starter kits** (`starter-kits/<name>/`). Agent code, container images, and model weights live in your own infrastructure; the metadata and documentation that describe them live here.
-
-The rest of this guide explains where each kind of contribution goes and what the PR-time checks expect. If you're new to Microsoft Discovery and want to install and try the app, start with the [end-user docs](docs/discovery-app/) below.
-
----
-
-## Using the Microsoft Discovery app
-
-If you want to install and use the app, start here:
-
-| Doc | What it covers |
-| --- | --- |
-| [`docs/discovery-app/install.md`](docs/discovery-app/install.md) | Prerequisites, download, install, verify, upgrade, uninstall, and a troubleshooting table. |
-| [`docs/discovery-app/quickstart.md`](docs/discovery-app/quickstart.md) | 15-minute conceptual tour — Bookshelves, Tasks, Engines, Notebooks, and the `dx` CLI. |
-| [`docs/discovery-app/feedback.md`](docs/discovery-app/feedback.md) | Where to file bugs, ideas, questions, and feature feedback. |
-
-The remainder of this file is about **contributing** to the catalog (agents and starter kits) via pull request.
-
----
-
-## Where contributions go
-
-Code contributions to the Microsoft Discovery app itself — its plugin, MCP tool, and use-case surfaces — are not handled in this repository (the app's source code lives elsewhere). Conversations about those surfaces happen in **Discussions**. Public contributors may submit catalog content under `agents/` and `starter-kits/`, along with documentation fixes, by pull request. Changes to trusted automation, repository configuration, schemas, generated output, and executable utilities are security-sensitive and require maintainer/CODEOWNER review; public contributors should discuss substantial proposals in **Discussions** before opening a pull request. Every PR runs through an automated review that checks structure, schema conformance, documentation, and secrets; any failures are reported inline on the PR with a remediation hint.
-
-| Type of contribution | Where it goes | Best for |
+| Change | Where to work | Get started |
 | --- | --- | --- |
-| **Idea / feature request** | [Discussions → Ideas](https://techcommunity.microsoft.com/category/azure/discussions/microsoft-discovery-discussions) | "It would be great if…", feedback on what could be better. |
-| **Something you built** | [Discussions → Show and tell](https://techcommunity.microsoft.com/category/azure/discussions/microsoft-discovery-discussions) | Workflows, prompts, notebooks, or anything you've put together on top of Microsoft Discovery. |
-| **Question** | [Discussions → Q&A](https://techcommunity.microsoft.com/category/azure/discussions/microsoft-discovery-discussions) | "How do I…?", "Why does…?" |
-| **Bug** | [Discussions → Bugs](https://techcommunity.microsoft.com/category/azure/discussions/microsoft-discovery-discussions) | The Bug template prompts you for version, repro steps, logs, etc. |
-| **Documentation fix** | Pull request changing Markdown or content under `docs/` | Typos, broken links, clarifications, missing prerequisites. |
-| **New agent** | Pull request adding `agents/<agent-name>/` | A prompt agent + optional Discovery-managed tools. See the [Agent authoring guide](docs/authoring-guides/agent-authoring-guide.md). |
-| **New starter kit** | Pull request adding `starter-kits/<starter-kit-name>/` | A `kit.json` manifest that bundles one or more agents into a launchable kit. See the [Starter-kit authoring guide](docs/authoring-guides/starter-kit-authoring-guide.md). |
-| **Discovery services utility** | Maintainer-authored pull request; public contributors open an [Idea](https://github.com/microsoft/discovery/discussions/categories/ideas) | Operator-facing PowerShell scripts that set up or maintain Discovery services (resource-provider registration, RBAC, data-asset migration). See [`utilities/README.md`](utilities/README.md). |
-| **Schema / workflow change** | Pull request against `docs/schemas/` or `.github/workflows/` — **Microsoft maintainers only** (enforced by CODEOWNERS + branch protection). External contributors should open an **Idea in Discussions** first; a Microsoft maintainer will land the change once it is agreed. | All PRs (including maintainers') come from forks. CODEOWNERS makes schema and workflow edits land only when a maintainer approves. |
-| **Discussion triage / answers** | [Discussions](https://techcommunity.microsoft.com/category/azure/discussions/microsoft-discovery-discussions) | Helping other community members. |
+| Add or update an agent | `agents/<agent-name>/` | [Agent authoring guide](docs/authoring-guides/agent-authoring-guide.md) |
+| Add or update a starter kit | `starter-kits/<kit-name>/` | [Starter-kit authoring guide](docs/authoring-guides/starter-kit-authoring-guide.md) |
+| Fix documentation | The relevant Markdown file or [docs/](docs/) | Make a focused change and check its links. |
 
----
+For product bugs, questions, or ideas, use
+[Discussions](https://techcommunity.microsoft.com/category/azure/discussions/microsoft-discovery-discussions).
+For schema, workflow, or executable utility changes, propose an idea there
+so a Microsoft maintainer can land the agreed change.
 
-## Authoring a catalog PR
+## Quick start
 
-> Applies to agent and starter-kit submissions. Every PR runs through an automated review that enforces structural, schema, policy, documentation, and security checks. Address any failures reported on your PR; the comment includes a rule ID and a remediation hint. Detailed walkthroughs:
->
-> - [Agent authoring guide](docs/authoring-guides/agent-authoring-guide.md)
-> - [Starter-kit authoring guide](docs/authoring-guides/starter-kit-authoring-guide.md)
+1. **Fork this repository** on GitHub. Clone your fork and create a branch,
+   replacing `YOUR-USERNAME` with your GitHub username:
 
-### Quick start
+   ```console
+   git clone https://github.com/YOUR-USERNAME/discovery.git
+   cd discovery
+   git switch -c my-contribution
+   ```
 
-1. **Fork** this repo and create a topic branch on your fork. All PRs — including those by Microsoft maintainers — come from forks.
-2. Add your agent under `agents/<agent-name>/` or your starter kit under `starter-kits/<starter-kit-name>/`. See [Repository layout](#repository-layout) below for the expected file tree.
-3. Open a pull request against `main` and fill out **every** section of the PR template.
-4. Automated checks will run on your PR. If anything fails, the bot adds an inline comment with the rule ID and how to fix it — address every finding before requesting human review.
-5. When the pr-review validator passes, the `pr-validation-passed` label is applied and the [CODEOWNERS](.github/CODEOWNERS) maintainers are auto-requested for review. Other status checks (unit tests, schema regression, etc.) report independently — see the PR status rollup for the full picture. **One CODEOWNERS approval** is required to merge.
+2. **Make changes.** Follow the
+   [agent authoring guide](docs/authoring-guides/agent-authoring-guide.md) or
+   [starter-kit authoring guide](docs/authoring-guides/starter-kit-authoring-guide.md)
+   for required files, naming, and examples.
+3. **Check your work** using the checklist below. If you include tool code,
+   test it in your own isolated environment or CI before submission.
+4. **Commit and push your branch**, then open a pull request against `main`.
+   Complete the [PR template](.github/pull_request_template.md) and explain what
+   changed and how you tested it. You can change your PR status to draft so that you get
+   the benefit of the checks, without triggering a review.
+5. **Respond to feedback.** Check the PR's status checks and run logs, address
+   findings, and push follow-up commits to the same branch.
 
-The PR review also spellchecks changed agent and starter-kit prose. `SPELL-001`
-annotations are advisory warnings: they never block merge, and code, identifiers,
-URLs, and fenced Markdown examples are excluded from the check.
+## Before opening your PR
 
-After merge, the weekly catalog audit reruns the modular rules across the full
-catalog and runs Microsoft Security DevOps over `agents/` and `starter-kits/`.
-URLhaus/PhishTank reputation lookups and Docker Scout base-image CVE scans are
-staged but currently disabled until their credentials, provider access, and
-representative runs are validated.
+- [ ] Follow the relevant authoring guide and include the required documentation.
+- [ ] Check examples, Markdown links, and images.
+- [ ] Remove secrets, customer data, unfinished placeholders, and editor/build artifacts.
+- [ ] Do not hand-edit [.auto-registry/](.auto-registry/); generated registry updates are handled separately.
 
-### Required files
+## What happens next?
 
-#### For an agent (`agents/<agent-name>/`)
+Some fork runs need maintainer authorization. Resolve merge conflicts and
+address check failures or review comments. A maintainer reviews and merges
+your PR once the required checks and approvals are satisfied.
 
-| File | Purpose | Schema |
-|------|---------|--------|
-| `metadata.yaml` | Identity, publisher info, tags, optional `publisher.party` (`1p` / `3p`) | [`docs/schemas/metadata-schema.json`](docs/schemas/metadata-schema.json) |
-| `agent.yaml` | Prompt-agent definition (`kind: prompt` only) | [`docs/schemas/agent-schema-v2.json`](docs/schemas/agent-schema-v2.json) |
-| `README.md` | Usage guide — must contain `## Overview`, `## Usage`, `## Prerequisites`, `## Architecture`, `## Configuration`, `## Known Limitations`, and `## Contributing` sections | n/a |
-| `tools/<tool-name>/tool.yaml` (optional) | Discovery-managed tool definition | [`docs/schemas/tool-definition-schema.json`](docs/schemas/tool-definition-schema.json) |
-| `tools/<tool-name>/Dockerfile` (optional) | Container build for the tool | n/a |
-
-#### For a starter kit (`starter-kits/<starter-kit-name>/`)
-
-The kit folder must contain `kit.json` and may also contain Markdown documentation
-and compliant local images. Catalog-card `logo` and `screenshots` fields must
-still reference HTTPS URLs.
-
-| File | Purpose | Schema |
-|------|---------|--------|
-| `kit.json` | Kit manifest — `agentRefs`, `defaultPrompts`, `samplePrompts`, optional `party` (`1p` / `3p`) | [`docs/schemas/starter-kit-schema.json`](docs/schemas/starter-kit-schema.json) |
-
-### Authoring checklist
-
-Before opening a PR, verify:
-
-- [ ] Folder name matches `metadata.yaml.name` (or `kit.json.name`).
-- [ ] `version` follows SemVer (`MAJOR.MINOR.PATCH`).
-- [ ] `tags` are lowercase, hyphen-separated, and non-empty.
-- [ ] Contact email domains resolve in DNS and webpage URLs return public HTML pages over HTTPS.
-- [ ] `README.md` includes all required sections.
-- [ ] No placeholder markers (`TODO`, `FIXME`, `XXX`) in metadata, agent definition, or README.
-- [ ] No duplicate mapping keys in any YAML file.
-- [ ] No hidden / OS artefacts (`.DS_Store`, `.env`, `*.swp`, `.idea/`, `.vs/`, etc.).
-- [ ] No hand-edits to `.auto-registry/**` — the registries are rebuilt automatically after merge.
-- [ ] If your agent depends on Discovery-managed tools, `agent.yaml.discoveryExtensions.tools[]` declares them.
-- [ ] If model-weight files are added, they are Git-LFS tracked, ≤5 GB each, and in an allowed format.
-
-### Schema changes
-
-> **Microsoft maintainers only.** Edits under `docs/schemas/` define the contract every agent and kit in the repo must satisfy. **This is enforced by `.github/CODEOWNERS` plus branch protection's "Require review from Code Owners"** — a schema PR cannot land without a Microsoft maintainer's approval, regardless of who opened it. If you are an external contributor and need a schema change, please [open an Idea in Discussions](https://techcommunity.microsoft.com/category/azure/discussions/microsoft-discovery-discussions) describing the use case so a Microsoft maintainer can land the change.
-
-### Test model
-
-Repository-owned validator tests live under `.github/tests/` and run together in
-the `Unit Tests` workflow with `python -m pytest .github/tests/ -v`. This suite
-covers agents and starter kits through trusted schema, policy, registry, and
-validator code.
-
-Agent tool authors may place focused `test_*.py` or `*_test.py` files beside a
-tool. The registry records their presence as `auto:has-tests`, but privileged PR
-workflows do not execute submitted test code. Tool tests may invoke subprocesses,
-download models, require GPUs, or otherwise cross the untrusted-code boundary;
-authors must run them in their own isolated environment or CI before submission.
-
-Starter-kit folders cannot contain test files. They may contain `kit.json`,
-Markdown documentation, and compliant Markdown images; behavior is covered by
-the trusted schema-security and starter-kit validator suites instead.
-
----
-
-## Repository layout
-
-For the full repository layout — `agents/`, `starter-kits/`, `.auto-registry/`, `docs/`, `.github/`, and where each schema and script lives — see the **"Repository layout" section of [`README.md`](README.md)**.
-
-Two things to remember as a contributor:
-
-- Both `agents/` and `starter-kits/` use a **flat layout**: one folder per agent or kit directly under the parent directory — no `microsoft/` or `partners/` levels.
-- A starter-kit folder may contain `kit.json`, Markdown documentation, and
-  compliant local PNG, JPEG, GIF, WebP, or inert SVG images. Local images must
-  be at most 1 MiB and referenced by Markdown in the same kit; catalog-card
-  `logo` and `screenshots` fields remain HTTPS URLs.
-
----
+For the PR lifecycle, automated checks, diagnostic feedback, and test model, see
+[Pull request workflow and checks](.github/workflows/README.md#pull-request-validation-and-feedback).
+You do not need to configure these workflows to contribute catalog content.
 
 ## Contributor License Agreement
 
@@ -156,4 +70,5 @@ This project has adopted the [Microsoft Open Source Code of Conduct](https://ope
 
 ## Reporting security issues
 
-Please do **not** file public GitHub issues or Discussions for security reports. See [`SECURITY.md`](SECURITY.md) for the coordinated-disclosure process and contact address.
+Please do **not** file public GitHub issues or Discussions for security reports.
+See [SECURITY.md](SECURITY.md) for the coordinated-disclosure process and contact address.

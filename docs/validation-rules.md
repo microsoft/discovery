@@ -2,9 +2,14 @@
 
 # Validation rules
 
-Automated checks that run on every pull request touching `agents/` or
-`starter-kits/`. Each rule reports with its ID, so a failure comment
-points straight at the section below.
+For PRs to `main`, **PR Review** runs catalog checks with read-only
+permissions. **PR Review Report** publishes diagnostic feedback separately
+and asynchronously; available rule comments include IDs pointing to the
+sections below. Required checks and source run logs remain authoritative
+if feedback is unavailable.
+
+See the [workflow overview](../.github/workflows/README.md#pull-request-validation-and-feedback)
+for the independent removal gate, reporting boundaries, and review requirements.
 
 Two escape hatches exist, and neither is a way to skip review:
 

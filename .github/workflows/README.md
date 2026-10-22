@@ -1,4 +1,122 @@
-# Release refresh automation
+# GitHub Actions workflows
+
+## Pull request validation and feedback
+
+### What happens to a pull request
+
+Open a PR from your fork against `main`, complete the
+[PR template](../pull_request_template.md), and follow the CLA bot's instructions.
+Fork runs may need maintainer authorization; resolve merge conflicts before
+`pull_request` checks can run.
+
+Read the required check results and their source run logs. **PR Review Report**
+publishes feedback asynchronously: inline rule comments where locations are
+available, summaries for other findings, and diagnostic labels. Setup/reporting
+failures may leave only run logs. Address findings in follow-up commits.
+
+GitHub requests review according to [CODEOWNERS](../CODEOWNERS), independently
+of diagnostic labels. At least one CODEOWNERS approval and all other configured
+review requirements must be satisfied. A maintainer then merges the PR or
+enables GitHub's native auto-merge.
+
+### Workflow responsibilities
+
+PR validation and diagnostic publishing run in separate trust contexts:
+
+| Workflow | Trigger and scope | Responsibility |
+| --- | --- | --- |
+| [PR Review](pr-review.yml) | `pull_request` to `main`: opened, synchronize, reopened | Read-only classification, catalog validation, secret scanning, and required report handoff. |
+| [Check Agent Removal Impact](check-agent-removal-impact.yml) | `pull_request` to any base branch: opened, synchronize, reopened | Read-only removal gate; skips validation only after successfully classifying the PR as unrelated to agent paths. |
+| [PR Review Report](pr-review-report.yml) | Completed `workflow_run` for either source above | Verifies the source run, current PR head, jobs, and bounded artifact before publishing diagnostic feedback. Executes only trusted default-branch code. |
+| [Update Registry](update-registry.yml) | Relevant catalog pushes to `main`, or manual dispatch | Rebuilds generated registries and proposes changes in a separate PR using the registry App. Human review and maintainer-controlled merging still apply. |
+
+The source workflows use contents/PR read permissions and trusted base-SHA
+validators, with the exact PR head checked out separately as data. Fork approval
+policies apply, and merge conflicts must be resolved before `pull_request`
+checks run. Neither source uses `pull_request_target` or an unsafe-checkout
+exception.
+
+Keep the existing required-check names: **Classify Changed Paths**, **Validate
+PR**, **Secret Scan**, **Post Results**, and **Check if agent removal breaks
+starter kits**. Do not add **Publish PR Feedback** as a required PR check:
+`workflow_run` checks are associated with the default branch, not the source
+PR head. Actual enforcement is configured in GitHub, not by this README.
+
+### Reporting artifacts and failures
+
+| Source | Attempt-scoped artifact | Single JSON member | Upload failure |
+| --- | --- | --- | --- |
+| PR Review | `pr-review-report-<run_attempt>` | `validation-results.json` | Fails the required **Post Results** handoff. |
+| Agent removal | `agent-removal-report-<run_attempt>` | `agent-removal-results.json` | Warns without rewriting the independently computed gate decision; missing data fails reporting. |
+
+Feedback is asynchronous and may be absent after cancellation, runner loss,
+missing artifacts, or a reporting error. Consult source checks and logs rather
+than waiting for a comment or label. PR Review's `pr-validation-passed` label
+does not summarize removal, unit-test, or schema checks. Only its reporting
+profile manages diagnostic labels and inline `COMMENT` reviews. Removal
+reporting posts summary comments for blocked/error results and makes no writes
+for success/no-op results. Neither profile approves, dismisses reviews, or merges.
+
+The former auto-merge enrollment and release-manifest approval workflow is
+retired. Maintainers merge PRs or enable GitHub's native auto-merge after the
+required checks and human/CODEOWNER reviews are satisfied. Registry App
+credentials are still needed to create registry refresh PRs.
+
+See the [trust boundary and staged rollout](../../docs/actions-execution-policy.md)
+before deploying changes to base-SHA validators, and
+[workflow testing and troubleshooting](../../docs/validation-workflow-testing.md)
+for local fixtures, optional branch-only runs, and missing feedback. The retired
+event-exception payload does not remove any policy previously applied in GitHub;
+administrator cleanup is separate.
+
+### Validation details and test model
+
+Catalog checks cover structure, schemas, policy, documentation, and security.
+The [agent](../../docs/authoring-guides/agent-authoring-guide.md) and
+[starter-kit](../../docs/authoring-guides/starter-kit-authoring-guide.md)
+authoring guides describe required files and content constraints. The
+[validation rule reference](../../docs/validation-rules.md) explains rule IDs
+and remediation.
+
+Changed agent and starter-kit prose is also spellchecked. `SPELL-001`
+annotations are advisory warnings: they never block merge. Code, identifiers,
+URLs, and fenced Markdown examples are excluded.
+
+Repository-owned validator tests live under [`.github/tests/`](../tests/) and
+run in the **Unit Tests** workflow. They cover agents and starter kits through
+trusted schema, policy, registry, and validator code. A local test command is:
+
+```powershell
+python -m pytest .github\tests\ -v
+```
+
+Agent tool authors may place focused `test_*.py` or `*_test.py` files beside a
+tool. The registry records their presence as `auto:has-tests`, but catalog PR
+validation does not execute submitted tool tests. Those tests may invoke
+subprocesses, download models, or require GPUs; run them in your own isolated
+environment or CI before submission.
+
+Starter-kit folders cannot contain test files. They may contain `kit.json`,
+Markdown documentation, and compliant Markdown images. Trusted schema-security
+and starter-kit validator suites cover their behavior instead.
+
+See [validation workflow testing](../../docs/validation-workflow-testing.md)
+for focused test commands and optional candidate-branch Linux runs.
+
+### After merge
+
+The weekly catalog audit reruns the modular rules across the full catalog and
+runs Microsoft Security DevOps over `agents/` and `starter-kits/`.
+URLhaus/PhishTank reputation lookups and Docker Scout base-image CVE scans are
+staged but currently disabled until their credentials, provider access, and
+representative runs are validated. See the
+[security process](../../SECURITY.md#repository-security-process) for ownership
+and promotion criteria.
+
+Catalog changes can also trigger **Update Registry**. Generated updates reach
+`main` through a separate reviewed registry PR, not automatic merging.
+
+## Release refresh automation
 
 Three workflows work together to keep the mutable `current` tag, the
 `Discovery-app-preview-release` GitHub Release, and the download table in
@@ -8,7 +126,7 @@ displays `published_at`, so the point of this automation is to keep that
 timestamp fresh — the previous rolling release was showing "2 months ago"
 even after the tag had been moved forward.
 
-## The pieces
+### The pieces
 
 | Workflow | Purpose | Triggers |
 | --- | --- | --- |
@@ -20,7 +138,7 @@ Both trigger paths funnel into the same worker (`refresh-current.yml`), so
 adding the ADO event trigger later is additive — no changes to the poll
 workflow are required.
 
-## Release asset policy
+### Release asset policy
 
 The release refresh must not upload installer files or any other custom
 assets to the GitHub Release. Download links remain the stable `aka.ms`
@@ -32,7 +150,7 @@ for every release backed by a git tag. Those two generated links cannot be
 removed independently while `current` remains a tag-backed release. They are
 not uploaded assets and do not contain the Windows installer binaries.
 
-## How the probe knows a new version shipped
+### How the probe knows a new version shipped
 
 `aka.ms/discovery/download/current` 301-redirects to a versioned filename on
 Azure Front Door:
@@ -55,7 +173,7 @@ The probe:
    exists on the remote (debounce) — it calls `gh workflow run
    refresh-current.yml` with the three parsed inputs.
 
-## Repository and branch guard
+### Repository and branch guard
 
 GitHub evaluates `schedule` workflows from each repository's default branch,
 including forks where Actions and scheduled workflows are enabled. The probe
@@ -64,7 +182,7 @@ and `github.ref == 'refs/heads/main'`. A scheduled run may still appear in a
 fork's Actions history, but it performs no steps and completes successfully.
 Manual dispatches from non-`main` refs are skipped in the same way.
 
-## Manual trigger
+### Manual trigger
 
 You can always run either workflow by hand from the
 [Actions tab](https://github.com/microsoft/discovery/actions):
@@ -75,7 +193,7 @@ You can always run either workflow by hand from the
 - **Probe aka.ms Discovery download** — runs the poll immediately without
    waiting for the next hourly schedule tick.
 
-## Local test helpers
+### Local test helpers
 
 Two PowerShell scripts mirror the workflow's runtime logic so you can validate
 regex/parsing changes from your workstation before pushing:
@@ -106,7 +224,7 @@ previous_date -> 2026-08-18
 DECISION: no-op (README already at v0.15.12)
 ```
 
-## Dry-run mode for CI smoke tests
+### Dry-run mode for CI smoke tests
 
 Both workflows accept a `dry_run` boolean input on `workflow_dispatch`. When
 `true`, they perform every read-only step (probe, notes generation, README
@@ -135,7 +253,7 @@ Recommended first-run smoke test after this branch merges to `main`:
 4. Once both dry-runs look clean, the scheduled probe will start firing on
    its hourly cron and the worker will act on real inputs.
 
-## Permissions
+### Permissions
 
 - `refresh-current.yml` needs `contents: write` (retag, edit release, push
   branch), `pull-requests: write` (open the README PR), and `issues: write`
@@ -144,7 +262,7 @@ Recommended first-run smoke test after this branch merges to `main`:
   `contents: read` (read `README.md`), and `issues: write` (for the failure
   tracking issue). No cross-boundary credentials.
 
-## Failure reporting
+### Failure reporting
 
 Both workflows have a `report-failure` job that runs only `if: failure()`.
 When any earlier job fails it records the failure — a link to the failing run,
@@ -173,7 +291,7 @@ README regex miss, broken aka.ms link (the worker HEADs every download
 URL after patching), retag/rerelease failure, PR-open failure, or the
 `gh workflow run` dispatch call failing.
 
-## Link verification
+### Link verification
 
 Before the worker opens the README PR, it enumerates every
 `https://aka.ms/discovery/download/...` URL in `README.md` and HEADs each

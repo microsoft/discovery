@@ -49,17 +49,23 @@ detailed rule definitions and remediation guidance are in
 
 | Layer | Policy inventory |
 | --- | --- |
-| Trust boundary | PR validation runs trusted base-branch code against the proposed content; PR-supplied code is not executed with a write token. Workflow permissions are minimized, and untrusted values are passed through environment variables. |
+| Trust boundary | PR Review and agent-removal validation use read-only `pull_request` jobs, trusted base-SHA code, and separate exact-head data checkouts without persisted credentials. PR feedback is published by a separate `workflow_run` job executing only trusted default-branch code. No workflow uses `pull_request_target`. |
+| Diagnostic feedback | The reporter verifies source identity, current-head freshness, expected jobs, and bounded data-only artifacts before writing. Labels and `COMMENT` reviews are diagnostics, not merge gates; removal feedback cannot change PR Review labels. Reporting never approves, dismisses reviews, or merges. |
 | Structure and schemas | `STR-*`, `SCH-*`, `AS-*`, and `SKT-*` validate required files, JSON/YAML schemas, names, references, and starter-kit composition. Concrete schema nodes require a type or reference plus size, count, or range bounds; semantic strings use patterns or formats, and objects are closed or use bounded extension maps. `MET-*`, `DOC-*`, and `DEP-*` validate metadata, documentation, and dependency declarations. |
 | Catalog content | `POL-004` and `POL-005` enforce description and README minimums; `POL-008`, `POL-009`, `POL-010`, `POL-011`, and `POL-012` restrict binaries, validate model weights, and block hidden artifacts, generated-registry edits, and deployer scratch data; `POL-014`, `POL-015`, `POL-016`, `POL-017`, `POL-018`, and `POL-019` govern base-image provenance and pinning, file types, small Markdown-referenced image safety, reachable public webpages, and mail-capable contact domains. `SKT-POL-001` requires new starter kits to be active. |
 | Classification | `TAG-001` and `TAG-002` enforce the reviewed tag vocabulary and reserve CI-computed tag namespaces. |
 | Security scanning | Verified-secret findings block PRs. Unverified secret candidates, CodeQL, DevSkim, and Microsoft Application Inspector results are report-only inputs for reviewers. |
-| Review and merge | CODEOWNERS and branch protection require successful checks and human approval. Agent-removal checks protect active starter-kit references; generated registries are rebuilt and schema-validated by automation. |
+| Review and merge | CODEOWNERS and branch protection govern checks and human approval. Agent-removal checks protect active starter-kit references. Generated registries are rebuilt/schema-validated by automation and proposed in separate PRs; maintainers control merging. Automatic approval and auto-merge enrollment are retired. |
 | After merge | The weekly catalog audit reruns all modular rules and Microsoft Security DevOps across the catalog. URLhaus/PhishTank reputation lookups and Docker Scout image-CVE scans are staged but disabled pending validated credentials, provider access, and representative runs. |
+
+The [workflow trust boundary and rollout guide](docs/actions-execution-policy.md)
+documents artifact validation, the non-fork-only maintainer removal override,
+trusted-base preparation, and retirement of any previously deployed event
+exception. Local tests are not evidence of live GitHub settings or event delivery.
 
 Policy configuration is review-controlled under [`.github/policy/`](.github/policy/):
 approved base images, source-file allowlists, network validation limits, and tag
-taxonomy. Exceptions require an expiring CODEOWNER-approved waiver; the ratchet
+taxonomy. Content-rule exceptions require an expiring CODEOWNER-approved waiver; the ratchet
 baseline records legacy findings but does not permit new violations.
 
 ### Security automation promotion and response

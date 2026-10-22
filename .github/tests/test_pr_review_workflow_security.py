@@ -1,23 +1,21 @@
-"""Security contracts for the privileged PR review workflow."""
+"""Security contracts for read-only PR validation and privileged reporting."""
 
 from pathlib import Path
+import re
 
 import pytest
 import yaml
 
 
 WORKFLOW_PATH = Path(__file__).resolve().parents[1] / "workflows" / "pr-review.yml"
-AUTO_MERGE_PATH = (
-    Path(__file__).resolve().parents[1]
-    / "workflows"
-    / "auto-merge-on-approval.yml"
-)
+REPORT_WORKFLOW_PATH = WORKFLOW_PATH.with_name("pr-review-report.yml")
 CODEOWNERS_PATH = Path(__file__).resolve().parents[1] / "CODEOWNERS"
+REMOVAL_WORKFLOW_PATH = WORKFLOW_PATH.with_name("check-agent-removal-impact.yml")
 
 
-def load_workflow() -> dict:
+def load_workflow(path: Path = WORKFLOW_PATH) -> dict:
     document = yaml.load(
-        WORKFLOW_PATH.read_text(encoding="utf-8"),
+        path.read_text(encoding="utf-8"),
         Loader=yaml.BaseLoader,
     )
     assert isinstance(document, dict)
@@ -76,12 +74,63 @@ def test_author_trust_signals_are_passed_to_validator():
     )
 
 
-def test_validation_feedback_does_not_submit_blocking_bot_reviews():
-    workflow_text = WORKFLOW_PATH.read_text(encoding="utf-8")
+def test_reporter_executes_only_default_branch_code():
+    workflow = load_workflow(REPORT_WORKFLOW_PATH)
+    assert workflow["on"] == {
+        "workflow_run": {"workflows": ["PR Review", "Check Agent Removal Impact"], "types": ["completed"]},
+    }
+    job = workflow["jobs"]["report"]
+    assert "workflow_run.event == 'pull_request'" in job["if"]
+    assert "workflow_run.conclusion != 'cancelled'" in job["if"]
+    checkouts = [step for step in job["steps"] if is_checkout(step)]
+    assert len(checkouts) == 1
+    assert checkouts[0]["with"] == {
+        "ref": "${{ github.sha }}", "path": "trusted",
+        "fetch-depth": "1", "persist-credentials": "false",
+    }
+    assert job["steps"][-1]["run"] == "python trusted/.github/scripts/report_pr_review.py"
+    assert job["steps"][-1]["env"] == {"GH_TOKEN": "${{ secrets.GITHUB_TOKEN }}"}
+    source = REPORT_WORKFLOW_PATH.read_text(encoding="utf-8")
+    assert "workflow_run.head_sha" not in source
+    assert "actions/download-artifact" not in source
+    assert "cache:" not in source
+    assert "workflow_run.workflow_id" in workflow["concurrency"]["group"]
+    assert workflow["concurrency"]["cancel-in-progress"] == "false"
 
-    assert "event: 'COMMENT'" in workflow_text
-    assert "event: 'REQUEST_CHANGES'" not in workflow_text
-    assert "requestReviewers" not in workflow_text
+
+def test_required_check_names_and_attempt_scoped_handoff_are_preserved():
+    workflow = load_workflow()
+    assert workflow["on"] == {
+        "pull_request": {"branches": ["main"], "types": ["opened", "synchronize", "reopened"]},
+    }
+    assert {job["name"] for job in workflow["jobs"].values()} == {
+        "Classify Changed Paths", "Validate PR", "Secret Scan", "Post Results",
+    }
+    handoff = workflow["jobs"]["post-results"]
+    assert handoff["if"] == "${{ !cancelled() }}"
+    assert set(handoff["needs"]) == {"classify", "validate", "secret-scan"}
+    download, upload, _ = handoff["steps"]
+    assert download["with"]["name"] == "validation-results"
+    assert "continue-on-error" not in download
+    assert upload["with"] == {
+        "name": "pr-review-report-${{ github.run_attempt }}",
+        "path": "${{ runner.temp }}/pr-review-report/validation-results.json",
+        "if-no-files-found": "error",
+    }
+    assert "results_json" not in WORKFLOW_PATH.read_text(encoding="utf-8")
+
+
+@pytest.mark.parametrize("path", [WORKFLOW_PATH, REPORT_WORKFLOW_PATH])
+def test_review_workflows_pin_actions_and_use_ephemeral_runners(path):
+    assert set(re.findall(
+        r"secrets\.([A-Z_][A-Z0-9_]*)", path.read_text(encoding="utf-8")
+    )) == {"GITHUB_TOKEN"}
+    for job in load_workflow(path)["jobs"].values():
+        assert job["runs-on"] == "ubuntu-latest"
+        assert 0 < int(job["timeout-minutes"]) <= 20
+        for step in job["steps"]:
+            if "uses" in step:
+                assert re.fullmatch(r"[^@\s]+@[0-9a-f]{40}", step["uses"])
 
 
 def owners_for_path(path: str) -> list[str]:
@@ -131,27 +180,6 @@ def test_utilities_use_engineering_reviewers(path):
     assert owners_for_path(path) == ["@microsoft/discovery-engineering-reviewers"]
 
 
-def test_native_auto_merge_keeps_only_the_manifest_exception():
-    source = AUTO_MERGE_PATH.read_text(encoding="utf-8")
-
-    assert "actions/checkout" not in source
-    assert "pull_request_target" in source
-    assert "github.rest.pulls.get" in source
-    assert "trustedAssociations.has(currentPr.data.author_association)" in source
-    assert "files.length === 1" in source
-    assert "docs\\/discovery-app\\/releases\\/manifests\\/" in source
-    assert "['added', 'modified'].includes(files[0].status)" in source
-    assert "'renamed'" not in source
-    assert "actions/create-github-app-token@" in source
-    assert "permission-pull-requests: write" in source
-    assert "APPROVAL_TOKEN" in source
-    assert "GH_TOKEN=\"$APPROVAL_TOKEN\" gh api" in source
-    assert 'gh pr merge "$PR_NUMBER" --repo "$REPO" --auto --squash' in source
-    assert "DEPENDABOT_FAST_LANE" not in source
-    assert "TOOLBOX_FAST_LANE" not in source
-    assert "HUMAN_APPROVALS" not in source
-    assert "CHECKS_PASSED" not in source
-
 def test_trufflehog_install_and_repository_layout_are_stable():
     workflow = load_workflow()
     command = workflow["jobs"]["secret-scan"]["steps"][0]["run"]
@@ -166,18 +194,20 @@ def test_trufflehog_install_and_repository_layout_are_stable():
     assert "/tmp/pr-history.git" not in command
 
 
-def test_only_reporting_job_has_write_permissions():
+def test_only_separate_reporting_workflow_has_write_permissions():
     workflow = load_workflow()
     assert workflow["permissions"] == {
         "contents": "read",
         "pull-requests": "read",
     }
 
-    for job_name in ("classify", "validate", "secret-scan"):
-        assert "permissions" not in workflow["jobs"][job_name]
+    for job in workflow["jobs"].values():
+        assert "permissions" not in job
+    assert "pull_request_target" not in WORKFLOW_PATH.read_text(encoding="utf-8")
 
-    assert workflow["jobs"]["post-results"]["permissions"] == {
+    assert load_workflow(REPORT_WORKFLOW_PATH)["permissions"] == {
         "contents": "read",
+        "actions": "read",
         "pull-requests": "write",
         "issues": "write",
     }
@@ -198,3 +228,50 @@ def test_validation_checkouts_do_not_persist_privileged_credentials():
         "${{ github.event.pull_request.head.repo.full_name }}"
     )
     assert untrusted["with"]["ref"] == "${{ github.event.pull_request.head.sha }}"
+    assert "allow-unsafe-pr-checkout" not in untrusted["with"]
+
+
+def test_removal_gate_is_read_only_and_keeps_its_required_identity_and_scope():
+    workflow = load_workflow(REMOVAL_WORKFLOW_PATH)
+    assert workflow["on"] == {"pull_request": ""}
+    assert workflow["permissions"] == {"contents": "read", "pull-requests": "read"}
+    job = workflow["jobs"]["check-impact"]
+    assert job["name"] == "Check if agent removal breaks starter kits"
+    assert "permissions" not in job
+    steps = job["steps"]
+    classification = steps[0]
+    assert classification["id"] == "changes" and not any(is_checkout(s) for s in steps[:1])
+    assert "github.paginate" in classification["with"]["script"]
+    gate = next(s for s in steps if s.get("id") == "gate")
+    assert gate["if"] == "steps.changes.outputs.relevant == 'true'"
+    assert "continue-on-error" not in gate
+    assert "python trusted/.github/scripts/check_agent_removal_impact.py" in gate["run"]
+    assert "--report-json" in gate["run"] and "--base-registry-root trusted" in gate["run"]
+    assert gate["env"]["GITHUB_TOKEN"] == "${{ secrets.GITHUB_TOKEN }}"
+    assert set(re.findall(
+        r"secrets\.([A-Z_][A-Z0-9_]*)", REMOVAL_WORKFLOW_PATH.read_text(encoding="utf-8")
+    )) == {"GITHUB_TOKEN"}
+    checkouts = [s["with"] for s in steps if is_checkout(s)]
+    assert all(c["persist-credentials"] == "false" and "allow-unsafe-pr-checkout" not in c for c in checkouts)
+
+
+def test_removal_handoff_preserves_gate_failure_and_is_optional_transport_only():
+    steps = load_workflow(REMOVAL_WORKFLOW_PATH)["jobs"]["check-impact"]["steps"]
+    finalize = next(s for s in steps if s["name"] == "Finalize removal report")
+    assert finalize["if"] == "${{ !cancelled() }}"
+    assert finalize["env"] == {
+        "CLASSIFICATION_OUTCOME": "${{ steps.changes.outcome }}",
+        "RELEVANT": "${{ steps.changes.outputs.relevant }}",
+        "GATE_OUTCOME": "${{ steps.gate.outcome }}",
+    }
+    assert "core.setFailed" in finalize["with"]["script"]
+    upload = next(s for s in steps if s.get("id") == "upload")
+    assert upload["if"] == "${{ !cancelled() }}" and upload["continue-on-error"] == "true"
+    assert upload["with"] == {
+        "name": "agent-removal-report-${{ github.run_attempt }}",
+        "path": "${{ runner.temp }}/agent-removal-report/agent-removal-results.json",
+        "if-no-files-found": "error",
+    }
+    warning = steps[-1]
+    assert warning["if"] == "${{ !cancelled() && steps.upload.outcome == 'failure' }}"
+    assert "::warning::" in warning["run"] and "GITHUB_STEP_SUMMARY" in warning["run"]

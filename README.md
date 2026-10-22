@@ -86,7 +86,7 @@ The Microsoft Discovery app is a **self-contained desktop application** — no S
 
 - **Agents:** open the `agents/` directory — each folder is one agent with its own `README.md`.
 - **Starter kits:** open the `starter-kits/` directory — each folder contains a single `kit.json` describing the bundled agents, sample prompts, and risk profile.
-- **Programmatic access:** the same content is exposed as a single aggregated JSON in [`.auto-registry/agent-registry.json`](.auto-registry/agent-registry.json) and [`.auto-registry/starter-kit-registry.json`](.auto-registry/starter-kit-registry.json), regenerated automatically on every merge.
+- **Programmatic access:** the same content is exposed in [`.auto-registry/agent-registry.json`](.auto-registry/agent-registry.json) and [`.auto-registry/starter-kit-registry.json`](.auto-registry/starter-kit-registry.json). Catalog changes trigger registry generation; updates are proposed in a separate PR and reach `main` after human review and maintainer-controlled merging.
 
 ---
 
@@ -111,7 +111,13 @@ Discussions category before opening a pull request.
 | **Something you built** | [Discussions → Show and tell](https://techcommunity.microsoft.com/category/azure/discussions/microsoft-discovery-discussions) | — |
 | **Schema / workflow change** | PR against `docs/schemas/` or `.github/workflows/` — **Microsoft maintainers only**; open an Idea first. | [`CONTRIBUTING.md`](CONTRIBUTING.md) |
 
-The full contributor contract is in [`CONTRIBUTING.md`](CONTRIBUTING.md). Every PR runs through an automated review that validates structure, schemas, policy, documentation, and secrets — failures are reported inline with rule IDs and remediation hints.
+Start with the quick contribution guide in [`CONTRIBUTING.md`](CONTRIBUTING.md).
+Read-only PR checks validate structure, schemas, policy, documentation, and
+secrets. A separate reporter publishes diagnostic labels and comments
+asynchronously; available rule feedback includes IDs and remediation hints.
+Required checks and source run logs remain authoritative if feedback is missing.
+See the [workflow overview](.github/workflows/README.md#pull-request-validation-and-feedback)
+for check names, reporting boundaries, and the manual review/merge process.
 
 ### Quick start for catalog contributors
 

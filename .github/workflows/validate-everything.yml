@@ -355,6 +355,8 @@ jobs:
           python trusted/.github/scripts/validate_starter_kits.py "${args[@]}" \
             | tee "$RUNNER_TEMP/shadow-validation/starter-kits.txt"
 
+      # No override token: shadow results do not verify maintainer-label overrides.
+      # This remains report-only, with no privileged reporter or PR check writes.
       - name: Run removal-impact validation without write access
         id: removal_impact
         if: steps.integration.outcome == 'success'

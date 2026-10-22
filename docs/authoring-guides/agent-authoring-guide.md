@@ -372,10 +372,15 @@ git push origin add-clinical-summary-agent
 
 What happens next:
 
-1. The automated review runs (structural, schema, policy, documentation, and security checks).
-2. Any failures are posted as inline review comments with a rule identifier and remediation hint. Address each comment and push a follow-up commit.
-3. When all checks pass, the `pr-validation-passed` label is applied and the CODEOWNERS maintainers are auto-requested for review.
-4. One approval from a CODEOWNERS reviewer is required to merge.
+1. Read-only **PR Review** checks structure, schemas, policy, documentation, and secrets. Independent checks, including **Check Agent Removal Impact**, report separately. Fork runs may require maintainer authorization; resolve merge conflicts before `pull_request` checks can run.
+2. **PR Review Report** publishes diagnostic labels and comments asynchronously. Rule findings may appear inline or in a summary with remediation hints. Source check results and run logs remain authoritative if feedback is unavailable; address findings and push a follow-up commit.
+3. The `pr-validation-passed` label reflects PR Review, not every required check. GitHub requests CODEOWNERS review independently of this label.
+4. All required checks, at least one CODEOWNERS approval, and other configured review requirements must be satisfied. A maintainer then merges the PR or enables GitHub's native auto-merge; workflows do not approve or enroll it automatically.
+
+If you remove or rename an agent, also review
+[starter-kit removal impact](starter-kit-authoring-guide.md#agent-removal-impact).
+For missing feedback, see the
+[workflow troubleshooting guide](../validation-workflow-testing.md#troubleshoot-missing-or-stale-feedback).
 
 ---
 

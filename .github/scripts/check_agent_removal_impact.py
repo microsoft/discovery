@@ -2,8 +2,9 @@
 """
 check_agent_removal_impact.py — PR gate for agent path removals.
 
-Detects when a PR removes or renames an agent path from the catalog and blocks merge
-if any active starter kit has a required:true reference to that removed path.
+Evaluates the exact PR head against a trusted base registry. Returns a failing
+gate result when removal/rename leaves active kits requiring an absent agent.
+The required workflow check, not this script or a diagnostic comment, gates merge.
 
 Gate options:
   Option A — Fix in PR: All affected active kits are updated in the PR, and the
@@ -11,20 +12,32 @@ Gate options:
              that each impacted required ref is gone, replaced by a valid agent, or the
              kit is now lifecycle:archived.
   Option B — Maintainer override: A user with write/maintain/admin permission on the
-             repo applies the label "starter-kit-impact-approved" to the PR.
-             Only available for non-fork PRs (label API is unavailable on forks).
+             repo applies the label "starter-kit-impact-approved" and reruns the
+             check. Only available for non-fork PRs, as repository policy.
 
-Usage (called from check-agent-removal-impact.yml):
-  python .github/scripts/check_agent_removal_impact.py \\
-    --repo-root . \\
+The CLI performs only GET API requests and never publishes comments, even with
+a token. GITHUB_TOKEN (or --github-token) is used only to verify Option B.
+--report-json writes a schema-version-1 result as well as logging it. Passing
+validation exits 0; blocked/error results exit 1. Workflow classification creates
+not_applicable records separately, without invoking this validator.
+
+Workflow invocation (Bash, from the workspace root):
+  python trusted/.github/scripts/check_agent_removal_impact.py \\
+    --repo-root pr \\
+    --base-registry-root trusted \\
     --base-sha <sha> \\
     --pr-number <number> \\
-    --github-token <token> \\
-    --repo <owner/repo>
+    --repo <owner/repo> \\
+    --report-json "$RUNNER_TEMP/agent-removal-report/agent-removal-results.json"
+
+Add --is-fork when head and base repositories differ. Report-capable code must
+already exist on the trusted base; never execute the PR copy as a fallback.
+PR Review Report consumes the artifact and posts diagnostic feedback separately.
 """
 
 import argparse
 import json
+import os
 import subprocess
 import sys
 import urllib.request
@@ -32,10 +45,11 @@ import urllib.error
 from pathlib import Path
 
 import update_registry
+from agent_removal_report import MAX_REPORT_BYTES, MAX_STRING, catalog_path, result, validate_report
 
 
 def load_json(path: Path) -> dict:
-    with path.open() as f:
+    with path.open(encoding="utf-8") as f:
         return json.load(f)
 
 
@@ -68,6 +82,8 @@ def github_get_paged(url: str, token: str) -> list:
         req = urllib.request.Request(paged_url, headers=headers)
         with urllib.request.urlopen(req) as resp:
             page_data = json.loads(resp.read().decode())
+        if not isinstance(page_data, list) or not all(isinstance(item, dict) for item in page_data):
+            raise ValueError("Expected a complete page of GitHub API objects.")
         if not page_data:
             break
         results.extend(page_data)
@@ -79,11 +95,17 @@ def github_get_paged(url: str, token: str) -> list:
 
 def _parse_registry_agent_paths(raw: str) -> set[str]:
     registry = json.loads(raw)
-    return {
-        e["path"]
-        for e in registry.get("entries", [])
-        if e.get("type") == "agent"
-    }
+    if not isinstance(registry, dict) or not isinstance(registry.get("entries"), list):
+        raise ValueError("Base registry must contain an entries array.")
+    paths = set()
+    for entry in registry["entries"]:
+        if not isinstance(entry, dict):
+            raise ValueError("Base registry entries must be objects.")
+        if entry.get("type") == "agent":
+            if not catalog_path(entry.get("path"), "agents"):
+                raise ValueError("Base registry contains an invalid agent path.")
+            paths.add(entry["path"])
+    return paths
 
 
 def get_base_registry_paths(
@@ -159,7 +181,9 @@ def get_head_registry_paths(repo_root: Path) -> set[str]:
         rel_path = f"agents/{agent_dir.name}"
         try:
             entry = update_registry.build_entry(str(agent_dir), rel_path, "agent")
-        except Exception as exc:
+        except (ValueError, TypeError, AttributeError) as exc:
+            if isinstance(exc.__cause__, OSError):
+                raise RuntimeError(f"Could not read {rel_path}: {exc}") from exc
             print(
                 f"WARNING: {rel_path} does not produce a valid registry entry "
                 f"and is treated as absent: {exc}"
@@ -174,6 +198,7 @@ def get_active_kits(repo_root: Path) -> list[tuple[str, dict]]:
     """Return list of (kit_rel_path, manifest) for all active kits.
 
     kit_rel_path is repo-root-relative, e.g. 'starter-kits/protein-structure-analysis'.
+    Malformed/unreadable manifests are fatal, not silently missing kits.
     """
     result = []
     base_dir = repo_root / "starter-kits"
@@ -185,10 +210,16 @@ def get_active_kits(repo_root: Path) -> list[tuple[str, dict]]:
         plugin_path = kit_dir / "kit.json"
         if not plugin_path.exists():
             continue
-        try:
-            manifest = load_json(plugin_path)
-        except Exception:
-            continue
+        manifest = load_json(plugin_path)
+        if (
+            not isinstance(manifest, dict)
+            or not isinstance(manifest.get("agentRefs", []), list)
+            or not all(
+                isinstance(ref, dict) and isinstance(ref.get("ref"), str)
+                for ref in manifest.get("agentRefs", [])
+            )
+        ):
+            raise ValueError(f"{plugin_path}: invalid starter-kit manifest.")
         if manifest.get("lifecycle") == "active":
             result.append((f"starter-kits/{kit_dir.name}", manifest))
     return result
@@ -231,7 +262,7 @@ def check_option_a_resolved(
             continue
         try:
             current_manifest = load_json(plugin_path)
-        except Exception as e:
+        except (OSError, ValueError) as e:
             unresolved.append(f"{kit_rel_path}: could not read kit.json: {e}")
             continue
 
@@ -258,11 +289,10 @@ def check_option_a_resolved(
 
 def get_pr_labels(token: str, repo: str, pr_number: int) -> list[str]:
     """Return list of label names on the PR."""
-    url = f"https://api.github.com/repos/{repo}/pulls/{pr_number}"
+    url = f"https://api.github.com/repos/{repo}/issues/{pr_number}/labels"
     try:
-        pr_data = github_get(url, token)
-        return [label["name"] for label in pr_data.get("labels", [])]
-    except Exception as e:
+        return [label["name"] for label in github_get_paged(url, token)]
+    except (OSError, ValueError, KeyError, TypeError) as e:
         print(f"WARNING: Could not fetch PR labels: {e}")
         return []
 
@@ -276,12 +306,12 @@ def get_label_applier(token: str, repo: str, pr_number: int, label: str) -> str 
         events = github_get_paged(url, token)
         for event in reversed(events):
             if (
-                event.get("event") == "labeled"
+                event.get("event") in {"labeled", "unlabeled"}
                 and event.get("label", {}).get("name") == label
             ):
-                return event.get("actor", {}).get("login")
+                return event.get("actor", {}).get("login") if event["event"] == "labeled" else None
         return None
-    except Exception as e:
+    except (OSError, ValueError, KeyError, TypeError) as e:
         print(f"WARNING: Could not fetch PR events: {e}")
         return None
 
@@ -297,7 +327,7 @@ def get_user_repo_permission(token: str, repo: str, username: str) -> str:
             return "none"
         print(f"WARNING: Could not fetch permission for {username}: {e}")
         return "none"
-    except Exception as e:
+    except (OSError, ValueError, KeyError, TypeError) as e:
         print(f"WARNING: Could not fetch permission for {username}: {e}")
         return "none"
 
@@ -313,7 +343,7 @@ def check_option_b(
     Returns (approved, reason_string).
     """
     if is_fork:
-        return False, "Fork PRs cannot use Option B (label API unavailable on forks). Use Option A."
+        return False, "Repository policy limits Option B to non-fork PRs. Use Option A."
     if not token or not repo or not pr_number:
         return False, "GitHub token, repo, and PR number are required for Option B check."
 
@@ -336,27 +366,33 @@ def check_option_b(
     return True, f"Label '{label}' applied by @{applier} (permission: {permission}). Override accepted."
 
 
-def post_pr_comment(token: str, repo: str, pr_number: int, body: str) -> None:
-    """Post a comment to the PR."""
-    url = f"https://api.github.com/repos/{repo}/issues/{pr_number}/comments"
-    data = json.dumps({"body": body}).encode()
-    req = urllib.request.Request(
-        url,
-        data=data,
-        method="POST",
-        headers={
-            "Authorization": f"Bearer {token}",
-            "Accept": "application/vnd.github+json",
-            "Content-Type": "application/json",
-            "X-GitHub-Api-Version": "2022-11-28",
-            "User-Agent": "discovery-pr-ci",
-        },
+def evaluate(
+    repo_root: Path, base_sha: str, base_registry_root: Path | None = None,
+    *, token: str | None = None, repo: str | None = None,
+    pr_number: int | None = None, is_fork: bool = False,
+) -> dict:
+    if not repo_root.is_dir():
+        raise RuntimeError(f"PR checkout not found: {repo_root}")
+    base_paths = get_base_registry_paths(repo_root, base_sha, base_registry_root)
+    head_paths = get_head_registry_paths(repo_root)
+    removed = base_paths - head_paths
+    print(f"Base registry: {len(base_paths)} agent(s); head registry: {len(head_paths)} agent(s)")
+    print(f"Removed agent paths: {sorted(removed)}")
+    if not removed:
+        return result("success")
+    impacted = find_impacted_kits(get_active_kits(repo_root), removed)
+    details = [{"path": path, "required_refs": sorted(set(refs))} for path, refs in impacted]
+    if not impacted:
+        return result("success", removed_paths=sorted(removed))
+    resolved, issues = check_option_a_resolved(repo_root, impacted, head_paths)
+    if resolved:
+        return result("success", removed_paths=sorted(removed))
+    approved, reason = check_option_b(token, repo, pr_number, is_fork)
+    return result(
+        "success" if approved else "blocked", removed_paths=sorted(removed),
+        impacted_kits=details, issues=[] if approved else issues,
+        approved=approved, reason=reason,
     )
-    try:
-        with urllib.request.urlopen(req):
-            pass
-    except Exception as e:
-        print(f"WARNING: Could not post PR comment: {e}")
 
 
 def main() -> None:
@@ -370,10 +406,14 @@ def main() -> None:
              "contain the base commit.",
     )
     parser.add_argument("--base-sha", required=True, help="Base commit SHA (PR base branch tip)")
-    parser.add_argument("--pr-number", type=int, help="PR number (for Option B and comment posting)")
-    parser.add_argument("--github-token", help="GitHub token (for API calls)")
+    parser.add_argument("--pr-number", type=int, help="PR number (for Option B)")
+    parser.add_argument(
+        "--github-token", default=os.environ.get("GITHUB_TOKEN"),
+        help="Read-only token for Option B GET requests (default: GITHUB_TOKEN); never posts comments",
+    )
     parser.add_argument("--repo", help="Owner/repo slug, e.g. owner/repo")
     parser.add_argument("--is-fork", action="store_true", help="Set if PR is from a fork")
+    parser.add_argument("--report-json", type=Path, help="Also write the schema-version-1 diagnostic result as JSON")
     args = parser.parse_args()
 
     repo_root = Path(args.repo_root).resolve()
@@ -381,106 +421,26 @@ def main() -> None:
         Path(args.base_registry_root).resolve() if args.base_registry_root else None
     )
 
-    print(f"Base SHA: {args.base_sha}")
-    print("Loading base registry...")
     try:
-        base_paths = get_base_registry_paths(
-            repo_root, args.base_sha, base_registry_root
+        report = evaluate(
+            repo_root, args.base_sha, base_registry_root, token=args.github_token,
+            repo=args.repo, pr_number=args.pr_number, is_fork=args.is_fork,
         )
-    except RuntimeError as e:
+        validate_report(report)
+        if len(json.dumps(report, indent=2).encode("utf-8")) > MAX_REPORT_BYTES:
+            raise ValueError("Removal report exceeds the size limit.")
+    except (RuntimeError, OSError, ValueError, TypeError, KeyError, AttributeError) as e:
         print(f"ERROR: {e}", file=sys.stderr)
-        sys.exit(1)
-    print(f"  Base registry: {len(base_paths)} agent(s)")
-
-    print("Building head registry from current checkout...")
-    try:
-        head_paths = get_head_registry_paths(repo_root)
-    except Exception as e:
-        print(f"ERROR: {e}", file=sys.stderr)
-        sys.exit(1)
-    print(f"  Head registry: {len(head_paths)} agent(s)")
-
-    removed_paths = base_paths - head_paths
-    if not removed_paths:
-        print("\n✓ No agent paths removed. No starter kit impact.")
-        sys.exit(0)
-
-    print(f"\nRemoved agent paths: {sorted(removed_paths)}")
-
-    # Find active kits impacted by removals
-    active_kits = get_active_kits(repo_root)
-    impacted = find_impacted_kits(active_kits, removed_paths)
-
-    if not impacted:
-        print("\n✓ No active starter kits have required refs to removed agents.")
-        # Informational: check archived/optional refs
-        for kit_name, manifest in active_kits:
-            optional_impacted = [
-                r["ref"] for r in manifest.get("agentRefs", [])
-                if r.get("required") is False and r.get("ref") in removed_paths
-            ]
-            if optional_impacted:
-                print(
-                    f"  INFO: [{kit_name}] optional refs affected (no block): {optional_impacted}"
-                )
-        sys.exit(0)
-
-    print(f"\n⚠ {len(impacted)} active kit(s) have required refs to removed agents:")
-    for kit_name, broken_refs in impacted:
-        print(f"  [{kit_name}]: {broken_refs}")
-
-    # Option A: check if all affected kits are fixed in this PR
-    print("\nChecking Option A (fix in PR)...")
-    option_a_ok, a_issues = check_option_a_resolved(repo_root, impacted, head_paths)
-    if option_a_ok:
-        print("✓ Option A satisfied: all impacted kits are resolved in this PR.")
-        sys.exit(0)
-    print(f"  Option A not satisfied: {len(a_issues)} unresolved issue(s):")
-    for issue in a_issues:
-        print(f"    - {issue}")
-
-    # Option B: maintainer override label
-    print("\nChecking Option B (maintainer override)...")
-    option_b_ok, b_reason = check_option_b(
-        args.github_token, args.repo, args.pr_number, args.is_fork
-    )
-    if option_b_ok:
-        print(f"✓ Option B satisfied: {b_reason}")
-        sys.exit(0)
-    print(f"  Option B not satisfied: {b_reason}")
-
-    # Build failure message
-    impact_lines = []
-    for kit_rel_path, broken_refs in impacted:
-        impact_lines.append(f"- **{kit_rel_path}**: required agents removed: `{', '.join(broken_refs)}`")
-
-    failure_message = (
-        "## ❌ Starter Kit Impact: Agent Removal Blocked\n\n"
-        "This PR removes agent(s) that are referenced as `required: true` by active starter kits:\n\n"
-        + "\n".join(impact_lines)
-        + "\n\n**To unblock this PR, choose one of:**\n\n"
-        "### Option A — Fix in PR\n"
-        "Update each affected starter kit in this PR:\n"
-        "- Replace the removed agent ref with a valid one, **or**\n"
-        "- Set `lifecycle: \"archived\"` on the kit, **or**\n"
-        "- Remove the `required: true` flag from the affected ref\n\n"
-        "The CI script will re-evaluate the kit state against the head-branch registry.\n\n"
-        "### Option B — Maintainer Override (non-fork PRs only)\n"
-        f"A user with **write, maintain, or admin** permission on `{args.repo or 'this repository'}` "
-        "must apply the label `starter-kit-impact-approved` to this PR.\n\n"
-        "> ⚠️ Fork PRs must use Option A (label API is unavailable on forks).\n"
-    )
-
-    print(f"\n{'='*60}")
-    print("GATE FAILED — merge blocked")
-    print(f"{'='*60}")
-
-    if args.github_token and args.repo and args.pr_number:
-        post_pr_comment(args.github_token, args.repo, args.pr_number, failure_message)
-        print("Posted failure comment to PR.")
-
-    print("\n" + failure_message)
-    sys.exit(1)
+        report = result("error", issues=[str(e)[:MAX_STRING] or type(e).__name__])
+    print(json.dumps(report, indent=2))
+    if args.report_json:
+        try:
+            args.report_json.parent.mkdir(parents=True, exist_ok=True)
+            args.report_json.write_bytes(json.dumps(report, indent=2).encode("utf-8"))
+        except OSError as e:
+            print(f"ERROR: Could not write removal report: {e}", file=sys.stderr)
+            sys.exit(1)
+    sys.exit(report["exit_code"])
 
 
 if __name__ == "__main__":

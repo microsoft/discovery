@@ -1,203 +1,215 @@
-# Actions execution policy: remediation and rollout plan
+# Actions execution policy: read-only validation and trusted reporting
 
-## Problem and acceptance criteria
+## Decision and acceptance criteria
 
-GitHub will enforce its default block on `pull_request_target` in affected public
-repositories on **November 2, 2026**. This is an execution-policy change, not a
-workflow syntax error. SHA-pinning actions, setting token permissions, or adding
-`allow-unsafe-pr-checkout` does not exempt a workflow from the event policy.
+Discovery no longer uses `pull_request_target` in any workflow. The final
+agent-removal exception payload has been retired rather than broadened or left
+empty. No new event exception, actor allowlist, or change to branch protection
+is required by this implementation.
 
-Discovery still uses this event for the three workflows below. Blocking them
-would stop PR feedback, agent-removal checks, and native auto-merge configuration.
-Several job names are required branch-protection checks, so blocked runs can
-leave PRs waiting indefinitely rather than reporting a failed check.
+GitHub's announced November 2, 2026 default execution protection for affected
+public repositories is the reason for retiring the target-event workflows.
+SHA-pinning actions, token permissions, and `allow-unsafe-pr-checkout` are not
+event-policy exceptions. Neither PR validation workflow uses that checkout input.
 
-The remediation is an explicit event-policy exception scoped to these three
-reviewed workflow files. Other workflows remain outside this exception. It does
-not change branch protection, required checks, approval rules, or token scopes.
+Acceptance requires:
 
-**A merged JSON file does not configure GitHub.** Completion requires an
-administrator to apply the policy and verify actual policy insights and PR runs.
-Do not mark the operational rollout complete based only on passing unit tests.
+- Read-only PR validation, including same-repository and fork PRs.
+- Existing required-check names and removal decisions preserved.
+- Trusted base code and dependencies; the exact PR head checked out only as data,
+  with no persisted credentials, PR executable caches, or App credentials.
+- Separate, non-required reporting that cannot approve, dismiss reviews, or merge.
+- Explicit errors for invalid/missing results and stale-source protection before
+  any diagnostic write.
+- Pre-merge fixture evidence distinguished from live GitHub acceptance.
 
-Acceptance criteria:
+## Workflow boundaries
 
-- The effective policy allows the three workflows' existing events.
-- No wildcard, repository-wide event exception, actor restriction, or new event
-  is introduced by this exception.
-- Required checks still report for ordinary, catalog, same-repository, and fork
-  PRs, including failing validation and agent-removal cases.
-- Secrets and write tokens are not introduced into PR-data validation jobs.
-- The policy's identity, applied payload, insights, and canary run URLs are
-  recorded in the rollout PR or change record.
-
-## Workflow review and decision
-
-| Workflow | Why retain the base-branch event | Trust boundary and residual risk |
+| Workflow | Event and scope | Authority |
 | --- | --- | --- |
-| [PR Review](../.github/workflows/pr-review.yml) | Runs base-branch validators against PR data; posts labels, reviews, and comments for fork PRs. | Classification and validation default to read-only tokens. Only the separate reporting job gets PR/issue write access. The base checkout supplies scripts and dependency constraints; PR files are isolated in a second checkout and must never be executed. Parsing untrusted files and network-backed checks remains a risk requiring maintained dependencies and ephemeral runners. |
-| [Check Agent Removal Impact](../.github/workflows/check-agent-removal-impact.yml) | Runs the trusted removal gate and posts PR diagnostics; preserves the existing required check. | Both checkout credentials are disabled, code comes from the base SHA, and the PR SHA is scanned as data. This job still has PR write permission to post diagnostics while parsing PR data; separating reporting is a possible future hardening, not a prerequisite for the event-policy exception. |
-| [Enable Native Auto-merge](../.github/workflows/auto-merge-on-approval.yml) | Enables native auto-merge and provides the existing narrow, Microsoft-member release-manifest approval exception. | No checkout or PR code execution. A short-lived App token supplies the manifest approval; GitHub's required checks and review rules remain authoritative. Preserve `pull_request_review` as well as `pull_request_target`. |
+| [PR Review](../.github/workflows/pr-review.yml) | `pull_request`, `main`, opened/synchronize/reopened | Read-only validation and secret scanning. Required checks: **Classify Changed Paths**, **Validate PR**, **Secret Scan**, **Post Results**. |
+| [Check Agent Removal Impact](../.github/workflows/check-agent-removal-impact.yml) | `pull_request`, all base branches, default opened/synchronize/reopened activities | Read-only gate. Required check name remains **Check if agent removal breaks starter kits**. |
+| [PR Review Report](../.github/workflows/pr-review-report.yml) | Completed `workflow_run` for either literal source name | Actions read and PR/issue write; default-branch reporting code only. **Publish PR Feedback** must not become a required PR check. |
 
-Do not mechanically replace `pull_request_target` with `pull_request`:
-fork PR tokens would lose write access and secrets, and validation workflow code
-would come from a different trust context. A migration to read-only validation
-plus privileged `workflow_run` reporting is possible, but needs a separate design
-for source-run provenance, head-SHA freshness, hostile artifacts, and required
-check attribution. It is not necessary to resolve this policy deadline.
+Normal fork-run approval policies apply; first-time contributors may need a
+maintainer to authorize a run. Conflicted PRs must resolve their merge conflicts
+before `pull_request` workflows can run. Workflow-level path filters are absent
+so irrelevant PRs do not strand required checks.
 
-The current `allow-unsafe-pr-checkout: true` inputs are explicit checkout
-exceptions, **not** policy exceptions. Keep them confined to the data checkout,
-with immutable head SHAs and `persist-credentials: false`. Never install from a
-PR requirements file, invoke a PR script, restore a PR-controlled executable
-cache, or expose an App token to a parsing job.
+Source dependency installers use the trusted base's constraints when available.
+Their existing compatibility fallback installs the named validator packages
+unpinned if that base lacks the constraints file; it never reads PR-supplied
+requirements. This fallback does not provide new CLI/protocol support. Prepare
+trusted code and constraints before cutover rather than relying on it as a
+single-merge bootstrap.
 
-## Phase 1: inventory and preflight
+## PR Review validation and reporting
 
-An administrator should review **Settings > Actions > Policy insights** and
-**Settings > Actions > Policies**, including inherited organization and enterprise
-policies. The repository policy cannot override an explicit inherited denial.
-Resolve such a denial with the policy owner rather than relaxing other rules.
+PR Review executes validators and dependency constraints from the trusted base
+SHA. Its exact head checkout is isolated as data. **Post Results** stays in the
+read-only workflow and republishes `validation-results.json` as
+`pr-review-report-<run_attempt>`. Missing downloads or failed uploads still fail
+that required handoff; this migration does not change PR Review's behavior.
 
-Use an authenticated GitHub CLI with repository administration permission.
-These commands use PowerShell from the repository root; API paths use GitHub's
-URL syntax.
+The [reporter](../.github/scripts/report_pr_review.py) has two fixed source
+profiles, not artifact-selected handlers. Each fixes the workflow path, API
+workflow ID check, expected jobs, base-branch scope, artifact prefix, and schema.
+PR Review remains main-only. Removal reporting retains all-base-branches scope.
+Concurrency includes source workflow identity so the two flows do not displace
+each other's pending reports.
+
+The reporter refetches source metadata from GitHub and verifies repository,
+workflow path/ID, `pull_request` event, completed status, and latest attempt.
+It resolves the current open PR using source head repository, owner/branch and
+exact SHA; it does not trust artifact PR numbers or populated PR association
+arrays (which can be empty for fork runs). Ambiguous matches fail without
+writes. Closed/stale/deleted-fork/cancelled/superseded runs are skipped with a
+notice. Freshness is checked again after reading the artifact, before writes.
+Partial reruns select the latest completed result per required job.
+
+Only the exact run's attempt-scoped artifact is accepted. Origin metadata,
+duplicate/expired artifacts, ZIP members, compressed/uncompressed sizes (5 MiB),
+JSON types and outcome consistency are checked. Artifacts are read in memory,
+never extracted or executed. Guidance links must stay within repository docs.
+Untrusted text is escaped and comments are bounded.
+
+Only the reporter's PR Review profile manages the allowlisted diagnostic labels
+and inline `COMMENT` reviews. The `pr-validation-passed` label covers PR Review's
+four jobs, not every required repository check; it can lag behind the current
+head if reporting is delayed or fails. GitHub's CODEOWNERS requests are
+independent of these labels. Labels are not merge gates. Reporting never
+approves, requests changes,
+dismisses a blocking review, or enables merging. A failed required check cannot
+become a passing label from artifact content alone.
+
+## Agent-removal validation and reporting
+
+The [gate](../.github/scripts/check_agent_removal_impact.py) compares the trusted
+base registry with valid head metadata and checks active kits' required refs.
+Renames/removals still block unless the PR fixes the kit or a valid non-fork
+maintainer override is verified. Optional refs, archived/deleted kits, and
+replacement refs to valid agents retain their existing behavior.
+
+Option B remains restricted to non-fork PRs as repository policy, not because
+fork label metadata is inherently unreadable. Override checks use only GETs:
+paginated labels/events and the latest applier's current write/maintain/admin
+permission. Missing or unavailable authorization does not grant an override.
+Apply `starter-kit-impact-approved` and rerun the removal check; labeling alone
+is not a configured trigger. Fork PRs must resolve their kit references.
+
+The [versioned protocol](../.github/scripts/agent_removal_report.py) records
+`success`, `blocked`, `not_applicable`, or `error`, with the gate exit code,
+removed paths, affected kits, issues, override decision/reason, and guidance.
+The validator never posts comments, even when supplied a token. Existing CLI
+callers, including the report-only shadow check, retain their gate exit codes.
+Unreadable/corrupt input is an error, not an empty successful registry.
+
+`--report-json` optionally writes schema version 1 alongside the CLI's logged
+result. `GITHUB_TOKEN` supplies the read-only override token by default; the
+legacy `--github-token` option is also accepted. The gate exits 0 for passing
+validation and 1 for blocked/error results. `not_applicable` is produced only by
+the workflow's successful changed-path classification, not by the gate CLI.
+The protocol checker exits 0 for a valid record matching the expected gate exit,
+including a valid blocked record; that does not clear the validator's failure.
+Removal reports use the fixed starter-kit authoring guide, not artifact-chosen
+guidance URLs.
+
+Only successful classification explicitly finding no relevant paths can produce
+`not_applicable`; this needs neither checkout nor Python setup. Classification,
+setup, missing/invalid local output, and outcome contradictions fail the required
+gate. Relevant results are validated with the trusted protocol implementation.
+Finalization and upload are attempted after validator failure unless cancelled.
+Runner loss/timeouts can still prevent any artifact.
+
+The diagnostic artifact is `agent-removal-report-<run_attempt>`, containing only
+`agent-removal-results.json`. Unlike PR Review's existing required handoff,
+removal artifact upload is optional transport: failure emits a warning and
+summary, but cannot rewrite the gate decision or swallow a validator failure.
+Missing artifacts fail the non-required reporter explicitly.
+
+Removal reporting posts only diagnostic issue comments for blocked/error
+results, with run links and resolution guidance. Success/no-op results make no
+writes. Source API job/run conclusions must match the report's gate outcome.
+The handler cannot alter PR Review labels or reviewer state. Reporting failures
+leave the independent required check unchanged.
+
+## Production bootstrap and rollout
+
+Local fixture tests require no merges. Production is different: source
+validators run from the PR's **base SHA**, and the reporter must exist on the
+default branch for `workflow_run` delivery.
+
+Use two staged changes, not a blind single-merge cutover:
+
+1. Prepare the trusted base with backward-compatible `--report-json` support,
+   the protocol module, and both fixed reporter profiles. In that transitional
+   change, preserve the old source trigger and legacy invocation behavior;
+   structured mode must suppress direct posting. Keep transitional contracts
+   consistent with that intermediate state.
+2. After preparation reaches every supported target base, land the read-only
+   source cutover, remove obsolete direct commenting and the final event
+   exception, and enable the final no-target contracts. The read-only workflow
+   configuration in this repository represents that final state. For other base branches, prepare
+   the protocol there before enabling their cutover checks.
+
+An unprepared base fails explicitly. Never run the PR's validator/protocol copy
+as a fallback. Do not add a privileged manual artifact-replay path.
+
+After default-branch deployment, use controlled same-repository/fork canaries:
+no-op, valid removal, blocked removal, fix-and-push, maintainer override,
+reopen/synchronize, and rerun failed jobs. Check current required-check
+attribution and real artifact/reporting delivery. Keep reporting non-required.
+Do not approve intentionally broken PRs or weaken branch protection.
+
+## Retiring a previously deployed exception
+
+Deleting the former JSON payload does **not** delete a live GitHub policy.
+An administrator must separately inspect **Settings > Actions > Policies** and
+**Policy insights**, including inherited organization/enterprise policies:
 
 ```powershell
-gh auth status --hostname github.com
 gh api -H "X-GitHub-Api-Version: 2026-03-10" `
   "repos/microsoft/discovery/actions/policies?has_parents=true&per_page=100" `
   --paginate --slurp
 gh api repos/microsoft/discovery/branches/main/protection/required_status_checks
 ```
 
-At initial investigation on October 19, 2026, the repository was public, all
-three workflows were active, and the policies API returned no configured
-policies, even with `has_parents=true`. That response is **not proof that the
-built-in default protection is absent**; verify it in Policy insights.
-
-If the named policy already exists, read and save its current payload before
-updating it. Do not blindly POST another copy or modify an inherited policy.
-Preserve unrelated actor, event, action-pinning, and lockfile protections.
-
-## Phase 2: review and apply the narrow exception
-
-The reviewed API payload is
-[actions-execution.json](../.github/policy/actions-execution.json). It targets
-three literal workflow paths and permits only the union of their existing
-events: `pull_request_target` and `pull_request_review`. The latter is used only
-by auto-merge today; an event policy permits events but does not add triggers.
-No actor allowlist is added: restricting actors to maintainers would prevent
-external contributors from triggering the required PR checks.
-
-After review, an administrator can create the policy:
-
-```powershell
-gh api --method POST -H "X-GitHub-Api-Version: 2026-03-10" `
-  repos/microsoft/discovery/actions/policies `
-  --input .github\policy\actions-execution.json
-```
-
-Record the returned policy ID and response. For an existing repository-owned
-policy, use `--method PUT` with
-`repos/microsoft/discovery/actions/policies/POLICY_ID` only after comparing its
-saved payload with the reviewed replacement. The payload is a complete
-replacement for the named policy, not a merge with additional rules.
-
-The checked-in payload uses `active` intentionally. Evaluate mode can help
-inspect restrictions, but is not an acceptance test for an enforced exception.
-If trialling in evaluate mode, follow with an approved active policy and repeat
-the checks below. GitHub applies all applicable restrictions together; a second
-policy cannot loosen an existing explicit event denial.
-
-Read the policy back and compare its name, enforcement, literal paths, and
-allowed events with the file. Reopen Policy insights and confirm the built-in
-default no longer blocks these workflows. Do not disable protections globally.
-
-## Phase 3: validation and critical review
-
-Run the policy contracts together with the existing workflow, schema, removal,
-and release regression tests:
-
-```powershell
-python -m pytest .github\tests\test_actions_execution_policy.py `
-  .github\tests\test_pr_review_workflow_security.py `
-  .github\tests\test_check_agent_removal_impact.py `
-  .github\tests\test_security_automation.py `
-  .github\tests\test_schema_security.py `
-  .github\tests\test_release_fastlane.py -q
-python -m pytest .github\tests\ -q -ra -n auto --dist worksteal
-python .github\scripts\validate_starter_kits.py --repo-root .
-git --no-pager diff --check
-```
-
-On Windows, use a UTF-8 Python console (`$env:PYTHONUTF8 = "1"`) and put Git's
-`usr\bin` directory on PATH so the content-sniffing tests can find `file.exe`.
-Linux CI remains authoritative for embedded Bash workflow execution.
-Use [Validate Everything](validation-workflow-testing.md) for full-catalog and
-Linux unit-test runs against the candidate branch.
-
-The policy tests reject added or renamed target workflows without a matching
-reviewed policy update, broad workflow targeting, lost review-event coverage,
-mutable action refs, credential persistence, and changed-path filters that
-would strand required checks. They inspect configuration; they do not prove
-that arbitrary PR content cannot exploit a parser or that GitHub settings have
-been applied. Review those boundaries separately.
-
-Before activating the exception, a maintainer should critically review:
-
-1. Every command and action that can run after the PR data checkout. Confirm
-   executable code, imports, requirements, configuration, and working directories
-   remain trusted, not merely that checkout credentials are disabled.
-2. Every write token and secret. Confirm PR parsing jobs cannot obtain approval
-   App credentials; auto-merge must not fetch or execute PR code.
-3. Failure paths. Missing validation results must not become a passing label;
-   a failed removal or secret scan must still block its required check.
-4. Scope drift. A newly added privileged workflow needs its own review, not an
-   expansion to a wildcard or all actors/events.
-5. Effective organization and enterprise rules. A repository exception is not
-   evidence that those rules permit the run.
-
-## Phase 4: live canaries and completion evidence
-
-After applying the policy, use controlled test PRs and record their URLs and
-head SHAs. Do not weaken branch protection or approve an intentionally bad PR.
-
-| Canary | Expected result |
-| --- | --- |
-| Ordinary documentation PR, same repository and fork | Required checks report even when catalog work is skipped; labels/comments can be posted. |
-| Valid catalog change from a fork | Trusted validators scan the exact fork head; schema and removal checks report successfully. |
-| Invalid catalog manifest | Validate PR fails and diagnostics identify the failure; no passing label is applied. |
-| Removal of an agent still required by an active kit | Removal gate fails unless the existing allowed resolution is satisfied. |
-| Synchronize/reopen a controlled PR | Existing event filters still trigger; obsolete runs do not replace current-head evidence. |
-| Non-draft PR and submitted review | Native auto-merge configuration still runs; no new broad auto-approval exception appears. |
-| Unrelated workflow | It has not acquired a `pull_request_target` exception from this policy. |
-
-Do not manufacture real credentials to test the secret scanner. Retain its
-existing regression tests and use only approved safe scanner fixtures.
-Manual workflow dispatches alone cannot validate the target-event allowlist.
-After the November 2 enforcement date, recheck Policy insights and a new PR run.
-
-## Rollback and ongoing ownership
-
-If a canary exposes unexpected permissions, scope, or execution, stop rollout.
-For a newly created policy, an administrator can delete only the recorded ID:
+If the former repository-owned **Reviewed pull request automation** exception
+was applied, save its payload, verify its recorded ID and exact scope, then
+delete only that policy after cutover acceptance:
 
 ```powershell
 gh api --method DELETE -H "X-GitHub-Api-Version: 2026-03-10" `
   repos/microsoft/discovery/actions/policies/POLICY_ID
 ```
 
-For an updated policy, restore the saved original payload instead. Reverting a
-Git commit does not roll back live settings. Removing the exception can cause
-the default policy to block these workflows again; temporarily pause merges
-rather than removing required checks. Coordinate any inherited-policy rollback
-with its owner.
+Do not delete inherited or unrelated policies. An empty policy listing is not
+proof that GitHub's default protections are absent. No settings are changed by
+these source edits. Record administrator actions and canary run URLs separately.
+If reporting breaks, keep the read-only gate and its logs; do not restore the
+target event, relax branch protection, or make reporting required.
 
-Reviewers of workflow changes must update the policy and its contracts together
-when a privileged workflow is added, renamed, retired, or changes events.
-Periodically inspect Policy insights, required checks, token scopes, action
-pins, and dependency updates.
+## PR approval and merging
+
+Automatic auto-merge enrollment and its release-manifest approval exception
+remain removed. All PRs, including manifest-only and generated registry updates,
+follow human/CODEOWNER review. Maintainers merge or enable native auto-merge.
+The retired job was not required in the October 21, 2026 settings snapshot;
+confirm current protection settings during deployment rather than treating
+historical observations as current enforcement evidence.
+
+[Update Registry](../.github/workflows/update-registry.yml) independently creates
+PRs and still needs `REGISTRY_APP_ID` and `REGISTRY_APP_PRIVATE_KEY`. Do not remove
+those credentials as part of this retirement.
+
+## Verification and ongoing ownership
+
+See [Testing validation workflows](validation-workflow-testing.md) for local and
+optional branch-only commands. Configuration contracts and offline API fixtures
+do not prove hosted token scopes, event delivery, or live settings.
+Review future source profiles, permissions, action pins, and dependency changes
+together. Keep target-event regression contracts and preserve required-check
+names and CODEOWNERS protections.
 
 ## References
 

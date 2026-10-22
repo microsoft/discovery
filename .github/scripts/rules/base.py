@@ -59,7 +59,7 @@ class Finding:
     severity: Severity = Severity.ERROR
 
     def to_dict(self) -> dict:
-        # Matches the JSON contract consumed by pr-review.yml's posting step.
+        # Validation artifact contract consumed by the separate trusted reporter.
         return {
             "rule_id": self.rule_id,
             "file": self.file,

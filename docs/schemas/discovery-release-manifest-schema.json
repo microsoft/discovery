@@ -2,7 +2,7 @@
   "$schema": "http://json-schema.org/draft-07/schema#",
   "$id": "discovery-release-manifest-schema.json",
   "title": "Microsoft Discovery Application Release Manifest",
-  "description": "Schema for ring-specific application release manifests under docs/discovery-app/releases/manifests/. These manifests are eligible for automated approval only when the trusted PR validator confirms this shape and all required checks pass.",
+  "description": "Schema for ring-specific application release manifests under docs/discovery-app/releases/manifests/. These manifests require human/CODEOWNER approval and passing required checks before merge.",
   "type": "object",
   "required": [
     "ring",
