@@ -115,7 +115,7 @@ jobs:
             core.setOutput('permission', permission);
             core.setOutput('association', association);
 
-  # ── Stages 2–4: Structural + Schema + Content/Policy + Documentation ───────
+  # ── Stages 2–4: Structure + Schema + Policy (including Containerfiles) + Docs
   validate:
     name: Validate PR
     runs-on: ubuntu-latest

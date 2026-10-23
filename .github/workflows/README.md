@@ -72,6 +72,11 @@ administrator cleanup is separate.
 ### Validation details and test model
 
 Catalog checks cover structure, schemas, policy, documentation, and security.
+The blocking `POL-022` policy rejects Podman `Containerfile` names and `.in`
+preprocessing conventions; use the
+[Podman-to-Docker migration guide](../../docs/authoring-guides/podman-to-docker-migration.md)
+or its linked migration skill. The check is static and does not build or execute
+contributor-controlled container inputs.
 The [agent](../../docs/authoring-guides/agent-authoring-guide.md) and
 [starter-kit](../../docs/authoring-guides/starter-kit-authoring-guide.md)
 authoring guides describe required files and content constraints. The
