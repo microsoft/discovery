@@ -21,9 +21,12 @@ Accept exactly one repository-relative source path under `agents/` or
 /migrate-podman-containerfile agents/example/tools/example/Containerfile
 ```
 
-If no path is supplied, locate changed `Containerfile*`, `*.Containerfile`, and
-`*Dockerfile*.in` files in those roots. Continue only when exactly one candidate
-exists; otherwise list the candidates and stop without changing files.
+If no path is supplied, enumerate changed files in those roots and compare
+basenames case-insensitively. Include `Containerfile`, names beginning with
+`Containerfile.`, ending with `.Containerfile`, or containing `.Containerfile.`;
+also include the corresponding `Dockerfile` variants when they end in `.in`.
+Continue only when exactly one candidate exists; otherwise list the candidates
+and stop without changing files.
 
 ## Safety gates
 
