@@ -42,6 +42,11 @@ Containerfile cannot bypass the canonical catalog structure in either tree.
 
 ## Plain Containerfile
 
+Before renaming, inspect the build context's ignore files. Podman prefers
+`.containerignore`, whereas Docker uses `.dockerignore` or a Dockerfile-specific
+ignore file. Ensure Docker's effective ignore file preserves the exclusions used
+by Podman; do not blindly overwrite an existing ignore file when they differ.
+
 For a standard file, preserve its contents and history:
 
 ```console
