@@ -32,6 +32,7 @@ Two escape hatches exist, and neither is a way to skip review:
 | [POL-018](#pol-018) | Catalog webpage URLs must resolve to reachable public HTML pages. | Whole repository | warning |
 | [POL-019](#pol-019) | Catalog contact email domains must exist and advertise usable mail DNS records. | Whole repository | error |
 | [POL-020](#pol-020) | UTF-8 source text must not contain unsafe or invisible Unicode characters. | Every changed file | error |
+| [POL-022](#pol-022) | Catalog container builds must use Docker-compatible Dockerfile names and must not rely on Podman .in preprocessing. | Every changed file | error |
 | [TAG-001](#tag-001) | Tags declared in metadata.yaml must exist in the controlled tag vocabulary. | Each touched agent folder | error |
 | [TAG-002](#tag-002) | Authors must not declare tags in the CI-computed namespaces (auto:, tier:, party:, capability:). | Each touched agent folder | error |
 
@@ -144,6 +145,20 @@ UTF-8 source text must not contain unsafe or invisible Unicode characters.
 **How to fix**
 
 Save the file as valid UTF-8 and remove the reported control, bidirectional, zero-width, private-use, unassigned, noncharacter, replacement, or non-standard separator code point. Normal visible international and scientific text is allowed.
+
+## POL-022
+
+Catalog container builds must use Docker-compatible Dockerfile names and must not rely on Podman .in preprocessing.
+
+- **Applies to:** Every changed file
+- **Severity:** error
+- **Tags:** compatibility, containers
+
+**How to fix**
+
+For a plain Containerfile, rename it to Dockerfile. For Containerfile.in or Dockerfile.in, resolve preprocessing first and commit one rendered Dockerfile. Use the migrate-podman-containerfile skill for a guarded migration.
+
+Further reading: `docs/authoring-guides/podman-to-docker-migration.md`
 
 ## TAG-001
 
