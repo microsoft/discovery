@@ -48,6 +48,11 @@ Before writing anything:
    `CMD`, `COPY`, `ENTRYPOINT`, `ENV`, `EXPOSE`, `FROM`, `HEALTHCHECK`, `LABEL`,
    `MAINTAINER`, `ONBUILD`, `RUN`, `SHELL`, `STOPSIGNAL`, `USER`, `VOLUME`, and
    `WORKDIR`. Stop on unknown instructions or a non-Docker syntax frontend.
+7. Identify the effective build-context directory; stop if it cannot be
+   determined or contains `.containerignore`. Docker does not read that file.
+   Require manual migration of its exclusions to Docker's effective ignore
+   file, resolving any existing `.dockerignore` or Dockerfile-specific ignore
+   file, before retrying.
 
 When a safety gate fails, make no changes. Explain the exact blocker and point
 to `docs/authoring-guides/podman-to-docker-migration.md`, including the manual
