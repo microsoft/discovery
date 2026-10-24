@@ -113,3 +113,7 @@ Collect the policy assignments effective at the target subscription (including i
 ### config_export — FR1.8
 Emit the config export only when all embedded validations pass or are explicitly waived with a recorded justification. Refuse to export if any P0 check is red without a waiver; write against `config.schema.json`, embed the waiver list, and stamp schema version and content hash.
 - Export blocked: resolve the named red check or add a waiver with justification, then re-run.
+
+### Region placement contract
+
+For `byo-existing`, validate the VNet location against `workloadRegion` (the physical managed-resource override), not `controlPlaneRegion`. Missing location evidence fails this check. Control-plane and workload regions may differ. The baseline retains one shared workload region for compute and workspace; it does not select an independent Search region or migrate existing immutable resources.

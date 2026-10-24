@@ -94,6 +94,17 @@ These apply to every tool below.
 - Per-service scoping. Supercomputer, workspace, and bookshelf have different
   dependencies; checks and deploys are scoped by service profile, never one blanket pass.
 
+### Region placement contract
+
+`controlPlaneRegion` selects Discovery ARM placement. `workloadRegion` selects the
+physical managed-resource region via `discovery.overridemrgregion`; BYO VNet/subnets
+must match that workload region, not necessarily the control plane. Planning and
+deployment must permit this split and must not pass unknown VNet-location evidence.
+The baseline accepts one shared workload region for compute and workspace; it does
+not provide per-Search-region selection or workspace-only reuse/migration. Recovery
+must preserve immutable region/tags and succeeded dependencies rather than treating
+a regional gate failure as permission to delete them.
+
 ### Offline dry-run acceptance criteria
 
 - Each Stage 2-5 entry point supports `-DryRun` without Azure CLI, authentication or HTTP calls.

@@ -247,11 +247,11 @@ Notes next to each field explain what to enter. A few that trip people up:
 | `network.model` | Choose one of the options described above. Only `byo-existing` skips Stage 2 network-template provisioning. |
 | `network.networkResourceGroup` | The resource group holding the existing VNet for `byo-existing`, or the target group for tool-provisioned networking. Stage 2 creates/uses the target network group for provisioning models. |
 | `network.dnsResourceGroup` | Resource group containing the private DNS zones linked to the Discovery VNet. Leave it blank when DNS zones live in `network.networkResourceGroup`; specify it for centralized DNS in another resource group. Stage 2 creates/reuses the required zones and exact VNet links there and includes this RG in its RBAC targets. |
-| `network.vnetName` | For `byo-existing`, enter the existing VNet name (Stage 1 checks it exists and is in `controlPlaneRegion`). For `managed`, `byo` or `byo-spoke`, enter the VNet name to deploy; blank defaults to `vnet-<names.workspace>`. |
+| `network.vnetName` | For `byo-existing`, enter the existing VNet name (Stage 1 checks it exists and is in `workloadRegion`). For `managed`, `byo` or `byo-spoke`, enter the VNet name to deploy; blank defaults to `vnet-<names.workspace>`. |
 | `network.existingSubnets` | BYO form: list existing subnet CIDRs outside the planned Discovery subnets so address planning can check for overlaps. This field does not make a provisioning model preserve unlisted subnets. |
 | `network.outboundType` | Select `UserDefinedRouting` for customer firewall/NVA egress, or `LoadBalancer` for AKS load-balancer-based egress. |
 | `network.nvaNextHop` | For UDR, enter the actual firewall/NVA private IP. It is not a NAT Gateway public IP. Not required for `LoadBalancer`. |
-| `controlPlaneRegion` / `workloadRegion` | Use a supported production region: **East US**, **Sweden Central**, or **UK South**. Keep resources for one deployment in the same region unless an approved architecture requires otherwise. |
+| `controlPlaneRegion` / `workloadRegion` | Use a Discovery-creatable production `controlPlaneRegion` (for example, **East US**, **Sweden Central**, or **UK South**). Set `workloadRegion` to the physical region of the VNet/subnets and managed dependencies; it may differ from the control plane. Check service availability and quota there before deployment. |
 | `names.*` | The resource names (workspace, project, supercomputer, node pool, etc.). Keep them unique in the subscription. |
 | `storage.account` | Required for every project, independently of Bookshelf. The name of the storage account you pre-created (prerequisite 8); keep `storage.model=byo`. Stage 1 fails if the account doesn't exist. Stage 2 adds the Blob CORS rules and private endpoint. The account denies public network traffic, so users who open project outputs in Discovery Studio need network access to it: from the VNet (VPN or ExpressRoute), or through a client IP rule you add. |
 | `workspace.publicNetworkAccess` | `Enabled` (default) or `Disabled`. With `Disabled`, the workspace data plane (agents, investigations, conversations) answers only from inside the VNet, so Stage 5 must run from a runner with private network access. |
@@ -260,8 +260,13 @@ Notes next to each field explain what to enter. A few that trip people up:
 Notes:
 - **Policies are collected live** from the subscription at runtime — you do not list deny/audit
   policies in the form. Add a `POLICY` row only to declare or override one.
-- For **`byo-existing`**, `controlPlaneRegion` must equal the region of the existing VNet that holds
-  the `managedcluster` / `nodepool` subnets.
+- For **`byo-existing`**, `workloadRegion` must equal the region of the existing VNet that holds
+  the `managedcluster` / `nodepool` subnets. Stage 4 passes it as `discovery.overridemrgregion`;
+  the Discovery ARM location remains `controlPlaneRegion`. The baseline has one shared workload
+  region for compute and workspace. It does not expose an independent Search-region setting or
+  a workspace-only reuse/migration workflow. Preserve succeeded resources and use a separately
+  reviewed ID-based recovery template for that topology; `-Recovery` is not a region migration.
+  Do not change immutable region/tags of an existing resource.
 - For **`byo-existing`**, Stage 2 skips the VNet/network-template deployment. Before Stage 3, make sure that:
   - Each SUBNET row's CIDR matches an existing subnet. Stage 1 maps rows to subnet names by CIDR
     and fails `byo-subnets` on a mismatch.
