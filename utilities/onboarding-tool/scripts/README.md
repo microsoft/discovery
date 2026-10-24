@@ -70,6 +70,7 @@ The Pester suites are:
 - [Stage4State.Tests.ps1](../tests/Stage4State.Tests.ps1)
 - [Stage5Workflow.Tests.ps1](../tests/Stage5Workflow.Tests.ps1)
 - [RbacModes.Tests.ps1](../tests/RbacModes.Tests.ps1)
+- [RegionPlacement.Tests.ps1](../tests/RegionPlacement.Tests.ps1)
 
 Run the applicable suites from `utilities/onboarding-tool` with PowerShell 7. Also run PowerShell
 parser checks, JSON/schema validation where relevant, workbook structural checks after editing

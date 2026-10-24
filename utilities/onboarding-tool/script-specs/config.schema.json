@@ -49,10 +49,12 @@
       ]
     },
     "controlPlaneRegion": {
-      "type": "string"
+      "type": "string",
+      "description": "Discovery ARM control-plane region. May differ from workloadRegion; actual new-create support must be verified."
     },
     "workloadRegion": {
-      "type": "string"
+      "type": "string",
+      "description": "Physical managed-resource and BYO VNet/subnet region, passed as discovery.overridemrgregion. The baseline uses one workload region for both compute and workspace; it does not expose a separate Search region or existing-supercomputer reuse input."
     },
     "systemSku": {
       "type": "string",

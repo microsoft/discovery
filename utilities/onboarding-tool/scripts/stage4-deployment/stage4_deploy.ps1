@@ -97,13 +97,13 @@ function Resolve-DiscoveryError {
         [pscustomobject]@{
             Signature   = 'Creation not supported in region'
             RootCause   = 'the target region is not a Discovery-creatable region for this resource type (the ARM-advertised location list can be broader than what the service allows for creation)'
-            Remediation = 'deploy into a Discovery-creatable region (for supercomputers/storageContainers eastus is confirmed creatable; eastus2 is rejected despite being advertised) and place the BYO VNet/subnets in that same region so the supercomputer stays co-regional with its node pool subnet'
+            Remediation = 'select a Discovery-creatable controlPlaneRegion for new ARM resources; keep BYO VNet/subnets in workloadRegion, which is passed as discovery.overridemrgregion. Verify actual creation support; the provider catalog alone is not proof. Preserve existing succeeded resources and their immutable regions/tags'
             Match       = { param($t) $t -match '(?is)Creation of new .* resources is not supported in region|is not supported in region' }
         }
         [pscustomobject]@{
             Signature   = 'RegionMismatch on supercomputer/nodePool SubnetId'
-            RootCause   = 'supercomputer location (controlPlaneRegion) differs from the BYO VNet/subnet region'
-            Remediation = 'set controlPlaneRegion to the region of the managedcluster/nodepool VNet so the supercomputer is co-regional with its subnets, then delete the failed supercomputer and re-run (region is immutable)'
+            RootCause   = 'the effective managed-resource region (workloadRegion / discovery.overridemrgregion) and a dependent VNet/subnet region are inconsistent, or an existing resource retains a different immutable override'
+            Remediation = 'compare workloadRegion, actual VNet/subnet locations, and the existing supercomputer tags. For new resources align the physical workload region with their subnets; controlPlaneRegion can differ. Preserve succeeded resources; do not change immutable regions/tags or delete a failed resource without a separately reviewed recovery plan'
             Match       = { param($t) $t -match '(?is)RegionMismatch|Region mismatch for dependent resource|must be in the same region as the primary resource' }
         }
         [pscustomobject]@{
@@ -761,6 +761,7 @@ if ([string]::IsNullOrWhiteSpace($resourceGroup)) {
 Invoke-Az -Args @('account', 'set', '--subscription', $subscriptionId) | Out-Null
 
 $location = [string]$cfg.controlPlaneRegion
+$workloadRegion = [string]$cfg.workloadRegion
 $workspaceName = Get-ConfigName -Config $cfg -Name 'workspace' -Default ''
 $workspaceConfigFailure = Get-Stage4WorkspaceConfigFailure -WorkspaceName $workspaceName
 if ($workspaceConfigFailure) {
@@ -882,17 +883,16 @@ $chatModelId = "$workspaceId/chatModelDeployments/gpt-5-4"
 $storageContainerId = New-DiscoveryId -SubscriptionId $subscriptionId -ResourceGroup $resourceGroup -TypePath 'storageContainers' -NamePath $storageContainerName
 $projectId = "$workspaceId/projects/$projectName"
 
-# Region co-location pre-flight (applies to both Bicep and ARM paths). The supercomputer must be
-# co-regional with its managedcluster/nodepool subnets; discovery.overridemrgregion does not relax it.
+# Physical VNet placement follows the managed-resource override in both deployment paths.
 if (-not $Recovery -and $location) {
     $preflightSubnet = Get-SubnetIdByRole -Config $cfg -Role 'managedcluster' -ResourceGroup $resourceGroup
     if ($preflightSubnet) {
         $preflightRegion = Get-VNetRegionFromSubnetId -SubnetId $preflightSubnet
-        if ($preflightRegion -and $preflightRegion -ne $location) {
+        if (-not (Test-WorkloadVNetRegion -WorkloadRegion $workloadRegion -VNetRegion $preflightRegion)) {
             $results.Add((New-CheckResult -Id 'deploy-supercomputer' -Name 'supercomputer deployment' -Status 'Fail' -Fr 'FR4.1' `
-                        -Detail "resource=$supercomputerId provisioningState=NotSubmitted RegionMismatch expected=$location actual=$preflightRegion subnet=$preflightSubnet" `
-                        -Remediation "controlPlaneRegion ($location) must match the managedcluster/nodepool VNet region ($preflightRegion); the supercomputer and its node pool subnet must be co-regional. Set controlPlaneRegion=$preflightRegion, delete the failed supercomputer, and re-run (region is immutable)." `
-                        -Data ([pscustomobject]@{ expected = $location; actual = $preflightRegion; subnetId = $preflightSubnet })))
+                        -Detail "resource=$supercomputerId provisioningState=NotSubmitted RegionMismatch expectedWorkload=$workloadRegion actual=$preflightRegion controlPlane=$location subnet=$preflightSubnet" `
+                        -Remediation "Confirm the VNet location and align workloadRegion ($workloadRegion) with it ($preflightRegion). controlPlaneRegion ($location) may differ. Preserve existing succeeded resources and immutable region/tags; review a recovery plan before any replacement." `
+                        -Data ([pscustomobject]@{ expected = $workloadRegion; actual = $preflightRegion; controlPlaneRegion = $location; subnetId = $preflightSubnet })))
             if ($PassThru) { return $results.ToArray() }
             $null = Write-OnboardingReport -Results $results.ToArray() -Title 'Stage 4 · deploy order (FR4.1-FR4.2)' -JsonPath $JsonPath
             Complete-Stage -Results $results.ToArray()
@@ -983,13 +983,14 @@ if (-not $BicepPath) {
     $nodeSubnet = Get-SubnetIdByRole -Config $cfg -Role 'nodepool' -ResourceGroup $resourceGroup
     if (-not $supercomputerName) { $scMissing += 'names.supercomputer' }
     if (-not $location) { $scMissing += 'controlPlaneRegion' }
+    if (-not $workloadRegion) { $scMissing += 'workloadRegion' }
     if (-not $managedIdentityId) { $scMissing += 'managedIdentity.id or names.managedIdentity' }
     if (-not $scSubnet) { $scMissing += 'managedcluster subnet id/name' }
     $regionMismatch = $null
-    if ($location -and $scSubnet) {
+    if ($workloadRegion -and $scSubnet) {
         $subnetRegion = Get-VNetRegionFromSubnetId -SubnetId $scSubnet
-        if ($subnetRegion -and $subnetRegion -ne $location) {
-            $regionMismatch = [pscustomobject]@{ expected = $location; actual = $subnetRegion; subnetId = $scSubnet }
+        if (-not (Test-WorkloadVNetRegion -WorkloadRegion $workloadRegion -VNetRegion $subnetRegion)) {
+            $regionMismatch = [pscustomobject]@{ expected = $workloadRegion; actual = $subnetRegion; subnetId = $scSubnet }
         }
     }
     if ($scMissing.Count) {
@@ -1000,7 +1001,7 @@ if (-not $BicepPath) {
     } elseif ($regionMismatch) {
         $results.Add((New-CheckResult -Id 'deploy-supercomputer' -Name 'supercomputer deployment' -Status 'Fail' -Fr 'FR4.1' `
                     -Detail "resource=$supercomputerId provisioningState=NotSubmitted RegionMismatch expected=$($regionMismatch.expected) actual=$($regionMismatch.actual) subnet=$($regionMismatch.subnetId)" `
-                    -Remediation "controlPlaneRegion ($($regionMismatch.expected)) must match the managedcluster/nodepool VNet region ($($regionMismatch.actual)); the supercomputer and its node pool subnet must be co-regional. Set controlPlaneRegion=$($regionMismatch.actual), delete the failed supercomputer, and re-run (region is immutable)." `
+                    -Remediation "Confirm the VNet location and align workloadRegion ($($regionMismatch.expected)) with it ($($regionMismatch.actual)). controlPlaneRegion ($location) may differ. Do not change immutable region/tags or delete existing resources without a reviewed recovery plan." `
                     -Data $regionMismatch))
     } else {
         $scNet = Get-ObjProp -Object $cfg -Name 'network'

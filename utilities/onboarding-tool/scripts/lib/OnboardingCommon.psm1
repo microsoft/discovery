@@ -26,6 +26,15 @@ Set-StrictMode -Version Latest
 
 $script:ValidStatus = @('Pass', 'Fail', 'Warn', 'Skip', 'Waived')
 
+function Test-WorkloadVNetRegion {
+    [CmdletBinding()]
+    param([AllowEmptyString()][string]$WorkloadRegion, [AllowEmptyString()][string]$VNetRegion)
+
+    # The managed-resource override, not the Discovery ARM location, owns the VNet.
+    if ([string]::IsNullOrWhiteSpace($WorkloadRegion) -or [string]::IsNullOrWhiteSpace($VNetRegion)) { return $false }
+    return $WorkloadRegion.Trim() -ieq $VNetRegion.Trim()
+}
+
 function New-CheckResult {
     <#
     .SYNOPSIS Standard result object emitted by every check/action.
@@ -1148,4 +1157,4 @@ Export-ModuleMember -Function `
     New-CheckResult, Test-AnyFailure, Get-OnboardingConfig, Test-CustomerJitManagedUser, Test-ConfigWaiver, `
     Invoke-Az, Get-AzJson, Set-PimRoleEligibility, Assert-AzLogin, Write-OnboardingReport, Write-OnboardingPlan, Complete-Stage, `
     ConvertTo-UInt32Ip, Get-CidrInfo, Test-CidrContains, Test-CidrOverlap, `
-    Resolve-SubnetRole, Test-CanonicalSubnetRole, Get-VcpuQuotaResult, Get-ModelQuotaResult
+    Resolve-SubnetRole, Test-CanonicalSubnetRole, Get-VcpuQuotaResult, Get-ModelQuotaResult, Test-WorkloadVNetRegion
