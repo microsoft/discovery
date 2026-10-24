@@ -1,0 +1,30 @@
+data_Si
+_symmetry_space_group_name_H-M   'F d -3 m :1'
+_symmetry_Int_Tables_number      227
+_cell_length_a                   5.43070
+_cell_length_b                   5.43070
+_cell_length_c                   5.43070
+_cell_angle_alpha                90.00000
+_cell_angle_beta                 90.00000
+_cell_angle_gamma                90.00000
+_chemical_formula_sum            'Si8'
+
+loop_
+ _symmetry_equiv_pos_as_xyz
+  'x, y, z'
+
+loop_
+ _atom_site_label
+ _atom_site_type_symbol
+ _atom_site_fract_x
+ _atom_site_fract_y
+ _atom_site_fract_z
+ _atom_site_occupancy
+  Si0  Si  0.00000  0.00000  0.00000  1.0
+  Si1  Si  0.00000  0.50000  0.50000  1.0
+  Si2  Si  0.50000  0.00000  0.50000  1.0
+  Si3  Si  0.50000  0.50000  0.00000  1.0
+  Si4  Si  0.25000  0.25000  0.25000  1.0
+  Si5  Si  0.25000  0.75000  0.75000  1.0
+  Si6  Si  0.75000  0.25000  0.75000  1.0
+  Si7  Si  0.75000  0.75000  0.25000  1.0
