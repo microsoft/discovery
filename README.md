@@ -165,7 +165,9 @@ discovery/
 │           └── Dockerfile
 ├── starter-kits/
 │   └── <kit-name>/                           ← flat catalog: one folder per kit
-│       └── kit.json                          ← Starter-kit manifest (required, the only file allowed in the folder)
+│       └── kit.json                          ← Starter-kit manifest (required)
+│       └── README.md                         ← Optional, but recommended
+│       └── media/                            ← Required only if images are used in Markdown files
 ├── .auto-registry/                           ← Auto-generated catalog registries; do not edit by hand
 │   ├── agent-registry.json                   ← Aggregated agent metadata from agents/*/
 │   └── starter-kit-registry.json             ← Aggregated starter-kit metadata from starter-kits/*/

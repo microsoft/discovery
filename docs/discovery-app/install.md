@@ -2,14 +2,14 @@
 
 This guide walks through installing the Microsoft Discovery app. For the conceptual tour, see the [Quick Start](quickstart.md).
 
-The Microsoft Discovery app is a self-contained application available for Windows x64, Windows Arm64, and MacOS Arm. The installer bundles everything it needs to run; you don't have to install an SDK, an IDE, or a runtime.
+The Microsoft Discovery app is a self-contained application available for Windows x64, Windows Arm64, macOS ARM, and Red Hat (Enterprise Linux) x64. The installer bundles everything it needs to run; you don't have to separately install an SDK, an IDE, or a runtime.
 
 ## Prerequisites
 
 | Requirement | Notes |
 | --- | --- |
-| **Operating system** | Windows 11 and macOS currently supported. Linux isn't currently supported. |
-| **GitHub account** | Required to download releases from this repository. |
+| **Operating systems** | Windows 11, macOS, and RHEL currently supported. |
+| **GitHub account** | Optional. Required only to make contributions to agents and starter-kits. |
 | **GitHub Copilot subscription** | Required. Microsoft Discovery drives Copilot to power its conversational and agent capabilities. |
 | **Disk space** | ~3 GB free for the install plus additional space for your bookshelves. |
 | **Network access at install time** | The installer fetches signed components from Microsoft endpoints. Microsoft Discovery runs locally after install; only specific Agent Plugins call out to the internet. |
@@ -23,17 +23,19 @@ The Microsoft Discovery app is a self-contained application available for Window
 ## Step 1 — Download
 
 1. Open the [Discovery download landing page](/README.md) on this repository.
-1. Select your platform amongst the **User Installer** options (**x64**, **Arm64**, or **macOS**). Optionally, you can get one previous version from the table below the download options.
+1. Select your platform amongst the **User Installer** options (**x64**, **Arm64**, **macOS**, **RHEL**). You can optionally get one previous version from the table below the download options.
 
 ## Step 2 — Install
 
-1. Right-click the downloaded installer for your platform.  Select **Run as administrator** to cleanly install.
+1. Start the installer that you just downloaded.  Windows and Linux require that you have the rights to elevate to Administrator or `sudo`.  For Windows, it's recommended that you right-click the downloaded installer and select **Run as administrator** to cleanly install.  For Linux, extract the tar.gz file contents and run the `install-discovery-app --rpm <rpm-file>`.
+
 1. Follow the installer prompts. Defaults are recommended.
-1. Launch the application when the installer finishes. On Windows, find it in the Start menu under *Microsoft Discovery*; on Mac in the App Launcher.
+1. Launch the application when the installer finishes. On Windows, find it in the Start menu under *Microsoft Discovery*; on Mac in the App Launcher, or on Red Hat from the menu or type `discovery-app --mode science` or `discovery-app --mode developer`.
+
+1. Sign in with your **GitHub account** when prompted. Microsoft Discovery uses this to drive your GitHub Copilot subscription.
 
 ## Step 3 — Verify (Optional)
 
-1. Sign in with your **GitHub account** when prompted. Microsoft Discovery uses this to drive your GitHub Copilot subscription.
 1. Open a terminal and verify the CLI is available:
 
    ```powershell
@@ -51,8 +53,8 @@ Continue with the [Quick Start](quickstart.md) to build your first Bookshelf and
 
 New builds are delivered as releases on this repository. To upgrade:
 
-1. Download the latest `Discovery-app-x.y.z-release-platform-arch.exe`.
-1. Close Microsoft Discovery.
+1. Download the latest installer.
+1. Close any running Microsoft Discovery instance.
 1. Run the new installer. It updates components in place; your `.discovery/` workspace state is preserved.
 1. Re-open Microsoft Discovery and verify with `dx --version`.
 
@@ -69,6 +71,9 @@ New builds are delivered as releases on this repository. To upgrade:
 1. Open **App Launcher** or a **Finder** instance and select **Applications**.
 1. Find the **Discovery** application and select.
 1. Drag to **Trash** icon on the desktop or in **Finder**.
+
+### Red Hat
+1. Enter `sudo dnf autoremove -y discovery-app`
 
 ## Troubleshooting
 
