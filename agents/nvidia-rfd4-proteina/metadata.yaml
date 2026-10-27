@@ -1,0 +1,25 @@
+---
+name: nvidia-rfd4-proteina
+type: agent
+version: 1.0.0
+associated_tools:
+  - agents/nvidia-rfd4-proteina/tools/nvidia-rfd4-proteina
+publisher:
+  name: NVIDIA
+  contact: bionemofeedback@nvidia.com
+  support_url: https://github.com/NVIDIA-BioNeMo/bionemo-agent-toolkit
+  party: 3p
+description: >
+  Expert agent for joint protein structure and sequence design using the NVIDIA RFD4-Proteina NIM.
+  Supports protein binder design, motif scaffolding, enzyme design, antibody CDR design,
+  small-molecule binder design, partial diffusion, and inverse folding via the NVIDIA hosted API
+  or a self-hosted NIM. Powered by BioNeMo Agent Toolkit.
+tags:
+  - protein-design
+  - nvidia-nim
+  - diffusion-model
+  - generative-model
+  - binder-design
+  - drug-discovery
+  - trained-model
+---
