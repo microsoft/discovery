@@ -633,6 +633,7 @@ def test_ci_python_dependencies_are_pinned_and_workflows_use_the_manifest():
         "pytest-xdist",
         "pyyaml",
         "referencing",
+        "requests",
     }
 
     install_steps: list[tuple[str, str]] = []
