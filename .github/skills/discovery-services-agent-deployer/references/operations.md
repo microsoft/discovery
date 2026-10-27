@@ -50,6 +50,48 @@ pwsh -NoProfile -ExecutionPolicy Bypass -File .github/skills/discovery-services-
 
 The runner skips completed stages based on `run-state.json` and continues from the next incomplete stage.
 
+## Validation evidence and approvals
+
+Validation retries repeat the original test; they never replace it with an
+`OK` connectivity prompt. Each poll saves the full response to
+`validation-response-<response-id>.json`, while `validation-result.json`
+records the conversation, response, investigation, original prompt, verdict,
+and diagnostic reason. Failed and timed-out investigations are retained even
+when successful-test cleanup is enabled.
+
+For tool-backed agents, success requires a correlated call and successful
+output from the deployed tool, not just an assistant message. Code environments
+must additionally print this receipt in tool stdout after executing assertions
+and verifying that the requested output files exist and have nonzero sizes:
+
+```text
+DISCOVERY_VALIDATION_RESULT={"checks":[{"name":"slope","actual":2.1,"expected":2.1,"tolerance":1e-8}],"artifacts":[{"path":"/output/coefficients.csv","bytes":123}]}
+```
+
+The numbers, tolerances, paths, and sizes must be measured, not copied from this
+example. The validator checks equality/tolerances, rejects nonfinite numbers and
+empty artifacts, and requires a platform output-resource URI. Native tools
+without code environments require successful tool output but no script receipt.
+No-tool agents retain their response-only smoke test. This is execution evidence
+for the supplied checks, not a general semantic grader of scientific analyses.
+
+Pending approval tools, API-required actions, Discovery
+`discoveryProperties.confirmations` in `AwaitingUserInput` state, and completed replies asking for
+confirmation produce `VALIDATION_APPROVAL_INPUT_REQUIRED=true` and
+`TASK_STATUS=validate:input_required`. Do not mark validation done or disable
+confirmation. Complete platform approvals in the Discovery UI, then rerun
+`-Stage validate -RunDir <RunDir>` to poll the same response. For a completed
+confirmation-only reply, use `ask_user` to obtain the user's answer, then pass
+that answer as `-ValidationPrompt` with the same run directory. The runner sends
+the continuation in the preserved conversation and retains the original test.
+Do not infer approval or automatically submit function outputs.
+
+Offline regression checks:
+
+```powershell
+python -m unittest discover -s .\.github\tests -p test_agent_deployer_validation.py -v
+```
+
 ## Stage TODO status
 
 When the assistant environment exposes a native task/TODO UI, such as the VS Code GitHub Copilot prompt-window TODO list, use that UI as the primary progress tracker. First validate every requested agent exists under `agents/microsoft/<agent>` or `agents/partners/<partner-name>/<agent>`. If any agent is missing or ambiguous, do not create deployment TODOs; stop and ask the user to fix the agent name or specify `-PublisherName`.
@@ -152,4 +194,3 @@ Validation requires the response to complete and not report an execution failure
 - `local`: use local Docker, then push to ACR.
 
 Use `-WhatIfPlan` to inspect repo discovery and planned stages without Azure calls.
-

@@ -506,6 +506,7 @@ function Set-RunStateFailed {
       'stage-03' { $State.deploy['status'] = 'Failed'; $State.deploy['errorMessage'] = $ErrorMessage }
       'stage-04' { $State.deploy['agentStatus'] = 'Failed'; $State.deploy['agentErrorMessage'] = $ErrorMessage }
       'stage-05' {
+        $State.validate.Remove('completedAt')
         $State.validate['status'] = 'Failed'
         $State.validate['errorMessage'] = $ErrorMessage
         $State.validate['failedAt'] = (Get-Date).ToString('o')
@@ -1721,6 +1722,12 @@ if (-not $State.deploy.tempAgentYaml) {
 }
 
 $EffectivePrompt = $Prompt
+if ([string]::IsNullOrWhiteSpace($EffectivePrompt) -and (Test-Path (Join-Path $RunDir 'validation-result.json'))) {
+  $PriorValidation = Get-Content (Join-Path $RunDir 'validation-result.json') -Raw | ConvertFrom-Json -AsHashtable
+  if ($PriorValidation['status'] -eq 'input_required' -and $PriorValidation.ContainsKey('validationPrompt')) {
+    $EffectivePrompt = [string]$PriorValidation['validationPrompt']
+  }
+}
 if ([string]::IsNullOrWhiteSpace($EffectivePrompt)) {
   if ($State.context.ContainsKey('hasTool') -and -not [bool]$State.context.hasTool) {
     $EffectivePrompt = 'What can you do?'
@@ -1764,8 +1771,30 @@ if hasattr(sys.stdout, "reconfigure"):
 if hasattr(sys.stderr, "reconfigure"):
   sys.stderr.reconfigure(encoding="utf-8", errors="replace")
 
-cfg_path, agent_name, prompt, delete_after, result_path = sys.argv[1], sys.argv[2], sys.argv[3], sys.argv[4], sys.argv[5]
-cfg = json.load(open(cfg_path, encoding='utf-8'))
+cfg_path, agent_name, prompt, delete_after, result_path, tool_name, tool_yaml, continuation = sys.argv[1:]
+with open(cfg_path, encoding="utf-8") as config_file:
+  cfg = json.load(config_file)
+import math
+from pathlib import Path
+import yaml
+
+tool_definition = yaml.safe_load(Path(tool_yaml).read_text(encoding="utf-8")) if tool_yaml else {}
+requires_receipt = bool(tool_definition.get("code_environments"))
+previous = json.loads(Path(result_path).read_text(encoding="utf-8")) if Path(result_path).exists() else {}
+validation_prompt = previous.get("validationPrompt", prompt) if previous.get("status") == "input_required" else prompt
+contract = """
+Actually execute the requested validation checks. For code execution, assert
+the requested numerical results and verify each required output file exists
+and has nonzero size before printing one line in the executed tool's stdout:
+DISCOVERY_VALIDATION_RESULT={"checks":[{"name":"check name","actual":2.1,"expected":2.1,"tolerance":1e-8}],"artifacts":[{"path":"/output/result.csv","bytes":123}]}
+Replace the example with actual measured values, tolerances, paths and sizes.
+Include every requested check and artifact, the executed script, and runtime
+session information. Use base language facilities if no JSON package exists.
+An assistant-only receipt or a plan is not execution evidence. If approval is
+needed, request it explicitly; never bypass approval.
+"""
+if requires_receipt:
+  prompt += "\n" + contract
 
 # Track all investigation URLs created during this run for cleanup on interruption
 _created_inv_urls = []
@@ -1774,6 +1803,8 @@ _cleanup_done = False
 def _cleanup_investigations():
   global _cleanup_done
   if _cleanup_done or str(delete_after).lower() != "true":
+    return
+  if not Path(result_path).exists() or json.loads(Path(result_path).read_text(encoding="utf-8")).get("status") != "passed":
     return
   _cleanup_done = True
   for url in _created_inv_urls:
@@ -1838,43 +1869,139 @@ safe = re.sub(r"[^a-z0-9-]", "-", agent_name.lower())[:8].strip("-") or "agent"
 timestamp_suffix = int(time.time())
 inv = f"test-{safe}-{timestamp_suffix}"[:24].rstrip("-")
 
-t = token()
+resume_response = None
+if previous.get("status") == "input_required" and previous.get("conversation"):
+  inv = previous["investigation"]
+  conv_name = previous["conversation"]
+  resume_response = previous.get("responseId")
+  if previous.get("responseStatus") == "completed" and continuation == "true":
+    resume_response = None
+    prompt = validation_prompt + "\nUser continuation:\n" + prompt
+else:
+  t = token()
+  inv_url = f"{base}/projects/{project}/investigations/{inv}?api-version={api}"
+  create = call_with_retries("PUT", inv_url, headers=headers(t), json={"description": "Post-deploy validation", "displayName": f"Validation Test {agent_name}"})
+  create.raise_for_status()
+  conv = call_with_retries("POST", f"{base}/conversations?api-version={api}", headers=headers(t), json={
+    "displayName": f"validation-{agent_name}",
+    "investigationName": f"/projects/{project}/investigations/{inv}",
+    "projectName": project,
+  })
+  conv.raise_for_status()
+  conv_name = conv.json().get("name")
+  if not conv_name:
+    raise RuntimeError("conversation create returned no name")
 inv_url = f"{base}/projects/{project}/investigations/{inv}?api-version={api}"
-call_with_retries("DELETE", inv_url, headers=headers(t))
-create = call_with_retries("PUT", inv_url, headers=headers(t), json={"description": "Post-deploy validation", "displayName": f"Validation Test {agent_name}"})
-if create.status_code not in (200, 201):
-  raise RuntimeError(f"investigation create failed: HTTP {create.status_code} {create.text[:300]}")
 _created_inv_urls.append(inv_url)
 
-conv = call_with_retries("POST", f"{base}/conversations?api-version={api}", headers=headers(t), json={
-  "displayName": f"validation-{agent_name}",
-  "investigationName": f"/projects/{project}/investigations/{inv}",
-  "projectName": project,
-})
-conv.raise_for_status()
-conv_name = conv.json().get("name")
-if not conv_name:
-  raise RuntimeError("conversation create returned no name")
+def response_text(body):
+  return "\n".join(
+    c["text"] for item in body.get("output", []) if item.get("type") == "message"
+    for c in item.get("content", []) if isinstance(c.get("text"), str)
+  ).strip()
+
+def approval_pending(body):
+  outputs = body.get("output", [])
+  answered = {o.get("call_id") for o in outputs if o.get("type") == "function_call_output"}
+  confirmations = (body.get("discoveryProperties") or {}).get("confirmations", [])
+  if any(c.get("status") == "AwaitingUserInput" for c in confirmations):
+    return True
+  return bool(body.get("required_action")) or body.get("status") == "requires_action" or any(
+    o.get("type") in {"mcp_approval_request", "tool_approval_request"} or
+    (o.get("type") == "function_call" and o.get("name") == "GetUserInput" and o.get("call_id") not in answered)
+    for o in outputs
+  )
+
+def verify_receipt(text):
+  matches = re.findall(r"^DISCOVERY_VALIDATION_RESULT=(.+)$", text, re.MULTILINE)
+  if not matches:
+    raise ValueError("Missing runtime validation receipt in tool output.")
+  receipt = json.loads(matches[-1])
+  checks, artifacts = receipt.get("checks"), receipt.get("artifacts")
+  if not isinstance(checks, list) or not checks:
+    raise ValueError("Receipt must contain measured checks.")
+  for check in checks:
+    if not isinstance(check, dict) or not check.get("name") or "actual" not in check or "expected" not in check:
+      raise ValueError("Malformed validation check.")
+    actual, expected = check["actual"], check["expected"]
+    if type(actual) in (int, float) and type(expected) in (int, float):
+      tolerance = check.get("tolerance", 0)
+      if type(tolerance) not in (int, float) or not all(math.isfinite(v) for v in (actual, expected, tolerance)) or tolerance < 0 or abs(actual - expected) > tolerance:
+        raise ValueError(f"Numerical validation failed: {check['name']}")
+    elif type(actual) not in (str, bool) or type(actual) is not type(expected) or actual != expected:
+      raise ValueError(f"Validation failed: {check['name']}")
+  if not isinstance(artifacts, list) or not artifacts:
+    raise ValueError("Receipt must contain verified artifacts.")
+  for artifact in artifacts:
+    if not isinstance(artifact, dict):
+      raise ValueError("Malformed artifact.")
+    path, size = artifact.get("path", ""), artifact.get("bytes")
+    if not isinstance(path, str) or not path.startswith("/output/") or ".." in path.split("/") or type(size) is not int or size <= 0:
+      raise ValueError("Artifact must have an output path and measured nonzero size.")
+  return receipt
+
+def assess_response(body):
+  text = response_text(body)
+  if approval_pending(body):
+    return "input_required", "Complete the pending approval in Discovery, then rerun validation."
+  if body.get("status") != "completed":
+    return "failed", f"Response ended with status {body.get('status')}."
+  outputs = body.get("output", [])
+  calls = {o.get("call_id"): o for o in outputs if o.get("type") == "function_call"}
+  executions = [
+    o for o in outputs if o.get("type") == "function_call_output" and
+    calls.get(o.get("call_id"), {}).get("name", "").lower().startswith(tool_name.lower() + "-")
+  ] if tool_name else []
+  if not executions and re.search(r"(?:please confirm|confirm.{0,80}proceed|would you like|approval required)", text, re.I | re.S):
+    return "input_required", text
+  if tool_name:
+    if not executions:
+      return "failed", "No correlated deployed-tool execution result."
+    output = executions[-1].get("output", "")
+    output = output if isinstance(output, str) else json.dumps(output)
+    if re.search(r"Tool execution failed|ToolRunError|ContainerExitCode|\"error\"\s*:\s*(?:\{|\"[^\" ]+)", output, re.I):
+      return "failed", "The deployed tool reported an execution error."
+    if not re.search(r"Tool execution succeeded|Tool has completed successfully|\"status\"\s*:\s*\"(?:succeeded|completed)\"", output, re.I):
+      return "failed", "The deployed tool did not report successful execution."
+    if requires_receipt:
+      try:
+        verify_receipt(output)
+      except (ValueError, TypeError, AttributeError) as error:
+        return "failed", str(error)
+      if not re.search(r"discovery://\S+", output):
+        return "failed", "No output resource was reported by the deployed tool."
+    return "passed", "Verified deployed-tool execution."
+  if not text or re.search(r"\b(?:blocked|failed|error|exception)\b", text, re.I):
+    return "failed", "Agent response was empty or reported failure."
+  return "passed", "Agent response completed."
 
 def wait_for_completion(conversation_name, text_prompt, wait_seconds):
   t_local = token()
-  resp = call_with_retries("POST", f"{base}/conversations/{conversation_name}/openai/v1/responses", headers=headers(t_local), json={
-    "input": [{"type": "message", "role": "user", "content": [{"type": "input_text", "text": text_prompt}]}],
-    "agent": {"type": "agent_reference", "name": agent_name},
-  })
+  if resume_response:
+    resp = call_with_retries("GET", f"{base}/conversations/{conversation_name}/openai/v1/responses/{resume_response}", headers=headers(t_local))
+  else:
+    resp = call_with_retries("POST", f"{base}/conversations/{conversation_name}/openai/v1/responses", headers=headers(t_local), json={
+      "input": [{"type": "message", "role": "user", "content": [{"type": "input_text", "text": text_prompt}]}],
+      "agent": {"type": "agent_reference", "name": agent_name},
+    })
   resp.raise_for_status()
   body_local = resp.json()
   rid_local = body_local.get("id")
   status_local = body_local.get("status", "")
 
-  terminal = {"completed", "failed", "cancelled", "expired"}
+  terminal = {"completed", "failed", "cancelled", "canceled", "expired", "incomplete"}
   deadline = time.time() + wait_seconds
   poll_count = 0
   start_time = time.time()
-  while status_local not in terminal:
+  while True:
+    evidence_path = Path(result_path).with_name(f"validation-response-{rid_local}.json")
+    evidence_path.write_text(json.dumps(body_local, indent=2), encoding="utf-8")
+    write_result("running", inv, status_local, response_text(body_local), body=body_local)
+    if status_local in terminal or approval_pending(body_local):
+      return body_local, status_local
     if _interrupted:
       print("[validation] Interrupted — stopping poll loop.", flush=True)
-      break
+      raise InterruptedError("Validation interrupted; response evidence has been saved.")
     if time.time() > deadline:
       raise TimeoutError(f"Timed out waiting {wait_seconds} seconds for response completion")
     time.sleep(30)
@@ -1890,10 +2017,11 @@ def wait_for_completion(conversation_name, text_prompt, wait_seconds):
   return body_local, status_local
 
 wait_seconds = int(os.getenv("VALIDATION_WAIT_SECONDS", "900"))
-fallback_prompt = os.getenv("VALIDATION_FALLBACK_PROMPT", "Reply with exactly OK")
 max_retries = int(os.getenv("VALIDATION_MAX_RETRIES", "3"))
+if wait_seconds <= 0 or max_retries <= 0:
+  raise ValueError("Validation timeout and retry count must be positive.")
 
-def write_result(status_value, investigation, response_status, text, semantic_failure=False):
+def write_result(status_value, investigation, response_status, text, semantic_failure=False, body=None, reason=""):
   with open(result_path, "w", encoding="utf-8") as f:
     json.dump({
       "status": status_value,
@@ -1901,14 +2029,21 @@ def write_result(status_value, investigation, response_status, text, semantic_fa
       "responseStatus": response_status,
       "semanticFailure": semantic_failure,
       "outputText": text or "",
+      "conversation": conv_name,
+      "responseId": (body or {}).get("id"),
+      "validationPrompt": validation_prompt,
+      "reason": reason,
+      "requiredAction": (body or {}).get("required_action") or {
+        "confirmations": ((body or {}).get("discoveryProperties") or {}).get("confirmations", [])
+      },
     }, f, indent=2)
 
-# Retry logic: if timeout or incomplete response, delete investigation and retry
+# Retain failed investigations and retry the same validation.
 body = None
 status = None
 for attempt in range(1, max_retries + 1):
   try:
-    body, status = wait_for_completion(conv_name, prompt if attempt == 1 else fallback_prompt, wait_seconds)
+    body, status = wait_for_completion(conv_name, prompt, wait_seconds)
     texts = []
     for item in body.get("output", []):
       if isinstance(item, dict) and item.get("type") == "message":
@@ -1917,53 +2052,36 @@ for attempt in range(1, max_retries + 1):
             texts.append(c["text"])
     joined = "\n".join(texts).strip()
     
-    blocked_patterns = [
-      r"\bblocked\b",
-      r"\bfailed\b",
-      r"\berror\b",
-      r"\bexception\b",
-      r"modulenotfounderror",
-      r"no module named",
-      r"cannot execute",
-      r"can't execute",
-      r"unable to proceed",
-      r"what i need to proceed",
-      r"tool connectivity check attempted but failed",
-      r"execution result:\s*\*\*400 bad request\*\*",
-      r"invalidnodepool",
-      r"nodepoolcapabilityerror",
-      r"bad request",
-      r"job submission",
-    ]
-    reported_failure = any(re.search(pattern, joined, flags=re.IGNORECASE) for pattern in blocked_patterns)
-
-    if status == "completed" and joined and reported_failure:
-      write_result("failed", inv, status, joined, True)
+    verdict, reason = assess_response(body)
+    if verdict == "input_required":
+      _cleanup_done = True
+      write_result(verdict, inv, status, joined, body=body, reason=reason)
+      print("VALIDATION_APPROVAL_INPUT_REQUIRED=true", flush=True)
+      print(f"VALIDATION_CONVERSATION={conv_name}", flush=True)
+      print(f"VALIDATION_RESPONSE_ID={body.get('id')}", flush=True)
+      print(f"VALIDATION_APPROVAL_REQUEST={reason}", flush=True)
+      raise SystemExit(3)
+    if status == "completed" and verdict == "failed":
+      _cleanup_done = True
+      write_result("failed", inv, status, joined, True, body=body, reason=reason)
       print(f"VALIDATION_INVESTIGATION={inv}", flush=True)
       print("VALIDATION_STATUS=failed", flush=True)
       print(f"VALIDATION_OUTPUT_PREVIEW={joined[:300]}", flush=True)
-      raise RuntimeError("Validation response completed but indicates the investigation is blocked or failed. Read validation-result.json for the final state.")
+      raise RuntimeError(f"Validation evidence failed: {reason} Read validation-result.json for details.")
 
-    # Success criteria: completed status, non-empty output, and no explicit failure report
-    if status == "completed" and joined:
-      write_result("passed", inv, status, joined, False)
+    if verdict == "passed":
+      write_result("passed", inv, status, joined, False, body=body, reason=reason)
       print(f"VALIDATION_INVESTIGATION={inv}", flush=True)
       print(f"VALIDATION_STATUS={status}", flush=True)
       print(f"VALIDATION_OUTPUT_PREVIEW={joined[:300]}", flush=True)
       break
     elif attempt < max_retries:
-      print(f"[validation] Attempt {attempt}: status={status}, output_len={len(joined)} - deleting investigation and retrying...", flush=True)
-      # Delete investigation before retry to clean up state
-      try:
-        t = token()
-        call_with_retries("DELETE", inv_url, headers=headers(t))
-        print(f"[validation] Investigation deleted: {inv}", flush=True)
-      except Exception as ex:
-        print(f"[validation] Warning: could not delete investigation: {ex}", flush=True)
+      print(f"[validation] Attempt {attempt}: status={status}; preserving evidence and retrying the original prompt.", flush=True)
+      print(f"[validation] Investigation retained: {inv}", flush=True)
       # Create new investigation for retry
       time.sleep(1)
       t = token()
-      call_with_retries("DELETE", inv_url, headers=headers(t))
+      resume_response = None
       inv_new = f"test-{safe}-{int(time.time())}"[:24].rstrip("-")
       inv_url_new = f"{base}/projects/{project}/investigations/{inv_new}?api-version={api}"
       create = call_with_retries("PUT", inv_url_new, headers=headers(t), json={"description": "Post-deploy validation", "displayName": f"Validation Test {agent_name}"})
@@ -1984,23 +2102,19 @@ for attempt in range(1, max_retries + 1):
         raise RuntimeError("conversation create failed on retry")
       time.sleep(2)  # Wait before retry
     else:
-      write_result("failed", inv, status, joined if "joined" in locals() else "", False)
+      _cleanup_done = True
+      write_result("failed", inv, status, joined, False, body=body, reason=reason)
       print(f"VALIDATION_INVESTIGATION={inv}", flush=True)
       print(f"VALIDATION_STATUS={status}", flush=True)
       print(f"VALIDATION_OUTPUT_PREVIEW={joined[:300] if joined else ''}", flush=True)
       raise SystemExit(2)
   except TimeoutError as ex:
     if attempt < max_retries:
-      print(f"[validation] Attempt {attempt}: Timeout - deleting investigation and retrying...", flush=True)
-      # Delete timed-out investigation
-      try:
-        t = token()
-        call_with_retries("DELETE", inv_url, headers=headers(t))
-        print(f"[validation] Timed-out investigation deleted: {inv}", flush=True)
-      except Exception as ex:
-        print(f"[validation] Warning: could not delete timed-out investigation: {ex}", flush=True)
+      print(f"[validation] Attempt {attempt}: timeout; preserving evidence and retrying the original prompt.", flush=True)
+      print(f"[validation] Timed-out investigation retained: {inv}", flush=True)
       # Create new investigation for retry
       time.sleep(1)
+      resume_response = None
       t = token()
       inv_new = f"test-{safe}-{int(time.time())}"[:24].rstrip("-")
       inv_url_new = f"{base}/projects/{project}/investigations/{inv_new}?api-version={api}"
@@ -2022,7 +2136,10 @@ for attempt in range(1, max_retries + 1):
         raise RuntimeError("conversation create failed on retry after timeout")
       time.sleep(2)
     else:
-      write_result("timeout", inv, "timeout", "", False)
+      _cleanup_done = True
+      saved = json.loads(Path(result_path).read_text(encoding="utf-8"))
+      saved.update(status="timeout", reason=str(ex))
+      Path(result_path).write_text(json.dumps(saved, indent=2), encoding="utf-8")
       print(f"VALIDATION_INVESTIGATION={inv}", flush=True)
       print(f"VALIDATION_STATUS=timeout", flush=True)
       print(f"VALIDATION_OUTPUT_PREVIEW=", flush=True)
@@ -2043,7 +2160,18 @@ else:
 $env:PYTHONUNBUFFERED = '1'
 $env:PYTHONIOENCODING = 'utf-8'
 $ValidationResultPath = Join-Path $RunDir 'validation-result.json'
-python $ValidatePy $State.deploy.deployConfigPath $TempAgentName $EffectivePrompt $Config.deleteInvestigationAfterTest $ValidationResultPath
+$ValidationToolName = if ($State.deploy.ContainsKey('toolName')) { [string]$State.deploy.toolName } else { '' }
+$ValidationToolYaml = if ($State.context.ContainsKey('toolYamlPath')) { [string]$State.context.toolYamlPath } else { '' }
+$ValidationContinuation = if ([string]::IsNullOrWhiteSpace($Prompt)) { 'false' } else { 'true' }
+python $ValidatePy $State.deploy.deployConfigPath $TempAgentName $EffectivePrompt $Config.deleteInvestigationAfterTest $ValidationResultPath $ValidationToolName $ValidationToolYaml $ValidationContinuation
+if ($LASTEXITCODE -eq 3) {
+  $State.validate.Remove('completedAt')
+  $State.validate.Remove('failedAt')
+  $State.validate.status = 'InputRequired'
+  $State.validate.resultPath = $ValidationResultPath
+  Save-RunState -RunDir $RunDir -State $State | Out-Null
+  throw 'VALIDATION_APPROVAL_INPUT_REQUIRED: Complete the approval in Discovery, or relay a confirmation-only request through ask_user and rerun validate with the explicit user response as -ValidationPrompt. Do not self-approve.'
+}
 if ($LASTEXITCODE -ne 0) { throw 'Validation test failed.' }
 if (-not (Test-Path $ValidationResultPath)) { throw "Validation result file was not written: $ValidationResultPath" }
 $ValidationResult = Get-Content $ValidationResultPath -Raw | ConvertFrom-Json
@@ -2052,6 +2180,8 @@ if ([string]$ValidationResult.status -ne 'passed') {
 }
 
 $State.validate.completedAt = (Get-Date).ToString('o')
+$State.validate.Remove('failedAt')
+$State.validate.Remove('errorMessage')
 $State.validate.status = 'Succeeded'
 $State.validate.resultPath = $ValidationResultPath
 $StatePath = Save-RunState -RunDir $RunDir -State $State
@@ -2066,7 +2196,7 @@ Write-Host '[stage-05] STATUS=Succeeded (5/5 validate complete)'
 
 } catch {
   $ErrMsg = $_.Exception.Message
-  if ($ErrMsg -like 'VALIDATION_PROMPT_INPUT_REQUIRED:*') {
+  if ($ErrMsg -like 'VALIDATION_PROMPT_INPUT_REQUIRED:*' -or $ErrMsg -like 'VALIDATION_APPROVAL_INPUT_REQUIRED:*') {
     Write-Host ("[stage-05] STATUS=InputRequired ({0})" -f ($ErrMsg -replace '^VALIDATION_PROMPT_INPUT_REQUIRED:\s*',''))
     throw
   }
@@ -2140,6 +2270,7 @@ function Get-StageStatus {
       return 'Pending'
     }
     5 {
+      if ((Has-StateValue -Bag $RunState.validate -Key 'status') -and ([string]$RunState.validate.status -eq 'InputRequired')) { return 'InputRequired' }
       if ((Has-StateValue -Bag $RunState.validate -Key 'status') -and ([string]$RunState.validate.status -eq 'Failed')) { return 'Failed' }
       if (Has-StateValue -Bag $RunState.validate -Key 'failedAt') { return 'Failed' }
       if (Has-StateValue -Bag $RunState.validate -Key 'completedAt') { return 'Succeeded' }
@@ -2341,9 +2472,9 @@ function Invoke-Stage {
   } catch {
     $isConfigInputRequired = $false
     if ($_.Exception.Message -like 'CONFIG_INPUT_REQUIRED:*' -or $_.Exception.Message -like 'BUILD_MODE_INPUT_REQUIRED:*' -or $_.Exception.Message -like 'SUPERCOMPUTER_NODEPOOL_CONFIRMATION_REQUIRED:*') { $isConfigInputRequired = $true }
-    if ($_.Exception.Message -like 'VALIDATION_PROMPT_INPUT_REQUIRED:*') { $isConfigInputRequired = $true }
+    if ($_.Exception.Message -like 'VALIDATION_PROMPT_INPUT_REQUIRED:*' -or $_.Exception.Message -like 'VALIDATION_APPROVAL_INPUT_REQUIRED:*') { $isConfigInputRequired = $true }
     foreach ($line in $outputLines) {
-      if ($line -eq 'CONFIG_INPUT_REQUIRED=true' -or $line -eq 'BUILD_MODE_INPUT_REQUIRED=true' -or $line -eq 'SUPERCOMPUTER_NODEPOOL_CONFIRMATION_REQUIRED=true' -or $line -eq 'VALIDATION_PROMPT_INPUT_REQUIRED=true' -or $line.StartsWith('[stage-01] STATUS=InputRequired')) {
+      if ($line -eq 'CONFIG_INPUT_REQUIRED=true' -or $line -eq 'BUILD_MODE_INPUT_REQUIRED=true' -or $line -eq 'SUPERCOMPUTER_NODEPOOL_CONFIRMATION_REQUIRED=true' -or $line -eq 'VALIDATION_PROMPT_INPUT_REQUIRED=true' -or $line -eq 'VALIDATION_APPROVAL_INPUT_REQUIRED=true' -or $line.StartsWith('[stage-01] STATUS=InputRequired')) {
         $isConfigInputRequired = $true
         break
       }
@@ -2824,5 +2955,3 @@ if ($SkipValidation) {
 
 Invoke-Stage -Name 'stage-summary' -TodoId 'summary' -ScriptBlock { param($StageArgs) Invoke-DiscoveryDeploySummary @StageArgs } -Arguments @{ RunDir = $RunDir } -RunDir $RunDir | Out-Null
 Write-Host '[runner] STATUS=Succeeded'
-
-
