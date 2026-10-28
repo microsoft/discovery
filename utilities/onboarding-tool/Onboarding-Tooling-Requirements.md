@@ -172,6 +172,10 @@ CIDRs, BYO storage model, deploying identity, the policy set, and mandatory
 `rbac.humanAccessMode` (`permanent-role-assignments` or `customer-jit-managed`). The JIT mode also
 requires `rbac.jitEligibilityDurationDays` as a whole number from 7 through 3650.
 
+The control-plane region is independent of the workload region. The VNet/subnets and all
+resources in the managed resource groups (MRGs) must share `workloadRegion`. Stage 1 validates
+an existing VNet against that region; Stage 4 checks deployment subnet regions before submission.
+
 FR1.2 [P0] Embedded subnet-sizing validation. Validate each Discovery subnet against the
 required prefix and confirm all fit inside the provided VNet without overlap:
 

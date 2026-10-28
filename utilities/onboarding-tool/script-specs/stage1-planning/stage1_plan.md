@@ -37,6 +37,10 @@ Confirm the subscription is allowlisted for Discovery, record the RP-registratio
 
 ### capture_fields — FR1.1
 Capture and normalize control-plane region, workload region, VNet CIDR, per-service subnet CIDRs, BYO storage model, deploying identity, and policy set. Normalize regions to Azure short names and CIDRs to canonical form; flag any required field left blank.
+
+For `byo-existing`, validate the existing VNet against `workloadRegion`, not `controlPlaneRegion`.
+The VNet/subnets and all managed-resource-group resources must share the workload region;
+the Discovery control-plane resources can use a different region.
 - Missing field: complete the corresponding cell in the planning sheet.
 
 ### project_storage — FR1.1
