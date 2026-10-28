@@ -20,6 +20,41 @@ Before starting the deployment, ensure you have:
 3. Docker installed locally for image building
 4. Azure CLI or PowerShell for resource management
 
+## UMAP dependency and verification
+
+The `molenv` environment includes `umap-learn` (imported as `from umap import
+UMAP`). The Dockerfile runs `app/smoke_umap.py` during the build: it computes real
+UMAP coordinates from a ten-row fingerprint Tanimoto-distance matrix and rejects
+non-finite coordinates or an output shape other than `(10, 2)`. This is an
+embedding execution check, not just an import check or an MDS/PCA substitute.
+
+In the matching tool environment, the check can also be run without rebuilding:
+
+```bash
+python /app/smoke_umap.py
+```
+
+Success prints `UMAP_SMOKE_OK`, the installed package version, and `(10, 2)`.
+The check requires the image's Python dependencies; compiling the script alone
+does not validate UMAP execution. It does not validate scientific cluster quality.
+
+| Prompt behavior before | Prompt behavior after |
+|---|---|
+| UMAP was not in the agent's available-package list | The agent explicitly uses `umap-learn` |
+| Missing UMAP could lead to an MDS fallback | MDS, PCA, and t-SNE cannot be reported as UMAP |
+| Precomputed similarities could be confused with distances | Tanimoto similarities are validated and converted to distances before UMAP |
+
+For example, "visualize ten candidate fingerprints using UMAP" now requires a
+real two-dimensional UMAP embedding, a plot, saved coordinates, package version,
+and parameters. A failed import or embedding must be reported as a failure with
+diagnostics, not as a completed substitute visualization.
+
+These are source changes, not an update to any existing image or deployed agent.
+Obtain approval before building, publishing, retagging, or replacing an image.
+After approval, build and scan the matching image first, verify the smoke check,
+then update the deployed tool and agent together before rerunning affected tasks.
+Changing agent instructions alone cannot add the missing dependency to an image.
+
 ## Build Docker Image
 
 ### Step 1: Build and Publish Docker Image
