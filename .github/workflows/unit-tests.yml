@@ -19,9 +19,12 @@ on:
       - ".github/scripts/**"
       - ".github/tests/**"
       - ".github/policy/**"
+      - ".github/skills/migrate-podman-containerfile/**"
       - ".github/requirements-ci.txt"
       - ".github/workflows/probe-aka-ms.yml"
       - ".github/workflows/unit-tests.yml"
+      - "docs/authoring-guides/agent-authoring-guide.md"
+      - "docs/authoring-guides/podman-to-docker-migration.md"
       - "utilities/agent-evaluation/**"
   workflow_dispatch:
 
@@ -45,11 +48,11 @@ jobs:
           FILES=$(gh api \
             "repos/${GITHUB_REPOSITORY}/pulls/${{ github.event.pull_request.number }}/files" \
             --paginate --jq '.[].filename')
-          if echo "$FILES" | grep -E '^\.github/(scripts|tests|policy)/|^\.github/requirements-ci\.txt$|^\.github/workflows/(probe-aka-ms|unit-tests)\.yml$|^utilities/agent-evaluation/' >/dev/null; then
+          if echo "$FILES" | grep -E '^\.github/(scripts|tests|policy)/|^\.github/skills/migrate-podman-containerfile/|^\.github/requirements-ci\.txt$|^\.github/workflows/(probe-aka-ms|unit-tests)\.yml$|^docs/authoring-guides/(agent-authoring-guide|podman-to-docker-migration)\.md$|^utilities/agent-evaluation/' >/dev/null; then
             echo "relevant=true" >> "$GITHUB_OUTPUT"
           else
             echo "relevant=false" >> "$GITHUB_OUTPUT"
-            echo "::notice::No validator, policy, test-dependency, unit-tests-workflow, or agent-evaluation paths changed; reporting success without running pytest."
+            echo "::notice::No validator, policy, tested migration guidance, test-dependency, unit-tests-workflow, or agent-evaluation paths changed; reporting success without running pytest."
           fi
 
       - name: Checkout

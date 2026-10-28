@@ -8,7 +8,7 @@
   "lock": {
     "byteLength": 16667,
     "reference": "runtime/generated/data/flowblind-catalog-research-v2-package-lock-v1.json",
-    "sha256": "7b7a8955d8a1cb03b7cd0e983eaa788105e34bd50d730ed58d1c00b42fddfae8"
+    "sha256": "64f7fbfd042fac543e6d097838b2c4fa2cd28ce7a9fbbb4f05d691807bc29086"
   },
   "packageId": "flowblind-research-teammate-v2",
   "packageVersion": "2.0.0",
@@ -16,6 +16,6 @@
   "verifier": {
     "byteLength": 36769,
     "reference": "runtime/flowblind-research-teammate-verification-v2.js",
-    "sha256": "09c35b5745ab453c5a1c0ffded90f88cf4fb803e8830d4e5495afed52fbe37bc"
+    "sha256": "8050fb71b8f50be40ca2e1dd0e92f0aab0f63efc39067512d2221cbead58bcac"
   }
 }

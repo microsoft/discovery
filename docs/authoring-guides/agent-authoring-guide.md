@@ -229,6 +229,9 @@ actions:
 - Each `actions[].infra_node` must reference an entry in `infra[].name`.
 - Container image references must use the deployer-substituted ACR placeholder format `{name}.azurecr.io/<image>:<tag>`; do not hardcode a registry name such as `myregistry.azurecr.io`.
 - Every tool subfolder must contain both `tool.yaml` and `Dockerfile`.
+- Podman `Containerfile` names are not accepted. For a guarded conversion, see
+  the [Podman-to-Docker migration guide](./podman-to-docker-migration.md) or
+  invoke `/migrate-podman-containerfile <path>`.
 - If a `tools/` directory exists, `agent.yaml.discoveryExtensions` must declare the corresponding tools so they are wired up at deploy time.
 - Optional tool tests must use `test_*.py` or `*_test.py` naming. Their presence is published as `auto:has-tests`, but the repository's privileged PR workflows do not execute submitted code; run these tests in your own isolated environment or CI before submission.
 

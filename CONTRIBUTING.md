@@ -33,7 +33,10 @@ so a Microsoft maintainer can land the agreed change.
    [starter-kit authoring guide](docs/authoring-guides/starter-kit-authoring-guide.md)
    for required files, naming, and examples.
 3. **Check your work** using the checklist below. If you include tool code,
-   test it in your own isolated environment or CI before submission.
+   test it in your own isolated environment or CI before submission. Tools
+   developed with Podman must use the canonical `Dockerfile`; follow the
+   [Podman-to-Docker migration guide](docs/authoring-guides/podman-to-docker-migration.md)
+   if your source uses `Containerfile` or `.in` preprocessing.
 4. **Commit and push your branch**, then open a pull request against `main`.
    Complete the [PR template](.github/pull_request_template.md) and explain what
    changed and how you tested it. You can change your PR status to draft so that you get

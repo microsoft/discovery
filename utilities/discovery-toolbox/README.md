@@ -110,7 +110,7 @@ The sidebar's breadth is set by a single **View Level** (`mdToolbox.viewLevel`):
 
 ## Feedback
 
-Found a bug, want a feature, or have general feedback? Open an issue on the [microsoft/discovery](https://github.com/microsoft/discovery/issues/new) repo and include the page you were on plus your toolbox version (Help → About inside the extension).
+Found a bug, want a feature, or have general feedback? Open an issue on the [Microsoft Discovery TechWeb Community](https://techcommunity.microsoft.com/category/azure/discussions/microsoft-discovery-discussions) repo and include the page you were on plus your toolbox version (Help → About inside the extension).
 
 ---
 

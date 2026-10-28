@@ -171,8 +171,7 @@ rm -rf ~/.md-toolbox
 ## 9. Reporting privacy concerns
 
 If you spot a behavior of this extension that contradicts anything in
-this document, please open an issue on the public release repository
-at [`microsoft/discovery`](https://github.com/microsoft/discovery/issues/new?labels=feedback&title=%5BPrivacy%5D%20)
+this document, please open an issue on the [TechCommunity forums](https://techcommunity.microsoft.com/category/azure/discussions/microsoft-discovery-discussions)
 or contact the maintainers.
 
 The "Send Feedback" entry in the Discovery Toolbox sidebar is hidden
