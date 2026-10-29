@@ -7,6 +7,8 @@ import itertools
 import json
 import os
 from pathlib import Path
+import shutil
+import subprocess
 import sys
 import tempfile
 import unittest
@@ -39,6 +41,39 @@ def execution(actual=2.1, expected=2.1, size=123, name="rstatistics-ExecuterCode
          "DISCOVERY_VALIDATION_RESULT=" + json.dumps(receipt)},
         message("Completed."),
     ]
+
+
+class RegistrySubstitutionTests(unittest.TestCase):
+    @unittest.skipUnless(shutil.which("pwsh"), "PowerShell 7 is required")
+    def test_registry_replacement_preserves_action_inputs(self):
+        source = RUNNER.read_text(encoding="utf-8")
+        block = source.split('$AcrLoginServer =', 1)[1].split('\n\npython -c', 1)[0]
+        block = '$AcrLoginServer =' + block
+        original = (
+            'qualified: "{name}.azurecr.io/tool:1.1.1"\n'
+            'bare: "{name}/tool:1.1.1"\n'
+            'name: "{{#if name}}{{name}}{{/if}}"\n'
+            'expression: "{{name}}.azurecr.io/{{name}}/output"\n'
+        )
+        expected = original.replace(
+            '"{name}.azurecr.io/', '"testregistry.azurecr.io/'
+        ).replace('"{name}/', '"testregistry.azurecr.io/')
+        with tempfile.TemporaryDirectory() as directory:
+            tool = Path(directory) / "tool.yaml"
+            tool.write_text(original, encoding="utf-8")
+            script = (
+                "$ErrorActionPreference = 'Stop'\n"
+                "$Config = @{ acrName = 'testregistry' }\n"
+                "$Ctx = @{ tempToolYaml = $env:TEST_TOOL_YAML }\n"
+                + block + "\n" + block
+            )
+            result = subprocess.run(
+                ["pwsh", "-NoProfile", "-Command", script],
+                env={**os.environ, "TEST_TOOL_YAML": str(tool)},
+                capture_output=True, text=True, check=False,
+            )
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertEqual(tool.read_text(encoding="utf-8-sig"), expected)
 
 
 class ValidationTests(unittest.TestCase):
@@ -199,6 +234,20 @@ class ValidationTests(unittest.TestCase):
         self.assertEqual(error.code, 3)
         self.assertIn("VALIDATION_APPROVAL_INPUT_REQUIRED=true", log)
         self.assertFalse(any(method == "DELETE" for method, _, _ in calls))
+
+    def test_explicit_approval_request_pauses_and_reuses_conversation(self):
+        result, calls, _, error = self.run_validator([
+            response([message("Proposed plan for approval.\nPlease approve and I'll execute this plan.")])
+        ])
+        self.assertEqual(result["status"], "input_required")
+        self.assertEqual(error.code, 3)
+        self.assertFalse(any(method == "DELETE" for method, _, _ in calls))
+        result, calls, _, error = self.run_validator([response(execution())], continuation=True)
+        self.assertIsNone(error)
+        self.assertEqual(result["conversation"], "conversation-1")
+        posts = [url for method, url, _ in calls if method == "POST"]
+        self.assertEqual(len(posts), 1)
+        self.assertIn("/conversations/conversation-1/", posts[0])
 
     def test_pending_get_user_input_pauses_and_resumes_same_response(self):
         pending = response([{"type": "function_call", "name": "GetUserInput", "call_id": "approval"}], "in_progress")

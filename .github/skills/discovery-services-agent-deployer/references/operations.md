@@ -19,6 +19,9 @@ The runner is a single self-contained PowerShell script and owns:
 7. Validation investigation
 8. Final summary
 
+Tool deployment resolves `{name}.azurecr.io/` and `{name}/` image registry
+placeholders without changing Handlebars action inputs such as `{{name}}`.
+
 Only `scripts/deploy-discovery-agent.ps1` is used for deployment logic. Keep new stage behavior in that script rather than adding separate internal stage scripts, so this skill stays aligned with the single-script `discovery-services-starter-kit-deployer` layout.
 
 ## Stage-at-a-time execution

@@ -1,0 +1,95 @@
+# yaml-language-server: $schema=../../../../docs/schemas/tool-definition-schema.json
+name: molecule-visualizations
+version: 1.1.2
+category: Cheminformatics
+description: >-
+  Creates 2D PNG and SVG molecule images, combined 2D contact sheets, and optional interactive 3D plots and structure files from SMILES. Uses RDKit and Plotly without model inference.
+actions:
+  - name: visualize_molecule
+    description: >-
+      Generate 2D PNG and SVG images for one molecule from SMILES. Optionally generate a rotatable interactive 3D HTML conformer plot and SDF, PDB, and XYZ files. Outputs are written to /output.
+    infra_node: worker
+    command: >-
+      --smiles-file /input/molecule.smiles --name-file /input/molecule.name --output-dir /output {{#if include_3d}}--with-3d{{/if}}
+    inline_files:
+      - mount_path: /input/molecule.smiles
+        content: "{{smiles}}"
+      - mount_path: /input/molecule.name
+        content: "{{#if name}}{{name}}{{/if}}"
+    environment_variables:
+      - name: PYTHONUNBUFFERED
+        value: "1"
+    input_schema:
+      type: object
+      properties:
+        smiles:
+          type: string
+          minLength: 1
+          description: SMILES string for the molecule to visualize.
+        name:
+          type: string
+          description: Optional molecule name used for plot titles and output filenames.
+        include_3d:
+          type: boolean
+          description: Set true to generate an interactive 3D HTML plot and SDF, PDB, and XYZ structure files in addition to the 2D images. Omit or set false for 2D only.
+      required:
+        - smiles
+    output_mount_configurations:
+      - output_name: MoleculeVisualizationResults
+        mount_path: /output
+        output_description: >-
+          Generated 2D PNG and SVG files, optional self-contained interactive 3D HTML plot with embedded Plotly JavaScript, and SDF, PDB, and XYZ structure files.
+        auto_promote: true
+  - name: visualize_molecule_gallery
+    description: >-
+      Generate 2D PNG and SVG files for multiple newline-separated SMILES strings and assemble all successfully rendered 2D PNGs into one labeled contact-sheet PNG. Outputs are written to /output.
+    infra_node: worker
+    command: >-
+      --gallery-smiles-file /input/gallery.smiles --output-dir /output {{#if columns}}--gallery-columns {{columns}}{{/if}}
+    inline_files:
+      - mount_path: /input/gallery.smiles
+        content: "{{smiles_list}}"
+    environment_variables:
+      - name: PYTHONUNBUFFERED
+        value: "1"
+    input_schema:
+      type: object
+      properties:
+        smiles_list:
+          type: string
+          minLength: 1
+          description: One exact SMILES string per line. Blank lines are ignored, and input order is preserved.
+        columns:
+          type: integer
+          minimum: 1
+          description: Number of molecule images per contact-sheet row. Defaults to 4 when omitted.
+      required:
+        - smiles_list
+    output_mount_configurations:
+      - output_name: MoleculeVisualizationGallery
+        mount_path: /output
+        output_description: >-
+          Per-molecule 2D PNG and SVG images plus molecule-contact-sheet.png for all successfully rendered molecules.
+        auto_promote: true
+infra:
+  - name: worker
+    infra_type: container
+    image:
+      acr: "{name}.azurecr.io/molecule-visualizations:1.1.2"
+    compute:
+      pool_type: static
+      pool_size: 1
+      infiniband: false
+      min_resources:
+        cpu: 2
+        gpu: 0
+        ram: 4Gi
+        storage: 16Gi
+      max_resources:
+        cpu: 4
+        gpu: 0
+        ram: 16Gi
+        storage: 64Gi
+      recommended_sku:
+        - Standard_D4s_v3
+        - Standard_D8s_v3

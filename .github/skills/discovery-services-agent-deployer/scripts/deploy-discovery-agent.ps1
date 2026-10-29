@@ -1148,11 +1148,11 @@ if ($Ctx.ContainsKey('hasTool') -and -not [bool]$Ctx.hasTool) {
 
 # Substitute the {name} registry placeholder with the ACR login server.
 # Handle both the fully-qualified form '{name}.azurecr.io/...' and the bare
-# form '{name}/...' that tool.yaml files use for the image reference.
+# form '{name}/...', without touching Handlebars input expressions.
 $AcrLoginServer = "$($Config.acrName).azurecr.io"
 (Get-Content $Ctx.tempToolYaml) `
-  -replace '\{name\}\.azurecr\.io', $AcrLoginServer `
-  -replace '\{name\}', $AcrLoginServer | Set-Content $Ctx.tempToolYaml -Encoding UTF8
+  -replace '(?<!\{)\{name\}\.azurecr\.io(?=/)', $AcrLoginServer `
+  -replace '(?<!\{)\{name\}(?=/)', $AcrLoginServer | Set-Content $Ctx.tempToolYaml -Encoding UTF8
 
 python -c "import yaml" 2>$null
 if ($LASTEXITCODE -ne 0) { python -m pip install --quiet pyyaml | Out-Null }
@@ -1952,7 +1952,7 @@ def assess_response(body):
     o for o in outputs if o.get("type") == "function_call_output" and
     calls.get(o.get("call_id"), {}).get("name", "").lower().startswith(tool_name.lower() + "-")
   ] if tool_name else []
-  if not executions and re.search(r"(?:please confirm|confirm.{0,80}proceed|would you like|approval required)", text, re.I | re.S):
+  if not executions and re.search(r"(?:please (?:confirm|approve)|confirm.{0,80}proceed|would you like|approval required)", text, re.I | re.S):
     return "input_required", text
   if tool_name:
     if not executions:
