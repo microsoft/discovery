@@ -4,22 +4,22 @@
   "metadata": {
     "_generator": {
       "name": "bicep",
-      "version": "0.41.2.15936",
-      "templateHash": "3453505155457192370"
+      "version": "0.39.26.7824",
+      "templateHash": "12946762802184486479"
     }
   },
   "parameters": {
     "location": {
       "type": "string",
       "metadata": {
-        "description": "Region for all Discovery resources. Must equal the BYO VNet/subnet region."
+        "description": "Control-plane region for Discovery resources. Can differ from the VNet/subnet and managed-resource-group region."
       }
     },
     "workloadRegion": {
       "type": "string",
       "defaultValue": "[parameters('location')]",
       "metadata": {
-        "description": "workloadRegion tag (discovery.overridemrgregion) for the managed RGs."
+        "description": "Region for all managed-resource-group resources, set through discovery.overridemrgregion. Must match the VNet/subnet region."
       }
     },
     "supercomputerName": {

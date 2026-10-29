@@ -714,10 +714,10 @@ function Invoke-Stage1Checks {
             $existing = Get-AzJson -Args @('network', 'vnet', 'show', '-g', $byoRg, '-n', $byoVnet, '--subscription', $Cfg.subscriptionId) -AllowFail
             if ($existing) {
                 $loc = [string]$existing.location
-                $status = if ($loc -and $Cfg.controlPlaneRegion -and $loc -ne $Cfg.controlPlaneRegion) { 'Fail' } else { 'Pass' }
+                $status = if ($loc -and $Cfg.workloadRegion -and $loc -ne $Cfg.workloadRegion) { 'Fail' } else { 'Pass' }
                 $R.Add((New-CheckResult -Id 'byo-vnet' -Name 'Existing VNet (byo-existing)' -Status $status -Fr 'FR1.2' `
                             -Detail "VNet '$byoVnet' found in '$byoRg' (location=$loc, address space=$(@($existing.addressSpace.addressPrefixes) -join ','))." `
-                            -Remediation ($status -eq 'Fail' ? "Set controlPlaneRegion/workloadRegion to '$loc' (the VNet's region) or use a VNet in '$($Cfg.controlPlaneRegion)'." : '') `
+                            -Remediation ($status -eq 'Fail' ? "Set workloadRegion to '$loc' (the VNet's region) or use a VNet in '$($Cfg.workloadRegion)'. controlPlaneRegion can differ." : '') `
                             -Data @{ vnetId = $existing.id; location = $loc }))
                 # Customer subnets keep their own names; later stages default to snet-<role>, so
                 # record each existing subnet's real name, matched by the planned CIDR.

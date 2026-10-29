@@ -10,9 +10,16 @@
 # including workflows, validation policy, schemas, and generated registries.
 *                                      @microsoft/discovery-samples-maintainer
 
+# Contributions reviewers can approve changes to tests (some internal agents come with tests)
+.github/tests                          @microsoft/discovery-samples-maintainer @microsoft/discovery-contributions-reviewers          
+
 # Operator utilities are reviewed by the engineering reviewers.
 /utilities/                            @microsoft/discovery-engineering-reviewers
 
 # Discovery Toolbox is maintained separately from the other utilities.
 # Releases require maintainer review; REL-002 verifies the VSIX pointer and digest.
 /utilities/discovery-toolbox/           @microsoft/discovery-samples-maintainer
+
+# Any of the reviewers/maintainers can review/approve agents and starter-kits
+/agents/                                @microsoft/discovery-samples-maintainer @microsoft/discovery-contributions-reviewers
+/starter-kits/                          @microsoft/discovery-samples-maintainer @microsoft/discovery-contributions-reviewers
