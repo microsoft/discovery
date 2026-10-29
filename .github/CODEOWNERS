@@ -11,7 +11,7 @@
 *                                      @microsoft/discovery-samples-maintainer
 
 # Contributions reviewers can approve changes to tests (some internal agents come with tests)
-.github/tests                          @microsoft/discovery-samples-maintainer @microsoft/discovery-contributions-reviewers          
+/.github/tests/                        @microsoft/discovery-samples-maintainer @microsoft/discovery-contributions-reviewers
 
 # Operator utilities are reviewed by the engineering reviewers.
 /utilities/                            @microsoft/discovery-engineering-reviewers

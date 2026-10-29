@@ -155,6 +155,7 @@ def owners_for_path(path: str) -> list[str]:
     ".github/CODEOWNERS",
     ".github/workflows/pr-review.yml",
     ".github/scripts/validate_pr.py",
+    ".github/tests-other/test_example.py",
     ".github/policy/baseline.json",
     "docs/validation-baseline-debt.md",
     "docs/schemas/agent.schema.json",
@@ -178,6 +179,19 @@ def test_non_utilities_and_toolbox_use_default_maintainers(path):
 ])
 def test_utilities_use_engineering_reviewers(path):
     assert owners_for_path(path) == ["@microsoft/discovery-engineering-reviewers"]
+
+
+@pytest.mark.parametrize("path", [
+    ".github/tests/test_pr_review_workflow_security.py",
+    ".github/tests/rules/test_pol_016.py",
+    "agents/molecule-visualization/agent.yaml",
+    "starter-kits/example/kit.json",
+])
+def test_catalog_and_tests_allow_contributions_reviewers(path):
+    assert owners_for_path(path) == [
+        "@microsoft/discovery-samples-maintainer",
+        "@microsoft/discovery-contributions-reviewers",
+    ]
 
 
 def test_trufflehog_install_and_repository_layout_are_stable():

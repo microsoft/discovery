@@ -23,7 +23,7 @@ the catalog parameter schema does not accept a `default` keyword.
 
 The [Dockerfile](Dockerfile) uses a digest-pinned Python 3.12 Debian Bookworm
 slim image. [requirements.txt](requirements.txt) pins NumPy 1.26.4,
-RDKit 2026.9.1, Plotly 7.0.0, and Pillow 10.4.0. Dependencies are installed as
+RDKit 2026.9.1, Plotly 7.0.0, and Pillow 13.0.0. Dependencies are installed as
 binary wheels at build time and checked with `pip check`; transitive
 dependencies and OS packages are not fully locked.
 
@@ -34,7 +34,7 @@ sandbox. No external API credentials or runtime package installation are needed.
 Only the Dockerfile, requirements, and application source enter the build context.
 
 The registry is substituted using `{name}`; the image repository and version
-are `molecule-visualizations:1.1.2`. Review base-image and package updates,
+are `molecule-visualizations:1.1.3`. Review base-image and package updates,
 scan the image, and rerun validation before publication.
 
 ## Build and local smoke tests
@@ -42,11 +42,11 @@ scan the image, and rerun validation before publication.
 Run from the repository root in PowerShell with Docker Linux containers:
 
 ```powershell
-docker build --tag molecule-visualizations:1.1.2 .\agents\molecule-visualization\tools\molecule-visualization
-docker run --rm --network none molecule-visualizations:1.1.2 --help
-docker run --rm --network none molecule-visualizations:1.1.2 CCO --name ethanol
-docker run --rm --network none molecule-visualizations:1.1.2 CCO --name ethanol --with-3d
-docker run --rm --network none molecule-visualizations:1.1.2 --gallery-smiles "CCO`nc1ccccc1" --gallery-columns 2
+docker build --tag molecule-visualizations:1.1.3 .\agents\molecule-visualization\tools\molecule-visualization
+docker run --rm --network none molecule-visualizations:1.1.3 --help
+docker run --rm --network none molecule-visualizations:1.1.3 CCO --name ethanol
+docker run --rm --network none molecule-visualizations:1.1.3 CCO --name ethanol --with-3d
+docker run --rm --network none molecule-visualizations:1.1.3 --gallery-smiles "CCO`nc1ccccc1" --gallery-columns 2
 ```
 
 These commands print JSON output paths and diagnostic logs. Files in an
@@ -55,7 +55,7 @@ unmounted container disappear when it exits. To retain artifacts:
 ```powershell
 New-Item -ItemType Directory -Force .\molecule-visualization-output | Out-Null
 $OutputPath = (Resolve-Path .\molecule-visualization-output).Path
-docker run --rm --network none --mount "type=bind,source=$OutputPath,target=/output" molecule-visualizations:1.1.2 CCO --name ethanol --with-3d
+docker run --rm --network none --mount "type=bind,source=$OutputPath,target=/output" molecule-visualizations:1.1.3 CCO --name ethanol --with-3d
 ```
 
 The mount must be writable by the non-root user. Keep generated files out of

@@ -23,7 +23,7 @@ instructions: |
   - visualize_molecule_gallery for one combined 2D preview of multiple molecules.
 
   Inspect the registered live action schema before use. The catalog reference
-  is tools/molecule-visualization/tool.yaml, targeting image version 1.1.2.
+  is tools/molecule-visualization/tool.yaml, targeting image version 1.1.3.
   The live schema is authoritative. The gallery action is unavailable until
   the corresponding image and tool definition are built, published, and
   deployed. If the live schema does not expose visualize_molecule_gallery,

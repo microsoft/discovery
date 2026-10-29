@@ -1,4 +1,4 @@
-"""Container regressions; build molecule-visualizations:1.1.2 before running."""
+"""Container regressions; build molecule-visualizations:1.1.3 before running."""
 
 import json
 import os
@@ -8,7 +8,7 @@ import tempfile
 import unittest
 
 
-IMAGE = os.environ.get("MOLECULE_VISUALIZATION_IMAGE", "molecule-visualizations:1.1.2")
+IMAGE = os.environ.get("MOLECULE_VISUALIZATION_IMAGE", "molecule-visualizations:1.1.3")
 
 
 class VisualizationTests(unittest.TestCase):
@@ -67,7 +67,7 @@ assert os.getuid() == 10001
 assert numpy.__version__ == '1.26.4'
 assert rdkit.__version__ == '2026.09.1'
 assert plotly.__version__ == '7.0.0'
-assert PIL.__version__ == '10.4.0'
+assert PIL.__version__ == '13.0.0'
 assert not Path('/etc/pip.conf').exists()
 for directory in ['/output', '/workdir', os.environ['HOME']]:
     with tempfile.TemporaryFile(dir=directory): pass
