@@ -179,6 +179,7 @@ jobs:
       # because the default GITHUB_TOKEN is read-only. The App
       # (discovery-registry-bot) must have Contents: Write and Pull requests:
       # Write on microsoft/discovery.
+      # Explicit token requests cannot grant permissions the installation lacks.
       # This App still creates PRs; it does not approve or enroll auto-merge.
       # If REGISTRY_APP_ID is unset (App not yet wired up), this step is
       # skipped and the workflow fails without pushing any branch.
@@ -189,6 +190,8 @@ jobs:
         with:
           app-id: ${{ secrets.REGISTRY_APP_ID }}
           private-key: ${{ secrets.REGISTRY_APP_PRIVATE_KEY }}
+          permission-contents: write
+          permission-pull-requests: write
 
       - name: Commit updated registry to a PR
         if: steps.diff.outputs.changed == 'true' && steps.app_check.outputs.configured == 'true'
