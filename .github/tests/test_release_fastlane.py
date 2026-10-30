@@ -5,6 +5,8 @@ import json
 import shutil
 from pathlib import Path
 
+import pytest
+
 from catalog_validation.runner import run_validation
 
 
@@ -54,6 +56,60 @@ def test_release_manifest_schema_and_cross_field_validation(tmp_path: Path):
     result = run_validation(tmp_path, [relative])
 
     assert result.blocking == []
+
+
+@pytest.mark.parametrize("installer_url", [
+    "PLACEHOLDER_PENDING_PUBLISH",
+    "https://aka.ms/discovery/download/rhel/previous",
+    "https://aka.ms/discovery/download/rhel/current",
+    "https://aka.ms/discovery/download/preview/rhel/previous",
+    "https://aka.ms/discovery/download/preview/rhel/current",
+])
+def test_release_manifest_accepts_rhel_installer_allowlist(
+    tmp_path: Path, installer_url: str,
+):
+    _copy_schema(tmp_path, "discovery-release-manifest-schema.json")
+    relative = "docs/discovery-app/releases/manifests/preview.json"
+    document = _manifest()
+    document["platforms"]["rhel-x64"] = {
+        "installerUrl": installer_url,
+        "sha256": "a" * 64,
+    }
+    _write_json(tmp_path, relative, document)
+
+    result = run_validation(tmp_path, [relative])
+
+    assert result.blocking == []
+
+
+@pytest.mark.parametrize("installer_url", [
+    "https://example.com/installer.rpm",
+    "https://aka.ms/discovery/download/current",
+    "https://aka.ms/discovery/download/preview/rhel/current?extra=1",
+    "https://aka.ms/discovery/download/preview/rhel/current#extra",
+    "https://aka.ms/discovery/download/preview/rhel/current/",
+    "http://aka.ms/discovery/download/rhel/current",
+    "PLACEHOLDER_PENDING_PUBLISH\n",
+    "",
+    None,
+    ["https://aka.ms/discovery/download/rhel/current"],
+])
+def test_release_manifest_rejects_rhel_installer_outside_allowlist(
+    tmp_path: Path, installer_url: str | list[str] | None,
+):
+    _copy_schema(tmp_path, "discovery-release-manifest-schema.json")
+    relative = "docs/discovery-app/releases/manifests/preview.json"
+    document = _manifest()
+    document["platforms"]["rhel-x64"] = {
+        "installerUrl": installer_url,
+        "sha256": "a" * 64,
+    }
+    _write_json(tmp_path, relative, document)
+
+    result = run_validation(tmp_path, [relative])
+
+    assert result.blocking
+    assert {failure.rule_id for failure in result.blocking} == {"REL-001"}
 
 
 def test_release_manifest_rejects_ring_and_version_regressions(tmp_path: Path):
