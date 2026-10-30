@@ -215,18 +215,26 @@ print(json.dumps(rows))
 }
 
 function Resolve-KnowledgeBaseInput {
-  param([object[]]$Requirements, [string]$InputJson)
+  param([object[]]$Requirements, [string]$InputJson, [Parameter(Mandatory)][string]$ApiVersion)
   if (@($Requirements).Count -eq 0) { return @{} }
+  $idFormat = '/bookshelves/{bookshelf_name}/knowledgeBases/{knowledgebase_name}'
+  $suggestedId = '/bookshelves/<bookshelf-name>/knowledgeBases/<knowledgebase-name>'
+  $idPattern = '^/bookshelves/[^/]+/knowledgeBases/[^/]+$'
+  if ($ApiVersion -lt '2026-06-01') {
+    $idFormat += ' (optionally followed by /versions/{version})'
+    $suggestedId += '/versions/<version>'
+    $idPattern = '^/bookshelves/[^/]+/knowledgeBases/[^/]+(?:/versions/[^/]+)?$'
+  }
   if ([string]::IsNullOrWhiteSpace($InputJson)) {
     $suggested = [ordered]@{}
     foreach ($row in @($Requirements)) {
       $suggested[[string]$row.agent] = @(@($row.knowledgeBases) | ForEach-Object {
-        [ordered]@{ knowledgeBaseId = '/bookshelves/<bookshelf-name>/knowledgeBases/<knowledgebase-name>/versions/<version>' }
+        [ordered]@{ knowledgeBaseId = $suggestedId }
       })
     }
     Write-Host 'KNOWLEDGE_BASE_INPUT_REQUIRED=true'
     Write-Host 'KNOWLEDGE_BASE_INPUT_FORMAT=json-file-or-inline-json'
-    Write-Host 'KNOWLEDGE_BASE_ID_FORMAT=/bookshelves/{bookshelf_name}/knowledgeBases/{knowledgebase_name}/versions/{version}'
+    Write-Host ("KNOWLEDGE_BASE_ID_FORMAT={0}" -f $idFormat)
     foreach ($row in @($Requirements)) {
       Write-Host ("KNOWLEDGE_BASE_REQUIRED agent={0} count={1}" -f $row.agent, @($row.knowledgeBases).Count)
     }
@@ -244,8 +252,8 @@ function Resolve-KnowledgeBaseInput {
     if ($items.Count -eq 0) { throw "KnowledgeBasesJson agent '$agentName' must include at least one knowledgeBaseId." }
     foreach ($item in $items) {
       $kbId = if ($item -is [System.Collections.IDictionary]) { [string]$item['knowledgeBaseId'] } else { [string]$item.knowledgeBaseId }
-      if ($kbId -notmatch '^/bookshelves/[^/]+/knowledgeBases/[^/]+/versions/[^/]+$') {
-        throw "Invalid knowledgeBaseId for agent '$agentName': '$kbId'. Expected /bookshelves/{bookshelf_name}/knowledgeBases/{knowledgebase_name}/versions/{version}."
+      if ($kbId -match '[{}<>]' -or $kbId -notmatch $idPattern) {
+        throw "Invalid knowledgeBaseId for agent '$agentName': '$kbId'. Expected $idFormat for API version '$ApiVersion'."
       }
     }
   }
@@ -846,10 +854,13 @@ def patch_agent_doc(agent_item):
     provided_kbs = (plan.get("knowledgeBases") or {}).get(agent_item["name"])
     if provided_kbs is not None:
         ext["knowledgeBases"] = provided_kbs
-    elif ext.get("knowledgeBases"):
-        unresolved = [kb for kb in ext.get("knowledgeBases") or [] if "{{" in str(kb.get("knowledgeBaseId", "")) or not re.match(r"^/bookshelves/[^/]+/knowledgeBases/[^/]+/versions/[^/]+$", str(kb.get("knowledgeBaseId", "")))]
-        if unresolved:
-            raise RuntimeError(f"{agent_item['name']} has unresolved knowledgeBases but no values were provided in KnowledgeBasesJson.")
+    kb_pattern = r"/bookshelves/[^/]+/knowledgeBases/[^/]+"
+    if cfg["apiVersion"] < "2026-06-01":
+        kb_pattern += r"(?:/versions/[^/]+)?"
+    for kb in ext.get("knowledgeBases") or []:
+        kb_id = str(kb.get("knowledgeBaseId", ""))
+        if re.search(r"[{}<>]", kb_id) or not re.fullmatch(kb_pattern, kb_id):
+            raise RuntimeError(f"{agent_item['name']} has invalid or unresolved knowledgeBases for API version {cfg['apiVersion']}: '{kb_id}'. Provide matching IDs in KnowledgeBasesJson.")
     doc["discoveryExtensions"] = ext
     return doc
 
@@ -1046,7 +1057,7 @@ switch ($Stage) {
     }
     $kbRequirements = @(Get-AgentKnowledgeBaseRequirements -Agents @($pluginData.agents))
     try {
-      $knowledgeBases = Resolve-KnowledgeBaseInput -Requirements $kbRequirements -InputJson $KnowledgeBasesJson
+      $knowledgeBases = Resolve-KnowledgeBaseInput -Requirements $kbRequirements -InputJson $KnowledgeBasesJson -ApiVersion $config.apiVersion
     } catch {
       if ([string]$_.Exception.Message -like 'KNOWLEDGE_BASE_INPUT_REQUIRED:*') {
         Write-Host 'TASK_STATUS=init:input_required'
@@ -1080,5 +1091,4 @@ switch ($Stage) {
     return
   }
 }
-
 

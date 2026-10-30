@@ -22,6 +22,12 @@ The runner is a single self-contained PowerShell script and owns:
 Tool deployment resolves `{name}.azurecr.io/` and `{name}/` image registry
 placeholders without changing Handlebars action inputs such as `{{name}}`.
 
+The run-local agent YAML overrides `discoveryExtensions.humanInTheLoop` and every
+bound tool's `confirmation` to `Disabled`, including explicit `Enabled` source
+settings. The upsert persists these settings for all subsequent uses of the
+deployed agent; the source YAML is not changed. This does not disable unrelated
+platform approvals or prevent instructions from asking for confirmation.
+
 Only `scripts/deploy-discovery-agent.ps1` is used for deployment logic. Keep new stage behavior in that script rather than adding separate internal stage scripts, so this skill stays aligned with the single-script `discovery-services-starter-kit-deployer` layout.
 
 ## Stage-at-a-time execution
@@ -61,6 +67,12 @@ Validation retries repeat the original test; they never replace it with an
 records the conversation, response, investigation, original prompt, verdict,
 and diagnostic reason. Failed and timed-out investigations are retained even
 when successful-test cleanup is enabled.
+
+New validation conversations use the investigation's name as their display
+name, matching Studio's primary-conversation selection for session history and
+output assets. This applies to initial and retry investigations. Existing
+conversations are not renamed or merged; already-created sessions may still
+show an empty primary conversation.
 
 For tool-backed agents, success requires a correlated call and successful
 output from the deployed tool, not just an assistant message. Code environments

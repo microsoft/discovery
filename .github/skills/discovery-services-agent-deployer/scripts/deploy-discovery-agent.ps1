@@ -323,7 +323,7 @@ function Load-BuilderConfig {
       Write-Host "[config] Location '$Location' is outside the preferred list (eastus, uksouth, swedencentral). Continuing with custom value."
     }
   }
-  $ApiVersion = Resolve-ConfigField -ConfigObj $WorkingConfig -Field 'apiVersion' -Default '2026-02-01-preview' -PromptLabel 'apiVersion'
+  $ApiVersion = Resolve-ConfigField -ConfigObj $WorkingConfig -Field 'apiVersion' -Default '2026-06-01' -PromptLabel 'apiVersion'
   $WorkspaceEndpoint = Resolve-ConfigField -ConfigObj $WorkingConfig -Field 'workspaceEndpoint' -Required:($Required.ContainsKey('workspaceEndpoint')) -PromptLabel 'workspaceEndpoint (https://<workspace>.workspace.discovery.azure.com)'
   $Project = Resolve-ConfigField -ConfigObj $WorkingConfig -Field 'project' -Required:($Required.ContainsKey('project')) -PromptLabel 'project'
   $TenantId = Resolve-ConfigField -ConfigObj $WorkingConfig -Field 'tenantId' -Required:($Required.ContainsKey('tenantId')) -PromptLabel 'tenantId'
@@ -1317,19 +1317,24 @@ if isinstance(model, dict):
     model['id'] = chat_model
   doc['model'] = model
 
-if tool_id:
-  disc = doc.get('discoveryExtensions') or {}
-  tools = disc.get('tools') or []
-  if not isinstance(tools, list):
-    tools = []
+disc = doc.get('discoveryExtensions') or {}
+if not isinstance(disc, dict):
+  raise SystemExit('Invalid discoveryExtensions: expected a mapping')
+disc['humanInTheLoop'] = 'Disabled'
+tools = disc.get('tools') or []
+if not isinstance(tools, list):
+  raise SystemExit('Invalid discoveryExtensions.tools: expected a list')
+for item in tools:
+  if not isinstance(item, dict):
+    raise SystemExit('Invalid discoveryExtensions.tools entry: expected a mapping')
+  item['confirmation'] = 'Disabled'
 
+if tool_id:
   tool_leaf = tool_id.rsplit('/', 1)[-1].lower()
   replaced_any = False
   deduped = []
   seen_leaves = set()
   for item in tools:
-    if not isinstance(item, dict):
-      continue
     current = str(item.get('toolId', '')).strip()
     current_leaf = current.rsplit('/', 1)[-1].lower() if current else ''
     is_placeholder = current.startswith('{{') and current.endswith('}}')
@@ -1339,8 +1344,6 @@ if tool_id:
       if tool_leaf in seen_leaves:
         continue
       item['toolId'] = tool_id
-      if 'confirmation' not in item:
-        item['confirmation'] = 'Disabled'
       deduped.append(item)
       seen_leaves.add(tool_leaf)
       replaced_any = True
@@ -1355,7 +1358,7 @@ if tool_id:
     deduped.append({'toolId': tool_id, 'confirmation': 'Disabled'})
 
   disc['tools'] = deduped
-  doc['discoveryExtensions'] = disc
+doc['discoveryExtensions'] = disc
 
 with open(path, 'w', encoding='utf-8') as f:
   yaml.safe_dump(doc, f, sort_keys=False, allow_unicode=False)
@@ -1368,6 +1371,7 @@ $PatchArgs = @($PatchPy, $TempAgentYaml, $Config.chatModel)
 if ($HasTool) { $PatchArgs += $State.deploy.toolResourceId }
 python @PatchArgs
 if ($LASTEXITCODE -ne 0) { throw 'Failed to patch temp agent.yaml' }
+Write-Host '[stage-04] Agent human-in-the-loop and tool confirmations are disabled for the deployed agent.'
 
 $CurrentTenant = (az account show --query tenantId -o tsv --only-show-errors).Trim()
 if ($CurrentTenant -ne $Config.tenantId) {
@@ -1861,6 +1865,15 @@ def call_with_retries(method, url, **kwargs):
 base = cfg["workspaceEndpoint"].rstrip("/")
 api = cfg["apiVersion"]
 project = cfg["project"]
+is_ga_api = api >= "2026-06-01"
+
+def response_url(conversation_name, response_id=None):
+  route = "openai/v1/responses" if is_ga_api else "openai/responses"
+  url = f"{base}/conversations/{conversation_name}/{route}"
+  if response_id:
+    url += f"/{response_id}"
+  return url if is_ga_api else f"{url}?api-version={api}"
+
 safe = re.sub(r"[^a-z0-9-]", "-", agent_name.lower())[:8].strip("-") or "agent"
 
 # Use deterministic investigation naming (timestamp-based, not random)
@@ -1883,7 +1896,7 @@ else:
   create = call_with_retries("PUT", inv_url, headers=headers(t), json={"description": "Post-deploy validation", "displayName": f"Validation Test {agent_name}"})
   create.raise_for_status()
   conv = call_with_retries("POST", f"{base}/conversations?api-version={api}", headers=headers(t), json={
-    "displayName": f"validation-{agent_name}",
+    "displayName": inv,
     "investigationName": f"/projects/{project}/investigations/{inv}",
     "projectName": project,
   })
@@ -1978,11 +1991,11 @@ def assess_response(body):
 def wait_for_completion(conversation_name, text_prompt, wait_seconds):
   t_local = token()
   if resume_response:
-    resp = call_with_retries("GET", f"{base}/conversations/{conversation_name}/openai/v1/responses/{resume_response}", headers=headers(t_local))
+    resp = call_with_retries("GET", response_url(conversation_name, resume_response), headers=headers(t_local))
   else:
-    resp = call_with_retries("POST", f"{base}/conversations/{conversation_name}/openai/v1/responses", headers=headers(t_local), json={
+    resp = call_with_retries("POST", response_url(conversation_name), headers=headers(t_local), json={
       "input": [{"type": "message", "role": "user", "content": [{"type": "input_text", "text": text_prompt}]}],
-      "agent": {"type": "agent_reference", "name": agent_name},
+      ("agent_reference" if is_ga_api else "agent"): {"type": "agent_reference", "name": agent_name},
     })
   resp.raise_for_status()
   body_local = resp.json()
@@ -2009,7 +2022,7 @@ def wait_for_completion(conversation_name, text_prompt, wait_seconds):
     elapsed = int(time.time() - start_time)
     print(f"[validation] Polling attempt {poll_count}, elapsed {elapsed}s, status={status_local}...", flush=True)
     t_local = token()
-    poll = call_with_retries("GET", f"{base}/conversations/{conversation_name}/openai/v1/responses/{rid_local}", headers=headers(t_local))
+    poll = call_with_retries("GET", response_url(conversation_name, rid_local), headers=headers(t_local))
     poll.raise_for_status()
     body_local = poll.json()
     status_local = body_local.get("status", "")
@@ -2092,7 +2105,7 @@ for attempt in range(1, max_retries + 1):
       _created_inv_urls.append(inv_url)
       # Create new conversation with new investigation
       conv = call_with_retries("POST", f"{base}/conversations?api-version={api}", headers=headers(t), json={
-        "displayName": f"validation-{agent_name}",
+        "displayName": inv,
         "investigationName": f"/projects/{project}/investigations/{inv}",
         "projectName": project,
       })
@@ -2126,7 +2139,7 @@ for attempt in range(1, max_retries + 1):
       _created_inv_urls.append(inv_url)
       # Create new conversation with new investigation
       conv = call_with_retries("POST", f"{base}/conversations?api-version={api}", headers=headers(t), json={
-        "displayName": f"validation-{agent_name}",
+        "displayName": inv,
         "investigationName": f"/projects/{project}/investigations/{inv}",
         "projectName": project,
       })

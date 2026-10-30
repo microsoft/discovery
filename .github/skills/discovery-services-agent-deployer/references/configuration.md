@@ -17,7 +17,7 @@ Copy-Item .github/skills/discovery-services-agent-deployer/config.template.json 
 | `acrName` | Yes | ACR name without `.azurecr.io`. |
 | `acrResourceGroup` | No | ACR resource group when the registry is not in `resourceGroup`; defaults to `resourceGroup`. |
 | `location` | Yes | Tool resource region. Ask the user for this value when it is missing; do not infer `uksouth` from the example. |
-| `apiVersion` | No | Defaults to `2026-02-01-preview` from `config.template.json`. |
+| `apiVersion` | No | Defaults to GA `2026-06-01` from `config.template.json`. Explicit preview overrides are preserved. |
 | `workspaceEndpoint` | Yes | Discovery workspace endpoint. |
 | `project` | Yes | Discovery project name. |
 | `tenantId` | Yes | Entra tenant for Discovery auth. |
@@ -29,6 +29,10 @@ Copy-Item .github/skills/discovery-services-agent-deployer/config.template.json 
 | `deleteInvestigationAfterTest` | No | Delete validation investigation after test. Defaults to `false` and is included in generated config guidance. |
 
 ## Copilot-style input behavior
+
+The configured API version applies to ARM tools and workspace agent, investigation, and conversation requests. Validation uses the GA `/conversations/{name}/openai/v1/responses` route without an `api-version` query and sends `agent_reference`. An explicit `2026-02-01-preview` override instead uses `/conversations/{name}/openai/responses?api-version=2026-02-01-preview` and the preview `agent` field, including when polling or resuming validation.
+
+Existing ignored config files and saved run configs are not automatically migrated. To opt an existing environment into GA, set `apiVersion` to `2026-06-01` before starting a new run. For GA agent bindings, use knowledge-base IDs in `/bookshelves/{bookshelf}/knowledgeBases/{knowledgebase}` format, without `/versions/{version}`. Preview also accepts versioned IDs. Do not silently strip a version from a user-provided ID.
 
 The runner never assumes `config.json` is present and never uses terminal `Read-Host` prompts for required config. Stage 1 verifies these required values are present: `subscriptionId`, `resourceGroup`, `acrName`, `location`, `workspaceEndpoint`, `project`, `tenantId`, `chatModel`, and `forceToolImageRebuild`. If `config.json` is absent or any required value is missing, Stage 1 prints a structured block:
 
@@ -49,4 +53,3 @@ After Stage 1 succeeds, the runner writes the resolved values into the run-local
 `buildMode` and `confirmSupercomputerNodepools` are intentionally not config fields. If Docker is available, the runner asks for build mode as a per-run Copilot choice and should be rerun with `-BuildMode remote` or `-BuildMode local`. Before building, the runner prints the tool image and recommended SKU choices; ask the customer to Proceed or Stop based on Supercomputer nodepool capacity. If they choose Proceed, rerun build with `-ConfirmSupercomputerNodepools`. Do not infer these choices and do not write them to `config.json`. If Docker is unavailable, the runner uses remote ACR build.
 
 Validation prompts are generated at runtime by default. If `testPrompt` is present and non-empty in `config.json`, it acts as a customer-provided override and validation uses it directly. Otherwise, for tool-backed agents, GitHub Copilot should generate a short, concrete validation prompt from the deployed agent/tool context at validation time and pass it with `-ValidationPrompt`.
-

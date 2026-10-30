@@ -92,7 +92,10 @@ class ValidationTests(unittest.TestCase):
         self.tool.write_text("code_environments:\n  - language: r\n", encoding="utf-8")
         self.result = self.root / "validation-result.json"
 
-    def run_validator(self, bodies, *, tool=True, continuation=False, retries=1):
+    def run_validator(self, bodies, *, tool=True, continuation=False, retries=1, api_version="2026-06-01", wait_seconds=1):
+        config = json.loads(self.config.read_text(encoding="utf-8"))
+        config["apiVersion"] = api_version
+        self.config.write_text(json.dumps(config), encoding="utf-8")
         bodies = iter(bodies)
         calls = []
         current = None
@@ -101,12 +104,11 @@ class ValidationTests(unittest.TestCase):
         def request(method, url, **kwargs):
             nonlocal current
             calls.append((method, url, kwargs))
-            if method == "POST" and url.endswith("/responses"):
+            if method == "POST" and "/responses" in url:
                 current = next(bodies)
                 data = current
             elif method == "GET":
-                if current is None:
-                    current = next(bodies)
+                current = next(bodies, current)
                 data = current
             elif method == "POST" and "/conversations?" in url:
                 data = {"name": f"conversation-{next(conversations)}"}
@@ -125,7 +127,7 @@ class ValidationTests(unittest.TestCase):
         log = io.StringIO()
         error = None
         with patch.object(sys, "argv", args), patch.dict(os.environ, {
-            "VALIDATION_WAIT_SECONDS": "1", "VALIDATION_MAX_RETRIES": str(retries),
+            "VALIDATION_WAIT_SECONDS": str(wait_seconds), "VALIDATION_MAX_RETRIES": str(retries),
         }), patch("requests.request", side_effect=request), patch("subprocess.run", return_value=Mock(stdout="test-token")), \
              patch("time.sleep"), patch("time.time", side_effect=lambda: next(clock)), \
              patch("atexit.register"), patch("signal.signal"), redirect_stdout(log):
@@ -137,6 +139,79 @@ class ValidationTests(unittest.TestCase):
 
     def test_embedded_script_compiles(self):
         ast.parse(SOURCE)
+
+    def assert_conversations_match_investigations(self, calls, expected_count):
+        creates = [kw["json"] for method, url, kw in calls
+                   if method == "POST" and "/conversations?" in url]
+        self.assertEqual(len(creates), expected_count)
+        for body in creates:
+            self.assertEqual(body["displayName"], body["investigationName"].rsplit("/", 1)[-1])
+            self.assertEqual(body["projectName"], "test")
+
+    def test_initial_conversation_is_studio_primary(self):
+        _, calls, _, error = self.run_validator([response(execution())])
+        self.assertIsNone(error)
+        self.assert_conversations_match_investigations(calls, 1)
+
+    def test_retry_conversations_are_studio_primary(self):
+        for first in (response([], "failed"), response([], "in_progress")):
+            with self.subTest(status=first["status"]):
+                self.result.unlink(missing_ok=True)
+                result, calls, _, error = self.run_validator(
+                    [first, response(execution())], retries=2,
+                )
+                self.assertIsNone(error)
+                self.assertEqual(result["status"], "passed")
+                self.assert_conversations_match_investigations(calls, 2)
+
+    def test_ga_response_request_contract(self):
+        result, calls, _, error = self.run_validator([response(execution())])
+        self.assertIsNone(error)
+        self.assertEqual(result["status"], "passed")
+        request = next(c for c in calls if c[0] == "POST" and "/responses" in c[1])
+        self.assertEqual(request[1], "https://workspace.example/conversations/conversation-1/openai/v1/responses")
+        self.assertEqual(request[2]["json"]["agent_reference"], {"type": "agent_reference", "name": "RStatisticsAgent"})
+        self.assertNotIn("agent", request[2]["json"])
+        for method, url, _ in calls:
+            if "/responses" not in url:
+                self.assertIn("api-version=2026-06-01", url)
+
+    def test_explicit_preview_response_request_contract(self):
+        result, calls, _, error = self.run_validator(
+            [response(execution())], api_version="2026-02-01-preview",
+        )
+        self.assertIsNone(error)
+        self.assertEqual(result["status"], "passed")
+        request = next(c for c in calls if c[0] == "POST" and "/responses" in c[1])
+        self.assertEqual(request[1], "https://workspace.example/conversations/conversation-1/openai/responses?api-version=2026-02-01-preview")
+        self.assertEqual(request[2]["json"]["agent"], {"type": "agent_reference", "name": "RStatisticsAgent"})
+        self.assertNotIn("agent_reference", request[2]["json"])
+
+    def test_polling_and_resuming_use_selected_response_api(self):
+        for version, suffix in (
+            ("2026-06-01", "/openai/v1/responses/response-1"),
+            ("2026-02-01-preview", "/openai/responses/response-1?api-version=2026-02-01-preview"),
+        ):
+            with self.subTest(version=version):
+                self.result.unlink(missing_ok=True)
+                result, calls, _, error = self.run_validator(
+                    [response([], "in_progress"), response(execution())],
+                    api_version=version, wait_seconds=900,
+                )
+                self.assertIsNone(error)
+                self.assertEqual(result["status"], "passed")
+                gets = [url for method, url, _ in calls if method == "GET"]
+                self.assertEqual(gets, ["https://workspace.example/conversations/conversation-1" + suffix])
+                pending = response([], "requires_action")
+                pending["required_action"] = {"type": "submit_tool_outputs"}
+                self.run_validator([pending], api_version=version)
+                result, calls, _, error = self.run_validator([response(execution())], api_version=version)
+                self.assertIsNone(error)
+                self.assertEqual(result["status"], "passed")
+                self.assertFalse(any(method == "POST" for method, _, _ in calls))
+                self.assertEqual([(method, url) for method, url, _ in calls if method == "GET"], [
+                    ("GET", "https://workspace.example/conversations/conversation-1" + suffix),
+                ])
 
     def test_real_execution_and_receipt_pass(self):
         result, _, _, error = self.run_validator([response(execution())])

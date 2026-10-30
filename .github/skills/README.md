@@ -78,6 +78,9 @@ Run these directly in Copilot Chat (CLI or VS Code):
 **Notes:**
 
 * If prompted for a build mode, choose remote or local in chat.
-* If referenced agents declare discoveryExtensions.knowledgeBases, provide the requested knowledgeBaseId values in /bookshelves/{bookshelf}/knowledgeBases/{knowledgebase}/versions/{version} format. Starter-kit deployment does not create knowledge bases; it patches user-provided IDs into each deployed agent.
+* Both deployers default new configurations to Discovery GA `2026-06-01`; existing local configs and saved runs retain explicit API versions.
+* Both deployers set agent `humanInTheLoop` and all bound tool `confirmation` values to `Disabled` in deployed agents, overriding source settings for all future use. They do not bypass nodepool capacity confirmation or unexpected platform approvals.
+* Agent-deployer validation names its conversation after the investigation so Studio can select its history and associated outputs. Starter-kit deployment does not create validation conversations.
+* If referenced agents declare discoveryExtensions.knowledgeBases, provide the requested knowledgeBaseId values in `/bookshelves/{bookshelf}/knowledgeBases/{knowledgebase}` format for GA. Explicit preview configs also accept `/versions/{version}`; GA rejects that suffix. Starter-kit deployment does not create knowledge bases; it patches user-provided IDs into each deployed agent.
 * If prompted for Supercomputer nodepool confirmation, choose Proceed / Stop in chat before tool builds continue.
 * Starter-kit deployment deploys each referenced agent individually and does not create a validation investigation; the summary lists deployed agents, deployed tools, and sample prompts you can use to test the deployment.
