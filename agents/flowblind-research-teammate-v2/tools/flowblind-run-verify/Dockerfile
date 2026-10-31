@@ -1,7 +1,7 @@
 # Both bases are pinned to their linux/amd64 manifests; build with --platform linux/amd64.
-FROM node:26.11.1-bookworm-slim@sha256:86f07bc9c5dce4578cf37e5a418b7bfc7f817cda25cde66e2b66e95ed86c4567 AS node-runtime
+FROM node:26.12.0-bookworm-slim@sha256:742a0fe7320e09e0321222b68165e6ac731d30470e7ea7f98f9bfc3a6e1034fe AS node-runtime
 
-FROM python:3.12.14-slim@sha256:2fe5997d249a808b8eeea52c58a1dbffbba28754dc11699ef5c029f2d818ce79
+FROM python:3.15.0-slim@sha256:f5b92f2a669a4c347044f29367f31983280b648250ca94dea66f98c53bc87e58
 
 LABEL org.opencontainers.image.title="FlowBlind run and verify study v2"
 LABEL org.opencontainers.image.version="2.0.0"
