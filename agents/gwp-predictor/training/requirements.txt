@@ -12,5 +12,5 @@ scikit-learn>=1.4
 scipy>=1.10
 matplotlib>=3.8
 seaborn>=0.13
-requests>=2.31
+requests>=2.34.2
 pdfplumber>=0.11
