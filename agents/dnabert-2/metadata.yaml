@@ -1,0 +1,17 @@
+name: dnabert-2
+type: agent
+version: 0.1.0
+associated_tools:
+- agents/dnabert-2/tools/dnabert-2
+publisher:
+  name: Microsoft
+  contact: discovery-catalog@microsoft.com
+  support_url: https://techcommunity.microsoft.com/category/azure/discussions/microsoft-discovery-discussions
+  party: 1p
+description: Scaffold for DNA sequence representation and downstream task modeling using DNABERT-2.
+tags:
+- genomics
+- bioinformatics
+- machine-learning
+- gpu
+- python
