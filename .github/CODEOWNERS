@@ -13,6 +13,10 @@
 # Contributions reviewers can approve changes to tests (some internal agents come with tests)
 /.github/tests/                        @microsoft/discovery-samples-maintainer @microsoft/discovery-contributions-reviewers
 
+# Contributions reviewers can approve Dependabot updates to CI Python deps and the code-scanning tool pin.
+/.github/requirements-ci.txt           @microsoft/discovery-samples-maintainer @microsoft/discovery-contributions-reviewers
+/.config/dotnet-tools.json             @microsoft/discovery-samples-maintainer @microsoft/discovery-contributions-reviewers
+
 # Operator utilities are reviewed by the engineering reviewers.
 /utilities/                            @microsoft/discovery-engineering-reviewers
 
