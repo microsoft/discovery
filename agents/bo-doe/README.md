@@ -72,7 +72,7 @@ BoTorch is the better tool.
 Measured on BoTorch's own tutorial problem, BoTorch's gradient-based acquisition
 optimization **beats this library** — 96.4% of the maximum hypervolume versus
 86.6%. A same-container, same-budget head-to-head reproduces the gap
-(55.75 vs 49.42; see `scripts/demo_raw_botorch.py`).
+(55.75 vs 49.42).
 
 So:
 
@@ -86,8 +86,8 @@ So:
 | Best of both | this library's design + feasible pool, BoTorch's surrogate + acquisition |
 
 What this library adds is the **constraint and workflow layer** around an
-optimizer, plus a ~10x cheaper acquisition step. `scripts/demo_raw_botorch.py`
-demonstrates all three modes — pure BoTorch, this API, and the two combined —
+optimizer, plus a ~10x cheaper acquisition step. An interoperability demo
+showed all three modes — pure BoTorch, this API, and the two combined —
 running in a single container job, including BoTorch selecting candidates that
 sum to exactly 10.0000 on a mixture simplex.
 
@@ -129,7 +129,7 @@ without it the largest-range column would dominate the GP kernel. A contract
 test verifies that a response driven *only* by the smallest-magnitude descriptor
 is still found.
 
-`scripts/demo_molecular_library.py` runs an 800-compound campaign end to end.
+An 800-compound demo campaign was run end to end.
 It reports the metric each mode actually targets — hypervolume for the
 multi-objective run, best-value for the single-objective run:
 
@@ -272,40 +272,30 @@ quick_finish()
 
 ## Validation
 
-Four independent suites:
+Two test suites ship beside the tool in [tools/bodoe](tools/bodoe) and run on
+the host (scikit-learn backend) or in the container (BoTorch backend):
 
 ```bash
-podman build -t bodoe:latest discovery_catalog/bo-doe/tools/bodoe
+cd agents/bo-doe/tools/bodoe
 
-# Behaviour and contracts, run inside the container (BoTorch backend)
-podman run --rm -v "${PWD}/scripts:/scripts:ro" bodoe:latest python -u /scripts/test_bodoe.py
-podman run --rm -v "${PWD}/scripts:/scripts:ro" bodoe:latest python -u /scripts/test_bodoe_contracts.py
+# Host (scikit-learn backend)
+python -u test_bodoe.py
+python -u test_bodoe_contracts.py
 
-# DoE mathematics, host is fine
-python scripts/verify_doe_properties.py
-
-# Benchmarks
-python scripts/benchmark_bodoe_formulation.py
-podman run --rm -v "${PWD}/scripts:/scripts:ro" -v "${PWD}/results:/results" \
-    -e BODOE_OUT=/results/bodoe-validation bodoe:latest \
-    python -u /scripts/validate_botorch_tutorial.py
-
-# Interoperability demo: raw BoTorch, this API, and both combined
-podman run --rm -v "${PWD}/scripts:/scripts:ro" bodoe:latest \
-    python -u /scripts/demo_raw_botorch.py
-
-# Molecular library campaign (descriptors in, next batch out)
-podman run --rm -v "${PWD}/scripts:/scripts:ro" bodoe:latest \
-    python -u /scripts/demo_molecular_library.py
-
-# What is actually installed in the image
-podman run --rm -v "${PWD}/scripts:/scripts:ro" bodoe:latest \
-    python -u /scripts/check_env_libraries.py
+# Container (BoTorch backend)
+docker build -t bodoe:latest .
+docker run --rm -v "${PWD}:/t:ro" bodoe:latest python -u /t/test_bodoe.py
+docker run --rm -v "${PWD}:/t:ro" bodoe:latest python -u /t/test_bodoe_contracts.py
 ```
+
+The DoE property checks, benchmarks and demos summarized below were run with
+separate development scripts that are not part of this catalog entry (the
+formulation benchmark depends on an external dataset). Their results are
+reported here for transparency.
 
 ### 1. External benchmark: BoTorch's own tutorial
 
-`scripts/validate_botorch_tutorial.py` replicates
+The validation run replicates
 [BoTorch's multi-objective tutorial](https://botorch.org/docs/tutorials/multi_objective_bo)
 exactly: `BraninCurrin(negate=True)`, per-objective noise SE `[15.19, 0.63]`,
 6 Sobol initial points, 20 batches of 4 (86 evaluations), scored by dominated
@@ -348,7 +338,7 @@ Comparisons above are therefore made against our own stronger baseline.
 
 ### 2. DoE mathematics verified from first principles
 
-`scripts/verify_doe_properties.py` — **14/14 checks pass**. Plackett-Burman
+DoE property checks — **14/14 pass**. Plackett-Burman
 designs are confirmed balanced and column-orthogonal ($D^\top D = nI$);
 fractional-factorial resolutions are computed from the actual defining relation
 by searching for the shortest defining word.
@@ -363,7 +353,7 @@ users can check any design themselves.
 
 ### 3. Component-contract tests
 
-`scripts/test_bodoe_contracts.py` — **34/34 pass, on both backends**. These test
+[test_bodoe_contracts.py](tools/bodoe/test_bodoe_contracts.py) — **34/34 pass, on both backends**. These test
 *internal contracts* rather than end-to-end outcomes, which is the main
 engineering lesson of this project: the original suite tested only invariants
 (mixtures sum correctly, batches spread out) and outcomes (beats random on
@@ -379,8 +369,8 @@ seeded runs are reproducible.
 
 ### 4. Formulation benchmark on the resin data
 
-`scripts/benchmark_bodoe_formulation.py`, using the 45 measured formulations in
-`data/`. Four RBF-SVR models on `log1p` targets act as the oracle; fitted on the
+A formulation benchmark using 45 measured UV-curable resin formulations (dataset
+not included). Four RBF-SVR models on `log1p` targets act as the oracle; fitted on the
 33-point training set they achieve held-out $R^2$ of 0.71–0.89 and Spearman
 $\rho$ of 0.83–0.97.
 
