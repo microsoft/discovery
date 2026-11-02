@@ -121,6 +121,37 @@ and promotion criteria.
 Catalog changes can also trigger **Update Registry**. Generated updates reach
 `main` through a separate reviewed registry PR, not automatic merging.
 
+## Registry App setup
+
+[Update Registry](update-registry.yml) uses an installation token for
+`discovery-registry-bot` to push its branch and create its PR. The App needs these
+repository permissions:
+
+| Permission | Required access |
+| --- | --- |
+| Contents | Read and write |
+| Pull requests | Read and write |
+
+An App owner must configure these permissions, and a Microsoft
+organization/installation administrator must approve any updated grant for the
+installation covering `microsoft/discovery`. Changing the App configuration
+alone does not establish installation approval. Keep `REGISTRY_APP_ID` and
+`REGISTRY_APP_PRIVATE_KEY` configured; a permission change does not require
+rotating these credentials.
+
+The workflow explicitly requests `permission-contents: write` and
+`permission-pull-requests: write` for its current-repository token. These inputs
+cannot elevate the App's approved installation permissions: token creation fails
+if the requested grant is unavailable.
+
+A branch push rejected with HTTP 403 for `discovery-registry-bot[bot]` is an
+authorization failure. Check both the App's Contents write permission and the
+installation's approval. Successful token creation without explicit permission
+requests does not prove write access. Do not broaden workflow-level
+`permissions` to fix an App token: those permissions govern `GITHUB_TOKEN`, which
+remains read-only. Registry PRs still require human/CODEOWNER review and
+maintainer-controlled merging.
+
 ## Release refresh automation
 
 Three workflows work together to keep the mutable `current` tag, the

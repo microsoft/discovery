@@ -517,6 +517,32 @@ def test_registry_refresh_tracks_computed_tag_inputs():
     } <= paths
 
 
+def test_registry_refresh_requests_required_app_permissions():
+    workflow = load_workflow(
+        REPO_ROOT / ".github" / "workflows" / "update-registry.yml"
+    )
+    steps = workflow["jobs"]["update-registry"]["steps"]
+    token_step = next(
+        step for step in steps
+        if uses_action(step, "actions/create-github-app-token")
+    )
+
+    assert token_step["id"] == "app_token"
+    assert {
+        key: value for key, value in token_step["with"].items()
+        if key.startswith("permission-")
+    } == {
+        "permission-contents": "write",
+        "permission-pull-requests": "write",
+    }
+
+    publish_step = next(
+        step for step in steps
+        if step.get("name") == "Commit updated registry to a PR"
+    )
+    assert publish_step["env"]["GH_TOKEN"] == "${{ steps.app_token.outputs.token }}"
+
+
 def test_registry_refresh_cannot_rewrite_or_self_approve_generated_prs():
     path = REPO_ROOT / ".github" / "workflows" / "update-registry.yml"
     workflow = load_workflow(path)
