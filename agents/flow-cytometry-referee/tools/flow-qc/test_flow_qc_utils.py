@@ -166,3 +166,16 @@ def test_tool_launcher_returns_python_exit_status(
 
     assert completed.returncode == expected_status
     assert expected_output in completed.stdout
+
+
+def test_rate_bin_count_cv_reflects_acquisition_pause() -> None:
+    """A long pause leaves empty time bins, which must raise the rate CV."""
+    steady_time = np.linspace(0, 100, 10_000)
+    paused_time = np.concatenate(
+        (np.linspace(0, 10, 5_000, endpoint=False), np.linspace(90, 100, 5_000))
+    )
+    steady = build_qc_report({}, pd.DataFrame({"Time": steady_time}))
+    paused = build_qc_report({}, pd.DataFrame({"Time": paused_time}))
+
+    assert steady["time_integrity"]["rate_bin_count_cv"] < 0.05
+    assert paused["time_integrity"]["rate_bin_count_cv"] > 1.0
