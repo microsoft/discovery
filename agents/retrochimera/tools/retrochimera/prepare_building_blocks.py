@@ -29,7 +29,7 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(mess
 # few months and removes old versions — check https://downloads.emolecules.com/orderbb/
 # if the default 404s.  Override with --url or BUILDING_BLOCKS_URL env var.
 DEFAULT_URL = (
-    "https://downloads.emolecules.com/orderbb/2026-04-01/parent.smi.gz"
+    "https://downloads.emolecules.com/orderbb/2026-09-01/parent.smi.gz"
 )
 
 MAX_RETRIES = 3
