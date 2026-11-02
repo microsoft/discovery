@@ -1,0 +1,279 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://flowblind.local/schemas/flowblind-catalog-hidden-flow-preparation-bundle-v1.schema.json",
+  "title": "FlowBlind catalog hidden-flow preparation bundle v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "$schema",
+    "schemaVersion",
+    "recordType",
+    "id",
+    "status",
+    "containsResults",
+    "association",
+    "humanContext",
+    "capability",
+    "problem",
+    "review",
+    "preflight",
+    "resourceLimits",
+    "dataHandling",
+    "runtime",
+    "software"
+  ],
+  "properties": {
+    "$schema": {
+      "const": "https://flowblind.local/schemas/flowblind-catalog-hidden-flow-preparation-bundle-v1.schema.json"
+    },
+    "schemaVersion": { "const": 1 },
+    "recordType": {
+      "const": "flowblind-catalog-hidden-flow-preparation-v1"
+    },
+    "id": {
+      "type": "string",
+      "pattern": "^flowblind-hidden-flow-preparation-[a-f0-9]{32}$"
+    },
+    "status": { "const": "prepared-awaiting-confirmation" },
+    "containsResults": { "const": false },
+    "association": { "$ref": "#/$defs/digest" },
+    "humanContext": {
+      "$ref": "flowblind-catalog-hidden-flow-input-v1.schema.json"
+    },
+    "capability": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "capabilityId",
+        "capabilityVersion",
+        "methodFamily",
+        "problemSchemaVersion"
+      ],
+      "properties": {
+        "capabilityId": {
+          "const": "finite-basis-hidden-flow-v1"
+        },
+        "capabilityVersion": { "const": "1.1.0" },
+        "methodFamily": {
+          "const": "finite-basis-observation-compatible-hidden-flow-v1"
+        },
+        "problemSchemaVersion": { "const": 1 }
+      }
+    },
+    "problem": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["canonicalization", "identity", "document"],
+      "properties": {
+        "canonicalization": { "const": "stable-json-v1" },
+        "identity": { "$ref": "#/$defs/jsonArtifact" },
+        "document": {
+          "$ref": "flowblind-catalog-hidden-flow-problem-acceptance-v1.schema.json"
+        }
+      }
+    },
+    "review": {
+      "$ref": "flowblind-catalog-hidden-flow-review-attestation-v1.schema.json"
+    },
+    "preflight": { "$ref": "#/$defs/preflight" },
+    "resourceLimits": { "$ref": "#/$defs/resourceLimits" },
+    "dataHandling": { "$ref": "#/$defs/dataHandling" },
+    "runtime": { "$ref": "#/$defs/runtime" },
+    "software": {
+      "$ref": "flowblind-catalog-hidden-flow-package-evidence-v1.schema.json"
+    }
+  },
+  "$defs": {
+    "sha256": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "digest": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["canonicalization", "sha256"],
+      "properties": {
+        "canonicalization": { "const": "stable-json-v1" },
+        "sha256": { "$ref": "#/$defs/sha256" }
+      }
+    },
+    "jsonArtifact": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["reference", "byteLength", "sha256", "mediaType"],
+      "properties": {
+        "reference": {
+          "type": "string",
+          "pattern": "^flowblind-catalog-hidden-flow-problem-[a-f0-9]{64}\\.json$"
+        },
+        "byteLength": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 16777216
+        },
+        "sha256": { "$ref": "#/$defs/sha256" },
+        "mediaType": { "const": "application/json" }
+      }
+    },
+    "preflight": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "basisSha256",
+        "retainedBasisFunctions",
+        "rejectedBasisFunctions",
+        "observationRows",
+        "observationRankLimit",
+        "solverRequestCount",
+        "solverRequestSha256",
+        "target"
+      ],
+      "properties": {
+        "basisSha256": { "$ref": "#/$defs/sha256" },
+        "retainedBasisFunctions": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 96
+        },
+        "rejectedBasisFunctions": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 96
+        },
+        "observationRows": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 256
+        },
+        "observationRankLimit": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 96
+        },
+        "solverRequestCount": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 64
+        },
+        "solverRequestSha256": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 64,
+          "items": { "$ref": "#/$defs/sha256" }
+        },
+        "target": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["id", "type", "title", "unit"],
+          "properties": {
+            "id": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$"
+            },
+            "type": {
+              "enum": [
+                "point-component",
+                "point-direction",
+                "point-speed-envelope",
+                "region-component",
+                "point-strain-component"
+              ]
+            },
+            "title": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 256
+            },
+            "unit": { "enum": ["mm/s", "1/s"] }
+          }
+        }
+      }
+    },
+    "resourceLimits": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "hiddenFlow",
+        "maximumPreparationBundleBytes",
+        "maximumVerifiedRunArtifactBytes",
+        "maximumMarkdownArtifactBytes"
+      ],
+      "properties": {
+        "hiddenFlow": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "maximumDocumentBytes",
+            "maximumSolverResultBytes",
+            "maximumSolverBatchRequests",
+            "maximumSolverBatchInputBytes",
+            "maximumSolverBatchResultBytes",
+            "maximumBasisFunctions",
+            "maximumObservationRows",
+            "maximumObservationMatrixEntries",
+            "maximumTargetGridPoints",
+            "maximumDirections",
+            "maximumScenarios",
+            "maximumTextLength",
+            "maximumIdentifierLength",
+            "maximumMatrixEntries",
+            "maximumCanonicalMatrixEntries",
+            "maximumNumericMagnitude"
+          ],
+          "properties": {
+            "maximumDocumentBytes": { "const": 16777216 },
+            "maximumSolverResultBytes": { "const": 16777216 },
+            "maximumSolverBatchRequests": { "const": 64 },
+            "maximumSolverBatchInputBytes": { "const": 33554432 },
+            "maximumSolverBatchResultBytes": { "const": 67108864 },
+            "maximumBasisFunctions": { "const": 96 },
+            "maximumObservationRows": { "const": 256 },
+            "maximumObservationMatrixEntries": { "const": 24576 },
+            "maximumTargetGridPoints": { "const": 256 },
+            "maximumDirections": { "const": 64 },
+            "maximumScenarios": { "const": 24 },
+            "maximumTextLength": { "const": 2048 },
+            "maximumIdentifierLength": { "const": 64 },
+            "maximumMatrixEntries": { "const": 9216 },
+            "maximumCanonicalMatrixEntries": { "const": 70000 },
+            "maximumNumericMagnitude": { "const": 1e100 }
+          }
+        },
+        "maximumPreparationBundleBytes": { "const": 17825792 },
+        "maximumVerifiedRunArtifactBytes": { "const": 134217728 },
+        "maximumMarkdownArtifactBytes": { "const": 16777216 }
+      }
+    },
+    "dataHandling": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "scientistInput",
+        "selection",
+        "preparation",
+        "execution",
+        "retention"
+      ],
+      "properties": {
+        "scientistInput": {
+          "const": "ordinary-language-goal-and-details-only"
+        },
+        "selection": {
+          "const": "one-host-selected-canonical-problem-json"
+        },
+        "preparation": {
+          "const": "local-read-only-validation-and-result-free-preflight"
+        },
+        "execution": {
+          "const": "host-confirmed-run-without-an-approval-input-field"
+        },
+        "retention": {
+          "const": "self-contained-content-addressed-bundle-with-no-hidden-state"
+        }
+      }
+    },
+    "runtime": {
+      "$ref": "flowblind-catalog-hidden-flow-review-attestation-v1.schema.json#/$defs/runtime"
+    }
+  }
+}

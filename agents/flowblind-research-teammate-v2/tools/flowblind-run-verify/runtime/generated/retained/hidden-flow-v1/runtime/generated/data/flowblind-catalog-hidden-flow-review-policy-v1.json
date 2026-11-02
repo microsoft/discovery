@@ -1,0 +1,130 @@
+{
+  "$schema": "https://flowblind.local/schemas/flowblind-catalog-hidden-flow-review-policy-v1.schema.json",
+  "assertions": {
+    "allowedObservationAndTargetTypes": "attested",
+    "canonicalProblemBytes": "attested",
+    "clinicalUse": "not-attested",
+    "executablePreflight": "attested",
+    "genericProblemContract": "attested",
+    "measurementValidity": "not-attested",
+    "modelOrUserApproval": "not-accepted-as-authority",
+    "neutralFiniteBasisClaims": "attested",
+    "parserAcceptance": "attested",
+    "physicalTruth": "not-attested",
+    "resourceLimits": "attested",
+    "solverRuntime": "attested",
+    "sourceAccuracy": "not-attested"
+  },
+  "authorityInput": "host-selected-canonical-problem-bytes-only",
+  "authorityVersion": "attested-generic-hidden-flow-problem-authority-v1",
+  "claimBoundary": "finite-basis-declared-model-only-no-physical-truth-source-validity-or-clinical-inference",
+  "id": "flowblind-catalog-hidden-flow-generic-review-policy-v1",
+  "policyVersion": "1.0.0",
+  "reviewScope": "generic-problem-contract-parser-and-executable-preflight-only",
+  "runtime": {
+    "confinement": {
+      "childProcessTimeoutMilliseconds": 60000,
+      "maximumStdoutStderrBytes": 1048576,
+      "network": "none",
+      "noNewPrivileges": true,
+      "rootFilesystem": "read-only",
+      "temporaryFilesystem": "/tmp:rw,noexec,nosuid,nodev,size=128m,mode=1777",
+      "user": "10001:10001"
+    },
+    "maximumThreads": 1,
+    "networkRequiredAtRuntime": false,
+    "nodeImage": "node:22.22.0-bookworm-slim@sha256:dd9d21971ec4395903fa6143c2b9267d048ae01ca6d3ea96f16cb30df6187d94",
+    "platform": "linux/amd64",
+    "pythonImage": "python:3.12.14-slim@sha256:2fe5997d249a808b8eeea52c58a1dbffbba28754dc11699ef5c029f2d818ce79",
+    "pythonPackages": [
+      {
+        "requirement": "clarabel==0.11.1",
+        "sha256": "c8c41aaa6f3f8c0f3bd9d86c3e568dcaee079562c075bd2ec9fb3a80287380ef"
+      },
+      {
+        "requirement": "cffi==2.1.1",
+        "sha256": "c1453022f490d2459a11819d83ad1d586e9ff65a12ac3e705ffebd46d3685dcf"
+      },
+      {
+        "requirement": "numpy==2.2.6",
+        "sha256": "fd83c01228a688733f1ded5201c678f0c53ecc1006ffbc404db9f7a899ac6249"
+      },
+      {
+        "requirement": "pycparser==3.0",
+        "sha256": "b727414169a36b7d524c1c3e31839a521725078d7b2ff038656844266160a992"
+      },
+      {
+        "requirement": "scipy==1.15.3",
+        "sha256": "271e3713e645149ea5ea3e97b57fdab61ce61333f97cfae392c28ba786f9bb49"
+      }
+    ],
+    "pythonRequirementsSha256": "1ffda1962375e2d2d77b794b7a930d55902869a2923e695ad333a3f8e0d7a4ed",
+    "requiredEnvironment": {
+      "BLIS_NUM_THREADS": "1",
+      "MKL_NUM_THREADS": "1",
+      "NUMEXPR_NUM_THREADS": "1",
+      "OMP_NUM_THREADS": "1",
+      "OPENBLAS_CORETYPE": "NEHALEM",
+      "OPENBLAS_NUM_THREADS": "1",
+      "PYTHONDONTWRITEBYTECODE": "1",
+      "PYTHONHASHSEED": "0",
+      "PYTHONUNBUFFERED": "1",
+      "VECLIB_MAXIMUM_THREADS": "1"
+    },
+    "solverAdapter": "PinnedPythonProcessHiddenFlowSolverAdapter",
+    "solverIdentity": {
+      "adapter": "flowblind-hidden-flow-direct-clarabel",
+      "adapterVersion": "1.0.0",
+      "architecture": "x86_64",
+      "clarabelVersion": "0.11.1",
+      "image": "python:3.12.14-slim@sha256:2fe5997d249a808b8eeea52c58a1dbffbba28754dc11699ef5c029f2d818ce79",
+      "linearSolverPrefix": "qdldl;direct=true;threads=1;",
+      "numpyVersion": "2.2.6",
+      "pythonVersion": "3.12.14",
+      "scipyVersion": "1.15.3"
+    },
+    "solverModule": "tools.hidden_flow_solver"
+  },
+  "schemaVersion": 1,
+  "subject": {
+    "allowedObservationTypes": [
+      "point-component",
+      "point-direction"
+    ],
+    "allowedTargetTypes": [
+      "point-component",
+      "point-direction",
+      "point-speed-envelope",
+      "region-component",
+      "point-strain-component"
+    ],
+    "canonicalization": "stable-json-v1",
+    "capabilityId": "finite-basis-hidden-flow-v1",
+    "capabilityVersion": "1.1.0",
+    "executablePreflight": "compile-basis-and-all-solver-requests-without-solving",
+    "genericProblemSchema": "https://flowblind.local/schemas/hidden-flow-problem.schema.json",
+    "genericProblemSchemaRole": "syntactic-prefilter-only",
+    "methodFamily": "finite-basis-observation-compatible-hidden-flow-v1",
+    "parser": "parseHiddenFlowProblem",
+    "problemAcceptanceSchema": "https://flowblind.local/schemas/flowblind-catalog-hidden-flow-problem-acceptance-v1.schema.json",
+    "problemSchemaVersion": 1,
+    "resourceLimits": {
+      "maximumBasisFunctions": 96,
+      "maximumCanonicalMatrixEntries": 70000,
+      "maximumDirections": 64,
+      "maximumDocumentBytes": 16777216,
+      "maximumIdentifierLength": 64,
+      "maximumMatrixEntries": 9216,
+      "maximumNumericMagnitude": 1e+100,
+      "maximumObservationMatrixEntries": 24576,
+      "maximumObservationRows": 256,
+      "maximumScenarios": 24,
+      "maximumSolverBatchInputBytes": 33554432,
+      "maximumSolverBatchRequests": 64,
+      "maximumSolverBatchResultBytes": 67108864,
+      "maximumSolverResultBytes": 16777216,
+      "maximumTargetGridPoints": 256,
+      "maximumTextLength": 2048
+    }
+  }
+}

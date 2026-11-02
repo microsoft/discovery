@@ -34,9 +34,10 @@ ENV DEBIAN_FRONTEND=noninteractive
 ENV MAMBA_ROOT_PREFIX=/opt/conda
 ENV PATH="${MAMBA_ROOT_PREFIX}/bin:${PATH}"
 
-# System tools only (NOT compilers — those come from conda for ABI compatibility)
+# System tools only (NOT compilers — those come from conda for ABI compatibility).
+# binutils provides ar/ranlib for CMake when using MPI compiler wrappers.
 RUN apt-get update && apt-get install -y --no-install-recommends \
-        wget git ca-certificates openssh-client \
+        wget git ca-certificates openssh-client binutils \
     && rm -rf /var/lib/apt/lists/*
 
 # Create conda env with compilers + build tools + all CP2K dependencies.
@@ -48,7 +49,7 @@ RUN micromamba create -n cp2kenv -c conda-forge --quiet -y \
         cmake ninja pkg-config \
         compilers \
         openmpi \
-        "libxc>=6,<7" fftw openblas scalapack libxsmm \
+        "libxc>=6,<7" fftw openblas scalapack "libxsmm=1.17" \
         "dftd4>=3.0,<4" \
         "libint>=2.6" \
         numpy scipy matplotlib-base pandas ase pymatgen \
@@ -65,8 +66,8 @@ RUN micromamba create -n cp2kenv -c conda-forge --quiet -y \
 ENV CE=/opt/conda/envs/cp2kenv
 ENV PATH="${CE}/bin:${PATH}"
 ENV LD_LIBRARY_PATH="${CE}/lib"
-# CRITICAL: pkg-config must find .pc files from conda packages (dftd4, scalapack, libxc, etc.)
-ENV PKG_CONFIG_PATH="${CE}/lib/pkgconfig:${CE}/share/pkgconfig"
+# LibXSMM 1.17 provides CP2K 2024.2's required extensions and ships .pc files in lib/.
+ENV PKG_CONFIG_PATH="${CE}/lib/pkgconfig:${CE}/share/pkgconfig:${CE}/lib"
 
 # ---------------------------------------------------------------------------
 # libint2 pkg-config shim: conda-forge "libint" package provides the library

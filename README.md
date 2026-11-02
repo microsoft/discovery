@@ -4,15 +4,16 @@
   <tr>
     <td align="center" width="320">
       <img src="includes/media/windows.svg" width="96" height="96" alt="Windows logo"><br>
-      <a href="https://aka.ms/discovery/download/current"><img src="includes/media/windows-download-card.svg" width="220" height="80" alt="Download Windows 11"></a><br>
+      <a href="https://aka.ms/discovery/download/preview/x64/current"><img src="includes/media/windows-download-card.svg" width="220" height="80" alt="Download Windows 11"></a><br>
       <strong>User Installer</strong>
-      <a href="https://aka.ms/discovery/download/current"><strong>x64</strong></a>
-      <a href="https://aka.ms/discovery/download/arm64/current"><strong>Arm64</strong></a>
-      <a href="https://aka.ms/discovery/download/osx/current"><strong>macOS</strong></a>
+      <a href="https://aka.ms/discovery/download/preview/x64/current"><strong>x64</strong></a>
+      <a href="https://aka.ms/discovery/download/preview/arm64/current"><strong>Arm64</strong></a>
+      <a href="https://aka.ms/discovery/download/preview/osx/current"><strong>macOS</strong></a>
+      <a href="https://aka.ms/discovery/download/preview/rhel/current"><strong>RHEL</strong></a>
     </td>
     <td valign="middle">
-      A self-contained desktop app - no SDK, no cloud setup. Current release: <strong>v0.15.15</strong>.<br>
-      <sub>Windows x64, Windows ARM64, and macOS installers are available today. Linux is not supported yet.</sub><br><br>
+      A self-contained desktop app - no SDK, no cloud setup. Current release: <strong>v0.15.21</strong>.<br>
+      <sub>Windows x64, Windows ARM64, macOS, and RHEL x64 (RPM) installers are available today.</sub><br><br>
       🛠️ <a href="docs/discovery-app/install.md">Install guide</a> - setup, verification, and upgrade steps.
     </td>
   </tr>
@@ -22,9 +23,10 @@
 
 | Version | Date | Platform | Installer |
 | --- | --- | --- | --- |
-| v0.15.14 _(previous)_ | 2026-09-08 | Windows x64 | [`Discovery-app-0.15.14-preview-win-x64.exe`](https://aka.ms/discovery/download/previous) |
-| v0.15.14 _(previous)_ | 2026-09-08 | Windows Arm64 | [`Discovery-app-0.15.14-preview-win-arm64.exe`](https://aka.ms/discovery/download/arm64/previous) |
-| v0.15.14 _(previous)_ | 2026-09-08 | macOS | [`Discovery-app-0.15.14-preview-osx-arm64.dmg`](https://aka.ms/discovery/download/osx/previous) |
+| v0.15.20 _(previous)_ | 2026-10-20 | Windows x64 | [`Discovery-app-0.15.20-preview-win-x64.exe`](https://aka.ms/discovery/download/preview/x64/previous) |
+| v0.15.20 _(previous)_ | 2026-10-20 | Windows Arm64 | [`Discovery-app-0.15.20-preview-win-arm64.exe`](https://aka.ms/discovery/download/preview/arm64/previous) |
+| v0.15.20 _(previous)_ | 2026-10-20 | macOS | [`Discovery-app-0.15.20-preview-osx-arm64.dmg`](https://aka.ms/discovery/download/preview/osx/previous) |
+| v0.15.20 _(previous)_ | 2026-10-20 | RHEL x64 | [`discovery-app-preview-0.15.20-1.el9.x86_64.rpm`](https://aka.ms/discovery/download/preview/rhel/previous) |
 
 ---
 
@@ -84,13 +86,19 @@ The Microsoft Discovery app is a **self-contained desktop application** — no S
 
 - **Agents:** open the `agents/` directory — each folder is one agent with its own `README.md`.
 - **Starter kits:** open the `starter-kits/` directory — each folder contains a single `kit.json` describing the bundled agents, sample prompts, and risk profile.
-- **Programmatic access:** the same content is exposed as a single aggregated JSON in [`.auto-registry/agent-registry.json`](.auto-registry/agent-registry.json) and [`.auto-registry/starter-kit-registry.json`](.auto-registry/starter-kit-registry.json), regenerated automatically on every merge.
+- **Programmatic access:** the same content is exposed in [`.auto-registry/agent-registry.json`](.auto-registry/agent-registry.json) and [`.auto-registry/starter-kit-registry.json`](.auto-registry/starter-kit-registry.json). Catalog changes trigger registry generation; updates are proposed in a separate PR and reach `main` after human review and maintainer-controlled merging.
 
 ---
 
 ## 🤝 Contributing
 
 All contributions — from Microsoft engineers and external partners — arrive via **pull request from a fork**. Direct pushes to `main` are not permitted.
+
+Public contributors may submit catalog content and documentation directly by
+pull request. Changes to trusted automation, repository configuration, schemas,
+generated output, and executable utilities are security-sensitive and require
+maintainer/CODEOWNER review; discuss substantial proposals through the matching
+Discussions category before opening a pull request.
 
 | Type | Goes to | First read |
 | --- | --- | --- |
@@ -103,7 +111,13 @@ All contributions — from Microsoft engineers and external partners — arrive 
 | **Something you built** | [Discussions → Show and tell](https://techcommunity.microsoft.com/category/azure/discussions/microsoft-discovery-discussions) | — |
 | **Schema / workflow change** | PR against `docs/schemas/` or `.github/workflows/` — **Microsoft maintainers only**; open an Idea first. | [`CONTRIBUTING.md`](CONTRIBUTING.md) |
 
-The full contributor contract is in [`CONTRIBUTING.md`](CONTRIBUTING.md). Every PR runs through an automated review that validates structure, schemas, policy, documentation, and secrets — failures are reported inline with rule IDs and remediation hints.
+Start with the quick contribution guide in [`CONTRIBUTING.md`](CONTRIBUTING.md).
+Read-only PR checks validate structure, schemas, policy, documentation, and
+secrets. A separate reporter publishes diagnostic labels and comments
+asynchronously; available rule feedback includes IDs and remediation hints.
+Required checks and source run logs remain authoritative if feedback is missing.
+See the [workflow overview](.github/workflows/README.md#pull-request-validation-and-feedback)
+for check names, reporting boundaries, and the manual review/merge process.
 
 ### Quick start for catalog contributors
 
@@ -151,7 +165,9 @@ discovery/
 │           └── Dockerfile
 ├── starter-kits/
 │   └── <kit-name>/                           ← flat catalog: one folder per kit
-│       └── kit.json                          ← Starter-kit manifest (required, the only file allowed in the folder)
+│       └── kit.json                          ← Starter-kit manifest (required)
+│       └── README.md                         ← Optional, but recommended
+│       └── media/                            ← Required only if images are used in Markdown files
 ├── .auto-registry/                           ← Auto-generated catalog registries; do not edit by hand
 │   ├── agent-registry.json                   ← Aggregated agent metadata from agents/*/
 │   └── starter-kit-registry.json             ← Aggregated starter-kit metadata from starter-kits/*/

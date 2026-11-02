@@ -1,0 +1,133 @@
+{
+  "$schema": "https://flowblind.local/schemas/flowblind-catalog-hidden-flow-declaration-v1.schema.json",
+  "actions": [
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": true
+      },
+      "confirmation": "Disabled",
+      "description": "Attest one host-selected canonical generic hidden-flow problem and emit a deterministic result-free preparation bundle.",
+      "hostSelection": "exactly-one-canonical-hidden-flow-problem-json",
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "details": {
+            "description": "Optional ordinary-language context for interpreting the already selected canonical problem.",
+            "maxLength": 4096,
+            "minLength": 1,
+            "title": "Additional details",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "goal": {
+            "description": "Describe the hidden-flow robustness question in ordinary scientific language.",
+            "maxLength": 4096,
+            "minLength": 1,
+            "title": "Research goal",
+            "type": "string"
+          }
+        },
+        "required": [
+          "goal"
+        ],
+        "type": "object"
+      },
+      "name": "prepare-study",
+      "resultFree": true,
+      "title": "Prepare a reviewed finite-basis hidden-flow study"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": false
+      },
+      "confirmation": "Enabled",
+      "description": "After host confirmation, re-attest the generic problem, run only the pinned Clarabel closure, independently verify it, and require deterministic replay.",
+      "hostSelection": "exactly-one-preparation-bundle-json",
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "details": {
+            "description": "Optional ordinary-language context for interpreting the already selected canonical problem.",
+            "maxLength": 4096,
+            "minLength": 1,
+            "title": "Additional details",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "goal": {
+            "description": "Describe the hidden-flow robustness question in ordinary scientific language.",
+            "maxLength": 4096,
+            "minLength": 1,
+            "title": "Research goal",
+            "type": "string"
+          }
+        },
+        "required": [
+          "goal"
+        ],
+        "type": "object"
+      },
+      "name": "run-and-verify-study",
+      "resultFree": false,
+      "title": "Run and verify a prepared finite-basis hidden-flow study"
+    }
+  ],
+  "capability": {
+    "capabilityId": "finite-basis-hidden-flow-v1",
+    "capabilityVersion": "1.1.0",
+    "methodFamily": "finite-basis-observation-compatible-hidden-flow-v1"
+  },
+  "id": "flowblind-catalog-hidden-flow-declaration-v1",
+  "packageVersion": "1.0.0",
+  "publicInputSchema": {
+    "additionalProperties": false,
+    "properties": {
+      "details": {
+        "description": "Optional ordinary-language context for interpreting the already selected canonical problem.",
+        "maxLength": 4096,
+        "minLength": 1,
+        "title": "Additional details",
+        "type": [
+          "string",
+          "null"
+        ]
+      },
+      "goal": {
+        "description": "Describe the hidden-flow robustness question in ordinary scientific language.",
+        "maxLength": 4096,
+        "minLength": 1,
+        "title": "Research goal",
+        "type": "string"
+      }
+    },
+    "required": [
+      "goal"
+    ],
+    "type": "object"
+  },
+  "reviewPolicy": {
+    "authorityVersion": "attested-generic-hidden-flow-problem-authority-v1",
+    "claimBoundary": "finite-basis-declared-model-only-no-physical-truth-source-validity-or-clinical-inference",
+    "id": "flowblind-catalog-hidden-flow-generic-review-policy-v1",
+    "policyVersion": "1.0.0",
+    "reviewScope": "generic-problem-contract-parser-and-executable-preflight-only"
+  },
+  "runtime": {
+    "network": "none",
+    "nonRootUser": "10001:10001",
+    "platform": "linux/amd64",
+    "rootFilesystem": "read-only",
+    "temporaryFilesystem": "/tmp:rw,noexec,nosuid,nodev,size=128m,mode=1777"
+  },
+  "schemaVersion": 1
+}

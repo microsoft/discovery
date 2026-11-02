@@ -1,0 +1,958 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://flowblind.local/schemas/vector-dataset.schema.json",
+  "title": "FlowBlind canonical vector dataset",
+  "description": "Structural schema mirroring src/domain/vectorDatasetModel.ts and the semantic guarantees of src/domain/vectorDatasetValidation.ts as closely as JSON Schema draft-07 permits. Cross-field invariants that JSON Schema cannot express (strict coordinate monotonicity, complete Cartesian products, per-frame array lengths, canonical component ordering, wall geometry, and expected-digest agreement) are enforced by the importer's semantic validator.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "kind",
+    "id",
+    "title",
+    "description",
+    "coordinateFrame",
+    "topology",
+    "components",
+    "temporal",
+    "frames",
+    "provenance",
+    "wall"
+  ],
+  "properties": {
+    "schemaVersion": {
+      "const": 1
+    },
+    "kind": {
+      "enum": [
+        "structured-vector-field",
+        "structured-vector-time-series",
+        "unstructured-vector-field",
+        "unstructured-vector-time-series"
+      ]
+    },
+    "id": {
+      "$ref": "#/definitions/identifier"
+    },
+    "title": {
+      "allOf": [
+        {
+          "$ref": "#/definitions/text"
+        },
+        {
+          "maxLength": 256
+        }
+      ]
+    },
+    "description": {
+      "allOf": [
+        {
+          "$ref": "#/definitions/text"
+        },
+        {
+          "maxLength": 2048
+        }
+      ]
+    },
+    "coordinateFrame": {
+      "$ref": "#/definitions/coordinateFrame"
+    },
+    "topology": {
+      "type": "object"
+    },
+    "components": {
+      "type": "array",
+      "minItems": 2,
+      "maxItems": 3,
+      "items": {
+        "$ref": "#/definitions/component"
+      }
+    },
+    "temporal": {
+      "type": "object"
+    },
+    "frames": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/definitions/frame"
+      }
+    },
+    "provenance": {
+      "$ref": "#/definitions/provenance"
+    },
+    "wall": {
+      "oneOf": [
+        {
+          "type": "null"
+        },
+        {
+          "$ref": "#/definitions/wall"
+        }
+      ]
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "required": [
+          "kind"
+        ],
+        "properties": {
+          "kind": {
+            "enum": [
+              "structured-vector-field",
+              "structured-vector-time-series"
+            ]
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "topology": {
+            "$ref": "#/definitions/structuredTopology"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "required": [
+          "kind"
+        ],
+        "properties": {
+          "kind": {
+            "enum": [
+              "unstructured-vector-field",
+              "unstructured-vector-time-series"
+            ]
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "topology": {
+            "$ref": "#/definitions/unstructuredTopology"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "required": [
+          "kind"
+        ],
+        "properties": {
+          "kind": {
+            "enum": [
+              "structured-vector-field",
+              "unstructured-vector-field"
+            ]
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "temporal": {
+            "$ref": "#/definitions/singleFrameTemporal"
+          },
+          "frames": {
+            "minItems": 1,
+            "maxItems": 1
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "required": [
+          "kind"
+        ],
+        "properties": {
+          "kind": {
+            "enum": [
+              "structured-vector-time-series",
+              "unstructured-vector-time-series"
+            ]
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "temporal": {
+            "$ref": "#/definitions/timeSeriesTemporal"
+          },
+          "frames": {
+            "minItems": 2
+          }
+        }
+      }
+    }
+  ],
+  "definitions": {
+    "text": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 2048,
+      "pattern": "^[^\\u0000-\\u0008\\u000b\\u000c\\u000e-\\u001f\\u007f\\u202a-\\u202e\\u2066-\\u2069]*$"
+    },
+    "identifier": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 64,
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$"
+    },
+    "sha256": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "sha256OrNull": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "lengthUnit": {
+      "enum": [
+        "m",
+        "cm",
+        "mm"
+      ]
+    },
+    "timeUnit": {
+      "enum": [
+        "s",
+        "ms"
+      ]
+    },
+    "velocityUnit": {
+      "enum": [
+        "m/s",
+        "cm/s",
+        "mm/s"
+      ]
+    },
+    "viscosityUnit": {
+      "enum": [
+        "Pa*s",
+        "mPa*s"
+      ]
+    },
+    "axis": {
+      "enum": [
+        "x",
+        "y",
+        "z"
+      ]
+    },
+    "cellType": {
+      "enum": [
+        "vertex",
+        "line",
+        "triangle",
+        "quad",
+        "tetrahedron",
+        "hexahedron",
+        "wedge",
+        "pyramid"
+      ]
+    },
+    "nonNegativeInteger": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "coordinateFrame": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "type",
+        "dimension",
+        "handedness",
+        "axisNames",
+        "lengthUnit"
+      ],
+      "properties": {
+        "id": {
+          "$ref": "#/definitions/identifier"
+        },
+        "type": {
+          "const": "cartesian"
+        },
+        "dimension": {
+          "enum": [
+            2,
+            3
+          ]
+        },
+        "handedness": {
+          "enum": [
+            "right-handed",
+            "unspecified"
+          ]
+        },
+        "axisNames": {
+          "type": "array",
+          "minItems": 2,
+          "maxItems": 3,
+          "uniqueItems": true,
+          "items": {
+            "allOf": [
+              {
+                "$ref": "#/definitions/text"
+              },
+              {
+                "maxLength": 128
+              }
+            ]
+          }
+        },
+        "lengthUnit": {
+          "$ref": "#/definitions/lengthUnit"
+        }
+      }
+    },
+    "component": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "name",
+        "axis",
+        "frameId",
+        "unit"
+      ],
+      "properties": {
+        "name": {
+          "allOf": [
+            {
+              "$ref": "#/definitions/text"
+            },
+            {
+              "maxLength": 128
+            }
+          ]
+        },
+        "axis": {
+          "$ref": "#/definitions/axis"
+        },
+        "frameId": {
+          "$ref": "#/definitions/identifier"
+        },
+        "unit": {
+          "$ref": "#/definitions/velocityUnit"
+        }
+      }
+    },
+    "structuredTopology": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "kind",
+        "dimension",
+        "pointOrdering",
+        "coordinates"
+      ],
+      "properties": {
+        "kind": {
+          "const": "rectilinear"
+        },
+        "dimension": {
+          "enum": [
+            2,
+            3
+          ]
+        },
+        "pointOrdering": {
+          "const": "x-fastest"
+        },
+        "coordinates": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "x",
+            "y"
+          ],
+          "properties": {
+            "x": {
+              "$ref": "#/definitions/coordinateAxis"
+            },
+            "y": {
+              "$ref": "#/definitions/coordinateAxis"
+            },
+            "z": {
+              "$ref": "#/definitions/coordinateAxis"
+            }
+          }
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "required": [
+              "dimension"
+            ],
+            "properties": {
+              "dimension": {
+                "const": 2
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "coordinates": {
+                "required": [
+                  "x",
+                  "y"
+                ],
+                "not": {
+                  "required": [
+                    "z"
+                  ]
+                }
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "required": [
+              "dimension"
+            ],
+            "properties": {
+              "dimension": {
+                "const": 3
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "coordinates": {
+                "required": [
+                  "x",
+                  "y",
+                  "z"
+                ]
+              }
+            }
+          }
+        }
+      ]
+    },
+    "coordinateAxis": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "number"
+      }
+    },
+    "unstructuredTopology": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "kind",
+        "dimension",
+        "points",
+        "cells"
+      ],
+      "properties": {
+        "kind": {
+          "const": "unstructured"
+        },
+        "dimension": {
+          "enum": [
+            2,
+            3
+          ]
+        },
+        "points": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "number"
+          }
+        },
+        "cells": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "type",
+              "pointIndices"
+            ],
+            "properties": {
+              "type": {
+                "$ref": "#/definitions/cellType"
+              },
+              "pointIndices": {
+                "type": "array",
+                "minItems": 1,
+                "items": {
+                  "$ref": "#/definitions/nonNegativeInteger"
+                }
+              }
+            }
+          }
+        }
+      },
+      "if": {
+        "properties": {
+          "dimension": {
+            "const": 2
+          }
+        },
+        "required": [
+          "dimension"
+        ]
+      },
+      "then": {
+        "properties": {
+          "cells": {
+            "items": {
+              "properties": {
+                "type": {
+                  "enum": [
+                    "vertex",
+                    "line",
+                    "triangle",
+                    "quad"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "frameAverageSampling": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "kind",
+            "exposureDuration"
+          ],
+          "properties": {
+            "kind": {
+              "const": "frame-average"
+            },
+            "exposureDuration": {
+              "type": "number",
+              "exclusiveMinimum": 0
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "kind",
+            "exposureDuration",
+            "exposureOperator",
+            "timestampAnchor"
+          ],
+          "properties": {
+            "kind": {
+              "const": "frame-average"
+            },
+            "exposureDuration": {
+              "type": "number",
+              "exclusiveMinimum": 0
+            },
+            "exposureOperator": {
+              "enum": [
+                "uniform-window-average",
+                "unspecified"
+              ]
+            },
+            "timestampAnchor": {
+              "enum": [
+                "start",
+                "midpoint",
+                "end",
+                "unspecified"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    "sampling": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "kind"
+          ],
+          "properties": {
+            "kind": {
+              "const": "instantaneous"
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "kind"
+          ],
+          "properties": {
+            "kind": {
+              "const": "steady-state"
+            }
+          }
+        },
+        {
+          "$ref": "#/definitions/frameAverageSampling"
+        }
+      ]
+    },
+    "transientSampling": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "kind"
+          ],
+          "properties": {
+            "kind": {
+              "const": "instantaneous"
+            }
+          }
+        },
+        {
+          "$ref": "#/definitions/frameAverageSampling"
+        }
+      ]
+    },
+    "singleFrameTemporal": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "kind",
+        "timestampUnit",
+        "sampling"
+      ],
+      "properties": {
+        "kind": {
+          "const": "single-frame"
+        },
+        "timestampUnit": {
+          "$ref": "#/definitions/timeUnit"
+        },
+        "sampling": {
+          "$ref": "#/definitions/sampling"
+        }
+      }
+    },
+    "timeSeriesTemporal": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "kind",
+        "timestampUnit",
+        "sampling",
+        "nominalCadence",
+        "cycle"
+      ],
+      "properties": {
+        "kind": {
+          "const": "time-series"
+        },
+        "timestampUnit": {
+          "$ref": "#/definitions/timeUnit"
+        },
+        "sampling": {
+          "$ref": "#/definitions/transientSampling"
+        },
+        "nominalCadence": {
+          "type": "number",
+          "exclusiveMinimum": 0
+        },
+        "cycle": {
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "startTime",
+                "endTime",
+                "period",
+                "phaseOrigin"
+              ],
+              "properties": {
+                "startTime": {
+                  "type": "number"
+                },
+                "endTime": {
+                  "type": "number"
+                },
+                "period": {
+                  "type": "number",
+                  "exclusiveMinimum": 0
+                },
+                "phaseOrigin": {
+                  "type": "number"
+                }
+              }
+            }
+          ]
+        }
+      }
+    },
+    "frame": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "timestamp",
+        "values",
+        "validMask"
+      ],
+      "properties": {
+        "timestamp": {
+          "type": "number"
+        },
+        "values": {
+          "type": "array",
+          "items": {
+            "type": "number"
+          }
+        },
+        "validMask": {
+          "type": "array",
+          "items": {
+            "type": "boolean"
+          }
+        }
+      }
+    },
+    "provenanceSource": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "path",
+        "format",
+        "byteLength",
+        "sha256",
+        "expectedSha256"
+      ],
+      "properties": {
+        "path": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 512,
+          "pattern": "^(?![A-Za-z]:)(?![\\\\/])(?!.*[\\\\])(?!.*(?:^|/)\\.\\.(?:/|$))(?!.*//)(?!.*/$)[^\\u0000-\\u001f\\u007f]{1,512}$"
+        },
+        "format": {
+          "enum": [
+            "csv",
+            "mat",
+            "zip",
+            "video",
+            "vti",
+            "vtu",
+            "generated"
+          ]
+        },
+        "byteLength": {
+          "$ref": "#/definitions/nonNegativeInteger"
+        },
+        "sha256": {
+          "$ref": "#/definitions/sha256"
+        },
+        "expectedSha256": {
+          "$ref": "#/definitions/sha256OrNull"
+        }
+      }
+    },
+    "provenanceSoftware": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "name",
+        "version",
+        "sha256"
+      ],
+      "properties": {
+        "name": {
+          "allOf": [
+            {
+              "$ref": "#/definitions/text"
+            },
+            {
+              "maxLength": 128
+            }
+          ]
+        },
+        "version": {
+          "allOf": [
+            {
+              "$ref": "#/definitions/text"
+            },
+            {
+              "maxLength": 128
+            }
+          ]
+        },
+        "sha256": {
+          "$ref": "#/definitions/sha256OrNull"
+        }
+      }
+    },
+    "provenance": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "sourceKind",
+        "citation",
+        "license",
+        "sources",
+        "transformations",
+        "software"
+      ],
+      "properties": {
+        "sourceKind": {
+          "enum": [
+            "generated",
+            "measured",
+            "simulation"
+          ]
+        },
+        "citation": {
+          "allOf": [
+            {
+              "$ref": "#/definitions/text"
+            },
+            {
+              "maxLength": 2048
+            }
+          ]
+        },
+        "license": {
+          "allOf": [
+            {
+              "$ref": "#/definitions/text"
+            },
+            {
+              "maxLength": 256
+            }
+          ]
+        },
+        "sources": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/definitions/provenanceSource"
+          }
+        },
+        "transformations": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/text"
+          }
+        },
+        "software": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/definitions/provenanceSoftware"
+          }
+        }
+      }
+    },
+    "wall": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "dynamicViscosity",
+        "method"
+      ],
+      "properties": {
+        "dynamicViscosity": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "value",
+            "unit"
+          ],
+          "properties": {
+            "value": {
+              "type": "number",
+              "exclusiveMinimum": 0
+            },
+            "unit": {
+              "$ref": "#/definitions/viscosityUnit"
+            }
+          }
+        },
+        "method": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "kind",
+            "wallPointIndices",
+            "nearWallPointIndices",
+            "normals",
+            "normalDirection",
+            "boundaryCondition",
+            "maximumTangentialOffsetFraction",
+            "maximumWallSpeed",
+            "wallSpeedUnit"
+          ],
+          "properties": {
+            "kind": {
+              "const": "point-pair-first-order"
+            },
+            "wallPointIndices": {
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "$ref": "#/definitions/nonNegativeInteger"
+              }
+            },
+            "nearWallPointIndices": {
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "$ref": "#/definitions/nonNegativeInteger"
+              }
+            },
+            "normals": {
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "type": "number"
+              }
+            },
+            "normalDirection": {
+              "const": "into-fluid"
+            },
+            "boundaryCondition": {
+              "const": "stationary-no-slip"
+            },
+            "maximumTangentialOffsetFraction": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            },
+            "maximumWallSpeed": {
+              "type": "number",
+              "minimum": 0
+            },
+            "wallSpeedUnit": {
+              "$ref": "#/definitions/velocityUnit"
+            }
+          }
+        }
+      }
+    }
+  }
+}

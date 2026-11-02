@@ -1,0 +1,18 @@
+name: pyopenms
+type: agent
+version: 1.0.0
+associated_tools:
+  - agents/pyopenms/tools/pyopenms
+publisher:
+  name: Microsoft
+  contact: discovery-catalog@microsoft.com
+  support_url: https://techcommunity.microsoft.com/category/azure/discussions/microsoft-discovery-discussions
+  party: 1p
+description: >
+  Mass-spectrometry data processing for proteomics and metabolomics: read mzML, inspect spectra, and extract
+  peak/feature information.
+tags:
+  - mass-spectrometry
+  - proteomics
+  - metabolomics
+  - pyopenms

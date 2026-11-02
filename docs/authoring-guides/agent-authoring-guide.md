@@ -51,7 +51,8 @@ agents/
     └── tools/              ← Optional; only if your agent uses custom containerised tools
         └── <tool-name>/
             ├── tool.yaml
-            └── Dockerfile
+          ├── Dockerfile
+          └── test_<tool-name>.py  ← Optional; run in your own isolated CI
 ```
 
 **Folder-name rules**
@@ -110,8 +111,8 @@ compliance:                           # Optional — include only if certified
 | `type` | ✅ | Always `agent`. |
 | `version` | ✅ | SemVer (`MAJOR.MINOR.PATCH`). Bump on meaningful change. |
 | `publisher.name` | ✅ | Display name of the publishing team or company. |
-| `publisher.contact` | ✅ | Valid email address. |
-| `publisher.support_url` | ✅ | HTTPS URL (issue tracker or support page). |
+| `publisher.contact` | ✅ | Valid email address whose domain has usable MX, A, or AAAA DNS records. This does not prove mailbox ownership. |
+| `publisher.support_url` | ✅ | Reachable public HTTPS webpage (issue tracker or support page) that returns HTML. |
 | `publisher.party` | optional | `1p` (Microsoft) or `3p` (third-party). Used only for the contribution-source PR label; not validated against folder location. |
 | `description` | ✅ | Plain-language description, up to 500 characters. |
 | `tags` | ✅ | Non-empty array of kebab-case strings. |
@@ -228,7 +229,11 @@ actions:
 - Each `actions[].infra_node` must reference an entry in `infra[].name`.
 - Container image references must use the deployer-substituted ACR placeholder format `{name}.azurecr.io/<image>:<tag>`; do not hardcode a registry name such as `myregistry.azurecr.io`.
 - Every tool subfolder must contain both `tool.yaml` and `Dockerfile`.
+- Podman `Containerfile` names are not accepted. For a guarded conversion, see
+  the [Podman-to-Docker migration guide](./podman-to-docker-migration.md) or
+  invoke `/migrate-podman-containerfile <path>`.
 - If a `tools/` directory exists, `agent.yaml.discoveryExtensions` must declare the corresponding tools so they are wired up at deploy time.
+- Optional tool tests must use `test_*.py` or `*_test.py` naming. Their presence is published as `auto:has-tests`, but the repository's privileged PR workflows do not execute submitted code; run these tests in your own isolated environment or CI before submission.
 
 ---
 
@@ -251,6 +256,21 @@ Your `README.md` must include all of these section headings:
 - `## Contributing` (or a reference to `CONTRIBUTING.md`)
 
 > Avoid placeholder markers (`TODO`, `FIXME`, `XXX`) in the README, `metadata.yaml`, or `agent.yaml` — they are blocked by the validator.
+
+### Images
+
+Documentation may include local **PNG, JPEG, GIF, WebP, or inert SVG** images.
+Each image must:
+
+- be no larger than **1 MiB**;
+- contain the format claimed by its extension;
+- be embedded from a Markdown file within the same agent folder (for example,
+  `![Architecture](media/architecture.png)`); and
+- for SVG, contain no scripts, event handlers, embedded documents, remote
+  resources, animation, or entity declarations.
+
+Unreferenced images and other binary formats are rejected. Compress or resize
+larger documentation images, or host them externally over HTTPS.
 
 ### Example skeleton
 
@@ -355,10 +375,15 @@ git push origin add-clinical-summary-agent
 
 What happens next:
 
-1. The automated review runs (structural, schema, policy, documentation, and security checks).
-2. Any failures are posted as inline review comments with a rule identifier and remediation hint. Address each comment and push a follow-up commit.
-3. When all checks pass, the `pr-validation-passed` label is applied and the CODEOWNERS maintainers are auto-requested for review.
-4. One approval from a CODEOWNERS reviewer is required to merge.
+1. Read-only **PR Review** checks structure, schemas, policy, documentation, and secrets. Independent checks, including **Check Agent Removal Impact**, report separately. Fork runs may require maintainer authorization; resolve merge conflicts before `pull_request` checks can run.
+2. **PR Review Report** publishes diagnostic labels and comments asynchronously. Rule findings may appear inline or in a summary with remediation hints. Source check results and run logs remain authoritative if feedback is unavailable; address findings and push a follow-up commit.
+3. The `pr-validation-passed` label reflects PR Review, not every required check. GitHub requests CODEOWNERS review independently of this label.
+4. All required checks, at least one CODEOWNERS approval, and other configured review requirements must be satisfied. A maintainer then merges the PR or enables GitHub's native auto-merge; workflows do not approve or enroll it automatically.
+
+If you remove or rename an agent, also review
+[starter-kit removal impact](starter-kit-authoring-guide.md#agent-removal-impact).
+For missing feedback, see the
+[workflow troubleshooting guide](../validation-workflow-testing.md#troubleshoot-missing-or-stale-feedback).
 
 ---
 

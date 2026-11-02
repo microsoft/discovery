@@ -33,9 +33,14 @@ SCAN_ROOTS = {
 def load_yaml(path: str) -> dict:
     try:
         with open(path, "r", encoding="utf-8") as f:
-            return yaml.safe_load(f) or {}
-    except Exception:
+            data = yaml.safe_load(f)
+    except (OSError, UnicodeDecodeError, yaml.YAMLError) as exc:
+        raise ValueError(f"failed to load YAML {path}: {exc}") from exc
+    if data is None:
         return {}
+    if not isinstance(data, dict):
+        raise ValueError(f"YAML document must be a mapping: {path}")
+    return data
 
 
 def extract_foundry_tools(agent_yaml: dict) -> list:
@@ -107,7 +112,7 @@ def scan_repo(repo_root: str) -> list:
     return entries
 
 
-def main():
+def main() -> int:
     parser = argparse.ArgumentParser(description="Rebuild .auto-registry/agent-registry.json from repo contents")
     parser.add_argument(
         "--repo-root",
@@ -135,7 +140,11 @@ def main():
 
     existing_paths = {e["path"] for e in existing_entries}
 
-    entries = scan_repo(repo_root)
+    try:
+        entries = scan_repo(repo_root)
+    except ValueError as exc:
+        print(f"ERROR: {exc}", file=sys.stderr)
+        return 1
     new_paths = {e["path"] for e in entries}
 
     added = new_paths - existing_paths
@@ -154,13 +163,16 @@ def main():
         "entries": entries,
     }
 
-    os.makedirs(os.path.dirname(output_path), exist_ok=True)
+    output_dir = os.path.dirname(output_path)
+    if output_dir:
+        os.makedirs(output_dir, exist_ok=True)
     with open(output_path, "w", encoding="utf-8") as f:
         json.dump(registry, f, indent=2)
         f.write("\n")
 
     print(f"Registry updated: {len(entries)} entries written to {output_path}")
+    return 0
 
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main())

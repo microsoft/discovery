@@ -1,0 +1,19 @@
+name: biopython
+type: agent
+version: 1.0.0
+associated_tools:
+  - agents/biopython/tools/biopython
+publisher:
+  name: Microsoft
+  contact: discovery-catalog@microsoft.com
+  support_url: https://techcommunity.microsoft.com/category/azure/discussions/microsoft-discovery-discussions
+  party: 1p
+description: >
+  Foundational bioinformatics toolkit for sequence I/O and analysis: parse FASTA/GenBank/PDB, compute sequence
+  statistics, translate, and manipulate biological sequences.
+tags:
+  - bioinformatics
+  - sequences
+  - fasta
+  - genbank
+  - biopython

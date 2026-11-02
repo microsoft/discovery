@@ -1,0 +1,21 @@
+{
+  "email_domain": {
+    "timeout_seconds": 5,
+    "fallback_record_types": [
+      "A",
+      "AAAA"
+    ]
+  },
+  "webpage": {
+    "allowed_ports": [
+      443
+    ],
+    "timeout_seconds": 10,
+    "max_redirects": 5,
+    "max_response_bytes": 16384,
+    "allowed_content_types": [
+      "text/html",
+      "application/xhtml+xml"
+    ]
+  }
+}

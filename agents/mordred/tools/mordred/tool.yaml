@@ -1,0 +1,45 @@
+name: mordred
+description: "Compute over 1800 2D and 3D molecular descriptors from SMILES for QSAR and machine-learning feature generation."
+version: 1.0.0
+category: Cheminformatics
+license: BSD-3-Clause
+infra:
+  - name: worker
+    infra_type: container
+    image:
+      acr: "{name}.azurecr.io/mordred:latest"
+    compute:
+      min_resources:
+        cpu: 1
+        ram: 4Gi
+        storage: 32Gi
+        gpu: 0
+      max_resources:
+        cpu: 4
+        ram: 8Gi
+        storage: 64Gi
+        gpu: 0
+      recommended_sku:
+        - Standard_D4s_v6
+      pool_type: static
+      pool_size: 1
+actions:
+  - name: compute_descriptors
+    description: "Compute Mordred 2D descriptors for each SMILES in the input files."
+    infra_node: worker
+    input_schema:
+      type: object
+      properties:
+        input_directory:
+          type: string
+          description: "Directory containing input files."
+        output_directory:
+          type: string
+          description: "Directory where results are written."
+        column_name:
+          type: string
+          description: "SMILES column name for CSV input"
+      required:
+        - input_directory
+        - output_directory
+    command: "python3 /app/entrypoint.py --action compute_descriptors --input {{input_directory}} --output {{output_directory}} {{#if column_name}}--column_name {{column_name}}{{/if}}"

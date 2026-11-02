@@ -1,6 +1,6 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "$id": "https://github.com/microsoft/discovery/blob/main/schemas/registry-schema.json",
+  "$id": "registry-schema.json",
   "title": "Discovery Catalog Registry",
   "description": "Catalog of all agents in the discovery-catalog repository.",
   "type": "object",
@@ -13,13 +13,13 @@
       "const": "1.0"
     },
     "generated_at": {
-      "type": "string",
-      "format": "date-time",
+      "allOf": [{ "$ref": "common-schema.json#/definitions/dateTime" }],
       "description": "UTC timestamp of the last registry update."
     },
     "entries": {
       "type": "array",
       "description": "One entry per agent in the repo.",
+      "maxItems": 10000,
       "items": { "$ref": "#/definitions/RegistryEntry" }
     }
   },
@@ -30,60 +30,71 @@
       "additionalProperties": false,
       "properties": {
         "name": {
-          "type": "string",
+          "allOf": [{ "$ref": "common-schema.json#/definitions/kebabCaseString" }],
+          "maxLength": 64,
           "description": "Human-readable name of the agent (from metadata.yaml)."
         },
         "type": {
-          "type": "string",
-          "enum": ["agent"],
+          "allOf": [{ "$ref": "common-schema.json#/definitions/agentType" }],
           "description": "Entry type. Always 'agent'."
         },
         "publisher_name": {
           "type": "string",
+          "minLength": 1,
+          "maxLength": 200,
           "description": "Name of the team or organisation that published this entry (from metadata.yaml)."
         },
         "path": {
-          "type": "string",
-          "description": "Relative path from repo root to the agent folder, e.g. agents/my-agent.",
-          "pattern": "^agents/[a-z0-9][a-z0-9-]*$"
+          "allOf": [{ "$ref": "common-schema.json#/definitions/agentPath" }],
+          "description": "Relative path from repo root to the agent folder, e.g. agents/my-agent."
         },
         "version": {
-          "type": "string",
-          "description": "Semantic version string from metadata.yaml (e.g. 1.0.0).",
-          "pattern": "^\\d+\\.\\d+\\.\\d+$"
+          "allOf": [{ "$ref": "common-schema.json#/definitions/semanticVersion" }],
+          "description": "Semantic version string from metadata.yaml (e.g. 1.0.0)."
         },
         "associated_tools": {
           "type": "array",
           "description": "Relative paths (from repo root) to each Discovery computation tool container folder under this agent's tools/ directory.",
+          "maxItems": 64,
+          "uniqueItems": true,
           "items": {
-            "type": "string"
+            "$ref": "metadata-schema.json#/properties/associated_tools/items"
           },
           "default": []
         },
         "foundry_tools": {
           "type": "array",
           "description": "Foundry-native tool names referenced in agent.yaml (e.g. web_search, mcp, openapi). Empty for agents with no Foundry-native tools.",
+          "maxItems": 64,
+          "uniqueItems": true,
           "items": {
-            "type": "string"
+            "type": "string",
+            "maxLength": 64,
+            "pattern": "^[a-z][a-z0-9_]{0,63}$"
           },
           "default": []
         },
         "supported_regions": {
           "type": "array",
           "description": "Azure region ARM aliases where this agent is supported (optional; empty means all regions).",
+          "maxItems": 100,
+          "uniqueItems": true,
           "items": {
-            "type": "string"
+            "$ref": "common-schema.json#/definitions/azureRegion"
           },
           "default": []
         },
         "description": {
           "type": "string",
+          "maxLength": 500,
           "description": "Short description of the agent (from metadata.yaml)."
         },
         "tags": {
           "type": "array",
           "description": "Tags from metadata.yaml for discoverability.",
-          "items": { "type": "string" },
+          "maxItems": 64,
+          "uniqueItems": true,
+          "items": { "$ref": "common-schema.json#/definitions/kebabCaseString" },
           "default": []
         }
       }

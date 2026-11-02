@@ -90,6 +90,7 @@ def _record_job_submission(
     except Exception as exc:  # pragma: no cover - defensive
         debug(f"job-history: record_submission swallowed {exc}")
 
+
 # Backward-compatibility re-exports: the canonical source of truth is
 # :class:`ApiVersion` in ``discovery.poll.models.api_version``. These sets exist so
 # existing callers/tests that import the constants continue to work; new code should
@@ -101,7 +102,8 @@ _NESTED_INFRA_OVERRIDES_API_VERSIONS = frozenset(
 
 
 def _parse_mount_protocol_or_exit(
-    value: str | None, av: ApiVersion,
+    value: str | None,
+    av: ApiVersion,
 ) -> StorageMountProtocol | None:
     """Parse a ``--mount-protocol`` flag value, fast-failing with ``typer.Exit``.
 
@@ -124,6 +126,18 @@ def _parse_mount_protocol_or_exit(
     except ValueError as exc:
         error(str(exc))
         raise typer.Exit(code=2) from exc
+
+
+def _validate_shm_override_or_exit(shm: str | None, av: ApiVersion) -> None:
+    """Reject ``--shm`` for API versions whose strict schema does not support it."""
+    if shm is None or shm == "":
+        return
+    if not av.supports_shm_override:
+        error(
+            f"--shm requires API version 2026-06-01 or later; "
+            f"configured/selected version is {av.value!r}."
+        )
+        raise typer.Exit(code=2)
 
 
 def _resolve_scratch_wrapper_id(np_info, env_cfg, av: ApiVersion) -> str:
@@ -162,7 +176,7 @@ def _resolve_scratch_wrapper_id(np_info, env_cfg, av: ApiVersion) -> str:
     return ""
 
 
-def _build_scratch_mount(np_info, env_cfg, av: ApiVersion) -> "DataMount | None":
+def _build_scratch_mount(np_info, env_cfg, av: ApiVersion) -> DataMount | None:
     """Construct an explicit /scratch DataMount for the active API version, if possible.
 
     On V1 builds ``discovery://dataassets{dc_id}/dataassets/scratch/paths/{uuid}``;
@@ -189,7 +203,7 @@ def _build_scratch_mount(np_info, env_cfg, av: ApiVersion) -> "DataMount | None"
     return DataMount(mountPath="/scratch", storageUri=storage_uri)
 
 
-def _scratch_mount_or_exit(np_info, env_cfg, av: ApiVersion, scratch: bool) -> "DataMount | None":
+def _scratch_mount_or_exit(np_info, env_cfg, av: ApiVersion, scratch: bool) -> DataMount | None:
     """Return a /scratch DataMount when ``scratch`` is True, else None.
 
     Fails fast (typer.Exit code 2) when the user passed ``--scratch`` but no
@@ -222,17 +236,21 @@ def build_infra_overrides(
     gpus: int | None,
     memory: str | None,
     image: str | None,
+    shm: str | None = None,
 ) -> InfraOverrides | InfraOverridesFlat | None:
     """Build the correct InfraOverrides variant for the target api-version.
 
     Returns None if no override parameters were supplied. Otherwise returns the shape
     mandated by the target api-version's server contract (nested for 2025-07-01-preview,
-    flat for everything else).
+    flat for everything else). ``shm`` is only valid for 2026-06-01 and later.
     """
-    if not any([cpus, gpus, memory, image]):
+    if not any([cpus, gpus, memory, image, shm]):
         return None
 
     av = ApiVersion.parse(api_version)
+    if shm and not av.supports_shm_override:
+        msg = f"shm overrides require API version 2026-06-01 or later, not {av.value}"
+        raise ValueError(msg)
     if av.uses_nested_infra_overrides:
         resources = None
         if any([cpus, gpus, memory]):
@@ -247,6 +265,7 @@ def build_infra_overrides(
         cpu=str(cpus) if cpus is not None else None,
         ram=memory,
         gpu=str(gpus) if gpus is not None else None,
+        shm=shm,
         replica_count=None,
         image_uri=image,
     )
@@ -322,9 +341,7 @@ def _poll_for_device_flow_url(
     import itertools
     import sys
 
-    fragments, full_url = _PROVIDER_DEVICE_FLOW.get(
-        provider, _PROVIDER_DEVICE_FLOW["github"]
-    )
+    fragments, full_url = _PROVIDER_DEVICE_FLOW.get(provider, _PROVIDER_DEVICE_FLOW["github"])
 
     spinner = itertools.cycle(["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"])
     start = time.time()
@@ -351,8 +368,7 @@ def _poll_for_device_flow_url(
             # failure itself must be visible — otherwise a persistent error
             # looks identical to a normal waiting-for-logs state.
             debug(
-                f"_poll_for_device_flow_url: poll {poll_count} failed: "
-                f"{type(exc).__name__}: {exc}"
+                f"_poll_for_device_flow_url: poll {poll_count} failed: {type(exc).__name__}: {exc}"
             )
             time.sleep(_DEVICE_FLOW_POLL_INTERVAL)
             continue
@@ -406,9 +422,7 @@ def _poll_for_device_flow_url(
 
     sys.stdout.write("\r\033[K")
     # Timeout path — log enough context to diagnose without a repro.
-    last_exc_str = (
-        f" last_poll_exc={type(last_exc).__name__}: {last_exc}" if last_exc else ""
-    )
+    last_exc_str = f" last_poll_exc={type(last_exc).__name__}: {last_exc}" if last_exc else ""
     error(
         f"Timed out waiting {_DEVICE_FLOW_POLL_TIMEOUT}s for device-flow URL "
         f"(op={operation_id}, polls={poll_count}, last_status={last_status}, "
@@ -441,10 +455,18 @@ def start(
         "--gpus",
         help="Number of GPUs to request",
     ),
-    memory: str = typer.Option(
+    memory: str | None = typer.Option(
         None,
         "--memory",
         help="Amount of RAM to request, e.g. '32Gi'",
+    ),
+    shm: str | None = typer.Option(
+        None,
+        "--shm",
+        help=(
+            "Size of /dev/shm, e.g. '2Gi' or '512Mi'. Must be less than the "
+            "effective RAM request. Requires API version 2026-06-01 or later."
+        ),
     ),
     image: str = typer.Option(
         None,
@@ -554,10 +576,10 @@ def start(
 
     # Normalize memory specification (fix case, add Gi suffix if missing)
     memory = normalize_memory(memory)
+    shm = normalize_memory(shm)
 
     # Ensure data container is configured for output data
     ensure_datacontainer(env_cfg)
-
 
     emit_env(env_cfg)
 
@@ -568,20 +590,23 @@ def start(
 
     # Resolve effective API version: CLI flag overrides config
     effective_api_version = api_version or env_cfg.api_version or None
+    av = ApiVersion.parse(effective_api_version)
+    _validate_shm_override_or_exit(shm, av)
 
     # Build infra_overrides using the schema variant matching the target api-version.
-    infra_overrides = build_infra_overrides(effective_api_version, cpus, gpus, memory, image)
+    infra_overrides = build_infra_overrides(effective_api_version, cpus, gpus, memory, image, shm)
 
     # Build payload — branching on API version capability.
     # Legacy: uri + discovery://dataassets, storageId required.
     # Modern: storageUri + discovery://storageassets, no storageId.
-    av = ApiVersion.parse(effective_api_version)
     # Validate --mount-protocol before any subsequent work (network calls,
     # scratch resolution, etc.) so bad flags fail fast.
     mp = _parse_mount_protocol_or_exit(mount_protocol, av)
     _scratch_mount = _scratch_mount_or_exit(np_info, env_cfg, av, scratch)
     if av.uses_dataassets_uri:
-        output_uri = f"discovery://dataassets{env_cfg.datacontainer_id}/dataassets/{effective_username}"
+        output_uri = (
+            f"discovery://dataassets{env_cfg.datacontainer_id}/dataassets/{effective_username}"
+        )
         shared_output_uri = f"discovery://dataassets{env_cfg.datacontainer_id}/dataassets/shared"
         payload = ToolRunRequest(
             toolId=env_cfg.tool_id,
@@ -597,8 +622,16 @@ def start(
         )
     else:
         output_mounts = [
-            DataMount(mountPath="/blob_user", storageUri=f"discovery://storageassets{env_cfg.storagecontainer_id}/storageassets/{effective_username}", mountProtocol=mp),
-            DataMount(mountPath="/blob_shared", storageUri=f"discovery://storageassets{env_cfg.storagecontainer_id}/storageassets/shared", mountProtocol=mp),
+            DataMount(
+                mountPath="/blob_user",
+                storageUri=f"discovery://storageassets{env_cfg.storagecontainer_id}/storageassets/{effective_username}",
+                mountProtocol=mp,
+            ),
+            DataMount(
+                mountPath="/blob_shared",
+                storageUri=f"discovery://storageassets{env_cfg.storagecontainer_id}/storageassets/shared",
+                mountProtocol=mp,
+            ),
             *([_scratch_mount] if _scratch_mount else []),
         ]
         payload = ToolRunRequest(
@@ -695,10 +728,18 @@ def batch(
         "--gpus",
         help="Number of GPUs to request",
     ),
-    memory: str = typer.Option(
+    memory: str | None = typer.Option(
         None,
         "--memory",
         help="Amount of RAM to request, e.g. '32Gi'",
+    ),
+    shm: str | None = typer.Option(
+        None,
+        "--shm",
+        help=(
+            "Size of /dev/shm, e.g. '2Gi' or '512Mi'. Must be less than the "
+            "effective RAM request. Requires API version 2026-06-01 or later."
+        ),
     ),
     image: str = typer.Option(
         None,
@@ -780,9 +821,7 @@ def batch(
             raise typer.Exit(code=1)
         command_list = [command] * size
     else:
-        error(
-            "Must specify either: (1) size and command, (2) --commands-file, or (3) --commands"
-        )
+        error("Must specify either: (1) size and command, (2) --commands-file, or (3) --commands")
         raise typer.Exit(code=1)
 
     # Get username - use provided value or Azure CLI logged-in user
@@ -838,22 +877,23 @@ def batch(
 
     # Normalize memory specification (fix case, add Gi suffix if missing)
     memory = normalize_memory(memory)
+    shm = normalize_memory(shm)
 
     # Ensure data container is configured for output data
     ensure_datacontainer(env_cfg)
-
 
     emit_env(env_cfg)
 
     # Resolve effective API version: CLI flag overrides config
     effective_api_version = api_version or env_cfg.api_version or None
     av = ApiVersion.parse(effective_api_version)
+    _validate_shm_override_or_exit(shm, av)
     # Validate --mount-protocol before scratch resolution + submission loop.
     mp = _parse_mount_protocol_or_exit(mount_protocol, av)
     _scratch_mount = _scratch_mount_or_exit(np_info, env_cfg, av, scratch)
 
     # Build infra_overrides using the schema variant matching the target api-version.
-    infra_overrides = build_infra_overrides(effective_api_version, cpus, gpus, memory, image)
+    infra_overrides = build_infra_overrides(effective_api_version, cpus, gpus, memory, image, shm)
 
     # Helper function to submit a single job
     def submit_job(idx: int, cmd: str) -> tuple[int, str | None, str | None]:
@@ -862,7 +902,9 @@ def batch(
             cmd_effective = prepare_command(cmd, env_cfg, False, [])
             if av.uses_dataassets_uri:
                 output_uri = f"discovery://dataassets{env_cfg.datacontainer_id}/dataassets/{effective_username}"
-                shared_output_uri = f"discovery://dataassets{env_cfg.datacontainer_id}/dataassets/shared"
+                shared_output_uri = (
+                    f"discovery://dataassets{env_cfg.datacontainer_id}/dataassets/shared"
+                )
                 payload = ToolRunRequest(
                     toolId=env_cfg.tool_id,
                     command=cmd_effective,
@@ -877,8 +919,16 @@ def batch(
                 )
             else:
                 output_mounts = [
-                    DataMount(mountPath="/blob_user", storageUri=f"discovery://storageassets{env_cfg.storagecontainer_id}/storageassets/{effective_username}", mountProtocol=mp),
-                    DataMount(mountPath="/blob_shared", storageUri=f"discovery://storageassets{env_cfg.storagecontainer_id}/storageassets/shared", mountProtocol=mp),
+                    DataMount(
+                        mountPath="/blob_user",
+                        storageUri=f"discovery://storageassets{env_cfg.storagecontainer_id}/storageassets/{effective_username}",
+                        mountProtocol=mp,
+                    ),
+                    DataMount(
+                        mountPath="/blob_shared",
+                        storageUri=f"discovery://storageassets{env_cfg.storagecontainer_id}/storageassets/shared",
+                        mountProtocol=mp,
+                    ),
                     *([_scratch_mount] if _scratch_mount else []),
                 ]
                 payload = ToolRunRequest(
@@ -889,7 +939,12 @@ def batch(
                     inputData=[],
                     outputData=output_mounts,
                 )
-            response = start_tool_run(env_cfg.project_name, payload, env_cfg.workspace_url, api_version=effective_api_version)
+            response = start_tool_run(
+                env_cfg.project_name,
+                payload,
+                env_cfg.workspace_url,
+                api_version=effective_api_version,
+            )
             _record_job_submission(
                 response.id,
                 env_cfg,
@@ -912,9 +967,7 @@ def batch(
 
     with ThreadPoolExecutor(max_workers=max_workers) as executor:
         # Submit all jobs
-        futures = {
-            executor.submit(submit_job, i, cmd): i for i, cmd in enumerate(command_list)
-        }
+        futures = {executor.submit(submit_job, i, cmd): i for i, cmd in enumerate(command_list)}
 
         # Collect results as they complete
         for future in as_completed(futures):
@@ -964,10 +1017,18 @@ def vscode_cmd(
         "--gpus",
         help="Number of GPUs to request (default: full node)",
     ),
-    memory: str = typer.Option(
+    memory: str | None = typer.Option(
         None,
         "--memory",
         help="Amount of RAM to request, e.g. '32Gi' (default: full node)",
+    ),
+    shm: str | None = typer.Option(
+        None,
+        "--shm",
+        help=(
+            "Size of /dev/shm, e.g. '2Gi' or '512Mi'. Must be less than the "
+            "effective RAM request. Requires API version 2026-06-01 or later."
+        ),
     ),
     image: str = typer.Option(
         None,
@@ -1025,9 +1086,7 @@ def vscode_cmd(
 
     provider = provider.lower()
     if provider not in _VALID_PROVIDERS:
-        msg = (
-            f"--provider must be one of {', '.join(_VALID_PROVIDERS)}; got {provider!r}"
-        )
+        msg = f"--provider must be one of {', '.join(_VALID_PROVIDERS)}; got {provider!r}"
         raise typer.BadParameter(msg)
 
     # Get username - use provided value or Azure CLI logged-in user
@@ -1089,10 +1148,10 @@ def vscode_cmd(
 
     # Normalize memory specification (fix case, add Gi suffix if missing)
     memory = normalize_memory(memory)
+    shm = normalize_memory(shm)
 
     # Ensure data container is configured for output data
     ensure_datacontainer(env_cfg)
-
 
     emit_env(env_cfg)
 
@@ -1110,18 +1169,21 @@ def vscode_cmd(
 
     # Resolve effective API version: CLI flag overrides config
     effective_api_version = api_version or env_cfg.api_version or None
+    av = ApiVersion.parse(effective_api_version)
+    _validate_shm_override_or_exit(shm, av)
 
     # Build infra_overrides with full-node resources using the schema variant matching
     # the target api-version.
-    infra_overrides = build_infra_overrides(effective_api_version, cpus, gpus, memory, image)
+    infra_overrides = build_infra_overrides(effective_api_version, cpus, gpus, memory, image, shm)
 
     # Build payload — branching on API version capability.
-    av = ApiVersion.parse(effective_api_version)
     # Validate --mount-protocol before scratch resolution + submission.
     mp = _parse_mount_protocol_or_exit(mount_protocol, av)
     _scratch_mount = _scratch_mount_or_exit(np_info, env_cfg, av, scratch)
     if av.uses_dataassets_uri:
-        output_uri = f"discovery://dataassets{env_cfg.datacontainer_id}/dataassets/{effective_username}"
+        output_uri = (
+            f"discovery://dataassets{env_cfg.datacontainer_id}/dataassets/{effective_username}"
+        )
         shared_output_uri = f"discovery://dataassets{env_cfg.datacontainer_id}/dataassets/shared"
         payload = ToolRunRequest(
             toolId=env_cfg.tool_id,
@@ -1137,8 +1199,16 @@ def vscode_cmd(
         )
     else:
         output_mounts = [
-            DataMount(mountPath="/blob_user", storageUri=f"discovery://storageassets{env_cfg.storagecontainer_id}/storageassets/{effective_username}", mountProtocol=mp),
-            DataMount(mountPath="/blob_shared", storageUri=f"discovery://storageassets{env_cfg.storagecontainer_id}/storageassets/shared", mountProtocol=mp),
+            DataMount(
+                mountPath="/blob_user",
+                storageUri=f"discovery://storageassets{env_cfg.storagecontainer_id}/storageassets/{effective_username}",
+                mountProtocol=mp,
+            ),
+            DataMount(
+                mountPath="/blob_shared",
+                storageUri=f"discovery://storageassets{env_cfg.storagecontainer_id}/storageassets/shared",
+                mountProtocol=mp,
+            ),
             *([_scratch_mount] if _scratch_mount else []),
         ]
         payload = ToolRunRequest(
@@ -1158,7 +1228,9 @@ def vscode_cmd(
 
     # Submit job without polling
     try:
-        response = start_tool_run(env_cfg.project_name, payload, env_cfg.workspace_url, api_version=effective_api_version)
+        response = start_tool_run(
+            env_cfg.project_name, payload, env_cfg.workspace_url, api_version=effective_api_version
+        )
         _record_job_submission(
             response.id,
             env_cfg,
@@ -1319,9 +1391,7 @@ def cancel(
         # state within the budget. Treat as a soft success: exit 0 with a clear
         # message so scripts don't pointlessly retry the cancel.
         warn(str(exc))
-        warn(
-            f"Run `discovery job status {operation_id}` to check the current state."
-        )
+        warn(f"Run `discovery job status {operation_id}` to check the current state.")
         return
     except httpx.HTTPStatusError as exc:
         # 404 / 409 on the cancel POST itself means the op is already terminal —
@@ -1407,9 +1477,7 @@ def _cancel_recent(env_cfg, *, since_value: str, yes: bool, parallelism: int) ->
         return
 
     # Sort newest-first for the confirmation preview.
-    entries_sorted = sorted(
-        entries, key=lambda e: e.submitted_at, reverse=True
-    )
+    entries_sorted = sorted(entries, key=lambda e: e.submitted_at, reverse=True)
 
     console = Console()
     console.print()
@@ -1424,13 +1492,10 @@ def _cancel_recent(env_cfg, *, since_value: str, yes: bool, parallelism: int) ->
         if len(cmd_preview) > 72:
             cmd_preview = cmd_preview[:71] + "…"
         console.print(
-            f"  [cyan]{entry.operation_id}[/cyan]  "
-            f"[dim]{entry.submitted_at}[/dim]  {cmd_preview}"
+            f"  [cyan]{entry.operation_id}[/cyan]  [dim]{entry.submitted_at}[/dim]  {cmd_preview}"
         )
     if len(entries_sorted) > preview_n:
-        console.print(
-            f"  [dim]… and {len(entries_sorted) - preview_n} more[/dim]"
-        )
+        console.print(f"  [dim]… and {len(entries_sorted) - preview_n} more[/dim]")
     console.print()
 
     if not yes and not typer.confirm("Proceed with cancellation?", default=False):
@@ -1483,8 +1548,7 @@ def _run_parallel_cancel(
     info(f"Cancelling {total} job(s) with {workers} parallel worker(s)…")
     with ThreadPoolExecutor(max_workers=workers) as pool:
         futures = {
-            pool.submit(_cancel_one_op, env_cfg, entry.operation_id):
-                entry.operation_id
+            pool.submit(_cancel_one_op, env_cfg, entry.operation_id): entry.operation_id
             for entry in entries
         }
         for fut in as_completed(futures):
@@ -1494,10 +1558,7 @@ def _run_parallel_cancel(
                 info(f"  [{len(succeeded) + len(failed)}/{total}] ✓ {op_id}")
             else:
                 failed.append((op_id, err_msg))
-                error(
-                    f"  [{len(succeeded) + len(failed)}/{total}] ✗ "
-                    f"{op_id}: {err_msg}"
-                )
+                error(f"  [{len(succeeded) + len(failed)}/{total}] ✗ {op_id}: {err_msg}")
     info(
         f"Done. Cancelled {len(succeeded)} of {total} job(s)"
         f"{'; ' + str(len(failed)) + ' failed' if failed else ''}."

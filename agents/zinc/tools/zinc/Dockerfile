@@ -1,4 +1,4 @@
-FROM python:3.11-slim
+FROM python:3.14-slim
 
 LABEL maintainer="Discovery Platform"
 LABEL description="ZINC22 / CartBlanche database access agent for molecular structure search and retrieval"

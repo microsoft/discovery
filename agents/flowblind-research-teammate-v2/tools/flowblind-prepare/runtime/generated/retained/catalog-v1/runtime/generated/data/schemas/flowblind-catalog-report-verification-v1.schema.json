@@ -1,0 +1,211 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://flowblind.local/schemas/flowblind-catalog-report-verification-v1",
+  "title": "FlowBlind catalog report verification v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "$schema",
+    "schemaVersion",
+    "recordType",
+    "status",
+    "teammateVersion",
+    "capability",
+    "preparation",
+    "source",
+    "protocol",
+    "software",
+    "artifacts",
+    "publication"
+  ],
+  "properties": {
+    "$schema": {
+      "const": "https://flowblind.local/schemas/flowblind-catalog-report-verification-v1"
+    },
+    "schemaVersion": { "const": 1 },
+    "recordType": {
+      "const": "flowblind-catalog-report-verification-v1"
+    },
+    "status": { "const": "verified-report-complete" },
+    "teammateVersion": { "const": "1.0.0" },
+    "capability": {
+      "oneOf": [
+        {
+          "$ref": "flowblind-catalog-preparation-bundle-v1.schema.json#/$defs/capability"
+        },
+        {
+          "$ref": "flowblind-catalog-vector-preparation-bundle-v1.schema.json#/$defs/capability"
+        }
+      ]
+    },
+    "preparation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "associationSha256", "bundle"],
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^flowblind-preparation-[a-f0-9]{32}$"
+        },
+        "associationSha256": { "$ref": "#/$defs/sha256" },
+        "bundle": { "$ref": "#/$defs/identity" }
+      }
+    },
+    "source": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["candidate", "trustedSidecar"],
+      "properties": {
+        "candidate": { "$ref": "#/$defs/sourceIdentity" },
+        "trustedSidecar": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "reference",
+            "byteLength",
+            "sha256",
+            "schemaId"
+          ],
+          "properties": {
+            "reference": { "$ref": "#/$defs/text" },
+            "byteLength": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 16777216
+            },
+            "sha256": { "$ref": "#/$defs/sha256" },
+            "schemaId": {
+              "enum": [
+                "https://flowblind.local/schemas/flowblind-trusted-source-sidecar-v2.schema.json",
+                "https://flowblind.local/schemas/flowblind-catalog-vector-source-sidecar-v1.schema.json"
+              ]
+            }
+          }
+        }
+      }
+    },
+    "protocol": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["sha256"],
+      "properties": {
+        "sha256": { "$ref": "#/$defs/sha256" }
+      }
+    },
+    "software": {
+      "$ref": "flowblind-catalog-preparation-bundle-v1.schema.json#/$defs/software"
+    },
+    "artifacts": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["preparation", "json", "markdown", "html"],
+      "properties": {
+        "preparation": {
+          "allOf": [
+            { "$ref": "#/$defs/identity" },
+            {
+              "properties": {
+                "mediaType": { "const": "application/json" }
+              }
+            }
+          ]
+        },
+        "json": {
+          "allOf": [
+            { "$ref": "#/$defs/identity" },
+            {
+              "properties": {
+                "mediaType": { "const": "application/json" }
+              }
+            }
+          ]
+        },
+        "markdown": {
+          "allOf": [
+            { "$ref": "#/$defs/identity" },
+            {
+              "properties": {
+                "mediaType": { "const": "text/markdown" }
+              }
+            }
+          ]
+        },
+        "html": {
+          "allOf": [
+            { "$ref": "#/$defs/identity" },
+            {
+              "properties": {
+                "mediaType": { "const": "text/html" }
+              }
+            }
+          ]
+        }
+      }
+    },
+    "publication": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "directory",
+        "commitMarker",
+        "pointOfNoReturn",
+        "policy",
+        "distributedExactlyOnceClaim"
+      ],
+      "properties": {
+        "directory": {
+          "type": "string",
+          "pattern": "^flowblind-study-[a-f0-9]{64}$"
+        },
+        "commitMarker": { "const": "report-verification.json" },
+        "pointOfNoReturn": {
+          "const": "exclusive-report-verification-commit-marker"
+        },
+        "policy": {
+          "const": "deterministic-exclusive-create-or-verify-content-then-commit-marker"
+        },
+        "distributedExactlyOnceClaim": { "const": false }
+      }
+    }
+  },
+  "$defs": {
+    "text": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 4096
+    },
+    "sha256": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "sourceIdentity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["reference", "byteLength", "sha256"],
+      "properties": {
+        "reference": { "$ref": "#/$defs/text" },
+        "byteLength": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 16777216
+        },
+        "sha256": { "$ref": "#/$defs/sha256" }
+      }
+    },
+    "identity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["reference", "byteLength", "sha256", "mediaType"],
+      "properties": {
+        "reference": { "$ref": "#/$defs/text" },
+        "byteLength": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 16777216
+        },
+        "sha256": { "$ref": "#/$defs/sha256" },
+        "mediaType": { "$ref": "#/$defs/text" }
+      }
+    }
+  }
+}

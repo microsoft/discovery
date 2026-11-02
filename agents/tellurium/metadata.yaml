@@ -1,0 +1,17 @@
+name: tellurium
+type: agent
+version: 1.0.0
+associated_tools:
+  - agents/tellurium/tools/tellurium
+publisher:
+  name: Microsoft
+  contact: discovery-catalog@microsoft.com
+  support_url: https://techcommunity.microsoft.com/category/azure/discussions/microsoft-discovery-discussions
+  party: 1p
+description: >
+  Simulate and analyze SBML/Antimony kinetic models of biochemical networks with the libRoadRunner ODE engine.
+tags:
+  - systems-biology
+  - kinetic-modeling
+  - sbml
+  - tellurium

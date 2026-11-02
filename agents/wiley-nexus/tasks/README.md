@@ -42,7 +42,7 @@ the instructions.
 
 | File | Written by | Contents |
 | --- | --- | --- |
-| `evidence_passages.md` | Task 1 | Every unique publication found, with its labeled metadata (DOI, authors, journal, full-text availability, Wiley Online Library link) and verbatim passages, plus a note on what each search angle covered. |
+| `evidence_passages.md` | Task 1 | An index of every publication's citation number and DOI, then every unique publication found, with its labeled metadata (DOI, authors, journal, full-text availability, Wiley Online Library link) and verbatim passages, plus a note on what each search angle covered. |
 | `fulltext_shortlist.json` | Task 1 | The 3–5 papers most worth reading in full, each with its DOI, title, a one-line rationale, and its download token. |
 | `analysis_<doi>.json` | Task 2, one per shortlisted paper | That paper's status, contribution, key findings, methods, and limitations — or a status of `unavailable` with a reason if it could not be retrieved. |
 | `research_response.md` | Task 3 | **The deliverable** — a structured answer with IEEE-numbered citations linked to Wiley Online Library. |

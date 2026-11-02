@@ -1,0 +1,17 @@
+name: dssp
+type: agent
+version: 1.0.0
+associated_tools:
+  - agents/dssp/tools/dssp
+publisher:
+  name: Microsoft
+  contact: discovery-catalog@microsoft.com
+  support_url: https://techcommunity.microsoft.com/category/azure/discussions/microsoft-discovery-discussions
+  party: 1p
+description: >
+  Assign protein secondary structure (helices, sheets, turns) from 3D coordinates using the classic Kabsch-
+  Sander DSSP algorithm.
+tags:
+  - structural-biology
+  - secondary-structure
+  - dssp

@@ -1,0 +1,20 @@
+name: ensembl
+type: agent
+version: 1.0.0
+associated_tools:
+  - agents/ensembl/tools/ensembl
+publisher:
+  name: Microsoft
+  contact: discovery-catalog@microsoft.com
+  support_url: https://techcommunity.microsoft.com/category/azure/discussions/microsoft-discovery-discussions
+  party: 1p
+description: >
+  Query Ensembl for genes, transcripts, variants, and cross-references across many species via the Ensembl REST
+  API.
+tags:
+  - bioinformatics
+  - genomics
+  - genes
+  - variants
+  - ensembl
+  - api

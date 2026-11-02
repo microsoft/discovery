@@ -12,7 +12,7 @@
 # ============================================================
 # Stage 1: Builder
 # ============================================================
-FROM debian:12-slim AS builder
+FROM debian:13-slim AS builder
 
 ENV DEBIAN_FRONTEND=noninteractive
 ENV TRILINOS_VERSION=trilinos-release-14-4-0
@@ -101,7 +101,7 @@ RUN mkdir -p /src/xyce-build && cd /src/xyce-build && \
 # ============================================================
 # Stage 2: Runtime
 # ============================================================
-FROM debian:12-slim
+FROM debian:13-slim
 
 ENV DEBIAN_FRONTEND=noninteractive
 

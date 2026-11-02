@@ -4,3 +4,7 @@ agents/gwp-predictor/tools/gwp-predictor/models/*.npz filter=lfs diff=lfs merge=
 # Shell scripts must use LF so they run correctly inside Linux containers.
 # CRLF endings cause "set: pipefail\r: invalid option name" and similar failures.
 *.sh text eol=lf
+
+# Onboarding-tool stage scripts start with a `#!/usr/bin/env pwsh` shebang and are run directly on
+# macOS/Linux; CRLF would break it ("env: 'pwsh\r': No such file or directory").
+utilities/onboarding-tool/**/*.ps1 text eol=lf

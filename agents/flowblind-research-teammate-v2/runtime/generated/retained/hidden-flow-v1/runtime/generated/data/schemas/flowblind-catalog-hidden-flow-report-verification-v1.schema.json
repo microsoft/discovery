@@ -1,0 +1,192 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://flowblind.local/schemas/flowblind-catalog-hidden-flow-report-verification-v1.schema.json",
+  "title": "FlowBlind catalog hidden-flow report verification v1",
+  "$comment": "JSON Schema validation is structural only. Consumers MUST also call the package-exported assertCatalogHiddenFlowReportSetSemanticContract validator so the preparation digest, deterministic replay hashes, marker identity, member references, and publication directory resolve to one canonical report set.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "$schema",
+    "schemaVersion",
+    "recordType",
+    "status",
+    "capability",
+    "preparation",
+    "problem",
+    "software",
+    "deterministicReplay",
+    "artifacts",
+    "publication"
+  ],
+  "properties": {
+    "$schema": {
+      "const": "https://flowblind.local/schemas/flowblind-catalog-hidden-flow-report-verification-v1.schema.json"
+    },
+    "schemaVersion": { "const": 1 },
+    "recordType": {
+      "const": "flowblind-catalog-hidden-flow-report-verification-v1"
+    },
+    "status": { "const": "verified-report-complete" },
+    "capability": {
+      "const": {
+        "capabilityId": "finite-basis-hidden-flow-v1",
+        "capabilityVersion": "1.1.0",
+        "methodFamily": "finite-basis-observation-compatible-hidden-flow-v1",
+        "packageVersion": "1.0.0"
+      }
+    },
+    "preparation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "associationSha256", "bundle"],
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^flowblind-hidden-flow-preparation-[a-f0-9]{32}$"
+        },
+        "associationSha256": { "$ref": "#/$defs/sha256" },
+        "bundle": {
+          "allOf": [
+            { "$ref": "#/$defs/artifact" },
+            {
+              "properties": {
+                "reference": {
+                  "pattern": "^flowblind-catalog-hidden-flow-preparation-[a-f0-9]{64}\\.json$"
+                },
+                "mediaType": { "const": "application/json" }
+              }
+            }
+          ]
+        }
+      }
+    },
+    "problem": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "identity"],
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$"
+        },
+        "identity": {
+          "allOf": [
+            { "$ref": "#/$defs/artifact" },
+            {
+              "properties": {
+                "reference": {
+                  "pattern": "^flowblind-catalog-hidden-flow-problem-[a-f0-9]{64}\\.json$"
+                },
+                "mediaType": { "const": "application/json" }
+              }
+            }
+          ]
+        }
+      }
+    },
+    "software": {
+      "$ref": "flowblind-catalog-hidden-flow-package-evidence-v1.schema.json"
+    },
+    "deterministicReplay": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "canonicalization",
+        "matched",
+        "firstExecutionSha256",
+        "replayExecutionSha256"
+      ],
+      "properties": {
+        "canonicalization": { "const": "stable-json-v1" },
+        "matched": { "const": true },
+        "firstExecutionSha256": { "$ref": "#/$defs/sha256" },
+        "replayExecutionSha256": { "$ref": "#/$defs/sha256" }
+      }
+    },
+    "artifacts": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["json", "markdown"],
+      "properties": {
+        "json": {
+          "allOf": [
+            { "$ref": "#/$defs/artifact" },
+            {
+              "properties": {
+                "reference": {
+                  "pattern": "^flowblind-hidden-flow-study-[a-f0-9]{64}/verified-run\\.json$"
+                },
+                "mediaType": { "const": "application/json" }
+              }
+            }
+          ]
+        },
+        "markdown": {
+          "allOf": [
+            { "$ref": "#/$defs/artifact" },
+            {
+              "properties": {
+                "reference": {
+                  "pattern": "^flowblind-hidden-flow-study-[a-f0-9]{64}/report\\.md$"
+                },
+                "mediaType": { "const": "text/markdown" }
+              }
+            }
+          ]
+        }
+      }
+    },
+    "publication": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "directory",
+        "commitMarker",
+        "pointOfNoReturn",
+        "policy",
+        "distributedExactlyOnceClaim"
+      ],
+      "properties": {
+        "directory": {
+          "type": "string",
+          "pattern": "^flowblind-hidden-flow-study-[a-f0-9]{64}$"
+        },
+        "commitMarker": { "const": "report-verification.json" },
+        "pointOfNoReturn": {
+          "const": "exclusive-report-verification-commit-marker"
+        },
+        "policy": {
+          "const": "deterministic-exclusive-create-or-verify-content-then-commit-marker"
+        },
+        "distributedExactlyOnceClaim": { "const": false }
+      }
+    }
+  },
+  "$defs": {
+    "sha256": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "artifact": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["reference", "byteLength", "sha256", "mediaType"],
+      "properties": {
+        "reference": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 512
+        },
+        "byteLength": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 134217728
+        },
+        "sha256": { "$ref": "#/$defs/sha256" },
+        "mediaType": {
+          "enum": ["application/json", "text/markdown"]
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,78 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://flowblind.local/schemas/flowblind-catalog-research-v2-publication-receipt.schema.json",
+  "title": "FlowBlind catalog-native research v2 publication receipt",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "status",
+    "phase",
+    "marker",
+    "artifacts",
+    "pointOfNoReturn",
+    "distributedExactlyOnceClaim"
+  ],
+  "properties": {
+    "status": {
+      "const": "committed"
+    },
+    "phase": {
+      "enum": [
+        "prepare",
+        "run"
+      ]
+    },
+    "marker": {
+      "$ref": "#/$defs/artifact"
+    },
+    "artifacts": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/artifact"
+      }
+    },
+    "pointOfNoReturn": {
+      "enum": [
+        "exclusive-preparation-commit-marker",
+        "exclusive-report-commit-marker"
+      ]
+    },
+    "distributedExactlyOnceClaim": {
+      "const": false
+    }
+  },
+  "$defs": {
+    "artifact": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "reference",
+        "byteLength",
+        "sha256",
+        "mediaType"
+      ],
+      "properties": {
+        "reference": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 512
+        },
+        "byteLength": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 67108864
+        },
+        "sha256": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "mediaType": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
+        }
+      }
+    }
+  }
+}

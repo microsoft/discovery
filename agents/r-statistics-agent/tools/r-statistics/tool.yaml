@@ -1,0 +1,40 @@
+# yaml-language-server: $schema=../../../../docs/schemas/tool-definition-schema.json
+name: r-statistics
+description: >-
+  CPU-only R 4.5.3 code environment with ggplot2 4.0.0, base and recommended packages for
+  statistics, regression, CSV processing, and headless plotting. Executes
+  scripts with Rscript --vanilla. Read inputs from /input, write artifacts
+  to /output, and use /workdir for scratch files. No runtime package
+  installation or external API credentials are required.
+version: 1.1.0
+category: statistics
+infra:
+  - name: r-statistics-container
+    infra_type: container
+    image:
+      acr: "{name}.azurecr.io/r-statistics:1.1.0"
+    compute:
+      min_resources:
+        cpu: 1
+        ram: 2Gi
+        storage: 4Gi
+        gpu: 0
+      max_resources:
+        cpu: 3
+        ram: 13Gi
+        storage: 32Gi
+        gpu: 0
+      infiniband: false
+      recommended_sku:
+        - Standard_D4s_v6
+      pool_type: static
+      pool_size: 1
+code_environments:
+  - language: r
+    command: 'Rscript --vanilla "/{{scriptName}}"'
+    description: >-
+      Execute an R script without startup profiles or workspace restoration.
+      Includes ggplot2 4.0.0, stats, utils, graphics, grDevices, datasets, methods, and
+      recommended packages such as MASS, Matrix, survival, and lattice.
+      Results are written by the script to /output.
+    infra_node: r-statistics-container

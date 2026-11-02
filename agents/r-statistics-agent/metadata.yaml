@@ -1,0 +1,19 @@
+name: r-statistics-agent
+type: agent
+version: 1.1.0
+associated_tools:
+  - agents/r-statistics-agent/tools/r-statistics
+publisher:
+  name: Microsoft
+  contact: discovery-catalog@microsoft.com
+  support_url: https://techcommunity.microsoft.com/category/azure/discussions/microsoft-discovery-discussions
+  party: 1p
+description: >-
+  Writes and executes R scripts for reproducible statistical analysis,
+  hypothesis testing, regression, and visualization. Uses a CPU-only R
+  container to analyze mounted data and produce tables, plots, and session
+  information with explicit assumptions and limitations.
+tags:
+  - statistics
+  - data-analysis
+  - hypothesis-testing

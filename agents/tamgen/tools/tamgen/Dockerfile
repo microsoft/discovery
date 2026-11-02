@@ -5,7 +5,7 @@
 # Base: Official PyTorch 2.3.0 + CUDA 12.1 + cuDNN 8
 # Model: Wu et al., Nature Communications 15:9360 (2024)
 
-FROM pytorch/pytorch:2.3.0-cuda12.1-cudnn8-runtime
+FROM pytorch/pytorch:2.3.1-cuda12.1-cudnn8-runtime
 
 ENV DEBIAN_FRONTEND=noninteractive \
     PYTHONUNBUFFERED=1 \

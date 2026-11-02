@@ -1,0 +1,86 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://flowblind.local/schemas/flowblind-catalog-research-v2-release-policy.schema.json",
+  "title": "FlowBlind catalog-native research v2 release policy",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "$schema",
+    "schemaVersion",
+    "id",
+    "packageId",
+    "packageVersion",
+    "promptAgent",
+    "publicTools",
+    "advertisedMethods",
+    "privateHiddenFlow",
+    "defaultOffMethods",
+    "unregisteredMethods",
+    "runtimeNetworkRequired"
+  ],
+  "properties": {
+    "$schema": {
+      "const": "https://flowblind.local/schemas/flowblind-catalog-research-v2-release-policy.schema.json"
+    },
+    "schemaVersion": {
+      "const": 1
+    },
+    "id": {
+      "const": "flowblind-catalog-research-v2-release-policy-v1"
+    },
+    "packageId": {
+      "const": "flowblind-research-teammate-v2"
+    },
+    "packageVersion": {
+      "const": "2.0.0"
+    },
+    "promptAgent": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "humanInTheLoop",
+        "allowMultipleToolCalls",
+        "temperature"
+      ],
+      "properties": {
+        "humanInTheLoop": {
+          "const": "Enabled"
+        },
+        "allowMultipleToolCalls": {
+          "const": false
+        },
+        "temperature": {
+          "const": 0
+        }
+      }
+    },
+    "publicTools": {
+      "type": "array",
+      "minItems": 2,
+      "maxItems": 2
+    },
+    "advertisedMethods": {
+      "const": [
+        "regional-agreement-v1@1.0.0",
+        "vector-time-readiness-audit-v1@1.0.0"
+      ]
+    },
+    "privateHiddenFlow": {
+      "type": "object"
+    },
+    "defaultOffMethods": {
+      "const": [
+        "flowblind-finite-sensor-placement-v1@2.0.0",
+        "generic-planar-external-validation-v1@1.0.0"
+      ]
+    },
+    "unregisteredMethods": {
+      "const": [
+        "home-qc"
+      ]
+    },
+    "runtimeNetworkRequired": {
+      "const": false
+    }
+  }
+}

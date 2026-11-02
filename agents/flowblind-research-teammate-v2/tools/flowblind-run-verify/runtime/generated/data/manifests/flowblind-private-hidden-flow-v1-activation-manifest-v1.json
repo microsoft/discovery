@@ -1,0 +1,36 @@
+{
+  "$schema": "https://flowblind.local/schemas/flowblind-private-hidden-flow-v1-activation-manifest.schema.json",
+  "activationClass": "package-local-retained-conformance",
+  "advertiseToScientist": false,
+  "bridgeExtension": {
+    "acceptedBridgeSha256": "f61326fd42415d02d03686dad4bb1d9e5b3098225c5eebf37a2aa4fffc987122",
+    "acceptedBridgeSource": "tools/catalogResearchV2/integrations/hiddenFlowV1.ts",
+    "behavior": "accept-compact-or-stable-pretty-json-without-reencoding-and-preserve-reconciliation-detail",
+    "extensionByteLength": 95226,
+    "extensionSha256": "154d29dc5b5a0de67096fcb975fb90e310753af9ab6cb882a76d61d8af42181f",
+    "extensionSource": "tools/catalogResearchV2/package/hiddenFlowV1PortableBridge.ts",
+    "id": "flowblind-hidden-bridge-stable-json-bytes-v2"
+  },
+  "enabled": true,
+  "exactNativeBytePreservation": "versioned-package-source-extension",
+  "id": "flowblind-private-hidden-flow-v1-activation-manifest-v1",
+  "liveActivationEligible": false,
+  "liveImageManifestDigests": {
+    "prepare": "REQUIRED_BEFORE_LIVE_ACTIVATION",
+    "run": "REQUIRED_BEFORE_LIVE_ACTIVATION"
+  },
+  "maximumVerifiedRunBytes": 67108864,
+  "retainedPackage": {
+    "lockSha256": "5adde457ed53ece29eec6bfffedfc835807ac16f276a786bd5dc19c71290c0c4",
+    "runtimeSha256": "162d466c18735d9c362396eb21770094a66fa5bd2682b833b5dd68fbf2774840",
+    "verifierSha256": "1e0a3b59d10d65140958ee91cd1e911c4a68750e3f4b0cd4dded5ee4c666c44f"
+  },
+  "retainedTreeSha256": "556d8d4d1c3be175258b91045ca7bd9c75ca836bd17a82ad21f2eb9769c4ebf6",
+  "route": {
+    "familyId": "hidden-flow",
+    "methodId": "finite-basis-hidden-flow-v1",
+    "methodVersion": "1.1.0"
+  },
+  "runtimeNetworkRequired": false,
+  "schemaVersion": 1
+}

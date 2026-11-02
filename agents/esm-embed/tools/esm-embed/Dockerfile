@@ -4,7 +4,7 @@
 #
 # Base: NVIDIA CUDA 12.1 runtime on Ubuntu 22.04 (matches PyTorch 2.3 cu121 wheels).
 
-FROM nvidia/cuda:12.1.1-runtime-ubuntu22.04
+FROM nvidia/cuda:13.4.2-runtime-ubuntu22.04
 
 ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \

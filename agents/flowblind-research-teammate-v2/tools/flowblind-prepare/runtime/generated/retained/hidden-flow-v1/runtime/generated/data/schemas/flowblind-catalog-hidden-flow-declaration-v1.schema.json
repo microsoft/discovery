@@ -1,0 +1,182 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://flowblind.local/schemas/flowblind-catalog-hidden-flow-declaration-v1.schema.json",
+  "title": "FlowBlind catalog hidden-flow declaration v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "$schema",
+    "schemaVersion",
+    "id",
+    "packageVersion",
+    "capability",
+    "publicInputSchema",
+    "actions",
+    "reviewPolicy",
+    "runtime"
+  ],
+  "properties": {
+    "$schema": {
+      "const": "https://flowblind.local/schemas/flowblind-catalog-hidden-flow-declaration-v1.schema.json"
+    },
+    "schemaVersion": { "const": 1 },
+    "id": {
+      "const": "flowblind-catalog-hidden-flow-declaration-v1"
+    },
+    "packageVersion": { "const": "1.0.0" },
+    "capability": {
+      "const": {
+        "capabilityId": "finite-basis-hidden-flow-v1",
+        "capabilityVersion": "1.1.0",
+        "methodFamily": "finite-basis-observation-compatible-hidden-flow-v1"
+      }
+    },
+    "publicInputSchema": { "$ref": "#/$defs/publicInputSchema" },
+    "actions": {
+      "type": "array",
+      "minItems": 2,
+      "maxItems": 2,
+      "prefixItems": [
+        {
+          "$ref": "#/$defs/prepareAction"
+        },
+        {
+          "$ref": "#/$defs/runAction"
+        }
+      ],
+      "items": false
+    },
+    "reviewPolicy": {
+      "const": {
+        "id": "flowblind-catalog-hidden-flow-generic-review-policy-v1",
+        "policyVersion": "1.0.0",
+        "authorityVersion": "attested-generic-hidden-flow-problem-authority-v1",
+        "reviewScope": "generic-problem-contract-parser-and-executable-preflight-only",
+        "claimBoundary": "finite-basis-declared-model-only-no-physical-truth-source-validity-or-clinical-inference"
+      }
+    },
+    "runtime": {
+      "const": {
+        "platform": "linux/amd64",
+        "nonRootUser": "10001:10001",
+        "rootFilesystem": "read-only",
+        "network": "none",
+        "temporaryFilesystem": "/tmp:rw,noexec,nosuid,nodev,size=128m,mode=1777"
+      }
+    }
+  },
+  "$defs": {
+    "publicInputSchema": {
+      "const": {
+        "type": "object",
+        "properties": {
+          "goal": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 4096,
+            "title": "Research goal",
+            "description": "Describe the hidden-flow robustness question in ordinary scientific language."
+          },
+          "details": {
+            "type": ["string", "null"],
+            "minLength": 1,
+            "maxLength": 4096,
+            "title": "Additional details",
+            "description": "Optional ordinary-language context for interpreting the already selected canonical problem."
+          }
+        },
+        "required": ["goal"],
+        "additionalProperties": false
+      }
+    },
+    "annotations": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "readOnlyHint",
+        "destructiveHint",
+        "idempotentHint",
+        "openWorldHint"
+      ],
+      "properties": {
+        "readOnlyHint": { "type": "boolean" },
+        "destructiveHint": { "const": false },
+        "idempotentHint": { "const": true },
+        "openWorldHint": { "const": false }
+      }
+    },
+    "baseAction": {
+      "type": "object",
+      "required": [
+        "name",
+        "title",
+        "description",
+        "inputSchema",
+        "annotations",
+        "confirmation",
+        "hostSelection",
+        "resultFree"
+      ],
+      "properties": {
+        "name": { "type": "string" },
+        "title": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
+        },
+        "description": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 1024
+        },
+        "inputSchema": { "$ref": "#/$defs/publicInputSchema" },
+        "annotations": { "$ref": "#/$defs/annotations" },
+        "confirmation": { "enum": ["Disabled", "Enabled"] },
+        "hostSelection": { "type": "string" },
+        "resultFree": { "type": "boolean" }
+      }
+    },
+    "prepareAction": {
+      "allOf": [
+        { "$ref": "#/$defs/baseAction" },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "name": { "const": "prepare-study" },
+            "title": true,
+            "description": true,
+            "inputSchema": true,
+            "annotations": true,
+            "confirmation": { "const": "Disabled" },
+            "hostSelection": {
+              "const": "exactly-one-canonical-hidden-flow-problem-json"
+            },
+            "resultFree": { "const": true }
+          }
+        }
+      ]
+    },
+    "runAction": {
+      "allOf": [
+        { "$ref": "#/$defs/baseAction" },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "name": { "const": "run-and-verify-study" },
+            "title": true,
+            "description": true,
+            "inputSchema": true,
+            "annotations": true,
+            "confirmation": { "const": "Enabled" },
+            "hostSelection": {
+              "const": "exactly-one-preparation-bundle-json"
+            },
+            "resultFree": { "const": false }
+          }
+        }
+      ]
+    }
+  }
+}

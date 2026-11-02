@@ -1,0 +1,18 @@
+name: sirius
+type: agent
+version: 1.0.0
+associated_tools:
+  - agents/sirius/tools/sirius
+publisher:
+  name: Microsoft
+  contact: discovery-catalog@microsoft.com
+  support_url: https://techcommunity.microsoft.com/category/azure/discussions/microsoft-discovery-discussions
+  party: 1p
+description: >
+  Metabolite structure elucidation from tandem mass spectra: molecular formula identification and structure
+  ranking (CSI:FingerID).
+tags:
+  - metabolomics
+  - mass-spectrometry
+  - structure-elucidation
+  - sirius
