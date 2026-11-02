@@ -156,11 +156,10 @@ def build_qc_report(metadata: dict[str, Any], events: pd.DataFrame) -> dict[str,
         differences = np.diff(finite)
         positive_gaps = differences[differences > 0]
         if finite.size > 1 and finite[-1] > finite[0]:
+            # Keep empty bins: a pause in acquisition shows up as bins with no events,
+            # and dropping them would let a paused run score as perfectly steady.
             counts, _ = np.histogram(finite, bins=20)
-            nonempty_counts = counts[counts > 0]
-            rate_bin_count_cv = (
-                float(np.std(nonempty_counts) / np.mean(nonempty_counts)) if nonempty_counts.size else None
-            )
+            rate_bin_count_cv = float(np.std(counts) / np.mean(counts))
         else:
             rate_bin_count_cv = None
         time_integrity.update(

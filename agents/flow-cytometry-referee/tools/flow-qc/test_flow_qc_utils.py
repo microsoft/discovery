@@ -64,3 +64,16 @@ def test_write_qc_artifacts_creates_dashboard_and_csv(tmp_path: Path) -> None:
     event_summary = next(item for item in report["channel_summaries"] if item["channel"] == "Event #")
     assert event_summary["at_declared_range_fraction"] is None
     assert "FSC-H" not in report["channel_roles"]["fluorescence"]
+
+
+def test_rate_bin_count_cv_reflects_acquisition_pause() -> None:
+    """A long pause leaves empty time bins, which must raise the rate CV."""
+    steady_time = np.linspace(0, 100, 10_000)
+    paused_time = np.concatenate(
+        (np.linspace(0, 10, 5_000, endpoint=False), np.linspace(90, 100, 5_000))
+    )
+    steady = build_qc_report({}, pd.DataFrame({"Time": steady_time}))
+    paused = build_qc_report({}, pd.DataFrame({"Time": paused_time}))
+
+    assert steady["time_integrity"]["rate_bin_count_cv"] < 0.05
+    assert paused["time_integrity"]["rate_bin_count_cv"] > 1.0
