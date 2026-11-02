@@ -1,0 +1,17 @@
+name: proteinmpnn
+type: agent
+version: 0.1.0
+associated_tools:
+- agents/proteinmpnn/tools/proteinmpnn
+publisher:
+  name: Microsoft
+  contact: discovery-catalog@microsoft.com
+  support_url: https://techcommunity.microsoft.com/category/azure/discussions/microsoft-discovery-discussions
+  party: 1p
+description: Scaffold for Fixed-backbone protein sequence design and sequence scoring using ProteinMPNN.
+tags:
+- structural-biology
+- protein
+- trained-model
+- gpu
+- python

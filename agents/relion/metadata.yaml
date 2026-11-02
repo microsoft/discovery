@@ -1,0 +1,17 @@
+name: relion
+type: agent
+version: 0.1.0
+associated_tools:
+- agents/relion/tools/relion
+publisher:
+  name: Microsoft
+  contact: discovery-catalog@microsoft.com
+  support_url: https://techcommunity.microsoft.com/category/azure/discussions/microsoft-discovery-discussions
+  party: 1p
+description: Scaffold for GPU cryo-EM particle classification and refinement using RELION.
+tags:
+- life-sciences
+- data-analysis
+- machine-learning
+- gpu
+- python
