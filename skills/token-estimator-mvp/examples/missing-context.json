@@ -1,0 +1,10 @@
+{
+  "contractVersion": "1.2.0",
+  "scopeDescription": "Literature screening requested, but deliverable boundaries, depth and checks are unanswered",
+  "tasks": [{
+    "id": "screen",
+    "description": "Screen literature",
+    "depth": "unresolved",
+    "validation": "unresolved"
+  }]
+}

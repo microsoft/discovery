@@ -1,0 +1,11 @@
+{
+  "contractVersion": "1.2.0",
+  "scopeDescription": "One focused AI operation, not scientific development or solver resources",
+  "tasks": [{
+    "id": "launch",
+    "description": "Simply execute the existing simulation.",
+    "bounded": true,
+    "depth": "bounded",
+    "validation": "included"
+  }]
+}

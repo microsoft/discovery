@@ -1,0 +1,10 @@
+{
+  "contractVersion": "1.2.0",
+  "tasks": [{
+    "id": "shared-operation",
+    "description": "Launch the existing workflow with shared setup and repeated local checks.",
+    "bounded": true,
+    "readiness": "ready",
+    "validation": "included"
+  }]
+}

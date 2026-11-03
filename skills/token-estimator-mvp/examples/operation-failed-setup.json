@@ -1,0 +1,12 @@
+{
+  "contractVersion": "1.2.0",
+  "tasks": [{
+    "id": "setup-attempt",
+    "description": "Troubleshoot failed setup for an existing workflow, repair command configuration and launch with startup confirmation.",
+    "bounded": true,
+    "readiness": "not-ready",
+    "retryLimit": 1,
+    "monitoring": "startup-only",
+    "validation": "included"
+  }]
+}

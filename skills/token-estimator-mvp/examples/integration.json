@@ -1,0 +1,11 @@
+{
+  "contractVersion": "1.2.0",
+  "tasks": [{
+    "id": "integration",
+    "description": "Integrate and debug existing component models in one focused prediction pipeline task",
+    "bounded": true,
+    "readiness": "ready",
+    "depth": "bounded",
+    "validation": "included"
+  }]
+}
