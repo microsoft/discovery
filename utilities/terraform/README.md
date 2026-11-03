@@ -518,9 +518,10 @@ do not use a live apply or destroy as part of the mocked test run.
 The imported lifecycle changes were developed from commit
 `fa9047884ddaa6bfd9dda2a49cbf39aa7bc08f5b` of the Terraform contribution in
 [microsoft/discovery#103](https://github.com/microsoft/discovery/pull/103).
-An earlier trial used uncommitted changes. The results below instead describe
-the fully logged October 15, 2026 rerun of exact commit
-`3ae7166db1d7b9691308adab1f2b7a593c5cd8c8`, including its optional user-access
+The results below summarize the
+[previously published lifecycle report](https://github.com/microsoft/discovery/blob/5396222c3586fbbd16825b56d98f5adc39b52c2f/utilities/terraform/README.md#deployment-lifecycle-evidence-and-open-validation)
+for the October 15, 2026 run of
+[commit `3ae7166db1d7b9691308adab1f2b7a593c5cd8c8`](https://github.com/microsoft/discovery/commit/3ae7166db1d7b9691308adab1f2b7a593c5cd8c8), including its optional user-access
 implementation and four mocked tests. All 34 archived candidate files were
 verified byte-for-byte unchanged after teardown. Subsequent documentation
 updates are not part of that live-applied commit.
@@ -541,8 +542,7 @@ The October 15 run used Terraform 1.16.5, AzureRM 4.81.0, AzAPI 2.11.0, and
 random 3.9.0 with Discovery API version `2026-06-01`. Control-plane resources,
 workspace-managed infrastructure, and supercomputer-managed infrastructure were
 all in UK South. Bookshelf was disabled. The following sanitized inputs capture
-the relevant placement and workload-pool choices, not the complete private
-configuration:
+the relevant placement and workload-pool choices only:
 
 ```hcl
 resource_group_name                          = "rg-discovery-terraform"
@@ -575,14 +575,13 @@ The snapshot grants **Managed Identity Operator to the cluster identity, scoped
 to the kubelet identity resource**. It does not grant that role to the kubelet
 identity on the cluster identity. This follows the
 [AKS pre-created kubelet identity guidance](https://learn.microsoft.com/azure/aks/managed-identity-overview#pre-created-kubelet-managed-identity).
-Earlier review notes reported Discovery-specific guidance with the reverse
-mapping. The current
+The published
 [Discovery managed-identity guidance](https://learn.microsoft.com/azure/microsoft-discovery/concept-managed-identities#advanced-configuration-granular-role-assignments-per-identity)
-no longer states that reverse mapping. Its node-resource-group role guidance
-does not independently establish the exact customer-UAMI scope used here.
+describes node-resource-group roles but does not independently establish the
+exact customer-UAMI scope used here.
 Successful provisioning, one CPU smoke job, and mocked assertions do not establish that every
-permission is necessary or sufficient. No reverse or additional grant has been
-added to resolve the discrepancy speculatively.
+permission is necessary or sufficient. The implementation does not add
+speculative reverse or additional grants.
 
 `Standard_D4s_v6` was accepted in the historical run but is excluded from both
 integrated workload-pool allowlists. Published
@@ -644,14 +643,9 @@ between teardown stages, because it can recreate resources already removed.
 Preserve remaining identities, permissions, networking, and storage until their service
 owners finish cleanup.
 
-Earlier, separate manual deployments had stuck cleanup involving missing
-identities and failed managed-service operations. Those incidents were not
-caused by this Terraform contribution, but motivate the owner-first precautions.
-Exact command arguments, UTC timings, exit codes, stdout/stderr, source archive,
-plans, state snapshots, failures, and recovery attempts are retained privately.
-Raw diagnostics can contain sensitive configuration and identity metadata; do
-not attach them to public issues or PRs without sanitization. No support incident
-details, raw state, binary plans, or personal configuration are included here.
+Raw diagnostics can contain sensitive configuration and identity metadata.
+Sanitize any evidence shared publicly; do not publish raw Terraform state,
+saved plans, or personal configuration.
 
 ### Remaining acceptance checks
 
