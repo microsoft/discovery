@@ -140,11 +140,18 @@ def owners_for_path(path: str) -> list[str]:
         if not fields:
             continue
         pattern = fields[0]
-        # This policy uses only a global default and rooted directory overrides.
+        # This policy uses only a global default and rooted, wildcard-free
+        # directory (trailing "/") or exact-file overrides.
         assert pattern == "*" or (
-            pattern.startswith("/") and pattern.endswith("/")
+            pattern.startswith("/") and "*" not in pattern
         )
-        if pattern == "*" or path.startswith(pattern[1:]):
+        if pattern == "*":
+            matches = True
+        elif pattern.endswith("/"):
+            matches = path.startswith(pattern[1:])
+        else:
+            matches = path == pattern[1:]
+        if matches:
             owners = fields[1:]
     return owners
 
@@ -157,6 +164,10 @@ def owners_for_path(path: str) -> list[str]:
     ".github/scripts/validate_pr.py",
     ".github/tests-other/test_example.py",
     ".github/policy/baseline.json",
+    ".github/dependabot.yml",
+    ".github/requirements-other.txt",
+    ".github/scripts/requirements-ci.txt",
+    ".config/other-tool.json",
     "docs/validation-baseline-debt.md",
     "docs/schemas/agent.schema.json",
     ".auto-registry/agents.json",
@@ -184,6 +195,8 @@ def test_utilities_use_engineering_reviewers(path):
 @pytest.mark.parametrize("path", [
     ".github/tests/test_pr_review_workflow_security.py",
     ".github/tests/rules/test_pol_016.py",
+    ".github/requirements-ci.txt",
+    ".config/dotnet-tools.json",
     "agents/molecule-visualization/agent.yaml",
     "starter-kits/example/kit.json",
 ])
