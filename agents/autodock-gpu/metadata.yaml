@@ -1,0 +1,17 @@
+name: autodock-gpu
+type: agent
+version: 0.1.0
+associated_tools:
+- agents/autodock-gpu/tools/autodock-gpu
+publisher:
+  name: Microsoft
+  contact: discovery-catalog@microsoft.com
+  support_url: https://techcommunity.microsoft.com/category/azure/discussions/microsoft-discovery-discussions
+  party: 1p
+description: Scaffold for GPU-accelerated AutoDock4 docking and virtual screening using AutoDock-GPU.
+tags:
+- docking
+- virtual-screening
+- drug-discovery
+- gpu
+- python

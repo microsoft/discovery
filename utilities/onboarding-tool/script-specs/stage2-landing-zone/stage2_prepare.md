@@ -7,21 +7,28 @@ Script: `../../scripts/stage2-landing-zone/stage2_prepare.ps1`
 Turn the signed config into a deployed landing zone idempotently: identity, network, storage, private DNS, quota/exemption requests, and the firewall artifact.
 
 ## Inputs
+- `-DryRun` optionally previews actions offline; `-JsonPath` writes plan reports unless `-PassThru` is set.
 - `--config <config.json>` from Stage 1.
 - `--subscription` / `--resource-group` targets.
 
 ## Behavior
+- `-DryRun` reads and validates config offline, then describes the ordered actions and
+  network/RBAC choices without Azure calls or request-artifact generation. Optional
+  `-JsonPath` writes JSON and Markdown with verdict `PLAN` and `Skip` results.
+  `-PassThru` returns plan results only. Exit 0 means plan generation, not a ready landing zone.
 - Run the folded steps in dependency order: RP register → RBAC → NSP joiner role → network → NSG → routes → DNS → storage → artifacts.
 - Converge on re-run without duplicate or conflicting resources (FR2.9).
 - Stop and surface the first hard failure with its remediation.
 
 ## Output
+- Dry run: `Skip` results and optional JSON/Markdown reports with verdict `PLAN`; no landing-zone or request artifacts.
 - JSON: per-step resource plus provisioning state.
 - Human: landing-zone build log and the generated request artifacts.
 
 ## Exit codes
-- 0 = all steps green.
-- Non-zero = at least one failure (see report).
+- 0 = all live steps green, or offline plan generation succeeds with `-DryRun`.
+- Dry run doesn't prove landing-zone readiness.
+- Non-zero = a live step fails, or config loading or report writing fails. Config errors appear on the console without a plan.
 
 ## Folded steps
 Each step ran as a separate sub-script before consolidation; the logic now lives in `stage2_prepare.ps1`. Only this stage and Stage 4 write platform resources.

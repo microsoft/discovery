@@ -36,6 +36,11 @@ def _is_dockerfile(path: str) -> bool:
         name == "dockerfile"
         or name.startswith("dockerfile.")
         or name.endswith(".dockerfile")
+        or name == "containerfile"
+        or name.startswith("containerfile.")
+        or name.endswith(".containerfile")
+        or ".containerfile." in name
+        or ".dockerfile." in name
     )
 
 

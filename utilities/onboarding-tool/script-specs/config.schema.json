@@ -49,10 +49,12 @@
       ]
     },
     "controlPlaneRegion": {
-      "type": "string"
+      "type": "string",
+      "description": "Region for Discovery control-plane resources. Can differ from workloadRegion."
     },
     "workloadRegion": {
-      "type": "string"
+      "type": "string",
+      "description": "Region for the VNet/subnets and all managed-resource-group resources."
     },
     "systemSku": {
       "type": "string",

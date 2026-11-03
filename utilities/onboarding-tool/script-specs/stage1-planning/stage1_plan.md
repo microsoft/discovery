@@ -37,6 +37,10 @@ Confirm the subscription is allowlisted for Discovery, record the RP-registratio
 
 ### capture_fields — FR1.1
 Capture and normalize control-plane region, workload region, VNet CIDR, per-service subnet CIDRs, BYO storage model, deploying identity, and policy set. Normalize regions to Azure short names and CIDRs to canonical form; flag any required field left blank.
+
+For `byo-existing`, validate the existing VNet against `workloadRegion`, not `controlPlaneRegion`.
+The VNet/subnets and all managed-resource-group resources must share the workload region;
+the Discovery control-plane resources can use a different region.
 - Missing field: complete the corresponding cell in the planning sheet.
 
 ### project_storage — FR1.1
@@ -88,7 +92,9 @@ Expand the sizing tier (Small|Medium|Large) into concrete resource counts and re
   by model and SKU first, prefer a compatible default version, then fall back to the latest
   compatible version. The workspace can use a service-pinned version independently. The check
   confirms from SKU rate-limit metadata that each quota capacity unit represents 1,000 tokens per
-  minute before interpreting usage values as K TPM. Every query is pinned to `subscriptionId` and
+  minute before interpreting usage values as K TPM. It supports both token-labeled metadata and the
+  unlabeled `1000` per `60` second rate-limit entry returned by Azure CLI for the exact matching
+  GPT-5.4 GlobalStandard SKU. Every query is pinned to `subscriptionId` and
   forces JSON output. A fresh deployment needs 450K (workspace 250K + chat model 200K); a resumed
   deployment counts only allocations whose Discovery resources are not already `Succeeded`.
   Quota is scoped by subscription, region, model, and deployment type. A numeric quota row by

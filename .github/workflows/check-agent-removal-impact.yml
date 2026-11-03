@@ -1,18 +1,16 @@
 name: Check Agent Removal Impact
 
-# NB: This workflow is a *required* status check on `main` (it's listed in branch
-# protection). GitHub treats a non-triggered required check as "expected, never
-# reported", which permanently blocks PRs that don't touch the trigger paths.
-# To avoid that, the workflow now runs on every PR and uses an internal
-# "Detect relevant changes" guard step — the real work is skipped (but the
-# check still reports success) when no agents/** paths changed.
+# Keep the required-check name and unfiltered PR trigger: workflow-level path
+# filters can strand required checks. Only successful classification can skip
+# validation; classification/setup/result errors must fail, not become no-ops.
+# This workflow stays read-only. pr-review-report.yml publishes diagnostics.
 
 on:
-  pull_request_target:
+  pull_request:
 
 permissions:
   contents: read
-  pull-requests: write
+  pull-requests: read
 
 jobs:
   check-impact:
@@ -32,7 +30,8 @@ jobs:
               pull_number: context.issue.number,
               per_page: 100,
             });
-            const relevant = files.some(({ filename }) => filename.startsWith('agents/'));
+            const relevant = files.some(({ filename, previous_filename }) =>
+              filename.startsWith('agents/') || previous_filename?.startsWith('agents/'));
             core.setOutput('relevant', String(relevant));
             if (!relevant) {
               core.notice('No agents/** paths changed; reporting success without running the impact check.');
@@ -53,7 +52,6 @@ jobs:
         with:
           repository: ${{ github.event.pull_request.head.repo.full_name }}
           ref: ${{ github.event.pull_request.head.sha }}
-          allow-unsafe-pr-checkout: true
           fetch-depth: 0
           persist-credentials: false
           path: pr
@@ -67,11 +65,9 @@ jobs:
       - name: Install trusted validator dependencies
         if: steps.changes.outputs.relevant == 'true'
         run: |
-          # check_agent_removal_impact.py imports update_registry, which
-          # requires PyYAML; pin from the trusted base checkout when present.
-          # During the bootstrap window - before this constraints file exists
-          # on the base branch - install unpinned rather than reading the
-          # untrusted PR copy. Self-heals to the pinned path once the PR merges.
+          # Use trusted base constraints for PyYAML, never the PR's requirements.
+          # The legacy unpinned fallback does not supply the new report protocol:
+          # prepare code and constraints on each target base before cutover.
           constraint="trusted/.github/requirements-ci.txt"
           if [ -f "$constraint" ]; then
             python -m pip install -c "$constraint" pyyaml
@@ -80,21 +76,17 @@ jobs:
             python -m pip install pyyaml
           fi
 
-      - name: Detect fork PR
-        if: steps.changes.outputs.relevant == 'true'
-        id: fork
-        run: |
-          if [ "${{ github.event.pull_request.head.repo.fork }}" = "true" ]; then
-            echo "is_fork=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "is_fork=false" >> "$GITHUB_OUTPUT"
-          fi
-
+      # The token authorizes GET-only override checks, not comment publishing.
+      # --report-json and its protocol checker must already exist on the base.
       - name: Check agent removal impact
+        id: gate
         if: steps.changes.outputs.relevant == 'true'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          IS_FORK: ${{ github.event.pull_request.head.repo.id != github.event.repository.id }}
         run: |
           FORK_FLAG=""
-          if [ "${{ steps.fork.outputs.is_fork }}" = "true" ]; then
+          if [ "$IS_FORK" = "true" ]; then
             FORK_FLAG="--is-fork"
           fi
           python trusted/.github/scripts/check_agent_removal_impact.py \
@@ -102,6 +94,72 @@ jobs:
             --base-registry-root trusted \
             --base-sha "${{ github.event.pull_request.base.sha }}" \
             --pr-number "${{ github.event.pull_request.number }}" \
-            --github-token "${{ secrets.GITHUB_TOKEN }}" \
             --repo "${{ github.repository }}" \
+            --report-json "$RUNNER_TEMP/agent-removal-report/agent-removal-results.json" \
             $FORK_FLAG
+
+      # No-op/setup-error records must work without checkout or Python setup.
+      # Relevant records are verified by trusted code, retaining validator failures.
+      - name: Finalize removal report
+        if: ${{ !cancelled() }}
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
+        env:
+          CLASSIFICATION_OUTCOME: ${{ steps.changes.outcome }}
+          RELEVANT: ${{ steps.changes.outputs.relevant }}
+          GATE_OUTCOME: ${{ steps.gate.outcome }}
+        with:
+          script: |
+            const fs = require('fs/promises');
+            const path = require('path');
+            const directory = path.join(process.env.RUNNER_TEMP, 'agent-removal-report');
+            const reportPath = path.join(directory, 'agent-removal-results.json');
+            const record = (outcome, issues = []) => ({
+              schema_version: 1, outcome,
+              exit_code: outcome === 'not_applicable' ? 0 : 1,
+              removed_paths: [], impacted_kits: [], issues,
+              override: {approved: false, reason: 'Not evaluated.'},
+              guidance: 'docs/authoring-guides/starter-kit-authoring-guide.md',
+            });
+            await fs.mkdir(directory, {recursive: true});
+            try {
+              if (process.env.CLASSIFICATION_OUTCOME !== 'success' ||
+                  !['true', 'false'].includes(process.env.RELEVANT)) {
+                throw new Error('Changed-path classification failed or omitted relevance.');
+              }
+              if (process.env.RELEVANT === 'false') {
+                await fs.writeFile(reportPath, JSON.stringify(record('not_applicable')));
+              } else {
+                if (!['success', 'failure'].includes(process.env.GATE_OUTCOME)) {
+                  throw new Error('Validation setup failed; the removal validator did not run.');
+                }
+                const exitCode = process.env.GATE_OUTCOME === 'success' ? '0' : '1';
+                const code = await exec.exec('python', [
+                  'trusted/.github/scripts/agent_removal_report.py', reportPath,
+                  '--expected-exit-code', exitCode,
+                ], {ignoreReturnCode: true});
+                if (code !== 0) {
+                  throw new Error('Missing, invalid, or contradictory local removal result. A prepared trusted base is required.');
+                }
+              }
+            } catch (error) {
+              core.setFailed(error.message);
+              await fs.writeFile(reportPath, JSON.stringify(record('error', [error.message])));
+            }
+
+      # Optional diagnostic transport only. Never extend continue-on-error to
+      # validation/finalization or copy this policy to PR Review's required handoff.
+      - name: Upload removal report
+        id: upload
+        if: ${{ !cancelled() }}
+        continue-on-error: true
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: agent-removal-report-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/agent-removal-report/agent-removal-results.json
+          if-no-files-found: error
+
+      - name: Report diagnostic transport failure
+        if: ${{ !cancelled() && steps.upload.outcome == 'failure' }}
+        run: |
+          echo "::warning::Removal report upload failed. The gate decision is unchanged; inspect this run's logs."
+          echo "Removal report upload failed; diagnostic feedback is unavailable. The gate decision is unchanged." >> "$GITHUB_STEP_SUMMARY"

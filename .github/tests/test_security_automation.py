@@ -97,10 +97,7 @@ def test_codeql_matrix_keeps_scopes_separate_and_supported():
         "/language:${{ matrix.language }}/scope:${{ matrix.scope }}"
     )
     assert analyze_step["with"]["output"] == "codeql-results"
-    assert analyze_step["with"]["upload"] == (
-        "${{ github.event_name != 'pull_request' || "
-        "github.event.pull_request.head.repo.full_name == github.repository }}"
-    )
+    assert analyze_step["with"]["upload"] == "false"
     artifact_step = next(
         step for step in codeql_job["steps"]
         if step.get("name") == "Upload CodeQL SARIF artifact"
@@ -284,8 +281,14 @@ def test_security_rollout_has_owners_deadline_and_response_slas():
     assert "GitHub Issues are disabled" in security
 
     contributing = (REPO_ROOT / "CONTRIBUTING.md").read_text(encoding="utf-8")
-    security = (REPO_ROOT / "SECURITY.md").read_text(encoding="utf-8")
-    assert "staged but currently disabled" in contributing
+    workflows = (REPO_ROOT / ".github" / "workflows" / "README.md").read_text(
+        encoding="utf-8"
+    )
+    assert (
+        ".github/workflows/README.md#pull-request-validation-and-feedback"
+        in contributing
+    )
+    assert "staged but currently disabled" in workflows
     assert "staged but disabled" in security
 
 
@@ -448,19 +451,6 @@ def test_validation_workflows_publish_actionable_diagnostics():
     )
     assert pr_summary["if"] == "always()"
     assert "trusted/.github/scripts/render_ci_summary.py catalog" in pr_summary["run"]
-    post_results = pr_workflow["jobs"]["post-results"]["steps"]
-    feedback = next(
-        step for step in post_results
-        if step.get("name") == "Manage labels and post PR feedback"
-    )["with"]["script"]
-    assert "**How to fix:** ${remediation(f)}" in feedback
-    assert "**Guidance:** ${guidanceUrl(f)}" in feedback
-    assert "results.has_markdown_only" in feedback
-    assert "results.has_dockerfile" in feedback
-    assert "results.has_code" in feedback
-    assert "'markdown-only':             { color: '8250df'" in feedback
-    assert "'contains-dockerfile':       { color: '2496ed'" in feedback
-    assert "'contains-code':             { color: '1f883d'" in feedback
 
 
 def test_unit_tests_run_for_every_validator_and_policy_input():
@@ -479,17 +469,6 @@ def test_unit_tests_run_for_every_validator_and_policy_input():
     assert "--check-no-growth" in source
     assert 'fetch-depth: 0' in source
     assert r"/^\.github\/workflows\/.*\.yml$/" not in source
-
-
-def test_pr_review_limits_new_labels_and_image_gate_to_catalog_changes():
-    source = (
-        REPO_ROOT / ".github" / "workflows" / "pr-review.yml"
-    ).read_text(encoding="utf-8")
-
-    assert "const hasCatalog =" in source
-    assert "} else if (hasDocsOnly) {" in source
-    assert "labelsToAdd.push('docs-only');" in source
-    assert "if (hasCatalog && results.has_images)" in source
 
 
 def test_schema_bootstrap_never_executes_pr_python():
@@ -555,6 +534,7 @@ def test_registry_refresh_cannot_rewrite_or_self_approve_generated_prs():
     assert "chore/registry-refresh-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}" in source
     assert "git push --set-upstream" in source
     assert "A human CODEOWNER must approve this PR" in source
+    assert "A maintainer must merge it or enable GitHub auto-merge" in source
     assert not (
         REPO_ROOT / ".github" / "workflows" / "auto-approve-registry-prs.yml"
     ).exists()
@@ -562,20 +542,32 @@ def test_registry_refresh_cannot_rewrite_or_self_approve_generated_prs():
     codeowners = (REPO_ROOT / ".github" / "CODEOWNERS").read_text(
         encoding="utf-8"
     )
-    registry_owner = next(
+    default_owner = next(
         line for line in codeowners.splitlines()
-        if line.startswith("/.auto-registry/")
+        if line.startswith("* ")
     )
-    assert registry_owner.split()[1:] == [
+    assert default_owner.split()[1:] == [
         "@microsoft/discovery-samples-maintainer"
     ]
 
-    auto_merge_source = (
-        REPO_ROOT / ".github" / "workflows" / "auto-merge-on-approval.yml"
-    ).read_text(encoding="utf-8")
-    assert "chore/registry-refresh-*" not in auto_merge_source
-    assert "files.length === 1" in auto_merge_source
-    assert "docs\\/discovery-app\\/releases\\/manifests\\/" in auto_merge_source
+
+def test_auto_merge_is_removed_without_workflow_dependents():
+    workflows = REPO_ROOT / ".github" / "workflows"
+    assert not (workflows / "auto-merge-on-approval.yml").exists()
+
+    retired_references = (
+        "auto-merge-on-approval.yml",
+        "Enable Native Auto-merge",
+        "Auto-merge on Approval",
+        "Enable GitHub auto-merge",
+        "native-auto-merge",
+    )
+    for path in workflows.iterdir():
+        if path.suffix not in {".yml", ".yaml"}:
+            continue
+        source = path.read_text(encoding="utf-8")
+        for reference in retired_references:
+            assert reference not in source, f"{path.name} references {reference}"
 
 
 def test_baseline_debt_is_codeowned_tracked_and_shrink_only():
@@ -591,8 +583,12 @@ def test_baseline_debt_is_codeowned_tracked_and_shrink_only():
         )
     )
 
-    assert "/.github/policy/baseline.json" in codeowners
-    assert "/docs/validation-baseline-debt.md" in codeowners
+    default_owner = next(
+        line for line in codeowners.splitlines() if line.startswith("* ")
+    )
+    assert default_owner.split()[1:] == [
+        "@microsoft/discovery-samples-maintainer"
+    ]
     assert "New entries are prohibited" in debt
     assert "December 31, 2026" in debt
     assert baseline["count"] == len(baseline["violations"]) == 3
@@ -637,6 +633,7 @@ def test_ci_python_dependencies_are_pinned_and_workflows_use_the_manifest():
         "pytest-xdist",
         "pyyaml",
         "referencing",
+        "requests",
     }
 
     install_steps: list[tuple[str, str]] = []
@@ -661,6 +658,7 @@ def test_python_validation_jobs_use_github_hosted_linux():
     expected_jobs = {
         "check-agent-removal-impact.yml": {"check-impact"},
         "pr-review.yml": {"validate"},
+        "pr-review-report.yml": {"report"},
         "unit-tests.yml": {"pytest"},
         "validate-everything.yml": {"validate-all-agents"},
         "validate-agent-schemas.yml": {"validate-schemas"},
@@ -711,7 +709,7 @@ def test_python_validation_jobs_use_github_hosted_linux():
     assert "packagefeedproxy.microsoft.io" not in workflow_text
 
 
-def test_pull_request_target_jobs_keep_pr_data_untrusted():
+def test_pr_validation_jobs_keep_pr_data_untrusted():
     for workflow_name, job_name in {
         "check-agent-removal-impact.yml": "check-impact",
         "pr-review.yml": "validate",
@@ -753,11 +751,8 @@ def test_pull_request_target_jobs_keep_pr_data_untrusted():
         "${{ github.event.pull_request.head.repo.full_name }}"
     )
     assert pr_head_checkout["with"]["persist-credentials"] == "false"
-    # The only head checkout lands untrusted content in pr/ (never executed).
-    # #141 removed the classify/secret-scan head checkouts; #106 requires
-    # allow-unsafe-pr-checkout so forked pull_request_target PRs can be fetched.
     assert pr_head_checkout["with"]["path"] == "pr"
-    assert pr_head_checkout["with"]["allow-unsafe-pr-checkout"] == "true"
+    assert "allow-unsafe-pr-checkout" not in pr_head_checkout["with"]
 
 
 def test_manual_shadow_validation_is_report_only_and_fork_aware():

@@ -4,7 +4,7 @@
 
 Microsoft Discovery is the AI for Science platform that enables agentic-driven scientific research and development. Discovery Toolbox provides an end-to-end deployment and management experience — including instantiation of agents, tools, models, knowledge bases (Bookshelves), and the supercomputer compute pool — plus subscription-wide resource inventory with cascade tear-down, declarative validation plans, live agent chat, and a `@discovery` chat participant for natural-language operations.
 
-**Current version:** `v1.10.64`
+**Current version:** `v1.11.28`
 
 ---
 
@@ -24,7 +24,7 @@ Microsoft Discovery is the AI for Science platform that enables agentic-driven s
 
 - 🔧 **End-to-end deployment** — Provision the full Microsoft Discovery platform from scratch (VNets, supercomputers, workspaces, projects, chat models, storage, managed identities) using a bundled, hardened Bicep template, deployed directly from inside VS Code with live terminal output.
 - 🤖 **Agent & tool publishing** — Publish AI agents and containerized tools directly to your Discovery environment. Create from scratch or from the catalog, then build tool images **remotely via ACR Tasks** — no local Docker required — and push them straight to your Azure Container Registry.
-- 🛡️ **Prerequisite validation** — Automatically verify 100+ Azure prerequisites — RBAC roles, resource providers, quotas, policies, **network security perimeter**, and configuration — before deployment, with one-click remediation actions for every issue found.
+- 🛡️ **Prerequisite validation** — Check Azure prerequisites, RBAC roles, resource providers, quotas, policies, **network security perimeter**, and configuration. Supported remediations are actionable; permission or platform blockers are reported explicitly. The full check catalogue is broader than the blocking deployment gate.
 - 🗂️ **Inventory & cleanup** — Subscription-wide scan of every Discovery resource group, workspace, project, agent, supercomputer, storage account/container, UAMI, Bookshelf, ACR registry, and orphan MRG. Per-leaf delete and full project / workspace / supercomputer cascade tear-down with type-confirm modals (gated by `mdToolbox.enableCleanup`).
 - 📊 **Architecture visualization** — See your entire Discovery deployment topology as an interactive diagram (workspaces, projects, agents, supercomputers, storage, networking) with real-time health status. Export as PNG (2×) or SVG, or browse a built-in example dataset.
 - 💰 **Cost analysis** — Track per-resource costs across your Discovery resource groups (daily, weekly, monthly breakdowns). Sortable table with RG and service filters, plus direct links to the Azure Portal cost blade.
@@ -59,7 +59,7 @@ Microsoft Discovery is the AI for Science platform that enables agentic-driven s
 - **Architecture Export** — Export your deployment topology as PNG (2×) or SVG; Show Example mode with realistic sample data.
 - **Cost Analysis** — Per-RG cost queries with daily/weekly/monthly breakdowns, RG and service filters.
 - **Diagnostics** — 5 signals with 6 KPI tiles and 5 collapsible data tables across main + managed resource groups.
-- **Cleanup** — All-or-nothing destructive teardown of every Discovery resource in scope, double-confirmed by typing the RG name. Off by default; flip `mdToolbox.enableCleanup` to enable.
+- **Cleanup** — Preview per-resource or cascade deletion before confirming. Cleanup is opt-in, partial failures remain visible, and a missing resource group is a no-op, not a completed deletion. Cross-scope chat operations pair `subscriptionId` with `tenantId`.
 - **Tracking Log** — Azure Activity Log viewer with date range presets, search, sort, and expandable detail rows.
 - **Operations History** — Per-resource CRUD log of every create/delete the toolbox performs (workspace, chat model, project, storage, UAMI, agent, MRG, Bookshelf, ACR registry, ACR image), persisted to global state and filterable by op type, target, RG, region, and status.
 - **Activity Log** — Every Azure API call routed through a logged fetch wrapper for full traceability and troubleshooting.
@@ -68,19 +68,35 @@ Microsoft Discovery is the AI for Science platform that enables agentic-driven s
 - **Update Checker** — Automatic version check on startup with a welcome-page banner and VS Code notification when a new version is available.
 - **Reset to First-Run** — Clear all local settings and cached state to return the toolbox to a clean first-run experience — handy for demos or escaping stale state. Right-click the **Introduction** sidebar group; your deployed Azure resources are not affected.
 
-## What's new & coming soon
+## Enabling deployment and cleanup
+
+Select your tenant and subscription in **Azure Scope**, then run **Pre-flight**.
+Chat writes require `mdToolbox.advancedDevProxy.allowDeploys`; deletion also
+requires `mdToolbox.enableCleanup`. Enable them deliberately in VS Code Settings
+or through confirmation-guarded `discovery_applySetting`. These settings do not
+grant Azure permissions or bypass per-action approval. Discovery project
+administration does not automatically grant Entra tenant administration.
+Do not reload VS Code while an operation is running.
+
+The **About** and **Chat Assistant** pages, `@discovery /help` and
+`discovery_listCapabilities` use one capability catalogue. It covers pre-flight
+export, regional capacity, run manifests, bookshelf indexing, ownership-aware
+inventory and scoped cleanup. The proposed hosted management plane is not part
+of this VSIX.
+
+## Available features and planned work
 
 The sidebar's breadth is set by a single **View Level** (`mdToolbox.viewLevel`): **Simple** (essentials), **Standard** (everything except the advanced pages — the default for this build), or **Advanced** (everything, including the advanced pages marked `*`). Change it from the **Welcome** page or the **View Level** menu (sidebar **…**). Advanced pages are fully functional — they are hidden below the Advanced level because they are power-user surfaces, not because they are unfinished.
 
 | Status | Feature | What it does |
 | --- | --- | --- |
-| Advanced | **Plan-Driven Validation** | Author a declarative 7-stage build plan (workspace · chat model · storage · project · agents · interactions), execute it, and review per-step pass/fail with JSONL audit footers. Stage 6 supports a multi-substep composer (`createInvestigation` · `addTask` · `addConversation` · `addMessage`) so a single plan can stand up a project, deploy agents, and assert on chat responses end-to-end. Failed runs offer a one-click cleanup of every resource the run created. |
+| Advanced | **Plan-Driven Validation** | Review and execute stages 0-9: foundation, chat model, storage account/container, project, agents, interactions, bookshelves, storage assets and knowledge bases. Per-step results and JSONL records preserve failures; cleanup is a separate approved operation. |
 | Advanced | **Live Agent Chat** | Talk to deployed Discovery agents from a 3-pane chat UX (investigations · conversations · messages) over REST or MCP, with a four-mode transport selector (`rest-only` · `mcp-only` · `rest-then-mcp` · `mcp-then-rest`) and per-message override. Conversations persist as JSONL under `~/.md-toolbox/conversations/`. |
 | Advanced | **Agent Scorecard** | LLM-as-judge per-agent scoring page tied to validation runs, with pass/fail rubrics and per-rubric drill-down. |
 | Advanced | **Bookshelves & Knowledge Bases** | Bookshelf enumeration, deploy form, and per-resource delete — wired into the Agent Deploy form's Knowledge Bases multi-select, the Inventory page, and the architecture diagram. |
 | Advanced | **Supercomputer Page** | AKS snapshot of the Discovery supercomputer with node pool list, resize/delete/create actions, and a read-only kubectl console. |
 | Advanced | **MCP Catalog & Invoke** | Browse MCP servers exposed by your Discovery environment and invoke their tools directly from the toolbox. |
-| Advanced | **@discovery Chat Participant** | Slash commands (`/help`, `/setup`, `/deploy`, `/list`, `/create-agent`, `/explain`) plus the full `#discovery_*` language model tool set — read tools (capabilities, catalog, starter kits, agents, tenants & subscriptions, docs, config, environment checks & preflight, Chat Progress plan, capacity & inventory scans) and write tools (`discovery_deployBicep` · `discovery_deployTool` · `discovery_deployAgent` · `discovery_provisionFoundation` · `discovery_applySetting` · `discovery_modifyNodePool`) for natural-language agent creation, infrastructure deploys, and Q&A. Write tools are double-gated on `mdToolbox.advancedDevProxy.allowDeploys` plus per-action approval flags. Requires GitHub Copilot Chat. |
+| Simple | **@discovery Chat Participant** | Available at every View Level through Chat Assistant and native Copilot Chat. `/help` and `discovery_listCapabilities` advertise the shared current catalogue. Mutating tools require their applicable safety gates and confirmations; GitHub Copilot Chat is required only for this chat surface. |
 | Planned | **Post-Deploy Health Smoke** | Dashboard-level passive health verification, endpoint connectivity tests, and Service Health correlation — complements the active Validation feature. |
 | Planned | **Centralized Input Validation** | Shared validation rules driving inline validation across every editable field. |
 
@@ -89,7 +105,7 @@ The sidebar's breadth is set by a single **View Level** (`mdToolbox.viewLevel`):
 - [Microsoft Learn — Microsoft Discovery docs](https://learn.microsoft.com/en-us/azure/microsoft-discovery/)
 - [Azure Blog — Microsoft Discovery: advancing agentic R&D at scale](https://azure.microsoft.com/en-us/blog/microsoft-discovery-advancing-agentic-rd-at-scale/)
 - [Azure Solutions page](https://azure.microsoft.com/en-us/solutions/discovery)
-- [Privacy & data handling](./PRIVACY.md)
+- [Privacy & data handling](https://github.com/microsoft/discovery/tree/main/utilities/discovery-toolbox/PRIVACY.md)
 - [All available Discovery Toolbox versions](https://github.com/microsoft/discovery/tree/main/utilities/discovery-toolbox/vsix)
 
 ## Feedback
@@ -98,4 +114,4 @@ Found a bug, want a feature, or have general feedback? Open an issue on the [mic
 
 ---
 
-<sub>Published version **v1.10.64** &middot; built from `8bff26f` on 2026-10-11T17:07:00.134Z.</sub>
+<sub>Published version **v1.11.28** &middot; built from `711b496` on 2026-10-30T17:55:38.541Z.</sub>

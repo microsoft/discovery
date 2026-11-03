@@ -10,7 +10,7 @@ This agent gives Discovery users conversational access to that capability. A res
 
 **Intended user:** computational chemists, catalysis researchers, and materials scientists doing candidate triage.
 
-**Related agents.** [`aqpotency`](../aqpotency/README.md) covers small-molecule potency and selectivity on the same platform and the same connection. [`sandboxaq`](../sandboxaq/README.md) is separate — it prompts a SandboxAQ model you have subscribed to in Azure AI Foundry, and needs no platform tenant.
+**Related agents.** [`aqpotency`](../aqpotency/README.md) covers small-molecule potency and selectivity on the same platform and the same connection.
 
 **Successful outcome:** a ranked, correctly-attributed set of adsorption energies with units intact, each reported with its convergence status and the resolved bulk identifier, plus an explicit statement of which systems fall outside the model's applicability.
 
@@ -40,9 +40,10 @@ The agent holds no compute of its own and ships no container. It is a prompt age
 
 - An Azure AI Foundry project with a chat model deployment, supplied as `{{CHAT-MODEL}}`.
 - Access to a SandboxAQ AI Simulation Platform tenant with AQCat enabled. Contact <support@sandboxaq.com> if your organization does not have one.
-- The MCP server URL for your tenant, and a credential that server accepts as a **request header**, stored as a connection in your Azure AI Foundry project. The agent references that connection by name; the credential never enters the agent definition.
+- The MCP server URL for your tenant, configured as a connection in your Azure AI Foundry project. The agent references that connection by name.
+- A SandboxAQ account for each user. Sign-in is per-user OAuth; no API keys or service tokens are issued or accepted.
 
-> **Authentication note.** Foundry's MCP tool authenticates with a stored connection or static headers; it cannot complete an interactive browser OAuth flow. If your tenant is configured for interactive consent only, request a service token or equivalent header credential from your platform administrator before deploying.
+> **Authentication note.** Each user signs in with their own SandboxAQ account through a browser OAuth flow. Discovery does not yet support per-user sign-in for MCP tools, so this agent cannot connect from Discovery until it does; until then, validate it in the Azure AI Foundry playground. Foundry supports browser sign-in, but each connection needs its own OAuth client, and the platform must accept the redirect URL Foundry generates for that connection (these begin with `https://global.consent.azure-apim.net/redirect/`). Contact <support@sandboxaq.com> to have a redirect URL accepted.
 
 ## Configuration
 
@@ -50,9 +51,9 @@ The agent holds no compute of its own and ships no container. It is a prompt age
 |---|---|---|
 | `{{CHAT-MODEL}}` | Azure AI Foundry chat model deployment name | `gpt-4o-deployment` |
 | `{{AQ_MCP_SERVER_URL}}` | Base URL of your tenant's SandboxAQ AI Simulation Platform MCP server | `https://mcp.demo.aisim.sandboxaq.com` |
-| `{{AQ_MCP_CONNECTION}}` | Name of the connection in your Foundry project holding the MCP server credential | `sandboxaq-aisim` |
+| `{{AQ_MCP_CONNECTION}}` | Name of the MCP server connection in your Foundry project | `sandboxaq-aisim` |
 
-Create the connection in your own Azure AI Foundry project before deploying. The agent definition references it by name and never carries the credential itself, so no secret appears in this catalog entry or in your deployed agent's configuration.
+Create the connection in your own Azure AI Foundry project before deploying. The agent definition references it by name, so no secret appears in this catalog entry or in your deployed agent's configuration.
 
 ## Usage
 
@@ -103,7 +104,7 @@ For comparative questions the agent submits one `AQCat` job per candidate surfac
 - **Applicability is bounded by training data.** Unusual elements, heavily distorted cells, and exotic oxidation states may produce confident-looking numbers with no basis. The agent flags these where it can recognize them, but the boundary is not sharply defined and the check is not exhaustive.
 - **Asynchronous jobs may outlive a conversation.** Long relaxations will not complete within a single turn; the agent returns a job identifier for later retrieval.
 - **No offline mode.** Every calculation requires network access to the platform, and the agent has no local fallback.
-- **Interactive-OAuth tenants are not supported** without a header credential — see the authentication note under Prerequisites.
+- **Not yet usable from Discovery.** Sign-in is per-user OAuth, which Discovery does not yet support for MCP tools — see the authentication note under Prerequisites.
 - **The `aqcat-adsorption-spin` skill does not transfer.** Discovery has no skill loader; the workflow it encodes is reproduced in this agent's `instructions` block and may diverge from the skill over time.
 
 ## Support

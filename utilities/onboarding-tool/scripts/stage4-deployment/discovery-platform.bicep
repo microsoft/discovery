@@ -6,10 +6,10 @@
 
 targetScope = 'resourceGroup'
 
-@description('Region for all Discovery resources. Must equal the BYO VNet/subnet region.')
+@description('Control-plane region for Discovery resources. Can differ from the VNet/subnet and managed-resource-group region.')
 param location string
 
-@description('workloadRegion tag (discovery.overridemrgregion) for the managed RGs.')
+@description('Region for all managed-resource-group resources, set through discovery.overridemrgregion. Must match the VNet/subnet region.')
 param workloadRegion string = location
 
 param supercomputerName string

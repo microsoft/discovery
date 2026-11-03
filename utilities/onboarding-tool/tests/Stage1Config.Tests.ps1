@@ -9,13 +9,63 @@ $ast = [System.Management.Automation.Language.Parser]::ParseFile(
     [ref]$errors
 )
 if ($errors.Count) { throw ($errors.Message -join [Environment]::NewLine) }
-foreach ($name in @('Read-XlsxSheet', 'Split-CellRef', 'ConvertFrom-ConfigSheet', 'ConvertTo-ConfigModel', 'Merge-ConfigDefaults', 'Get-RequiredVmSkuResult')) {
+foreach ($name in @('Read-XlsxSheet', 'Split-CellRef', 'ConvertFrom-ConfigSheet', 'ConvertTo-ConfigModel', 'Merge-ConfigDefaults', 'Get-RequiredVmSkuResult', 'Test-Field', 'Get-Stage1PropertyValue', 'Get-LivePolicyAssignments', 'Invoke-Stage1Checks')) {
     $functionAst = $ast.Find({
             param($node)
             $node -is [System.Management.Automation.Language.FunctionDefinitionAst] -and $node.Name -eq $name
         }, $true)
     if (-not $functionAst) { throw "$name was not found in $stage1Path." }
     Invoke-Expression $functionAst.Extent.Text
+}
+foreach ($statement in $ast.EndBlock.Statements) {
+    if ($statement -is [System.Management.Automation.Language.AssignmentStatementAst] -and
+        $statement.Left -is [System.Management.Automation.Language.VariableExpressionAst] -and
+        $statement.Left.VariablePath.UserPath -like 'script:*') {
+        Invoke-Expression $statement.Extent.Text
+    }
+}
+
+Describe 'Stage 1 existing VNet region alignment' {
+    BeforeEach {
+        $configPath = Join-Path (Split-Path -Parent $stage1Path) '..\examples\sample-config.json'
+        $config = Get-Content -LiteralPath $configPath -Raw | ConvertFrom-Json
+        $defaults = ConvertTo-ConfigModel -Parsed ([pscustomobject]@{ Scalars = @{}; Subnets = @(); Policies = @(); Waivers = @() }) |
+            ConvertTo-Json -Depth 20 | ConvertFrom-Json
+        $config = Merge-ConfigDefaults -Config $config -Defaults $defaults
+        $config.network.model = 'byo-existing'
+        $script:existingVnet = [pscustomobject]@{
+            id           = '/subscriptions/sub/resourceGroups/network-rg/providers/Microsoft.Network/virtualNetworks/vnet'
+            location     = 'uksouth'
+            addressSpace = [pscustomobject]@{ addressPrefixes = @($config.network.vnetCidr) }
+            subnets      = @($config.network.subnets | ForEach-Object {
+                    [pscustomobject]@{ name = "snet-$($_.role)"; addressPrefix = $_.cidr }
+                })
+        }
+        Mock Get-AzJson { $null }
+        Mock Get-AzJson { [pscustomobject]@{ id = 'sub' } } -ParameterFilter { $Args[0] -eq 'account' }
+        Mock Get-AzJson { $script:existingVnet } -ParameterFilter { $Args[0] -eq 'network' }
+        Mock Get-VcpuQuotaResult {}
+        Mock Get-ModelQuotaResult {}
+        Mock Get-LivePolicyAssignments { @() }
+    }
+
+    It 'checks the workload region independently of the control plane' -TestCases @(
+        @{ Control = 'eastus'; Workload = 'uksouth'; Expected = 'Pass' },
+        @{ Control = 'uksouth'; Workload = 'uksouth'; Expected = 'Pass' },
+        @{ Control = 'uksouth'; Workload = 'eastus'; Expected = 'Fail' }
+    ) {
+        param($Control, $Workload, $Expected)
+        $config.controlPlaneRegion = $Control
+        $config.workloadRegion = $Workload
+
+        $result = Invoke-Stage1Checks -Cfg $config | Where-Object id -eq 'byo-vnet'
+
+        $result.status | Should Be $Expected
+        if ($Expected -eq 'Fail') {
+            $result.remediation | Should Match "Set workloadRegion to 'uksouth'"
+            $result.remediation | Should Not Match 'Set controlPlaneRegion'
+        }
+    }
 }
 
 Describe 'Stage 1 required VM SKU availability' {

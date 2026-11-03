@@ -54,6 +54,7 @@ updates:
     directories:
       - "/.github"
       - "/agents/gwp-predictor/training"
+      - "/agents/molecule-visualization/tools/molecule-visualization"
       - "/agents/zinc/tools/zinc"
     schedule:
       interval: "weekly"

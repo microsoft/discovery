@@ -1,12 +1,19 @@
 #!/usr/bin/env pwsh
 #Requires -Version 7.0
+
 <#
-.SYNOPSIS  Stage 3 / FR3.1-FR3.8 — run infra validation checks (single consolidated script).
+.SYNOPSIS
+    Stage 3 / FR3.1-FR3.8 — run infra validation checks (single consolidated script).
 .DESCRIPTION
     Self-contained headless CLI for read-only control-plane checks, with opt-in test VM probes.
     Consolidates the former dependency_spec / check_* / testvm_lifecycle / probe_* sub-scripts
     into one file. Read-only except the opt-in -WithVm ephemeral probe VM (always torn down).
-    Spec: ../../script-specs/stage3-validation/stage3_validate.md
+.PARAMETER DryRun
+    List profile checks and the selected VM lifecycle offline without Azure calls.
+    Reports use PLAN, not readiness. PassThru returns objects without reports.
+
+.LINK
+    ../../script-specs/stage3-validation/stage3_validate.md
 #>
 [CmdletBinding()]
 param(
@@ -14,9 +21,14 @@ param(
     [string]$JsonPath,
     [ValidateSet('supercomputer', 'workspace', 'bookshelf')][string]$Profile = 'supercomputer',
     [switch]$WithVm,
+    [switch]$DryRun,
     [switch]$PassThru
 )
 Import-Module (Join-Path $PSScriptRoot '..\lib\OnboardingCommon.psm1') -Force
+if ($DryRun) {
+    Write-OnboardingPlan -Stage 3 -ConfigPath $ConfigPath -Options $PSBoundParameters -JsonPath $JsonPath -PassThru:$PassThru -ErrorAction Stop
+    return
+}
 $script:Stage3ScriptRoot = $PSScriptRoot
 $cfg = Get-OnboardingConfig -Path $ConfigPath
 $results = [System.Collections.Generic.List[object]]::new()
@@ -615,14 +627,35 @@ function Invoke-CheckDnsAndPe {
         foreach ($conn in $connections) {
             if ($conn.PSObject.Properties.Name -contains 'privateLinkServiceConnectionState' -and $conn.privateLinkServiceConnectionState.status -eq 'Approved') { $approved = $true }
         }
+        $peState = if ($pe.PSObject.Properties.Name -contains 'provisioningState') { [string]$pe.provisioningState } else { '' }
+        $peResourceGroup = if ($pe.id -match '/resourceGroups/([^/]+)/providers/Microsoft\.Network/privateEndpoints/') { $Matches[1] } else { '' }
+        $zoneGroups = if ($peResourceGroup) {
+            @(Get-AzJson -Args @(
+                    'network', 'private-endpoint', 'dns-zone-group', 'list',
+                    '-g', $peResourceGroup, '--endpoint-name', [string]$pe.name
+                ) -AllowFail)
+        }
+        else { @() }
+        $succeededZoneGroups = @($zoneGroups | Where-Object {
+                $_.provisioningState -eq 'Succeeded' -and @($_.privateDnsZoneConfigs).Count -gt 0
+            })
         $dnsConfigs = if ($pe.PSObject.Properties.Name -contains 'customDnsConfigs' -and $pe.customDnsConfigs) { @($pe.customDnsConfigs) } else { @() }
         $dnsCount = @($dnsConfigs | Where-Object { ($_.PSObject.Properties.Name -contains 'fqdn' -and $_.fqdn) -or ($_.PSObject.Properties.Name -contains 'ipAddresses' -and @($_.ipAddresses).Count) }).Count
-        $ok = $approved -and $dnsCount -gt 0
+        $dnsConfigured = $succeededZoneGroups.Count -gt 0 -or $dnsCount -gt 0
+        $ok = $peState -eq 'Succeeded' -and $approved -and $dnsConfigured
         $peSubnetId = if ($pe.PSObject.Properties.Name -contains 'subnet' -and $pe.subnet -and $pe.subnet.id) { $pe.subnet.id } else { '' }
         $out.Add((New-CheckResult -Id "private-endpoint-$($pe.name)" -Name "private endpoint $($pe.name)" -Status ($ok ? 'Pass' : 'Fail') -Fr 'FR3.6d' `
-                    -Detail "approved=$approved dnsConfigs=$dnsCount subnet=$peSubnetId" `
-                    -Remediation ($ok ? '' : 'Fix private DNS zone links / VNet DNS.') `
-                    -Data ([pscustomobject]@{ name = $pe.name; approved = $approved; dnsCount = $dnsCount; id = $pe.id })))
+                    -Detail "state=$peState approved=$approved succeededDnsZoneGroups=$($succeededZoneGroups.Count) customDnsConfigs=$dnsCount subnet=$peSubnetId" `
+                    -Remediation ($ok ? '' : 'Ensure the private endpoint is Succeeded, its connection is Approved, and it has a Succeeded private DNS zone group or valid custom DNS configuration. Then verify the referenced zone is linked to the configured VNet.') `
+                    -Data ([pscustomobject]@{
+                            name                   = $pe.name
+                            provisioningState      = $peState
+                            approved               = $approved
+                            succeededDnsZoneGroups = $succeededZoneGroups.Count
+                            customDnsConfigCount   = $dnsCount
+                            resourceGroup          = $peResourceGroup
+                            id                     = $pe.id
+                        })))
     }
     if (-not @($pes).Count) {
         if ($expectedPeCount -gt 0) {

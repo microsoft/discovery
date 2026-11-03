@@ -31,7 +31,7 @@ requirements specification.
 Supporting implementation:
 
 - [OnboardingCommon.psm1](lib/OnboardingCommon.psm1) — configuration, Azure CLI, reporting,
-  quota, CIDR and PIM helpers.
+  offline dry-run plans, quota, CIDR and PIM helpers.
 - [dependency-spec.json](stage3-validation/dependency-spec.json) — Stage 3 profile/check mapping.
 - [Managed VNet planning form](stage1-planning/discovery-resource-planning-form-managed-vnet.xlsx)
   and [BYO VNet planning form](stage1-planning/discovery-resource-planning-form-byo-vnet.xlsx).
@@ -44,6 +44,9 @@ Supporting implementation:
 - Each stage stops on its first hard failure and exits non-zero on a `NO-GO` verdict.
 - `-JsonPath` produces machine-readable JSON and a sibling Markdown report.
 - `-PassThru` returns result objects for tests and composition.
+- Stages 2-5 support offline `-DryRun`: no Azure calls, `Skip` results and a `PLAN`
+  verdict rather than readiness or certification. See the user guide for commands.
+- In dry-run mode, `-PassThru` takes precedence over `-JsonPath` and writes no reports.
 - Stage 2 and Stage 4 write persistent Azure resources. Stage 3 is read-only unless `-WithVm` is
   explicitly used.
 - Shared logic belongs in `lib/OnboardingCommon.psm1`; stage-specific orchestration stays in the
@@ -54,6 +57,7 @@ Supporting implementation:
 
 The Pester suites are:
 
+- [DryRun.Tests.ps1](../tests/DryRun.Tests.ps1)
 - [OnboardingCommon.Tests.ps1](../tests/OnboardingCommon.Tests.ps1)
 - [CommonContracts.Tests.ps1](../tests/CommonContracts.Tests.ps1)
 - [DeploymentRegression.Tests.ps1](../tests/DeploymentRegression.Tests.ps1)
@@ -70,3 +74,13 @@ The Pester suites are:
 Run the applicable suites from `utilities/onboarding-tool` with PowerShell 7. Also run PowerShell
 parser checks, JSON/schema validation where relevant, workbook structural checks after editing
 planning forms, and `git diff --check`.
+
+For example, run the dry-run suite from that directory:
+
+```powershell
+$result = Invoke-Pester -Script .\tests\DryRun.Tests.ps1 -PassThru
+if ($result.FailedCount -gt 0) { throw 'Dry-run tests failed.' }
+```
+
+Run each suite in a separate PowerShell process when checking all suites, so extracted
+stage functions and mocks don't leak between suites.

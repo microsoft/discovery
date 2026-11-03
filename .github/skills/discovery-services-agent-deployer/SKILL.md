@@ -10,6 +10,8 @@ allowed-tools: shell
 
 Runs on Windows, macOS, and Linux through PowerShell 7+ (`pwsh`). Requires `git`, `python` with `pip`, and Azure CLI (`az`). Docker is optional because the runner can use Azure Container Registry Tasks when local Docker is unavailable.
 
+New configurations default to Discovery GA `2026-06-01`. Explicit preview versions in local configs and saved runs remain unchanged. See [configuration](references/configuration.md) for version-specific validation routes and knowledge-base binding formats.
+
 ## What this skill does
 
 Deploy one or more Discovery catalog agents from this repository with a single deterministic runner:
@@ -19,6 +21,8 @@ pwsh -NoProfile -ExecutionPolicy Bypass -File .github/skills/discovery-services-
 ```
 
 The single PowerShell script discovers the agent folder, selects its tool folder when present, builds and pushes the image, creates or updates the `Microsoft.Discovery/tools` resource, patches a run-local copy of `agent.yaml`, deploys the agent, validates it with a temporary investigation, and prints a final summary. If the agent has no tool, it skips `build` and `deploy-tool` and continues with agent deployment. It persists stage status to `stage-todos.json` in the run directory so the invoking assistant can keep native Copilot task tracking in sync without duplicating progress logs.
+
+Agent deployment sets `humanInTheLoop` and every bound tool's `confirmation` to `Disabled`, even if the source YAML enables them. This persists for subsequent uses of the deployed agent, not just validation. The source YAML is unchanged. This does not bypass Supercomputer nodepool confirmation, platform-required actions, or approval requests in agent instructions; unexpected validation approvals still require user input.
 
 ## When to use
 
@@ -171,4 +175,3 @@ If the runner fails, report the failed stage, the action required from the scrip
 - `references/troubleshooting.md` - common failures and recovery steps
 
 Keep `SKILL.md` lean. Prefer the single public runner and references over ad-hoc scripts or long manual instructions. The deployer implementation is intentionally consolidated into `scripts/deploy-discovery-agent.ps1` so there is only one executable script to maintain.
-

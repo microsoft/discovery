@@ -7,6 +7,7 @@ Script: `../../scripts/stage4-deployment/stage4_deploy.ps1`
 Deploy the platform in dependency order and, when a step fails, surface the true cause with a specific remediation instead of a raw ARM error. Supplied Stage 3 reports must be GO; omitting the reports or supercomputer profile coverage only produces a warning. Reports are not bound to the current config, and static GO does not prove working egress. Uses api-version 2026-06-01 for all `Microsoft.Discovery` ARM resources and the workspace data plane.
 
 ## Inputs
+- `-DryRun` optionally previews deployment or recovery offline; `-JsonPath` writes plan reports unless `-PassThru` is set.
 - `-ConfigPath <config.json>`, optional `-ReadinessReport` with one or more GO report paths. Optional `-NoBicep` to force the per-resource ARM PUT sequence, or a custom `-BicepPath` / `-ParametersPath`.
 - Recovery mode: `-Recovery -Subscription <id> -ResourceGroup <name> -Workspace <name>`.
 
@@ -20,17 +21,23 @@ submitting a deployment. A missing workspace is returned as the structured
 The supercomputer `outboundType` comes from the Stage 1 planning decision `network.outboundType` (default `UserDefinedRouting`); it is passed straight through to the `outboundType` template parameter. `UserDefinedRouting` (forced tunneling) requires egress to route through the customer firewall/NVA and a separate management subnet (spare role / `managementSubnet`, delegated to `Microsoft.ContainerService/managedClusters`) passed as `managementSubnetId` for AKS API-server VNet integration. With `LoadBalancer`, `managementSubnetId` is omitted. The managedcluster subnet itself must never be delegated; the `deploy-subnet-topology` pre-flight enforces both rules before submit.
 
 ## Behavior
+- `-DryRun` describes deployment or targeted `-Recovery` offline, before login, readiness
+  gates, Bicep or ARM execution. It makes no Azure calls and is not Azure what-if.
+  Optional `-JsonPath` writes JSON and Markdown with verdict `PLAN` and `Skip` results;
+  `-PassThru` returns plan results only. Exit 0 means plan generation, not deployment success.
 - Deploy in order, gating each on Succeeded, then run true-state detection and, on failure, the error-remediation engine.
 - Log resource, provisioning state, and matched remediation; exit non-zero (FR4.6).
 - Offer the targeted re-PUT recovery path for a workspace-only failure.
 
 ## Output
+- Dry run: `Skip` results and optional JSON/Markdown reports with verdict `PLAN`; no Bicep submission or ARM changes.
 - JSON: per-step resource + state + remediation.
 - Human: ordered deploy log with the go/no-go at each gate.
 
 ## Exit codes
-- 0 = all steps green.
-- Non-zero = at least one failure (see report).
+- 0 = all live steps green, or offline plan generation succeeds with `-DryRun`.
+- Dry run doesn't prove deployment success.
+- Non-zero = a live step fails, or config loading or report writing fails. Config errors appear on the console without a plan.
 
 ## Folded steps
 Each concern ran as a separate sub-script before consolidation; the logic now lives in `stage4_deploy.ps1`. This stage and Stage 2 are the only writers of platform resources.
@@ -52,9 +59,9 @@ to activate the role. Eligible-but-inactive does not fail the completed deployme
 principals and managed identities keep standard assignments. Other assignment failures are Warn.
 The workspace `publicNetworkAccess` comes from `workspace.publicNetworkAccess` (default `Enabled`) and is applied on the bicep deploy, the direct workspace PUT, and the recovery re-PUT.
 The immutable `NetworkIsolation` tag comes from `workspace.networkIsolation` (default `true`) and is applied by both Bicep and direct workspace deployment.
-Region co-location (pre-flight): the supercomputer `location` (from `controlPlaneRegion`) must equal the region of the BYO VNet that holds the managedcluster/nodepool subnets. Discovery validates the node pool `SubnetId` against the supercomputer's primary region, and `discovery.overridemrgregion` (workloadRegion) does not relax that check. The chosen region must also be a Discovery-creatable region: creation is rejected in some regions (e.g. eastus2 returns "Creation of new Supercomputer resources is not supported in region") even though the ARM provider location list advertises them; eastus is confirmed creatable. So the BYO VNet must live in a creatable region. The script resolves the VNet region from the subnet id and fails fast with a RegionMismatch remediation before the PUT. Region is immutable, so a mismatch requires setting `controlPlaneRegion` to a creatable VNet region, deleting the failed supercomputer, and re-running (a plain re-PUT cannot move it).
-- RegionMismatch on SubnetId: set controlPlaneRegion = the managedcluster/nodepool VNet region (which must itself be a Discovery-creatable region); delete the failed supercomputer and re-run.
-- Creation not supported in region: the region is not Discovery-creatable for this resource type; place the BYO VNet and set controlPlaneRegion to a creatable region (eastus confirmed; eastus2 rejected despite being advertised).
+Region alignment (pre-flight): Discovery resource `location` comes from `controlPlaneRegion` and can differ from the VNet region. All resources in the managed resource groups must share `workloadRegion`, set by `discovery.overridemrgregion` on the supercomputer and workspace. The script resolves each deployment subnet's VNet region and checks it against `workloadRegion` before either Bicep or ARM submission. An unreadable VNet or a mismatch returns `deploy-network-region` and stops deployment.
+- RegionMismatch on SubnetId: set `workloadRegion` to the VNet/subnet region, or use subnets in `workloadRegion`. Existing managed resources may need to be recreated to change region.
+- Creation not supported in region: select a Discovery-creatable `controlPlaneRegion` for the affected resource type. This does not require moving the VNet or changing `workloadRegion`.
 
 ### true_state_detection — FR4.3
 Allow 15-30 minutes for the supercomputer and up to about an hour for the workspace; plan one to two hours overall. Deployment/recovery callers use a 120-minute resource-state polling timeout per resource; this is not a guaranteed completion time.
@@ -66,8 +73,8 @@ Catch the case where the ARM resource list shows Succeeded while a Foundry accou
 ### error_remediation_engine — FR4.4
 Match the ARM error signature and emit the specific remediation:
 - `InsufficientQuota` (Tokens Per Minute) on a managed-RG model deployment → not enough free gpt-5.4 GlobalStandard TPM in the workload region (workspace needs 250K, the chat model 200K) → free or request quota, then re-run (Stage 1 `model-quota` catches this up front).
-- `Creation of new X resources is not supported in region` → the target region is not Discovery-creatable for that resource type (ARM advertises more locations than the service allows) → deploy into a creatable region (eastus confirmed; eastus2 rejected) and place the BYO VNet there so the supercomputer stays co-regional with its node pool subnet.
-- `RegionMismatch` on supercomputer/nodePool `SubnetId` → supercomputer location differs from the BYO VNet/subnet region → set controlPlaneRegion to the VNet region so the supercomputer is co-regional with its subnets, delete the failed supercomputer, and re-run (region is immutable).
+- `Creation of new X resources is not supported in region` → the target control-plane region is not Discovery-creatable for that resource type → select a supported `controlPlaneRegion`; keep the VNet and MRG resources aligned in `workloadRegion`.
+- `RegionMismatch` on supercomputer/nodePool `SubnetId` → the MRG workload region differs from the VNet/subnet region → align `workloadRegion` and the VNet; `controlPlaneRegion` can differ.
 - `AKSCapacityHeavyUsage` / `InternalServerError` on AKS create → region capacity for API Server VNet Integration → retry, or deploy workload in a region with capacity and global-peer to the firewall.
 - Repeated `AZFWApplicationRule` deny on packages.microsoft.com → firewall source scoped to the wrong CIDR → add the real spoke CIDR and allow the bootstrap FQDNs.
 - 409 `FlagMustBeSetForRestore` → Foundry account soft-deleted then recreated → set Restore=true, or purge and wait before re-PUT.

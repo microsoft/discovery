@@ -15,6 +15,14 @@ it performs. Specs only — no implementation. Every spec maps to the FR ids in
 - Every script emits JSON for automation and a human-readable report, and exits non-zero on
   any failure so it can gate a pipeline.
 - Every failure returns the exact remediation, not just a red mark.
+- Stages 2-5 accept `-DryRun` for an offline intent plan; Stage 1 doesn't support this switch.
+  Dry run checks the config's required fields and RBAC mode without Azure CLI or HTTP calls.
+  It doesn't evaluate deployment prerequisites or live state and isn't Azure what-if.
+- A dry run returns `Skip` results and verdict `PLAN`. Exit 0 means plan generation only.
+  Missing, malformed or invalid config returns non-zero. A plan can't satisfy the Stage 4 readiness gate.
+- `-JsonPath` optionally writes a dry-run JSON report and sibling Markdown report.
+  `-PassThru` returns results only and takes precedence over `-JsonPath`; no reports or execution artifacts are written.
+  Config fields and schemas don't change.
 - Read-only stays read-only. Only Stage 2 and Stage 4 write platform resources; Stage 3
   writes only its ephemeral test VM.
 

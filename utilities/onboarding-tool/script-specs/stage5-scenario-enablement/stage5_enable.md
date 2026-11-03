@@ -7,20 +7,29 @@ Script: `../../scripts/stage5-scenario-enablement/stage5_enable.ps1`
 Prove the platform works end to end: a Discovery Q&A agent (no Discovery tool bound) answers a scientific prompt. A completed run with no assistant text does not certify anything. In-network connectivity probing (formerly FR5.1) moves to Stage 3; tool creation and binding (formerly FR5.2) are out of scope.
 
 ## Inputs
+- `-DryRun` optionally previews actions offline; `-JsonPath` writes plan reports unless `-PassThru` is set.
+- `-PassThru` returns result objects for either mode instead of the final report and exit gate.
 - `-ConfigPath <config.json>`; workspace, project, and chat-model deployment names (overridable with `-Workspace`, `-Project`, `-ChatModel`).
 - Optional `-Prompt` to replace the default scientific question.
 
 ## Behavior
+- `-DryRun` describes connectivity, agent/conversation creation, prompt execution and
+  certification offline, honoring target and prompt overrides. No Azure calls, inference,
+  state or response artifacts are produced. Optional `-JsonPath` writes JSON and Markdown
+  with verdict `PLAN` and `Skip` results; `-PassThru` returns results only. Exit 0 means
+  plan generation, never certification. Missing or invalid config fails.
 - Probe the workspace data plane, then create agent, create investigation + conversation, send prompt + poll, verify the agent answered.
 - Emit the per-service verification summary and a certification verdict.
 
 ## Output
+- Dry run: `Skip` results and optional JSON/Markdown reports with verdict `PLAN`; no state, response or certification artifacts.
 - JSON: per-step results plus certification verdict.
 - Human: certification report.
 
 ## Exit codes
-- 0 = certified (all steps green).
-- Non-zero = at least one failure (see report).
+- 0 = certified in live mode, or offline plan generation succeeds with `-DryRun`.
+- Dry run never certifies the platform.
+- Non-zero = a live check fails, or config loading or report writing fails. Config errors appear on the console without a plan.
 
 ## Folded steps
 Each step ran as a separate sub-script before consolidation; the logic now lives in `stage5_enable.ps1`.

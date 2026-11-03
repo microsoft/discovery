@@ -26,7 +26,16 @@ def test_empty_change_set_is_not_markdown_only(tmp_path: Path):
 
 
 def test_dockerfile_names_get_docker_label(tmp_path: Path):
-    for name in ("Dockerfile", "Dockerfile.cpu", "build.windows.dockerfile"):
+    for name in (
+        "Dockerfile",
+        "Dockerfile.cpu",
+        "build.windows.dockerfile",
+        "Containerfile",
+        "Containerfile.cpu",
+        "build.windows.containerfile",
+        "build.windows.containerfile.in",
+        "build.windows.dockerfile.in",
+    ):
         summary = classify(tmp_path, [f"agents/demo/tools/demo/{name}"])
         assert summary.has_dockerfile, name
 

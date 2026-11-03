@@ -13,6 +13,15 @@ if ($errors.Count) { throw ($errors.Message -join [Environment]::NewLine) }
 foreach ($name in @(
         'Get-WorkspacePublicNetworkAccess',
         'Get-WorkspaceNetworkIsolation',
+        'Get-ObjProp',
+        'Get-ConfigName',
+        'Get-Stage4VNetName',
+        'Get-SubnetIdByRole',
+        'Get-VNetRegionFromSubnetId',
+        'Get-Stage4NetworkRegionFailures',
+        'Get-ManagedIdentityId',
+        'Get-StorageAccountId',
+        'New-Stage4BicepParamFile',
         'Resolve-DiscoveryError',
         'Get-DiscoveryArmState',
         'Get-FoundryAccountState',
@@ -24,6 +33,78 @@ foreach ($name in @(
         }, $true)
     if (-not $functionAst) { throw "$name was not found in $stage4Path." }
     Invoke-Expression $functionAst.Extent.Text
+}
+
+Describe 'Stage 4 workload and VNet region alignment' {
+    BeforeEach {
+        $configPath = Join-Path (Split-Path -Parent $stage4Path) '..\examples\sample-config.json'
+        $config = Get-Content -LiteralPath $configPath -Raw | ConvertFrom-Json
+        $config.controlPlaneRegion = 'eastus'
+        $config.workloadRegion = 'uksouth'
+        Mock Get-VNetRegionFromSubnetId { 'uksouth' }
+    }
+
+    It 'allows separate control-plane and workload regions' {
+        @(Get-Stage4NetworkRegionFailures -Config $config -ResourceGroup $config.resourceGroup).Count | Should Be 0
+    }
+
+    It 'preserves same-region deployments' {
+        $config.controlPlaneRegion = 'uksouth'
+
+        @(Get-Stage4NetworkRegionFailures -Config $config -ResourceGroup $config.resourceGroup).Count | Should Be 0
+    }
+
+    It 'rejects a subnet in the control-plane region instead of the workload region' -TestCases @(
+        @{ Role = 'managedcluster' },
+        @{ Role = 'nodepool' },
+        @{ Role = 'agent-containerapp' },
+        @{ Role = 'workspace-containerapp' },
+        @{ Role = 'search-containerapp' },
+        @{ Role = 'private-endpoints' },
+        @{ Role = 'spare' }
+    ) {
+        param($Role)
+        $script:mismatchedRole = $Role
+        Mock Get-VNetRegionFromSubnetId { 'eastus' } -ParameterFilter { $SubnetId -like "*/snet-$script:mismatchedRole" }
+
+        $failures = @(Get-Stage4NetworkRegionFailures -Config $config -ResourceGroup $config.resourceGroup)
+
+        $failures.Count | Should Be 1
+        $failures[0].status | Should Be 'Fail'
+        $failures[0].data.role | Should Be $Role
+        $failures[0].data.expected | Should Be 'uksouth'
+        $failures[0].data.actual | Should Be 'eastus'
+        $failures[0].remediation | Should Match 'controlPlaneRegion can differ'
+    }
+
+    It 'fails explicitly when the VNet region cannot be read' {
+        Mock Get-VNetRegionFromSubnetId { '' }
+
+        $failures = @(Get-Stage4NetworkRegionFailures -Config $config -ResourceGroup $config.resourceGroup)
+
+        ($failures.Count -gt 0) | Should Be $true
+        $failures[0].detail | Should Match 'Could not resolve VNet region'
+    }
+
+    It 'does not validate the unused management subnet with LoadBalancer egress' {
+        $config.network.outboundType = 'LoadBalancer'
+        Mock Get-VNetRegionFromSubnetId { 'eastus' } -ParameterFilter { $SubnetId -like '*/snet-spare' }
+
+        @(Get-Stage4NetworkRegionFailures -Config $config -ResourceGroup $config.resourceGroup).Count | Should Be 0
+    }
+
+    It 'keeps the control-plane location and MRG workload region separate in Bicep parameters' {
+        $path = New-Stage4BicepParamFile -Config $config -ResourceGroup $config.resourceGroup -Location $config.controlPlaneRegion
+        try {
+            $parameters = Get-Content -LiteralPath $path -Raw | ConvertFrom-Json
+
+            $parameters.parameters.location.value | Should Be 'eastus'
+            $parameters.parameters.workloadRegion.value | Should Be 'uksouth'
+        }
+        finally {
+            Remove-Item -LiteralPath $path -Force
+        }
+    }
 }
 
 Describe 'Stage 4 workspace configuration defaults' {
@@ -130,6 +211,13 @@ Describe 'Resolve-DiscoveryError' {
             Should Be 'Creation not supported in region'
         (Resolve-DiscoveryError -ErrorText 'RegionMismatch for dependent resource SubnetId').errorSignature |
             Should Match 'RegionMismatch'
+    }
+
+    It 'does not require changing the control-plane region to resolve a subnet-region mismatch' {
+        $result = Resolve-DiscoveryError -ErrorText 'RegionMismatch for dependent resource SubnetId'
+
+        $result.remediation | Should Match 'set workloadRegion'
+        $result.remediation | Should Not Match 'set controlPlaneRegion'
     }
 
     It 'maps policy failures by affected resource type' {
