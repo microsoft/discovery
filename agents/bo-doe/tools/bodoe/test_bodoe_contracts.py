@@ -18,7 +18,7 @@ Contracts verified here:
 * ``Objective`` auto-transform detection latches and round-trips.
 * Failed experiments are recorded, excluded from regression, and penalized.
 
-Run:  python scripts/test_bodoe_contracts.py
+Run:  python test_bodoe_contracts.py   (or: python -m pytest test_bodoe_contracts.py)
 """
 from __future__ import annotations
 
@@ -651,6 +651,154 @@ def t_reproducibility():
     assert np.allclose(run(), run()), "identical seeds must give identical batches"
 
 
+# --------------------------------------------------------------------------
+# Regression tests for review findings on PR #290
+# --------------------------------------------------------------------------
+def t_loo_r2_is_out_of_sample():
+    """In-sample R^2 of an interpolating GP is ~1 even on pure noise."""
+    from models import fit_gp
+    rng = np.random.default_rng(0)
+    U = rng.random((20, 3))
+    noise = fit_gp(U, rng.normal(size=20), seed=0).loo_r2()
+    assert noise < 0.3, f"pure noise must not look predictive (loo_r2={noise:.3f})"
+    U = rng.random((30, 2))
+    smooth = fit_gp(U, np.sin(3 * U[:, 0]) + U[:, 1] ** 2, seed=0).loo_r2()
+    assert smooth > 0.8, f"smooth response should be predictive (loo_r2={smooth:.3f})"
+
+
+def t_loo_r2_matches_brute_force():
+    """Closed form equals refitting n times with the hyperparameters fixed."""
+    from sklearn.gaussian_process import GaussianProcessRegressor
+    from models import fit_gp
+    rng = np.random.default_rng(1)
+    U = rng.random((15, 2))
+    y = np.sin(4 * U[:, 0]) + 0.1 * rng.normal(size=15)
+    gp = fit_gp(U, y, backend="sklearn", seed=0)
+    z = (y - gp._mu) / gp._sd
+    pred = np.empty(15)
+    for i in range(15):
+        m = np.arange(15) != i
+        g = GaussianProcessRegressor(kernel=gp._model.kernel_, optimizer=None,
+                                     alpha=gp._model.alpha, normalize_y=False)
+        g.fit(U[m], z[m])
+        pred[i] = g.predict(U[i:i + 1])[0] * gp._sd + gp._mu
+    brute = 1 - np.sum((y - pred) ** 2) / np.sum((y - y.mean()) ** 2)
+    assert abs(gp.loo_r2() - brute) < 1e-6, (gp.loo_r2(), brute)
+
+
+def t_acquisition_names_never_fall_back():
+    """Multi-objective or misspelt names must not silently become 'std'."""
+    for name in ("parego", "ehvi", "qparego", "EHVI"):
+        try:
+            acquisition(name, np.zeros(3), np.ones(3), best=0.0)
+        except ValueError:
+            pass
+        else:
+            raise AssertionError(f"acquisition('{name}') must raise")
+    sp = make_space({"a": (0, 1), "b": (0, 1)})
+    rng = np.random.default_rng(0)
+    X = rng.random((12, 2))
+    Y = np.column_stack([(X[:, 0] - .3) ** 2, X[:, 1]])
+    P = sp.sample(200, seed=1)
+
+    def raw(acq):
+        o = BayesianOptimizer(sp, [Objective("f1", "minimize", transform=None),
+                                   Objective("f2", "maximize", transform=None)],
+                              acquisition_fn=acq, seed=0, n_candidates=200)
+        o.tell(X, Y)
+        o.fit()
+        return o._raw_score(P, o._make_context())
+    assert np.allclose(raw("EHVI"), raw("ehvi"))
+    assert np.allclose(raw("qNEHVI"), raw("ehvi"))
+    assert np.allclose(raw("qparego"), raw("parego"))
+    for bad, objs in (("nope", [Objective("y")]), ("ehvi", [Objective("y")])):
+        try:
+            BayesianOptimizer(sp, objs, acquisition_fn=bad)
+        except ValueError:
+            pass
+        else:
+            raise AssertionError(f"acquisition_fn='{bad}' must raise")
+
+
+def t_pareto_plot_respects_directions():
+    from plots import _directed_front, plot_pareto
+    import tempfile
+    Y = np.array([[1.0, 10.0], [2.0, 20.0], [3.0, 5.0]])   # min f1, max f2
+    front = _directed_front(Y, np.array([1.0, -1.0]))
+    assert sorted(map(tuple, front.tolist())) == [(1.0, 10.0), (2.0, 20.0)]
+    objs = [Objective("f1", "minimize"), Objective("f2", "maximize")]
+    path = os.path.join(tempfile.mkdtemp(), "p.png")
+    assert os.path.exists(plot_pareto(Y, objs, path))
+
+
+def t_final_results_is_strict_json():
+    import json
+    import tempfile
+    import io_utils
+    tmp = tempfile.mkdtemp()
+    io_utils.quick_setup(tmp, os.path.join(tmp, "o"), os.path.join(tmp, "w"))
+    path = io_utils.save_final_results(
+        {"r2": float("nan"), "x": np.float64("inf"), "arr": np.array([1.0, np.nan])})
+
+    def reject(c):
+        raise ValueError(f"non-standard JSON constant {c}")
+    data = json.loads(open(path, encoding="utf-8").read(), parse_constant=reject)
+    assert data["results"] == {"r2": None, "x": None, "arr": [1.0, None]}
+    # Non-float64 NumPy floats go through the encoder itself.
+    assert json.dumps([np.float32("nan")], cls=io_utils.JSONSafeEncoder) == "[null]"
+
+
+def t_ccd_orthogonal_and_inside_bounds():
+    from doe import design_diagnostics, doe_central_composite
+    for k, n0 in ((2, 4), (3, 4), (4, 6)):
+        sp = make_space([(-1.0, 1.0)] * k)
+        D = doe_central_composite(sp, alpha="orthogonal", center_points=n0)
+        Q = D ** 2 - (D ** 2).mean(axis=0)
+        assert abs(Q[:, 0] @ Q[:, 1]) < 1e-9, f"k={k}: quadratic terms not orthogonal"
+        assert np.all(sp.is_feasible(D))
+        assert np.isclose(np.abs(D).max(), 1.0), "axial points should sit on the bounds"
+    try:
+        doe_central_composite(make_space([(0, 1)] * 2), face="circumscribed")
+    except ValueError:
+        pass
+    else:
+        raise AssertionError("circumscribed CCD would leave the bounds; must raise")
+    mx = make_mixture_space(["A", "B", "C"], total=10.0)
+    d_eff = design_diagnostics(mx, mx.sample(12, seed=0))["d_efficiency_first_order"]
+    assert np.isfinite(d_eff) and d_eff > 0, d_eff
+
+
+def t_ehvi_counts_improvement_beyond_ideal():
+    from acquisition import expected_hypervolume_improvement
+    front = np.zeros((1, 3))
+    ref = np.ones(3)
+    e = expected_hypervolume_improvement(np.full((1, 3), -1.0), np.full((1, 3), 1e-9),
+                                         front, ref)
+    assert abs(e[0] - 7.0) < 1e-6, e
+    # A point inside the region the front already dominates gains nothing.
+    e = expected_hypervolume_improvement(np.full((1, 3), 0.5), np.full((1, 3), 1e-9),
+                                         front, ref)
+    assert abs(e[0]) < 1e-9, e
+    # A user reference point that no observation meets yet: the front
+    # dominates nothing, so the improvement is the whole box [s, ref].
+    e = expected_hypervolume_improvement(np.array([[0.5, 0.5, 0.0]]),
+                                         np.full((1, 3), 1e-9),
+                                         np.array([[0.0, 0.0, 2.0]]), ref)
+    assert abs(e[0] - 0.25) < 1e-6, e
+
+
+def t_integer_factors_are_suggested_as_integers():
+    from optimize import suggest_next
+    sp = make_space({"n": (1, 10), "t": (0, 1)}, kinds=["integer", "continuous"])
+    rng = np.random.default_rng(0)
+    X = np.column_stack([rng.integers(1, 11, 10), rng.random(10)]).astype(float)
+    out = suggest_next(X, (X[:, 0] - 6.3) ** 2 + X[:, 1], sp,
+                       [Objective("y", "minimize")], q=3, seed=0)
+    Xn = np.asarray(out["X"])
+    assert np.allclose(Xn[:, 0], np.round(Xn[:, 0])), Xn
+    assert [s["n"] for s in out["suggestions"]] == Xn[:, 0].astype(int).tolist()
+
+
 def main():
     tests = [
         ("rank/order preserving", t_rank_order_preserving),
@@ -687,6 +835,14 @@ def main():
         ("library/cold start spread", t_diverse_subset_cold_start),
         ("library/input guards", t_library_guards),
         ("repro/deterministic given seed", t_reproducibility),
+        ("model/loo r2 is out of sample", t_loo_r2_is_out_of_sample),
+        ("model/loo r2 matches brute force", t_loo_r2_matches_brute_force),
+        ("acq/names never fall back", t_acquisition_names_never_fall_back),
+        ("plot/pareto respects directions", t_pareto_plot_respects_directions),
+        ("io/final results strict json", t_final_results_is_strict_json),
+        ("doe/ccd orthogonal + in bounds", t_ccd_orthogonal_and_inside_bounds),
+        ("acq/ehvi beyond ideal point", t_ehvi_counts_improvement_beyond_ideal),
+        ("space/integer suggestions", t_integer_factors_are_suggested_as_integers),
     ]
     print("Component-contract tests\n")
     for name, fn in tests:
@@ -697,3 +853,8 @@ def main():
 
 if __name__ == "__main__":
     sys.exit(main())
+else:
+    # Make every t_* check collectable by pytest as test_*.
+    for _name, _fn in list(globals().items()):
+        if _name.startswith("t_") and callable(_fn):
+            globals()["test_" + _name[2:]] = _fn

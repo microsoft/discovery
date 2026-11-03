@@ -2,9 +2,10 @@
 
 Two backends are supported and selected automatically:
 
-* ``"botorch"`` -- BoTorch/GPyTorch ``SingleTaskGP`` with input normalization and
-  outcome standardization. Preferred when ``torch`` is installed; enables exact
-  Monte-Carlo batch acquisitions (qEI, qNEHVI).
+* ``"botorch"`` -- BoTorch/GPyTorch ``SingleTaskGP`` fitted on unit-cube inputs
+  and standardized outputs. Preferred when ``torch`` is installed. Acquisitions
+  are computed by this package from the GP posterior; for BoTorch's own
+  Monte-Carlo acquisitions (qLogEI, qLogNEHVI) call BoTorch directly.
 * ``"sklearn"`` -- scikit-learn ``GaussianProcessRegressor`` with an ARD Matern
   5/2 kernel plus a white-noise term. Dependency-light fallback that runs
   anywhere; used for analytic acquisitions and ParEGO-style multi-objective BO.
@@ -126,7 +127,15 @@ class GPSurrogate:
             torch.manual_seed(self.seed)
         tx = torch.as_tensor(X, dtype=torch.double)
         tz = torch.as_tensor(z, dtype=torch.double).unsqueeze(-1)
-        model = SingleTaskGP(tx, tz)
+        # Inputs are already in the unit cube and outputs already standardized
+        # by ``fit``, so BoTorch's own transforms are disabled. That keeps the
+        # GP's prior mean and covariance in the same space as ``z``, which the
+        # closed-form leave-one-out diagnostic relies on.
+        kwargs = {"outcome_transform": None, "input_transform": None}
+        if self.noise is not None:
+            yvar = float((self.noise / self._sd) ** 2)
+            kwargs["train_Yvar"] = torch.full_like(tz, max(yvar, 1e-12))
+        model = SingleTaskGP(tx, tz, **kwargs)
         mll = ExactMarginalLogLikelihood(model.likelihood, model)
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
@@ -153,12 +162,42 @@ class GPSurrogate:
         return (mean, std) if return_std else mean
 
     # ----------------------------------------------------------- diagnostics
+    def _train_prior(self):
+        """Prior mean vector and noisy covariance at the training inputs (z units)."""
+        if self.backend == "botorch":  # pragma: no cover
+            import torch
+            tx = torch.as_tensor(self.X_, dtype=torch.double)
+            m = self._model
+            with torch.no_grad():
+                mean = m.mean_module(tx).reshape(-1).cpu().numpy()
+                K = m.covar_module(tx).to_dense().cpu().numpy()
+                noise = m.likelihood.noise.reshape(-1).cpu().numpy()
+            K = K + np.diag(np.broadcast_to(noise, (len(K),)))
+            return mean, K
+        gp = self._model
+        K = gp.kernel_(self.X_) + gp.alpha * np.eye(len(self.X_))
+        return np.zeros(len(self.X_)), K
+
     def loo_r2(self) -> float:
-        """Approximate leave-one-out :math:`R^2` (in-sample sanity check)."""
+        """Leave-one-out :math:`R^2` of the fitted GP.
+
+        Uses the exact closed form for GP leave-one-out predictions with the
+        fitted hyperparameters held fixed (Rasmussen & Williams 2006, eq. 5.12):
+        the residual for point ``i`` is ``[K^-1 (y - m)]_i / [K^-1]_ii``. Unlike
+        in-sample :math:`R^2`, which an interpolating GP pushes towards 1 even
+        on pure noise, this measures how well the surrogate predicts points it
+        has not seen.
+        """
         if self.X_ is None or len(self.X_) < 4:
             return float("nan")
-        mean = self.predict(self.X_, return_std=False)
-        ss_res = float(np.sum((self.y_ - mean) ** 2))
+        z = (self.y_ - self._mu) / self._sd
+        mean, K = self._train_prior()
+        try:
+            Kinv = np.linalg.inv(K)
+        except np.linalg.LinAlgError:
+            Kinv = np.linalg.pinv(K)
+        resid_z = (Kinv @ (z - mean)) / np.diag(Kinv)
+        ss_res = float(np.sum((resid_z * self._sd) ** 2))
         ss_tot = float(np.sum((self.y_ - self.y_.mean()) ** 2))
         return 1.0 - ss_res / ss_tot if ss_tot > 0 else float("nan")
 

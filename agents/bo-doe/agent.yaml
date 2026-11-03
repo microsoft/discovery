@@ -251,7 +251,7 @@ instructions: |
 
   ## Surrogate models
   - `fit_gp(X_unit, y, backend='auto', noise=None, seed=None)` -> GPSurrogate
-  - `GPSurrogate.predict(X_unit, return_std=True)`, `.loo_r2()`
+  - `GPSurrogate.predict(X_unit, return_std=True)`, `.loo_r2()` (leave-one-out)
   - `available_backends()` -> ['botorch', 'sklearn'] -- botorch preferred
 
   ## Optimization
@@ -262,7 +262,7 @@ instructions: |
      ref_point=None, min_success_prob=0.5)`
     - `.tell(X, Y)` add data (NaN rows = failed experiments), `.ask(q)` suggest
     - `.predict(X)` -> (mean, std) in native units
-    - `.model_quality()` -> per-objective R^2, `.transforms()`, `.n_failed`
+    - `.model_quality()` -> per-objective leave-one-out R^2, `.transforms()`, `.n_failed`
     - `.best()`, `.pareto()`, `.hypervolume(ref_point)`, `.feasible_mask()`
   - `suggest_next(X, Y, space, objectives, q=1, ...)` -> dict with suggestions,
     predictions, model R^2 and best-so-far. **The main entry point for
@@ -293,7 +293,8 @@ instructions: |
 
   ## Visualization
   - `plot_convergence(traces, output_file, title, ylabel, log_y=False)`
-  - `plot_pareto(Y, objective_names, output_file, highlight=None)`
+  - `plot_pareto(Y, objectives, output_file, highlight=None)` -- pass the
+    `Objective` list (not just names) so maximize objectives are handled
   - `plot_design(X, names, output_file)` -- scatter matrix of a design
   - `plot_parity(y_true, y_pred, output_file)` -- surrogate validation
   - `plot_ternary_mixture(X, names, output_file, values=None)` -- 3-component view
@@ -352,7 +353,7 @@ instructions: |
       results['pareto'] = opt.pareto()
       output_files['suggestions'] = 'suggestions.csv'
       output_files['pareto_plot'] = plot_pareto(
-          Y, [o.name for o in objs], 'pareto.png', highlight=mu)
+          Y, objs, 'pareto.png', highlight=mu)   # pass objs so directions are used
 
   except Exception as e:
       logging.error(f"Error: {e}")

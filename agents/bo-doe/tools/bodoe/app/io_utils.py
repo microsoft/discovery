@@ -18,19 +18,38 @@ _STATE = {"input": "/input", "output": "/output", "work": "/workdir"}
 
 
 class JSONSafeEncoder(json.JSONEncoder):
-    """JSON encoder that understands NumPy scalars/arrays and NaN-free floats."""
+    """JSON encoder that understands NumPy scalars and arrays."""
 
     def default(self, o):
         if isinstance(o, (np.integer,)):
             return int(o)
         if isinstance(o, (np.floating,)):
-            v = float(o)
-            return None if not np.isfinite(v) else v
+            v = float(o)        # float32/float16 reach here; float64 does not
+            return v if np.isfinite(v) else None
         if isinstance(o, np.ndarray):
             return o.tolist()
         if isinstance(o, (np.bool_,)):
             return bool(o)
         return super().default(o)
+
+
+def _json_safe(o):
+    """Recursively replace non-finite floats with ``None``.
+
+    ``json.JSONEncoder.default`` is never called for ``float`` or its subclass
+    ``np.float64``, so NaN/inf must be removed before encoding; otherwise the
+    file contains bare ``NaN`` tokens that strict JSON parsers reject.
+    """
+    if isinstance(o, dict):
+        return {k: _json_safe(v) for k, v in o.items()}
+    if isinstance(o, (list, tuple)):
+        return [_json_safe(v) for v in o]
+    if isinstance(o, np.ndarray):
+        return _json_safe(o.tolist())
+    if isinstance(o, (float, np.floating)):
+        v = float(o)
+        return v if np.isfinite(v) else None
+    return o
 
 
 def quick_setup(input_dir: str = "/input", output_dir: str = "/output",
@@ -55,16 +74,20 @@ def quick_setup(input_dir: str = "/input", output_dir: str = "/output",
 
 def save_final_results(results: dict, output_files: Optional[dict] = None,
                        file_descriptions: Optional[dict] = None) -> str:
-    """Write ``final_results.json`` -- MANDATORY at the end of every job."""
-    payload = {
+    """Write ``final_results.json`` -- MANDATORY at the end of every job.
+
+    Non-finite numbers (NaN, inf) are written as ``null`` so the file is
+    strict JSON.
+    """
+    payload = _json_safe({
         "results": results or {},
         "output_files": output_files or {},
         "file_descriptions": file_descriptions or {},
         "generated_at": datetime.now().isoformat(),
-    }
+    })
     path = os.path.join(_STATE["work"], "final_results.json")
     with open(path, "w", encoding="utf-8") as fh:
-        json.dump(payload, fh, indent=2, cls=JSONSafeEncoder)
+        json.dump(payload, fh, indent=2, cls=JSONSafeEncoder, allow_nan=False)
     logging.info("wrote %s", path)
     return path
 

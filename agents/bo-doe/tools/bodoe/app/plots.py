@@ -23,6 +23,11 @@ __all__ = [
 _DPI = 150
 
 
+def _directed_front(Y: np.ndarray, sign: np.ndarray) -> np.ndarray:
+    """Pareto front in native units; ``sign`` is +1 to minimize, -1 to maximize."""
+    return pareto_front(np.asarray(Y, dtype=float) * sign) * sign
+
+
 def plot_convergence(traces: dict, output_file: str = "convergence.png",
                      title: str = "Optimization convergence",
                      ylabel: str = "Best scalarized objective (lower is better)",
@@ -57,16 +62,36 @@ def plot_convergence(traces: dict, output_file: str = "convergence.png",
     return output_file
 
 
-def plot_pareto(Y: np.ndarray, objective_names: Sequence[str],
+def plot_pareto(Y: np.ndarray, objective_names: Sequence,
                 output_file: str = "pareto.png",
                 highlight: Optional[np.ndarray] = None,
-                title: str = "Objective space and Pareto front") -> str:
+                title: str = "Objective space and Pareto front",
+                directions: Optional[Sequence[str]] = None) -> str:
     """Scatter the observed objective space and highlight the Pareto front.
 
     For more than two objectives a pairwise grid of the first three is drawn.
+
+    Args:
+        Y: ``(n, n_obj)`` responses in native units.
+        objective_names: Axis labels, or the :class:`optimize.Objective` list
+            itself -- in which case each objective's direction is used.
+        output_file: Destination path.
+        highlight: Optional points (e.g. predicted suggestions) to mark.
+        title: Figure title.
+        directions: ``"minimize"``/``"maximize"`` per objective. Defaults to the
+            directions of ``Objective`` instances, else all ``"minimize"``.
+            Passing the wrong directions draws the wrong front.
     """
     Y = np.atleast_2d(np.asarray(Y, dtype=float))
     m = Y.shape[1]
+    names = [getattr(o, "name", o) for o in objective_names]
+    if directions is None:
+        directions = [getattr(o, "direction", "minimize") for o in objective_names]
+    if len(directions) != m or any(d not in ("minimize", "maximize")
+                                   for d in directions):
+        raise ValueError("directions must give 'minimize' or 'maximize' for "
+                         "every objective")
+    sign = np.array([1.0 if d == "minimize" else -1.0 for d in directions])
     pairs = [(0, 1)] if m == 2 else [(i, j) for i in range(min(m, 3))
                                      for j in range(i + 1, min(m, 3))]
     fig, axes = plt.subplots(1, len(pairs), figsize=(5.2 * len(pairs), 4.4),
@@ -74,15 +99,15 @@ def plot_pareto(Y: np.ndarray, objective_names: Sequence[str],
     for ax, (i, j) in zip(axes[0], pairs):
         ax.scatter(Y[:, i], Y[:, j], s=26, c="#9bb7d4", label="observed",
                    edgecolors="none")
-        front = pareto_front(Y[:, [i, j]])
+        front = _directed_front(Y[:, [i, j]], sign[[i, j]])
         ax.plot(front[:, 0], front[:, 1], "o-", c="#c0392b", ms=6, lw=1.6,
                 label="Pareto front")
         if highlight is not None:
             H = np.atleast_2d(highlight)
             ax.scatter(H[:, i], H[:, j], marker="*", s=180, c="#1e8449",
                        label="selected", zorder=5)
-        ax.set_xlabel(objective_names[i])
-        ax.set_ylabel(objective_names[j])
+        ax.set_xlabel(names[i])
+        ax.set_ylabel(names[j])
         ax.grid(alpha=0.3)
     axes[0][0].legend(frameon=False)
     fig.suptitle(title)

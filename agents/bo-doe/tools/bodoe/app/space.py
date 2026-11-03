@@ -157,6 +157,15 @@ class ParameterSpace:
             ok &= np.abs(X.sum(axis=1) - self.total) <= max(tol, 1e-6 * self.total)
         return ok
 
+    def snap(self, X: np.ndarray) -> np.ndarray:
+        """Round integer and categorical factors to their allowed values."""
+        X = np.atleast_2d(np.asarray(X, dtype=float)).copy()
+        lo, hi = self.bounds
+        for j, p in enumerate(self.parameters):
+            if p.kind in ("integer", "categorical"):
+                X[:, j] = np.clip(np.round(X[:, j]), np.ceil(lo[j]), np.floor(hi[j]))
+        return X
+
     def repair(self, X: np.ndarray) -> np.ndarray:
         """Project points into the feasible region.
 
