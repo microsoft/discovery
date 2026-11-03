@@ -12,6 +12,9 @@ Usage inside a job script::
     quick_finish()
 """
 
+import numpy as np
+import pandas as pd
+
 from acquisition import (acquisition, chebyshev_scalarization,
                          expected_hypervolume_improvement, expected_improvement,
                          hypervolume, hypervolume_improvement,
@@ -36,6 +39,8 @@ from space import (Parameter, ParameterSpace, make_mixture_space, make_space)
 __version__ = "1.0.0"
 
 __all__ = [
+    # re-exported so `from bodoe_utils import *` scripts can use np/pd directly
+    "np", "pd",
     # space
     "Parameter", "ParameterSpace", "make_space", "make_mixture_space",
     # doe

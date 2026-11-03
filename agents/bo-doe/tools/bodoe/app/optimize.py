@@ -252,6 +252,12 @@ class BayesianOptimizer:
         if not self.objectives:
             raise ValueError("at least one Objective is required")
         self.backend = resolve_backend(backend)
+        if acquisition_fn != "auto":
+            acquisition_fn = canonical_acquisition(acquisition_fn)
+            if (acquisition_fn in ("parego", "ehvi")
+                    and len(self.objectives) < 2):
+                raise ValueError(f"acquisition '{acquisition_fn}' needs two or "
+                                 "more objectives")
         self.acquisition_fn = acquisition_fn
         self.seed = seed
         self.rng = np.random.default_rng(seed)
@@ -402,7 +408,11 @@ class BayesianOptimizer:
         return np.column_stack(mus), np.column_stack(sds)
 
     def model_quality(self) -> dict:
-        """In-sample :math:`R^2` per objective -- a quick surrogate sanity check."""
+        """Leave-one-out :math:`R^2` per objective (see ``GPSurrogate.loo_r2``).
+
+        Computed in the modelling space (after the output transform), where the
+        GP is actually fitted.
+        """
         self._ensure_fit()
         return {o.name: float(m.loo_r2())
                 for o, m in zip(self.objectives, self._models)}
@@ -478,7 +488,7 @@ class BayesianOptimizer:
         idx = self.rng.integers(0, len(anchors), size=n_local)
         scale = 0.10 * (self.space.bounds[1] - self.space.bounds[0])
         loc = anchors[idx] + self.rng.normal(0.0, scale, size=(n_local, self.space.dim))
-        loc = self.space.repair(loc)
+        loc = self.space.snap(self.space.repair(loc))
         pool = np.vstack([glob, loc])
         pool = pool[self.space.is_feasible(pool)]
         return self._filter_likely_failures(pool)
@@ -560,7 +570,7 @@ class BayesianOptimizer:
         name = self.acquisition_fn
         if name in ("auto", "parego"):
             return self._parego(mu, sd, ctx)
-        if name in ("ehvi", "qnehvi", "qehvi"):
+        if name == "ehvi":
             # Build the reference front from the GP posterior mean at the
             # observed designs, not from the raw observations. Under
             # measurement noise a front built from raw values is optimistically
@@ -610,7 +620,7 @@ class BayesianOptimizer:
         """Canonical acquisition key actually in force."""
         if self.acquisition_fn == "auto":
             return "parego" if self.multi_objective else "logei"
-        return canonical_acquisition(self.acquisition_fn)
+        return self.acquisition_fn
 
     def _ranked_score(self, X: np.ndarray, ctx: "_AskContext",
                       pending: Sequence[np.ndarray] = ()) -> np.ndarray:
@@ -709,10 +719,16 @@ class BayesianOptimizer:
         try:
             res = minimize(neg, x0, method="SLSQP", bounds=bounds,
                            constraints=cons, options={"maxiter": 60, "ftol": 1e-9})
-            cand = self.space.repair(np.atleast_2d(res.x))[0]
+            raw = self.space.repair(np.atleast_2d(res.x))[0]
+            cand = self.space.snap(raw[None, :])[0]
             if not self.space.is_feasible(cand[None, :])[0]:
                 return x0
             if neg(cand) >= start:
+                return x0
+            # Snapping integer factors can undo SLSQP's diversity constraint.
+            if (len(pending) and not np.allclose(cand, raw)
+                    and (self._pending_distance(cand[None, :], pending)[0]
+                         < self._diversity_radius())):
                 return x0
             # Never let refinement violate a threshold the start point met, or
             # wander into a region the success classifier has ruled out.

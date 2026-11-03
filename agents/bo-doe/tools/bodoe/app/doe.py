@@ -223,20 +223,27 @@ def doe_plackett_burman(space: ParameterSpace) -> np.ndarray:
 # Response-surface designs
 # --------------------------------------------------------------------------
 def doe_central_composite(space: ParameterSpace, alpha: str | float = "rotatable",
-                          center_points: int = 4, face: str = "circumscribed") -> np.ndarray:
+                          center_points: int = 4, face: str = "inscribed") -> np.ndarray:
     """Central composite design (CCD) for quadratic response surfaces.
+
+    The space bounds are treated as hard limits, so the design is always
+    returned **inscribed** (CCI): the axial points sit on the bounds and the
+    factorial cube is shrunk by ``1/alpha`` inside them. A circumscribed design
+    (CCC), whose axial points lie beyond the factorial range, would violate the
+    bounds; to get one, widen the bounds to the axial range and use this design.
 
     Args:
         space: Box parameter space.
-        alpha: ``"rotatable"`` (:math:`2^{k/4}`), ``"orthogonal"``, ``"face"``
-            (= 1, i.e. face-centred) or an explicit float.
+        alpha: ``"rotatable"`` (:math:`(2^k)^{1/4}`), ``"orthogonal"``,
+            ``"face"`` (= 1, i.e. face-centred) or an explicit float.
         center_points: Number of replicated centre runs.
-        face: ``"circumscribed"`` keeps axial points at ±alpha in coded units
-            and rescales the factorial part inside the bounds;
-            ``"inscribed"`` shrinks the whole design so axial points sit on
-            the bounds.
+        face: Only ``"inscribed"`` is supported (see above).
     """
     _require_box(space, "central composite")
+    if face != "inscribed":
+        raise ValueError("only face='inscribed' is supported: the space bounds "
+                         "are hard limits, so axial points cannot lie beyond "
+                         "them. Widen the bounds to the axial range instead.")
     k = space.dim
     cube = np.array(list(itertools.product([-1.0, 1.0], repeat=k)), dtype=float)
     if alpha == "rotatable":
@@ -244,8 +251,11 @@ def doe_central_composite(space: ParameterSpace, alpha: str | float = "rotatable
     elif alpha == "face":
         a = 1.0
     elif alpha == "orthogonal":
+        # Orthogonal-blocking alpha: (F * Q / 4) ** (1/4), with
+        # Q = (sqrt(F + 2k + n0) - sqrt(F)) ** 2 (Myers & Montgomery).
         nf = 2 ** k
-        a = float(np.sqrt(nf * (np.sqrt(nf + 2 * k + center_points) - np.sqrt(nf)) ** 2 / 4))
+        q = (np.sqrt(nf + 2 * k + center_points) - np.sqrt(nf)) ** 2
+        a = float((nf * q / 4.0) ** 0.25)
     else:
         a = float(alpha)
     axial = np.zeros((2 * k, k))
@@ -253,9 +263,8 @@ def doe_central_composite(space: ParameterSpace, alpha: str | float = "rotatable
         axial[2 * j, j] = a
         axial[2 * j + 1, j] = -a
     D = np.vstack([cube, axial, np.zeros((center_points, k))])
-    scale = a if face == "circumscribed" else 1.0
-    U = 0.5 + 0.5 * D / scale
-    return space.from_unit(np.clip(U, 0.0, 1.0))
+    U = 0.5 + 0.5 * D / max(a, 1.0)
+    return space.from_unit(U)
 
 
 def doe_box_behnken(space: ParameterSpace, center_points: int = 3) -> np.ndarray:
@@ -461,7 +470,8 @@ def design_diagnostics(space: ParameterSpace, X: np.ndarray) -> dict:
 
     Returns a dict with the number of runs, minimum pairwise distance
     (maximin), maximum absolute off-diagonal correlation, D-efficiency of a
-    first-order model, and the fraction of feasible runs.
+    first-order model (the Scheffe linear model for mixture spaces), and the
+    fraction of feasible runs.
     """
     X = np.atleast_2d(np.asarray(X, dtype=float))
     U = space.to_unit(X)
@@ -469,10 +479,16 @@ def design_diagnostics(space: ParameterSpace, X: np.ndarray) -> dict:
     with np.errstate(invalid="ignore"):
         corr = np.corrcoef(U, rowvar=False) if n > 2 else np.eye(d)
     corr = np.nan_to_num(corr, nan=0.0)
-    M = np.column_stack([np.ones(n), U - 0.5])
+    if space.mixture:
+        # Scheffe linear mixture model (no intercept): an intercept column is
+        # an exact linear combination of the components, so the usual
+        # first-order information matrix is singular for every mixture design.
+        M = X / space.total
+    else:
+        M = np.column_stack([np.ones(n), U - 0.5])
     try:
-        info = M.T @ M
-        d_eff = float(np.linalg.det(info) ** (1.0 / M.shape[1]) / n)
+        det = float(np.linalg.det(M.T @ M))
+        d_eff = max(det, 0.0) ** (1.0 / M.shape[1]) / n
     except np.linalg.LinAlgError:
         d_eff = float("nan")
     return {

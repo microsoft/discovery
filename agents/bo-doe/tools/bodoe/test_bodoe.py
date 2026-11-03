@@ -295,3 +295,8 @@ def main():
 
 if __name__ == "__main__":
     sys.exit(main())
+else:
+    # Make every t_* check collectable by pytest as test_*.
+    for _name, _fn in list(globals().items()):
+        if _name.startswith("t_") and callable(_fn):
+            globals()["test_" + _name[2:]] = _fn

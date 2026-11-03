@@ -153,7 +153,7 @@ its acquisition targets.
 | Family | Designs |
 |---|---|
 | Screening | Full factorial, fractional factorial ($2^{k-p}$), Plackett-Burman |
-| Response surface | Central composite (rotatable / orthogonal / face-centred), Box-Behnken |
+| Response surface | Central composite (rotatable / orthogonal / face-centred; inscribed, so every run stays within the bounds), Box-Behnken |
 | Space filling | Latin hypercube (maximin- or correlation-optimized), scrambled Sobol' |
 | Mixture | Scheffe simplex lattice, simplex centroid, extreme vertices, constrained maximin space filling || Candidate library | Maximin diverse subset over feature vectors (`select_diverse_subset`) |
 Every design is returned in the user's own units together with quality
@@ -354,7 +354,7 @@ users can check any design themselves.
 
 ### 3. Component-contract tests
 
-[test_bodoe_contracts.py](tools/bodoe/test_bodoe_contracts.py) — **34/34 pass, on both backends**. These test
+[test_bodoe_contracts.py](tools/bodoe/test_bodoe_contracts.py) — **42/42 pass, on both backends**. These test
 *internal contracts* rather than end-to-end outcomes, which is the main
 engineering lesson of this project: the original suite tested only invariants
 (mixtures sum correctly, batches spread out) and outcomes (beats random on
@@ -366,7 +366,11 @@ frozen ask-context; a candidate scores identically alone and in a batch; local
 refinement never worsens its own objective and respects mixture, bound and
 diversity constraints; transform auto-detection latches and round-trips; failed
 experiments are recorded, steer suggestions, and the filter is self-calibrating;
-seeded runs are reproducible.
+seeded runs are reproducible. Regression tests for the review findings below
+cover leave-one-out $R^2$ (checked against brute-force refitting), acquisition
+names, Pareto directions in plots, strict-JSON results, orthogonal CCDs, EHVI
+beyond the ideal point and integer factors. Both suites also run under
+`python -m pytest`.
 
 ### 4. Formulation benchmark on the resin data
 
@@ -460,6 +464,12 @@ inconsistent scoring scale. This table is what survives correcting all three.
 | 8 | Container entrypoint sourced `conda.sh`, absent from the runtime stage; matplotlib and fontconfig failed against a read-only home. | First actual container run |
 | 9 | `Objective.to_min()` silently used the **raw scale** whenever an `"auto"` transform had not been resolved. Benchmark scoring built fresh objectives and never fitted a model, so every hypervolume was computed untransformed. `forward()` now resolves lazily on first use. | Warm-start check failed implausibly |
 | 10 | Fixing #9 exposed a latent harness flaw: each scoring call resolved transforms from *that method's own data*, so a method sampling a wide range was scored on a log scale while another was scored linearly. Scoring transforms are now resolved once against the reference sample and shared, with an assertion that they cannot change. | Benchmark inverted — BO appeared to lose by two orders of magnitude |
+| 11 | `loo_r2()` / `model_quality()` reported **in-sample** $R^2$, which an interpolating GP pushes to ~1 even on pure noise, so the "warn if $R^2 < 0.5$" rule could never fire. Now the exact closed-form leave-one-out $R^2$. | PR review |
+| 12 | `plot_pareto()` assumed every objective was minimized and drew the wrong front for maximize objectives. It now takes the `Objective` list (or `directions=`). | PR review |
+| 13 | `acquisition()` silently returned the posterior SD for multi-objective or unrecognized names, so `acquisition_fn="EHVI"` or `"qparego"` became pure exploration. Names are now canonicalized and validated. | PR review |
+| 14 | `final_results.json` could contain bare `NaN`; mixture `design_diagnostics` returned a `NaN` D-efficiency; prompt examples used `pd` without it being exported. | PR review |
+| 15 | `alpha="orthogonal"` CCD used $\alpha^2$ instead of $\alpha$; the `face` options were mislabelled and `"inscribed"` was clipped. | PR review |
+| 16 | 3+-objective EHVI ignored improvement beyond the front's ideal point; integer factors were scored and returned at fractional values. | PR review |
 
 Defects 1 and 2 were found only because an outcome test happened to notice.
 Defects 3 and 4 were invisible to every invariant and outcome test and needed
@@ -539,6 +549,9 @@ Stated explicitly rather than left for a user to discover:
   distortion of the tight-bound fallback is not corrected — only bounded.
 * The success classifier needs several failures before it is informative; with
   one or two it stays out of the way by design.
+* `model_quality()` holds the GP hyperparameters fixed at their full-data fit
+  when computing leave-one-out $R^2$, so it is somewhat optimistic on very small
+  datasets. Treat it as a screen, not a validation.
 * The formulation benchmark's oracle shares its inductive bias (smooth RBF) with
   the optimizer. The BoTorch tutorial replication is the independent check.
 * On a **known, fixed weighting** of objectives, a surrogate-plus-DE workflow

@@ -14,11 +14,14 @@ Single objective
 
 Multi objective
     ``parego`` (augmented-Chebyshev random scalarization; works with any
-    backend), ``ehvi`` (expected hypervolume improvement, exact for 2
-    objectives, MC otherwise), ``qnehvi`` (delegated to BoTorch when available).
+    backend) and ``ehvi`` (expected hypervolume improvement, exact increment
+    for 2 objectives, Monte-Carlo otherwise). ``qnehvi``/``qehvi`` are accepted
+    as aliases of this package's ``ehvi``; for BoTorch's own qLogNEHVI call
+    BoTorch directly. Multi-objective names are only valid through
+    :class:`optimize.BayesianOptimizer`.
 
-Batch selection is provided by the constant-liar / Kriging-believer strategy in
-:func:`batch_via_liar`, which works with every acquisition above.
+Batches are built by the optimizer, which penalizes candidates near earlier
+picks of the same batch.
 """
 
 from __future__ import annotations
@@ -256,7 +259,10 @@ def acquisition(name: str, mu: np.ndarray, sd: np.ndarray,
         return probability_below_threshold(mu, sd, threshold)
     if key == "mean":
         return -np.asarray(mu, dtype=float)
-    return np.asarray(sd, dtype=float)                      # "std"
+    if key == "std":
+        return np.asarray(sd, dtype=float)
+    raise ValueError(f"'{key}' is a multi-objective acquisition; use it through "
+                     "BayesianOptimizer with two or more objectives")
 
 
 # --------------------------------------------------------------------------
@@ -422,22 +428,25 @@ def expected_hypervolume_improvement(mus: np.ndarray, sds: np.ndarray,
     # x: the same candidate would score differently depending on what it was
     # evaluated alongside, and any local refinement of it would be meaningless.
     lo = np.minimum(front.min(axis=0), ref)
-    span = ref - lo
-    if np.any(span <= 0):
-        return np.zeros(len(mus))
+    span = ref - lo                     # >= 0; zero when no front point beats ref
     volume = float(np.prod(span))
     grid = rng.uniform(lo, ref, size=(hv_mc_samples, n_obj))
     dominated = np.any(np.all(grid[:, None, :] >= front[None, :, :], axis=2), axis=1)
     free = grid[~dominated]
-    if len(free) == 0:
-        return np.zeros(len(mus))
     cell = volume / hv_mc_samples
     Z = rng.standard_normal((mc_samples, n_obj))   # common random numbers
     out = np.zeros(len(mus))
     for i in range(len(mus)):
         draws = np.minimum(mus[i] + sds[i] * Z, ref)   # beyond ref counts for 0
-        counts = np.all(free[None, :, :] >= draws[:, None, :], axis=2).sum(axis=1)
-        out[i] = float(counts.mean() * cell)
+        # The part of a draw's box [s, ref] lying outside [lo, ref] (some
+        # coordinate below the front's ideal point) cannot be dominated by the
+        # front, so it is all improvement and has a closed form. The grid only
+        # has to estimate the part inside [lo, ref].
+        outside = (np.prod(ref - draws, axis=1)
+                   - np.prod(ref - np.maximum(draws, lo), axis=1))
+        inside = (np.all(free[None, :, :] >= draws[:, None, :], axis=2).sum(axis=1)
+                  * cell if len(free) else 0.0)
+        out[i] = float(np.mean(outside + inside))
     return out
 
 
