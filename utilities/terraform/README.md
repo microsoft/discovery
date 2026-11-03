@@ -176,6 +176,14 @@ placement requirements before changing them. The Workspace VNet and storage
 remain in `location`; the Supercomputer VNet follows its managed-infrastructure
 region.
 
+Workload VM sizes in both the root input and standalone Supercomputer module
+are restricted to the
+[2026-06-01 node-pool reference](https://learn.microsoft.com/azure/templates/microsoft.discovery/2026-06-01/supercomputers/nodepools).
+This conservative allowlist remains unchanged while the
+[CPU documentation discrepancy](#identity-mapping-and-workload-sku-questions)
+is reconciled. Subscription quota and regional availability alone do not expand
+the allowlist.
+
 The storage account disables shared keys. Grant the Terraform runner blob data
 access as shown in the quickstart, and allow RBAC assignments time to propagate.
 
@@ -517,8 +525,15 @@ implementation and four mocked tests. All 34 archived candidate files were
 verified byte-for-byte unchanged after teardown. Subsequent documentation
 updates are not part of that live-applied commit.
 The integrated configuration merges newer upstream changes and excludes the
-unconfirmed CPU SKU described below. It is not the exact live-tested snapshot
-and requires its own live validation.
+CPU SKU omitted from the versioned API reference, as described below. It is not
+the exact live-tested snapshot.
+
+Current-candidate formatting, validation, and mocked-test results must be
+reported separately in the PR with the candidate commit and exact commands.
+The historical results below do not establish live acceptance of the integrated
+candidate. This update does not claim a new Azure plan, apply, workload run, or
+teardown. Agree the required live acceptance checks with the engineering
+reviewer before provisioning another environment.
 
 ### Live-tested configuration
 
@@ -550,7 +565,7 @@ not a capacity or product-support guarantee.
 | Provisioning | Apply succeeded: 37 added, zero changed, zero destroyed, in about 74 minutes. | One environment and configuration; not a capacity or general reliability guarantee. |
 | Drift | A normal post-apply `plan -detailed-exitcode` returned zero: no changes. | Captured before the separately approved smoke-test tool and extra user grant; not a claim that no out-of-state resources existed later. |
 | Workspace access | The optional Terraform-managed workspace user grant was verified; the user reported that the UI appeared to work without a manual workspace-access fix. | Basic UI smoke only, not full workflow or compute-user access validation. |
-| Workload execution | One 1-CPU, 512-MiB, single-replica job with no data mounts succeeded in about 129 seconds on `Standard_D4s_v6`, with verified arithmetic output and success marker. AKS snapshots showed workload nodes scale from zero to one and later back to zero. | Submission required a separate temporary test-RG Discovery Platform Contributor grant after an initial 403. No GPU or scientific workflow was tested; official SKU support remains unconfirmed. |
+| Workload execution | One 1-CPU, 512-MiB, single-replica job with no data mounts succeeded in about 129 seconds on `Standard_D4s_v6`, with verified arithmetic output and success marker. AKS snapshots showed workload nodes scale from zero to one and later back to zero. | Submission required a separate temporary test-RG Discovery Platform Contributor grant after an initial 403. No GPU or scientific workflow was tested; the versioned SKU documentation discrepancy described below remains unresolved. |
 | Regions | The tested deployment was same-region UK South. | Cross-region deployment and Bookshelf were not validated by this run. |
 | Teardown | Final state had zero resources; all four managed groups, the customer group, temporary tool, and both temporary group-scoped user grants were confirmed removed. | This was not a single-pass full destroy; workspace deletion needed a fresh-plan retry, and service-side RBAC cleanup needed to be accounted for. |
 
@@ -570,12 +585,19 @@ permission is necessary or sufficient. No reverse or additional grant has been
 added to resolve the discrepancy speculatively.
 
 `Standard_D4s_v6` was accepted in the historical run but is excluded from both
-integrated workload-pool allowlists. It is outside the published workload VM
-size enumeration in the
+integrated workload-pool allowlists. Published
+[Discovery Supercomputer guidance](https://learn.microsoft.com/azure/microsoft-discovery/concept-supercomputer#node-pool-configurations)
+describes CPU-optimized workload pools, and the
+[Discovery quota guidance](https://learn.microsoft.com/azure/microsoft-discovery/concept-quota-reservation#virtual-machine-sku-quotas)
+lists `Standard_D4s_v6`. However, that SKU is absent from the `vmSize` enumeration
+in the versioned
 [2026-06-01 node-pool reference](https://learn.microsoft.com/azure/templates/microsoft.discovery/2026-06-01/supercomputers/nodepools).
-Official workload-pool support remains unconfirmed. The successful CPU smoke
-demonstrates one small workload on this configuration, not product support or
-certification for other workloads.
+This is a documentation discrepancy, not an assertion that Discovery only
+supports GPUs. This utility retains the versioned API allowlist until the
+published guidance is reconciled; it does not accept arbitrary CPU SKUs based
+only on available quota. The historical CPU smoke is not a recommended
+configuration for this integrated candidate or evidence that another workload
+SKU has been live-tested.
 
 The job's top-level status and operation history reported Succeeded, with a
 completion timestamp and verified output, while nested `result.status` remained
@@ -637,13 +659,17 @@ Before claiming broader validation:
 
 * Confirm the exact customer-UAMI role scope with the product owners; the
   integrated mapping follows AKS pre-created kubelet identity guidance.
-* Confirm an officially supported workload SKU and validate a representative
-  scientific workload, including its storage and data-access requirements.
+* Agree the acceptance workload using a SKU in the versioned node-pool
+  reference, including its storage and data-access requirements. Reconcile
+  the published CPU guidance before expanding the allowlists.
 * Agree the intended compute-user role scope; the opt-in workspace-only grant
   must not be presented as complete Scientist-persona access.
-* Validate any changed integration candidate separately from this tested commit.
-  Mocked tests do not exercise Azure deletion races or prove prerequisite
-  propagation.
+* Confirm whether the observed staged teardown, including a fresh-plan retry
+  after workspace child deletion, is acceptable for the initial contribution.
+  No automated or single-pass teardown guarantee is included.
+* Agree which live checks must be repeated against the final candidate and
+  record that exact commit separately from the historical run. Mocked tests
+  do not exercise Azure deletion races or prove prerequisite propagation.
 
 Before the logged apply, pinned-provider initialization,
 `terraform fmt -check -recursive`, `terraform validate -no-color`, and
