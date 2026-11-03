@@ -289,8 +289,9 @@ docker run --rm -v "${PWD}:/t:ro" bodoe:latest python -u /t/test_bodoe_contracts
 ```
 
 The DoE property checks, benchmarks and demos summarized below were run with
-separate development scripts that are not part of this catalog entry (the
-formulation benchmark depends on an external dataset). Their results are
+separate development scripts that are not part of this catalog entry. The
+formulation benchmark uses a published third-party dataset that is not
+redistributed here; see [Data attribution](#data-attribution). Their results are
 reported here for transparency.
 
 ### 1. External benchmark: BoTorch's own tutorial
@@ -369,8 +370,14 @@ seeded runs are reproducible.
 
 ### 4. Formulation benchmark on the resin data
 
-A formulation benchmark using 45 measured UV-curable resin formulations (dataset
-not included). Four RBF-SVR models on `log1p` targets act as the oracle; fitted on the
+This benchmark uses 45 measured DLP-printable elastomer (UV-curable resin)
+formulations published by Song *et al.* (2026), using the authors' original
+`train_data`, `val_data` and `ext_val_data` splits. The dataset is not
+redistributed with this agent; download it from Zenodo,
+[doi:10.5281/zenodo.19389221](https://doi.org/10.5281/zenodo.19389221)
+(full citation under [Data attribution](#data-attribution)).
+
+Four RBF-SVR models on `log1p` targets act as the oracle; fitted on the
 33-point training set they achieve held-out $R^2$ of 0.71–0.89 and Spearman
 $\rho$ of 0.83–0.97.
 
@@ -540,6 +547,25 @@ Stated explicitly rather than left for a user to discover:
 * Solution quality is below BoTorch's qNEHVI (89.8% of its hypervolume on the
   tutorial problem). The trade is roughly 10x less compute plus mixture,
   DoE and failure-handling support.
+
+## Data attribution
+
+The formulation benchmark in [Validation](#validation) uses data and model
+hyperparameters from the following work. We thank the authors for making them
+publicly available.
+
+* **Paper:** Song, Y., Park, B., Jeon, S. *et al.* Machine learning guided
+  formulation design of digital light processing printable elastomers beyond
+  viscosity stretchability tradeoff. *Nat. Commun.* **17**, 7167 (2026).
+  [https://doi.org/10.1038/s41467-026-73735-4](https://doi.org/10.1038/s41467-026-73735-4)
+* **Dataset and code:** Song, Y., Park, B., Jeon, S., Kweon, H., Lee, S. & Na, J.
+  *bspark1102/Resin_ML: final_manuscript* (Version final_manuscript). Zenodo
+  (2026). [https://doi.org/10.5281/zenodo.19389221](https://doi.org/10.5281/zenodo.19389221)
+  — released under the MIT License.
+
+The data is not included in this repository. Benchmark results reported here
+are our own and are not endorsed by the original authors. If you use this
+dataset, please cite the paper and the Zenodo record above.
 
 ## Contributing
 
