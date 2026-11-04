@@ -260,32 +260,19 @@ Describe 'Stage 3 private DNS validation' {
         Remove-Variable Stage3DnsLinks, Stage3PrivateEndpoints, Stage3DnsZoneGroups -Scope Global -ErrorAction SilentlyContinue
     }
 
-    It 'passes private DNS zones only when they link to the configured VNet' {
-        $results = @(Invoke-CheckDnsAndPe -Config (New-Stage3DnsConfig) -Profile 'supercomputer')
-        $zones = @($results | Where-Object { $_.id -like 'private-dns-zone-*' })
-
-        ($zones.Count -gt 0) | Should Be $true
-        @($zones | Where-Object status -ne 'Pass').Count | Should Be 0
+    It 'does not check private DNS zones for any profile' {
+        foreach ($profileName in @('supercomputer', 'workspace', 'bookshelf')) {
+            $results = @(Invoke-CheckDnsAndPe -Config (New-Stage3DnsConfig) -Profile $profileName)
+            @($results | Where-Object { $_.id -like 'private-dns-zone-*' }).Count | Should Be 0
+        }
+        Assert-MockCalled Get-AzJson -Scope It -Times 0 -ParameterFilter {
+            $Args -contains 'private-dns' -and $Args -contains 'zone' -and $Args -contains 'show'
+        }
     }
 
-    It 'fails zones linked to a different VNet' {
-        $global:Stage3DnsLinks = @([pscustomobject]@{
-                virtualNetwork = [pscustomobject]@{ id = '/subscriptions/sub/resourceGroups/network-rg/providers/Microsoft.Network/virtualNetworks/other-vnet' }
-            })
-
-        $results = @(Invoke-CheckDnsAndPe -Config (New-Stage3DnsConfig) -Profile 'supercomputer')
-        $zones = @($results | Where-Object { $_.id -like 'private-dns-zone-*' })
-
-        @($zones | Where-Object status -eq 'Fail').Count | Should Be $zones.Count
-    }
-
-    It 'resolves the VNet from the network resource group and searches endpoint resource groups' {
+    It 'searches endpoint resource groups' {
         $null = @(Invoke-CheckDnsAndPe -Config (New-Stage3DnsConfig) -Profile 'supercomputer')
 
-        Assert-MockCalled Get-AzJson -Scope It -Times 1 -ParameterFilter {
-            $Args -contains 'vnet' -and $Args -contains 'show' -and
-            $Args -contains 'network-rg' -and $Args -notcontains 'dns-rg'
-        }
         foreach ($resourceGroup in @('network-rg', 'platform-rg', 'storage-rg')) {
             Assert-MockCalled Get-AzJson -Scope It -Times 1 -ParameterFilter {
                 $Args -contains 'private-endpoint' -and $Args -contains 'list' -and $Args -contains $resourceGroup

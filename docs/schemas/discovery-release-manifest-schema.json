@@ -47,7 +47,12 @@
             {
               "properties": {
                 "installerUrl": {
-                  "const": "https://aka.ms/discovery/download/osx/current"
+                  "enum": [
+                    "https://aka.ms/discovery/download/osx/previous",
+                    "https://aka.ms/discovery/download/osx/current",
+                    "https://aka.ms/discovery/download/preview/osx/previous",
+                    "https://aka.ms/discovery/download/preview/osx/current"
+                  ]
                 }
               }
             }
@@ -59,7 +64,12 @@
             {
               "properties": {
                 "installerUrl": {
-                  "const": "https://aka.ms/discovery/download/arm64/current"
+                  "enum": [
+                    "https://aka.ms/discovery/download/arm64/previous",
+                    "https://aka.ms/discovery/download/arm64/current",
+                    "https://aka.ms/discovery/download/preview/arm64/previous",
+                    "https://aka.ms/discovery/download/preview/arm64/current"
+                  ]
                 }
               }
             }
@@ -71,7 +81,12 @@
             {
               "properties": {
                 "installerUrl": {
-                  "const": "https://aka.ms/discovery/download/current"
+                  "enum": [
+                    "https://aka.ms/discovery/download/previous",
+                    "https://aka.ms/discovery/download/current",
+                    "https://aka.ms/discovery/download/preview/x64/previous",
+                    "https://aka.ms/discovery/download/preview/x64/current"
+                  ]
                 }
               }
             }
@@ -96,16 +111,19 @@
   },
   "definitions": {
     "rhelPlatformRelease": {
-      "description": "Optional RHEL x64 release. Only RHEL may use the exact pending-publish placeholder until its HTTPS installer URL is available.",
+      "description": "Optional RHEL x64 release. Installer URL must be a listed RHEL download URL or the exact pending-publish placeholder.",
       "type": "object",
       "required": ["installerUrl", "sha256"],
       "additionalProperties": false,
       "properties": {
         "installerUrl": {
-          "pattern": "^[^\\s]+$(?![\\s\\S])",
-          "anyOf": [
-            { "$ref": "#/definitions/platformRelease/properties/installerUrl" },
-            { "const": "PLACEHOLDER_PENDING_PUBLISH" }
+          "type": "string",
+          "enum": [
+            "PLACEHOLDER_PENDING_PUBLISH",
+            "https://aka.ms/discovery/download/rhel/previous",
+            "https://aka.ms/discovery/download/rhel/current",
+            "https://aka.ms/discovery/download/preview/rhel/previous",
+            "https://aka.ms/discovery/download/preview/rhel/current"
           ]
         },
         "sha256": {
