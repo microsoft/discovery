@@ -7,9 +7,10 @@ from .findings import Failure
 
 _MAINTAINER_PERMISSIONS = frozenset({"admin", "maintain", "write"})
 _MICROSOFT_ORG_ASSOCIATIONS = frozenset({"member", "owner"})
-_PUBLIC_CATALOG_ROOTS = frozenset({"agents", "starter-kits"})
+_PUBLIC_CONTENT_ROOTS = frozenset({"agents", "starter-kits", "utilities"})
 _PROTECTED_ROOTS = frozenset({".auto-registry", ".github", ".vscode"})
 _PROTECTED_PATHS = frozenset({"docs/validation-rules.md"})
+_PUBLIC_ROOT_FILES = frozenset({".gitignore"})
 _PUBLIC_ROOT_DOCS = frozenset({"readme.md", "contributing.md"})
 _DOC_SUFFIXES = (".md", ".markdown")
 _EXECUTABLE_SUFFIXES = frozenset({
@@ -27,10 +28,6 @@ _DEPENDABOT_PIP_PATHS = frozenset({
     ".github/requirements-ci.txt",
     "agents/gwp-predictor/training/requirements.txt",
     "agents/zinc/tools/zinc/requirements.txt",
-})
-_DEPENDABOT_UV_PATHS = frozenset({
-    "utilities/supercomputer-cli/discovery/pyproject.toml",
-    "utilities/supercomputer-cli/discovery/uv.lock",
 })
 
 
@@ -58,8 +55,6 @@ def is_trusted_dependabot_update(path: str, author: str, head_ref: str) -> bool:
         return normalized == ".config/dotnet-tools.json"
     if head_ref.startswith("dependabot/pip/"):
         return normalized in _DEPENDABOT_PIP_PATHS
-    if head_ref.startswith("dependabot/uv/"):
-        return normalized in _DEPENDABOT_UV_PATHS
     return False
 
 
@@ -80,7 +75,9 @@ def _is_public_contribution_path(path: str) -> bool:
     if len(parts) >= 2 and parts[:2] == ["docs", "schemas"]:
         return False
 
-    if len(parts) >= 2 and parts[0] in _PUBLIC_CATALOG_ROOTS:
+    if normalized in _PUBLIC_ROOT_FILES:
+        return True
+    if len(parts) >= 2 and parts[0] in _PUBLIC_CONTENT_ROOTS:
         return True
     if len(parts) >= 2 and parts[0] == "docs":
         return _suffix(parts[-1]) not in _EXECUTABLE_SUFFIXES
@@ -123,11 +120,14 @@ def check_contributor_scope(
             failures.append(Failure(
                 "POL-021",
                 changed_file,
-                f"{actor} is classified as a contributor with repository permission "
-                f"'{permission}'. Public contributors may modify catalog content and "
-                "documentation. Microsoft organization members may contribute to any "
-                "repository path, subject to correctness validation and normal GitHub "
-                "review protections. Remove this file from the PR or ask a Microsoft "
-                "organization member or repository maintainer to author the change.",
+                f"{actor} has no visible trust signal for this protected path "
+                f"(repository permission '{permission}', PR author association "
+                f"'{association or 'none'}'). Public contributors may modify catalog "
+                "content, utilities, documentation, and the root .gitignore. Other "
+                "paths require repository write/maintain/admin permission or a visible "
+                "Microsoft MEMBER/OWNER association. An absent association does not "
+                "prove non-membership. Remove this file from the PR or ask a repository "
+                "maintainer to help with the protected-path change. Correctness "
+                "validation and normal GitHub CODEOWNER review protections still apply.",
             ))
     return failures

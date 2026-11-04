@@ -1,8 +1,8 @@
 # Contributing
 
 Thanks for helping improve Microsoft Discovery! You can contribute catalog
-agents, starter kits, and documentation here. The Discovery app's source code
-is not in this repository.
+agents, starter kits, utilities, and documentation here. The Discovery app's
+source code is not in this repository.
 
 ## Choose your contribution
 
@@ -10,12 +10,26 @@ is not in this repository.
 | --- | --- | --- |
 | Add or update an agent | `agents/<agent-name>/` | [Agent authoring guide](docs/authoring-guides/agent-authoring-guide.md) |
 | Add or update a starter kit | `starter-kits/<kit-name>/` | [Starter-kit authoring guide](docs/authoring-guides/starter-kit-authoring-guide.md) |
+| Add or fix a utility | `utilities/<utility-name>/` | Follow the utility's README and include focused tests and validation evidence. |
 | Fix documentation | The relevant Markdown file or [docs/](docs/) | Make a focused change and check its links. |
+
+Utility source code, tests, dependency manifests, lock files, and ignore files
+are open to outside contributors as well as Microsoft members. The root
+`.gitignore` may also be updated for contribution-related build artifacts.
+Neither Microsoft membership nor repository write access is required for these
+contributions; correctness checks, CLA, and normal CODEOWNER review still apply.
+Engineering reviewers own utilities, except Discovery Toolbox releases, which
+retain maintainer ownership and release-specific validation.
 
 For product bugs, questions, or ideas, use
 [Discussions](https://techcommunity.microsoft.com/category/azure/discussions/microsoft-discovery-discussions).
-For schema, workflow, or executable utility changes, propose an idea there
-so a Microsoft maintainer can land the agreed change.
+For changes to protected schemas, workflows, validator policy, or other trusted
+repository configuration, propose an idea there so a Microsoft maintainer can
+land the agreed change. A visible Microsoft `MEMBER`/`OWNER` association or
+repository write/maintain/admin access permits broader author scope, but private
+organization membership may not be visible to Actions. An absent association is
+not proof that someone is outside Microsoft, and does not block ordinary
+utility contributions.
 
 ## Quick start
 

@@ -19,6 +19,27 @@ of diagnostic labels. At least one CODEOWNERS approval and all other configured
 review requirements must be satisfied. A maintainer then merges the PR or
 enables GitHub's native auto-merge.
 
+### Contributor scope and private organization membership
+
+Public contributors may modify catalog content, utility source and tests,
+documentation, and the root `.gitignore`. Utility manifests and lock files do
+not require Microsoft membership or repository write access. Existing artifact
+and release validation still apply; opening author scope does not waive checks
+or approvals.
+
+PR Review uses the current API-reported author association as a positive trust
+signal, not as an authoritative negative membership lookup. Private Microsoft
+members can appear as `NONE` to `GITHUB_TOKEN`; normal utility contributions
+remain allowed in that case. Protected paths still need a visible
+`MEMBER`/`OWNER` association or repository write/maintain/admin access.
+Unavailable lookups produce warnings and do not grant protected-path access.
+
+Utilities use engineering CODEOWNERS, while root files use the default
+maintainer owner; Discovery Toolbox retains its maintainer-owned exception.
+Draft PRs do not automatically request CODEOWNER reviews. After a new push,
+check the latest commit's required checks and approval requirements rather than
+relying on an older approval or diagnostic label.
+
 ### Workflow responsibilities
 
 PR validation and diagnostic publishing run in separate trust contexts:

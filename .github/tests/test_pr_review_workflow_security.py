@@ -1,10 +1,14 @@
 """Security contracts for read-only PR validation and privileged reporting."""
 
+import json
 from pathlib import Path
 import re
+import subprocess
 
 import pytest
 import yaml
+
+from validate_pr import check_contributor_scope
 
 
 WORKFLOW_PATH = Path(__file__).resolve().parents[1] / "workflows" / "pr-review.yml"
@@ -72,6 +76,95 @@ def test_author_trust_signals_are_passed_to_validator():
     assert validator["env"]["PR_AUTHOR_ASSOCIATION"] == (
         "${{ needs.classify.outputs.author_association || 'NONE' }}"
     )
+
+
+@pytest.mark.parametrize(("permission_status", "association_status"), [
+    (0, 0),
+    (404, 0),
+    (403, 0),
+    (0, 403),
+])
+def test_author_trust_resolution_keeps_private_member_utility_scope_public(
+    permission_status, association_status,
+):
+    classify = load_workflow()["jobs"]["classify"]
+    script = next(
+        step["with"]["script"] for step in classify["steps"]
+        if step.get("id") == "author_permission"
+    )
+    harness = r"""
+const fs = require('fs');
+const input = JSON.parse(fs.readFileSync(0, 'utf8'));
+const outputs = {}, warnings = [], calls = [], infos = [];
+const core = {
+  setOutput: (key, value) => outputs[key] = value,
+  warning: message => warnings.push(message),
+  info: message => infos.push(message),
+};
+const respond = async (name, options, status, data) => {
+  calls.push({name, options});
+  if (status) throw Object.assign(new Error('Lookup unavailable'), {status});
+  return {data};
+};
+const github = {rest: {
+  repos: {getCollaboratorPermissionLevel: async options =>
+    respond('permission', options, input.permission_status, {permission: 'read'})},
+  pulls: {get: async options =>
+    respond('association', options, input.association_status, {author_association: 'NONE'})},
+}};
+const context = {
+  repo: {owner: 'microsoft', repo: 'discovery'},
+  payload: {pull_request: {
+    number: 103, user: {login: 'Modrats'}, author_association: 'MEMBER',
+  }},
+};
+const AsyncFunction = Object.getPrototypeOf(async function(){}).constructor;
+new AsyncFunction('core', 'github', 'context', input.script)(core, github, context)
+  .then(() => console.log(JSON.stringify({outputs, warnings, calls, infos})))
+  .catch(error => {console.error(error); process.exitCode = 1;});
+"""
+    process = subprocess.run(
+        ["node", "-e", harness],
+        input=json.dumps({
+            "script": script,
+            "permission_status": permission_status,
+            "association_status": association_status,
+        }),
+        capture_output=True, text=True,
+    )
+    assert process.returncode == 0, process.stderr
+    result = json.loads(process.stdout)
+    assert result["outputs"] == {
+        "permission": (
+            "none" if permission_status == 404
+            else "unknown" if permission_status else "read"
+        ),
+        "association": "NONE",
+    }
+    assert result["calls"] == [
+        {"name": "permission", "options": {
+            "owner": "microsoft", "repo": "discovery", "username": "Modrats",
+        }},
+        {"name": "association", "options": {
+            "owner": "microsoft", "repo": "discovery", "pull_number": 103,
+        }},
+    ]
+    assert len(result["warnings"]) == (
+        int(permission_status not in {0, 404}) + int(bool(association_status))
+    )
+    assert any("does not prove non-membership" in info for info in result["infos"])
+    public_paths = [
+        ".gitignore", "README.md", "utilities/terraform/main.tf",
+        "utilities/terraform/.terraform.lock.hcl",
+    ]
+    assert check_contributor_scope(
+        public_paths, result["outputs"]["permission"], "Modrats",
+        author_association=result["outputs"]["association"],
+    ) == []
+    assert [failure.rule_id for failure in check_contributor_scope(
+        [".github/workflows/example.yml"], result["outputs"]["permission"],
+        "Modrats", author_association=result["outputs"]["association"],
+    )] == ["POL-021"]
 
 
 def test_reporter_executes_only_default_branch_code():

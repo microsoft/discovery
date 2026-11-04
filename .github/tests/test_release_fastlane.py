@@ -128,7 +128,10 @@ def test_release_manifest_rejects_ring_and_version_regressions(tmp_path: Path):
     ]
 
 
-def test_toolbox_pointer_must_match_published_vsix_digest(tmp_path: Path):
+@pytest.mark.parametrize("author_permission", [None, "read"])
+def test_toolbox_pointer_must_match_published_vsix_digest(
+    tmp_path: Path, author_permission: str | None,
+):
     _copy_schema(tmp_path, "discovery-toolbox-release-schema.json")
     vsix = (
         tmp_path
@@ -150,6 +153,8 @@ def test_toolbox_pointer_must_match_published_vsix_digest(tmp_path: Path):
     result = run_validation(
         tmp_path,
         [pointer, vsix.relative_to(tmp_path).as_posix()],
+        author_permission=author_permission,
+        author_association="NONE",
     )
 
     assert result.blocking == []
@@ -157,7 +162,10 @@ def test_toolbox_pointer_must_match_published_vsix_digest(tmp_path: Path):
     document = json.loads((tmp_path / pointer).read_text(encoding="utf-8"))
     document["sha256"] = "0" * 64
     _write_json(tmp_path, pointer, document)
-    result = run_validation(tmp_path, [pointer])
+    result = run_validation(
+        tmp_path, [pointer],
+        author_permission=author_permission, author_association="NONE",
+    )
 
     assert [failure.rule_id for failure in result.blocking] == ["REL-002"]
 
