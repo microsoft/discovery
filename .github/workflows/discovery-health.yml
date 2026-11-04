@@ -1,0 +1,425 @@
+name: Discovery Health
+
+# Live, programmatic health tests for every catalog agent and tool against a
+# dedicated Discovery test environment. No AI runs on the runner: prompts and
+# assertions come from deterministic specs in .github/discovery-health/specs.
+#
+#   plan    -> discover agents, compute fingerprints and shards (no Azure)
+#   test    -> per shard: ACR build + image smoke, tool registration, direct
+#              tool runs, agent registration and round trips (Azure via OIDC)
+#   report  -> merge shards, synthesize lost results, reap orphaned operations,
+#              write the job summary and scorecard site
+#   publish -> GitHub Pages (main runs only; PR runs never publish)
+#
+# Every resource the tests create is marked discovery-github-test. Raw evidence
+# (logs, payloads) is kept in private storage; public output uses templated
+# messages only. See .github/discovery-health/README.md.
+
+on:
+  schedule:
+    # 04:00 UTC Saturday - weekly full-catalog run.
+    - cron: "0 4 * * 6"
+  workflow_dispatch:
+    inputs:
+      agents:
+        description: "Comma-separated agent folder names (empty = all; with pr_number, empty = agents changed by the PR)"
+        type: string
+        default: ""
+      stages:
+        description: "Comma-separated stages: build, image-smoke, tool-register, tool-run, agent-register, round-trip (or all)"
+        type: string
+        default: "all"
+      pr_number:
+        description: "Test a pull request's agents (maintainers only; uses the reviewer-gated environment; never publishes)"
+        type: string
+        default: ""
+      pr_head_sha:
+        description: "Expected PR head SHA (optional; the run fails if the PR head differs)"
+        type: string
+        default: ""
+      rebuild:
+        description: "Image rebuild policy"
+        type: choice
+        options: ["changed", "always"]
+        default: "changed"
+      shards:
+        description: "Parallel shards (budgets and concurrency are split across shards)"
+        type: choice
+        options: ["1", "2", "3", "4", "6", "8"]
+        default: "3"
+      dry_run:
+        description: "Plan only; no Azure calls"
+        type: boolean
+        default: false
+      publish:
+        description: "Publish the scorecard to GitHub Pages (main runs only)"
+        type: boolean
+        default: true
+      bootstrap:
+        description: "First publish only: allow an empty scorecard history"
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: discovery-health-live
+  cancel-in-progress: false
+
+env:
+  PYTHONUTF8: "1"
+  DH_HARNESS: .github/discovery-health/Invoke-DiscoveryHealth.ps1
+
+jobs:
+  plan:
+    name: Plan
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      pull-requests: read
+    outputs:
+      matrix: ${{ steps.plan.outputs.matrix }}
+      run_id: ${{ steps.plan.outputs.run_id }}
+      agent_count: ${{ steps.plan.outputs.agent_count }}
+      untrusted: ${{ steps.pr.outputs.untrusted || 'false' }}
+      head_repo: ${{ steps.pr.outputs.head_repo }}
+      head_sha: ${{ steps.pr.outputs.head_sha }}
+      publish: ${{ steps.plan.outputs.publish }}
+    steps:
+      - name: Check out trusted harness
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+
+      - name: Verify pull request binding
+        id: pr
+        if: ${{ inputs.pr_number != '' }}
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ inputs.pr_number }}
+          EXPECTED_SHA: ${{ inputs.pr_head_sha }}
+          REQUESTED_AGENTS: ${{ inputs.agents }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          if ($env:PR_NUMBER -notmatch '^\d+$') { throw 'pr_number must be numeric.' }
+          $pr = gh api "repos/$env:GITHUB_REPOSITORY/pulls/$env:PR_NUMBER" | ConvertFrom-Json
+          if ($pr.state -ne 'open') { throw "PR #$env:PR_NUMBER is not open." }
+          if ($pr.base.ref -ne 'main') { throw "PR #$env:PR_NUMBER does not target main." }
+          if ($env:EXPECTED_SHA -and $pr.head.sha -ne $env:EXPECTED_SHA) { throw "PR head is $($pr.head.sha), expected $env:EXPECTED_SHA." }
+          $files = gh api --paginate "repos/$env:GITHUB_REPOSITORY/pulls/$env:PR_NUMBER/files" --jq '.[].filename'
+          $changed = @($files | Where-Object { $_ -match '^agents/([a-z0-9][a-z0-9-]*)/' } | ForEach-Object { ($_ -split '/')[1] } | Where-Object { $_ -ne 'tmp' } | Sort-Object -Unique)
+          if ($files | Where-Object { $_ -like '.github/discovery-health/specs/*' }) { Write-Host '::notice::Spec changes in this PR are inactive until merged; the main specs are used.' }
+          $agents = if ($env:REQUESTED_AGENTS) { $env:REQUESTED_AGENTS } else { $changed -join ',' }
+          "untrusted=true" >> $env:GITHUB_OUTPUT
+          "head_repo=$($pr.head.repo.full_name)" >> $env:GITHUB_OUTPUT
+          "head_sha=$($pr.head.sha)" >> $env:GITHUB_OUTPUT
+          "agents=$agents" >> $env:GITHUB_OUTPUT
+          Write-Host "Testing PR #$env:PR_NUMBER at $($pr.head.sha): $(if ($agents) { $agents } else { '(no agents changed)' })"
+
+      - name: Check out pull request as data
+        if: ${{ inputs.pr_number != '' }}
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: ${{ steps.pr.outputs.head_repo }}
+          ref: ${{ steps.pr.outputs.head_sha }}
+          path: pr
+          persist-credentials: false
+          fetch-depth: 1
+
+      - name: Set up Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: python -m pip install -r .github/requirements-ci.txt
+
+      - name: Plan
+        id: plan
+        shell: pwsh
+        env:
+          PR_NUMBER: ${{ inputs.pr_number }}
+          AGENTS: ${{ inputs.pr_number != '' && steps.pr.outputs.agents || inputs.agents }}
+          STAGES: ${{ inputs.stages || 'all' }}
+          SHARDS: ${{ inputs.shards || '3' }}
+          PAGES_URL: ${{ vars.DH_PAGES_URL }}
+          PUBLISH: ${{ github.event_name == 'schedule' || (inputs.publish && inputs.pr_number == '') }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $catalog = if ($env:PR_NUMBER) { Join-Path $PWD 'pr' } else { $PWD.Path }
+          if ($env:PR_NUMBER -and -not $env:AGENTS) {
+            "matrix={""include"":[]}" >> $env:GITHUB_OUTPUT; "agent_count=0" >> $env:GITHUB_OUTPUT; "run_id=none" >> $env:GITHUB_OUTPUT; "publish=false" >> $env:GITHUB_OUTPUT
+            Write-Host '::notice::The pull request changes no agents; nothing to test.'
+            exit 0
+          }
+          $previous = if ($env:PAGES_URL) { "$($env:PAGES_URL.TrimEnd('/'))/state.json" } else { '' }
+          $agents = @($env:AGENTS -split ',' | Where-Object { $_ })
+          & $env:DH_HARNESS plan -CatalogRoot $catalog -Agents $agents -Stages $env:STAGES -Shards ([int]$env:SHARDS) `
+            -SpecRoot .github/discovery-health/specs -OutputDir "$env:RUNNER_TEMP/dh-plan" -PreviousStateUrl $previous `
+            -Context $(if ($env:PR_NUMBER) { "PR #$env:PR_NUMBER" } else { $env:GITHUB_EVENT_NAME })
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          "publish=$($env:PUBLISH.ToLowerInvariant())" >> $env:GITHUB_OUTPUT
+
+      - name: Upload plan
+        if: ${{ steps.plan.outputs.run_id != 'none' }}
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: discovery-health-plan
+          path: |
+            ${{ runner.temp }}/dh-plan/plan.json
+            ${{ runner.temp }}/dh-plan/matrix.json
+          if-no-files-found: error
+          retention-days: 30
+
+  test:
+    name: Test shard ${{ matrix.shard }}
+    needs: plan
+    if: ${{ needs.plan.outputs.agent_count != '0' && !inputs.dry_run }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 355
+    environment: ${{ needs.plan.outputs.untrusted == 'true' && 'discovery-health-pr' || 'discovery-health-trusted' }}
+    permissions:
+      contents: read
+      id-token: write
+    strategy:
+      fail-fast: false
+      max-parallel: 8
+      matrix: ${{ fromJSON(needs.plan.outputs.matrix) }}
+    env:
+      AZURE_CLIENT_ID: ${{ vars.DH_AZURE_CLIENT_ID }}
+      AZURE_TENANT_ID: ${{ vars.DH_TENANT_ID }}
+      DH_SUBSCRIPTION_ID: ${{ vars.DH_SUBSCRIPTION_ID }}
+      DH_TENANT_ID: ${{ vars.DH_TENANT_ID }}
+      DH_RESOURCE_GROUP: ${{ vars.DH_RESOURCE_GROUP }}
+      DH_LOCATION: ${{ vars.DH_LOCATION }}
+      DH_ACR_NAME: ${{ vars.DH_ACR_NAME }}
+      DH_ACR_RESOURCE_GROUP: ${{ vars.DH_ACR_RESOURCE_GROUP }}
+      DH_ACR_AGENT_POOL: ${{ vars.DH_ACR_AGENT_POOL }}
+      DH_WORKSPACE_ENDPOINT: ${{ vars.DH_WORKSPACE_ENDPOINT }}
+      DH_PROJECT: ${{ vars.DH_PROJECT }}
+      DH_CHAT_MODEL: ${{ vars.DH_CHAT_MODEL }}
+      DH_NODE_POOLS: ${{ vars.DH_NODE_POOLS }}
+      DH_EVIDENCE_STORAGE: ${{ vars.DH_EVIDENCE_STORAGE }}
+      DH_OUTPUT_STORAGE_CONTAINER_ID: ${{ vars.DH_OUTPUT_STORAGE_CONTAINER_ID }}
+      DH_CONFIG_JSON: ${{ vars.DH_CONFIG_JSON }}
+      DH_TEMPLATE_VARIABLES: ${{ needs.plan.outputs.untrusted != 'true' && secrets.DH_TEMPLATE_VARIABLES || '' }}
+    steps:
+      - name: Check out trusted harness
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          lfs: ${{ needs.plan.outputs.untrusted != 'true' }}
+          fetch-depth: 0
+
+      - name: Check out pull request as data
+        if: ${{ needs.plan.outputs.untrusted == 'true' }}
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: ${{ needs.plan.outputs.head_repo }}
+          ref: ${{ needs.plan.outputs.head_sha }}
+          path: pr
+          persist-credentials: false
+          lfs: true
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: python -m pip install -r .github/requirements-ci.txt
+
+      - name: Download plan
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: discovery-health-plan
+          path: ${{ runner.temp }}/dh-plan
+
+      - name: Azure login (OIDC)
+        uses: azure/login@a641126d1b8aa4d1fa005f4f92df94a3a4c4c906 # v3.1.0
+        with:
+          client-id: ${{ vars.DH_AZURE_CLIENT_ID }}
+          tenant-id: ${{ vars.DH_TENANT_ID }}
+          subscription-id: ${{ vars.DH_SUBSCRIPTION_ID }}
+
+      - name: Run shard
+        shell: pwsh
+        env:
+          SHARD: ${{ matrix.shard }}
+          UNTRUSTED: ${{ needs.plan.outputs.untrusted }}
+          REBUILD: ${{ inputs.rebuild || 'changed' }}
+        run: |
+          $catalog = if ($env:UNTRUSTED -eq 'true') { Join-Path $PWD 'pr' } else { $PWD.Path }
+          $flags = @{ Untrusted = ($env:UNTRUSTED -eq 'true') }
+          & $env:DH_HARNESS run -PlanPath "$env:RUNNER_TEMP/dh-plan/plan.json" -Shard ([int]$env:SHARD) `
+            -CatalogRoot $catalog -SpecRoot "$PWD/.github/discovery-health/specs" -OutputDir "$env:RUNNER_TEMP/dh-run" `
+            -Rebuild $env:REBUILD -Untrusted:$flags.Untrusted
+          exit $LASTEXITCODE
+
+      - name: Upload shard results
+        if: ${{ always() }}
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: discovery-health-results-${{ matrix.shard }}
+          path: |
+            ${{ runner.temp }}/dh-run/results/
+            ${{ runner.temp }}/dh-run/run.json
+          if-no-files-found: warn
+          retention-days: 30
+
+  report:
+    name: Report
+    needs: [plan, test]
+    if: ${{ always() && needs.plan.result == 'success' && needs.plan.outputs.agent_count != '0' && !inputs.dry_run }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    environment: discovery-health-trusted
+    permissions:
+      contents: read
+      id-token: write
+    outputs:
+      site: ${{ steps.report.outputs.site }}
+      exit_code: ${{ steps.report.outputs.exit_code }}
+    env:
+      AZURE_CLIENT_ID: ${{ vars.DH_AZURE_CLIENT_ID }}
+      AZURE_TENANT_ID: ${{ vars.DH_TENANT_ID }}
+      DH_SUBSCRIPTION_ID: ${{ vars.DH_SUBSCRIPTION_ID }}
+      DH_TENANT_ID: ${{ vars.DH_TENANT_ID }}
+      DH_RESOURCE_GROUP: ${{ vars.DH_RESOURCE_GROUP }}
+      DH_WORKSPACE_ENDPOINT: ${{ vars.DH_WORKSPACE_ENDPOINT }}
+      DH_PROJECT: ${{ vars.DH_PROJECT }}
+      DH_EVIDENCE_STORAGE: ${{ vars.DH_EVIDENCE_STORAGE }}
+      DH_CONFIG_JSON: ${{ vars.DH_CONFIG_JSON }}
+    steps:
+      - name: Check out trusted harness
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Download plan
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: discovery-health-plan
+          path: ${{ runner.temp }}/dh-plan
+
+      - name: Download shard results
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          pattern: discovery-health-results-*
+          path: ${{ runner.temp }}/dh-results
+
+      - name: Azure login (OIDC)
+        id: login
+        continue-on-error: true
+        uses: azure/login@a641126d1b8aa4d1fa005f4f92df94a3a4c4c906 # v3.1.0
+        with:
+          client-id: ${{ vars.DH_AZURE_CLIENT_ID }}
+          tenant-id: ${{ vars.DH_TENANT_ID }}
+          subscription-id: ${{ vars.DH_SUBSCRIPTION_ID }}
+
+      - name: Build report
+        id: report
+        shell: pwsh
+        env:
+          PUBLISH: ${{ needs.plan.outputs.publish }}
+          PAGES_URL: ${{ vars.DH_PAGES_URL }}
+          BOOTSTRAP: ${{ inputs.bootstrap }}
+          AZURE_OK: ${{ steps.login.outcome == 'success' }}
+          PR_NUMBER: ${{ inputs.pr_number }}
+          HEAD_SHA: ${{ needs.plan.outputs.head_sha }}
+        run: |
+          $dirs = @(Get-ChildItem "$env:RUNNER_TEMP/dh-results" -Directory -ErrorAction SilentlyContinue | ForEach-Object FullName)
+          $site = ($env:PUBLISH -eq 'true' -and $env:GITHUB_REF -eq 'refs/heads/main')
+          $context = if ($env:PR_NUMBER) { "PR #$env:PR_NUMBER @ $env:HEAD_SHA" } else { "$env:GITHUB_EVENT_NAME on $env:GITHUB_REF_NAME" }
+          $previous = if ($env:PAGES_URL) { "$($env:PAGES_URL.TrimEnd('/'))/state.json" } else { '' }
+          $azure = $env:AZURE_OK -eq 'true'
+          & $env:DH_HARNESS report -ResultsDir $dirs -PlanPath "$env:RUNNER_TEMP/dh-plan/plan.json" -OutputDir "$env:RUNNER_TEMP/dh-report" `
+            -Site:$site -Bootstrap:($env:BOOTSTRAP -eq 'true') -PreviousStateUrl $previous -Context $context `
+            -RepositoryUrl "$env:GITHUB_SERVER_URL/$env:GITHUB_REPOSITORY" -FromCheckpoints:$azure -ReapOrphans:$azure
+          $code = $LASTEXITCODE
+          "exit_code=$code" >> $env:GITHUB_OUTPUT
+          "site=$(([bool]($site -and (Test-Path "$env:RUNNER_TEMP/dh-report/site/index.html"))).ToString().ToLowerInvariant())" >> $env:GITHUB_OUTPUT
+          exit 0
+
+      - name: Upload report
+        if: ${{ always() }}
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: discovery-health-report
+          path: |
+            ${{ runner.temp }}/dh-report/summary.md
+            ${{ runner.temp }}/dh-report/results.json
+            ${{ runner.temp }}/dh-report/junit.xml
+          if-no-files-found: warn
+          retention-days: 90
+
+      - name: Upload Pages artifact
+        if: ${{ steps.report.outputs.site == 'true' }}
+        uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
+        with:
+          path: ${{ runner.temp }}/dh-report/site
+
+      - name: Apply failure policy
+        if: ${{ steps.report.outputs.exit_code != '0' }}
+        shell: pwsh
+        env:
+          CODE: ${{ steps.report.outputs.exit_code }}
+        run: |
+          Write-Host "::error title=Discovery Health::Report exit code $env:CODE (1 = failing agents per policy, 3 = scorecard history unavailable, 4 = harness error). See the job summary."
+          exit 1
+
+  publish:
+    name: Publish scorecard
+    needs: report
+    if: ${{ always() && needs.report.outputs.site == 'true' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@368f82528645a54fb793d4d04e342629a3f51346 # v5.0.1
+
+  pr-feedback:
+    name: PR feedback
+    needs: [plan, report]
+    if: ${{ always() && inputs.pr_number != '' && needs.report.result != 'skipped' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      pull-requests: write
+    steps:
+      - name: Download report
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: discovery-health-report
+          path: ${{ runner.temp }}/dh-report
+
+      - name: Post or update the sticky comment
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ inputs.pr_number }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          if ($env:PR_NUMBER -notmatch '^\d+$') { throw 'pr_number must be numeric.' }
+          $marker = '<!-- discovery-health-report -->'
+          $summary = Get-Content "$env:RUNNER_TEMP/dh-report/summary.md" -Raw
+          if ($summary.Length -gt 60000) { $summary = $summary.Substring(0, 60000) + "`n`n_Truncated; see the run artifacts._" }
+          $body = "$marker`n$summary`n`n[Workflow run]($env:RUN_URL)"
+          $comments = gh api --paginate "repos/$env:GITHUB_REPOSITORY/issues/$env:PR_NUMBER/comments" | ConvertFrom-Json
+          $existing = @($comments | Where-Object { $_.body -like "$marker*" -and $_.user.type -eq 'Bot' }) | Select-Object -First 1
+          $payload = @{ body = $body } | ConvertTo-Json -Compress
+          if ($existing) { $payload | gh api --method PATCH "repos/$env:GITHUB_REPOSITORY/issues/comments/$($existing.id)" --input - | Out-Null }
+          else { $payload | gh api --method POST "repos/$env:GITHUB_REPOSITORY/issues/$env:PR_NUMBER/comments" --input - | Out-Null }

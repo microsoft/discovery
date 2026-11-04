@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Discovery catalog health</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header>
+  <h1>Discovery catalog health</h1>
+  <p>Programmatic live tests of every catalog agent and tool: image build, image smoke checks, tool registration, deterministic tool runs and agent round trips. Updated {{GENERATED}} &middot; {{RUNS}} run(s) of history &middot; <a href="state.json">state.json</a></p>
+  <p class="summary">{{SUMMARY}}</p>
+  <p class="legend"><b>healthy</b>: every applicable stage passed with full coverage &middot; <b>partial</b>: passed what could be tested (missing spec, capacity or trusted configuration) &middot; <b>inconclusive</b>: infrastructure prevented a verdict &middot; <b>failing</b>: a contribution-level failure was found.</p>
+  <input id="filter" type="search" placeholder="Filter agents or states" aria-label="Filter agents or states">
+</header>
+<main>
+<table id="health">
+<thead><tr>
+  <th data-sort="text">Agent</th><th data-sort="text">State</th><th data-sort="num">Score</th><th data-sort="num">Coverage</th>
+  <th>Build</th><th>Smoke</th><th>Register</th><th>Run</th><th>Agent</th><th>Round trip</th>
+  <th data-sort="text">Last tested</th><th data-sort="text">Last healthy</th><th>Trend</th><th>Findings</th>
+</tr></thead>
+<tbody>
+{{ROWS}}
+</tbody>
+</table>
+</main>
+<script>
+(function () {
+  var table = document.getElementById('health');
+  var filter = document.getElementById('filter');
+  filter.addEventListener('input', function () {
+    var q = filter.value.toLowerCase();
+    Array.prototype.forEach.call(table.tBodies[0].rows, function (row) {
+      row.style.display = row.textContent.toLowerCase().indexOf(q) >= 0 ? '' : 'none';
+    });
+  });
+  Array.prototype.forEach.call(table.tHead.rows[0].cells, function (th, index) {
+    if (!th.dataset.sort) { return; }
+    th.addEventListener('click', function () {
+      var rows = Array.prototype.slice.call(table.tBodies[0].rows);
+      var asc = th.dataset.dir !== 'asc';
+      th.dataset.dir = asc ? 'asc' : 'desc';
+      rows.sort(function (a, b) {
+        var x = a.cells[index], y = b.cells[index];
+        var vx = th.dataset.sort === 'num' ? parseFloat(x.dataset.v || x.textContent) : x.textContent;
+        var vy = th.dataset.sort === 'num' ? parseFloat(y.dataset.v || y.textContent) : y.textContent;
+        return (vx > vy ? 1 : vx < vy ? -1 : 0) * (asc ? 1 : -1);
+      });
+      rows.forEach(function (row) { table.tBodies[0].appendChild(row); });
+    });
+  });
+})();
+</script>
+</body>
+</html>

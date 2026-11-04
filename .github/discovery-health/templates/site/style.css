@@ -1,0 +1,24 @@
+body { font-family: -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; margin: 0; color: #1f2328; background: #fff; }
+header { padding: 1rem 2rem; border-bottom: 1px solid #d0d7de; }
+header h1 { margin: 0 0 .5rem; font-size: 1.6rem; }
+header p { margin: .3rem 0; }
+.legend { font-size: .85rem; color: #57606a; }
+#filter { margin-top: .5rem; padding: .35rem .6rem; width: 22rem; max-width: 100%; border: 1px solid #d0d7de; border-radius: 6px; }
+main { padding: 1rem 2rem; overflow-x: auto; }
+table { border-collapse: collapse; width: 100%; font-size: .85rem; }
+th, td { border-bottom: 1px solid #d0d7de; padding: .35rem .5rem; text-align: left; vertical-align: top; white-space: nowrap; }
+th[data-sort] { cursor: pointer; text-decoration: underline dotted; }
+td:last-child { white-space: normal; min-width: 14rem; }
+.pill { display: inline-block; padding: .1rem .55rem; border-radius: 1rem; margin-right: .35rem; font-size: .85rem; }
+.st-healthy, .s-passed, .s-cached { background: #dafbe1; }
+.st-partial, .s-warning, .s-untested, .s-skipped { background: #fff8c5; }
+.st-inconclusive, .s-inconclusive, .s-blocked { background: #eaeef2; }
+.st-failing, .s-failed { background: #ffebe9; }
+.st-removed, .st-untested, .s-na { background: #f6f8fa; color: #57606a; }
+.dot { display: inline-block; width: .7rem; height: .7rem; border-radius: 50%; margin-right: 2px; border: 1px solid #d0d7de; }
+.dot.st-healthy { background: #2da44e; }
+.dot.st-partial { background: #bf8700; }
+.dot.st-failing { background: #cf222e; }
+.dot.st-inconclusive, .dot.st-untested, .dot.st-removed { background: #8c959f; }
+details summary { cursor: pointer; }
+code { font-size: .8rem; }

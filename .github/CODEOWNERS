@@ -23,3 +23,6 @@
 # Any of the reviewers/maintainers can review/approve agents and starter-kits
 /agents/                                @microsoft/discovery-samples-maintainer @microsoft/discovery-contributions-reviewers
 /starter-kits/                          @microsoft/discovery-samples-maintainer @microsoft/discovery-contributions-reviewers
+
+# Deterministic Discovery Health specs describe how agents are tested; the harness itself stays maintainer-owned.
+/.github/discovery-health/specs/        @microsoft/discovery-samples-maintainer @microsoft/discovery-contributions-reviewers

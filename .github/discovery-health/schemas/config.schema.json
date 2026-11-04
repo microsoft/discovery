@@ -1,0 +1,101 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Discovery Health configuration",
+  "type": "object",
+  "properties": {
+    "subscriptionId": { "type": "string" },
+    "tenantId": { "type": "string" },
+    "resourceGroup": { "type": "string" },
+    "location": { "type": "string" },
+    "acrName": { "type": "string", "pattern": "^([a-zA-Z0-9]{5,50}|)$|^<.+>$" },
+    "acrResourceGroup": { "type": "string" },
+    "acrAgentPool": { "type": "string" },
+    "acrTimeoutSeconds": { "type": "integer", "minimum": 300, "maximum": 28800 },
+    "workspaceEndpoint": { "type": "string" },
+    "project": { "type": "string" },
+    "projectResourceId": { "type": "string" },
+    "apiVersion": { "type": "string", "pattern": "^\\d{4}-\\d{2}-\\d{2}(-preview)?$" },
+    "chatModel": { "type": "string" },
+    "nodePools": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "skus"],
+        "properties": {
+          "id": { "type": "string" },
+          "skus": { "type": "array", "items": { "type": "string" } },
+          "gpu": { "type": "boolean" }
+        }
+      }
+    },
+    "outputStorageContainerId": { "type": "string" },
+    "evidenceStorage": {
+      "type": "object",
+      "properties": {
+        "account": { "type": "string" },
+        "container": { "type": "string" },
+        "resourceGroup": { "type": "string" }
+      }
+    },
+    "scorecard": {
+      "type": "object",
+      "properties": {
+        "pagesUrl": { "type": "string" },
+        "historyRuns": { "type": "integer", "minimum": 1, "maximum": 104 }
+      }
+    },
+    "testTag": { "type": "string", "minLength": 1 },
+    "acrRepositoryPrefix": { "type": "string", "pattern": "^[a-z0-9][a-z0-9._/-]*$" },
+    "namePrefix": { "type": "string", "pattern": "^[a-z][a-z0-9-]{0,9}$" },
+    "rebuild": {
+      "type": "object",
+      "properties": {
+        "mode": { "enum": ["changed", "always"] },
+        "maxImageAgeDays": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "concurrency": {
+      "type": "object",
+      "additionalProperties": { "type": "integer", "minimum": 1 }
+    },
+    "budgets": {
+      "type": "object",
+      "additionalProperties": { "type": "integer", "minimum": 0 }
+    },
+    "timeouts": {
+      "type": "object",
+      "additionalProperties": { "type": "integer", "minimum": 1 }
+    },
+    "roundTrip": {
+      "type": "object",
+      "properties": {
+        "enabled": { "type": "boolean" },
+        "maxAttempts": { "type": "integer", "minimum": 1, "maximum": 5 },
+        "deleteInvestigationOnPass": { "type": "boolean" }
+      }
+    },
+    "deadlineMinutes": { "type": "integer", "minimum": 5 },
+    "pollSeconds": { "type": "integer", "minimum": 2, "maximum": 300 },
+    "cleanup": {
+      "type": "object",
+      "properties": {
+        "afterRun": { "enum": ["none", "all"] },
+        "retentionDays": { "type": "integer", "minimum": 0 },
+        "retainFailedDays": { "type": "integer", "minimum": 0 },
+        "keepImagesPerRepo": { "type": "integer", "minimum": 0 },
+        "maxRunAgeHours": { "type": "integer", "minimum": 1 }
+      }
+    },
+    "failOn": { "enum": ["contribution", "any", "none"] },
+    "templateVariables": { "type": "object", "additionalProperties": { "type": "string" } },
+    "staging": {
+      "type": "object",
+      "properties": {
+        "maxContextMB": { "type": "integer", "minimum": 1 },
+        "maxFiles": { "type": "integer", "minimum": 1 }
+      }
+    },
+    "ledgerDir": { "type": "string" },
+    "pythonCommand": { "type": "string" }
+  }
+}

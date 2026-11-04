@@ -1,0 +1,95 @@
+name: Discovery Health Cleanup
+
+# Removes discovery-github-test resources from the dedicated test environment
+# in dependency order: orphaned ACR/tool runs -> dgt- investigations -> data-plane
+# agents -> tool LinkedAgentIds -> tagged tools -> ACR purge of the
+# discovery-github-test/ namespace. Refuses to act unless the resource group and
+# registry are tagged discovery-github-test=true. Manual runs default to dry run.
+
+on:
+  schedule:
+    # 06:00 UTC Sunday - after the weekly Discovery Health run.
+    - cron: "0 6 * * 0"
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Report what would be deleted without deleting"
+        type: boolean
+        default: true
+      all:
+        description: "Delete every discovery-github-test resource (not only stale or removed ones)"
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: discovery-health-live
+  cancel-in-progress: false
+
+env:
+  PYTHONUTF8: "1"
+
+jobs:
+  cleanup:
+    name: Clean up test resources
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    environment: discovery-health-trusted
+    permissions:
+      contents: read
+      id-token: write
+    env:
+      AZURE_CLIENT_ID: ${{ vars.DH_AZURE_CLIENT_ID }}
+      AZURE_TENANT_ID: ${{ vars.DH_TENANT_ID }}
+      DH_SUBSCRIPTION_ID: ${{ vars.DH_SUBSCRIPTION_ID }}
+      DH_TENANT_ID: ${{ vars.DH_TENANT_ID }}
+      DH_RESOURCE_GROUP: ${{ vars.DH_RESOURCE_GROUP }}
+      DH_LOCATION: ${{ vars.DH_LOCATION }}
+      DH_ACR_NAME: ${{ vars.DH_ACR_NAME }}
+      DH_ACR_RESOURCE_GROUP: ${{ vars.DH_ACR_RESOURCE_GROUP }}
+      DH_WORKSPACE_ENDPOINT: ${{ vars.DH_WORKSPACE_ENDPOINT }}
+      DH_PROJECT: ${{ vars.DH_PROJECT }}
+      DH_PROJECT_RESOURCE_ID: ${{ vars.DH_PROJECT_RESOURCE_ID }}
+      DH_EVIDENCE_STORAGE: ${{ vars.DH_EVIDENCE_STORAGE }}
+      DH_CONFIG_JSON: ${{ vars.DH_CONFIG_JSON }}
+    steps:
+      - name: Check out trusted harness
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: python -m pip install -r .github/requirements-ci.txt
+
+      - name: Azure login (OIDC)
+        uses: azure/login@a641126d1b8aa4d1fa005f4f92df94a3a4c4c906 # v3.1.0
+        with:
+          client-id: ${{ vars.DH_AZURE_CLIENT_ID }}
+          tenant-id: ${{ vars.DH_TENANT_ID }}
+          subscription-id: ${{ vars.DH_SUBSCRIPTION_ID }}
+
+      - name: Clean up
+        shell: pwsh
+        env:
+          DRY_RUN: ${{ github.event_name == 'workflow_dispatch' && inputs.dry_run || false }}
+          ALL: ${{ github.event_name == 'workflow_dispatch' && inputs.all || false }}
+        run: |
+          & ./.github/discovery-health/Invoke-DiscoveryHealth.ps1 cleanup -CatalogRoot $PWD.Path `
+            -OutputDir "$env:RUNNER_TEMP/dh-cleanup" -DryRun:($env:DRY_RUN -eq 'true') -All:($env:ALL -eq 'true')
+          exit $LASTEXITCODE
+
+      - name: Upload cleanup report
+        if: ${{ always() }}
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: discovery-health-cleanup
+          path: ${{ runner.temp }}/dh-cleanup/cleanup.json
+          if-no-files-found: warn
+          retention-days: 30

@@ -1,0 +1,21 @@
+# Deterministic Discovery Health spec for chembl (code-environment tool).
+# Schema: .github/discovery-health/schemas/spec.schema.json
+agent: chembl
+tools:
+  ChEMBL:
+    toolRun:
+      - name: aspirin-lookup
+        script: |
+          from chembl_webresource_client.new_client import new_client
+
+          molecule = new_client.molecule.get("CHEMBL25")
+          print("PREF_NAME=" + str(molecule.get("pref_name")))
+        expect:
+          status: Succeeded
+          contains: ['PREF_NAME=ASPIRIN']
+        timeoutMinutes: 15
+roundTrip:
+  prompt: 'Use the chembl tool to look up the ChEMBL molecule CHEMBL25 and report its preferred name.'
+  expect:
+    toolsCalled: [ChEMBL]
+    matches: ['(?i)aspirin']

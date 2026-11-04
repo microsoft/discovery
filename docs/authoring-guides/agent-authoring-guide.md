@@ -234,6 +234,9 @@ actions:
   invoke `/migrate-podman-containerfile <path>`.
 - If a `tools/` directory exists, `agent.yaml.discoveryExtensions` must declare the corresponding tools so they are wired up at deploy time.
 - Optional tool tests must use `test_*.py` or `*_test.py` naming. Their presence is published as `auto:has-tests`, but the repository's privileged PR workflows do not execute submitted code; run these tests in your own isolated environment or CI before submission.
+- Maintainers run live [Discovery Health](../../.github/discovery-health/README.md) tests against a dedicated test environment. The tests build your image in ACR, register the tool, run it with deterministic inputs, and round-trip the agent. Results appear on the public health scorecard.
+  - The build context is the tool folder by default. If your Dockerfile copies `tools/<tool>/...` or `agent.yaml`, the agent folder is used automatically.
+  - Action-based tools need a deterministic spec in `.github/discovery-health/specs/<agent>.yaml` to be fully tested. Specs are maintainer-owned and take effect after merge; you may propose one in your PR.
 
 ---
 

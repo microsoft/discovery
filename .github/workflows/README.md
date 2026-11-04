@@ -121,6 +121,39 @@ and promotion criteria.
 Catalog changes can also trigger **Update Registry**. Generated updates reach
 `main` through a separate reviewed registry PR, not automatic merging.
 
+## Discovery Health live tests
+
+[`discovery-health.yml`](discovery-health.yml) runs programmatic live tests for every agent and
+tool against a dedicated Discovery test environment. It runs weekly (full catalog) and on
+maintainer `workflow_dispatch`. Each tool goes through these stages:
+
+- ACR build and image smoke checks
+- tool registration
+- a deterministic direct tool run
+- agent registration
+- an agent round trip
+
+The results feed a public GitHub Pages scorecard. No AI runs on the runner.
+
+| Workflow | Trigger | Responsibility |
+| --- | --- | --- |
+| [Discovery Health](discovery-health.yml) | Weekly `schedule`; `workflow_dispatch` (agents, stages, `pr_number`, shards, dry run) | Plan → sharded tests (OIDC) → report → Pages publish (`main` only) → sticky PR comment for PR tests. |
+| [Discovery Health Cleanup](discovery-health-cleanup.yml) | Weekly `schedule`; `workflow_dispatch` (dry run by default) | Deletes stale `discovery-github-test` resources in dependency order, behind resource-group and registry tag guards. |
+
+**Pull requests:** these workflows never run on `pull_request` or `pull_request_target`. A
+maintainer tests a PR by dispatching it with `pr_number`:
+
+- The plan job verifies that the PR is open, targets `main`, and matches the expected head SHA.
+- The PR is checked out as data only. The harness and specs come from `main`.
+- Azure jobs use the reviewer-gated `discovery-health-pr` environment, and secrets are never passed to PR runs.
+- The scheduled run uses `discovery-health-trusted`, which has no reviewers and is restricted to `main`.
+
+**Logs and evidence:** raw logs and payloads go to private evidence storage. Public logs,
+summaries, artifacts and the scorecard contain only templated, sanitized messages.
+
+See the [Discovery Health guide](../discovery-health/README.md) for Azure and GitHub setup,
+configuration, specs and local Windows/Linux usage.
+
 ## Release refresh automation
 
 Three workflows work together to keep the mutable `current` tag, the

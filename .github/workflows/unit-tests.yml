@@ -20,6 +20,8 @@ on:
       - ".github/tests/**"
       - ".github/policy/**"
       - ".github/skills/migrate-podman-containerfile/**"
+      - ".github/discovery-health/**"
+      - ".github/workflows/discovery-health*.yml"
       - ".github/requirements-ci.txt"
       - ".github/workflows/probe-aka-ms.yml"
       - ".github/workflows/unit-tests.yml"
@@ -48,7 +50,7 @@ jobs:
           FILES=$(gh api \
             "repos/${GITHUB_REPOSITORY}/pulls/${{ github.event.pull_request.number }}/files" \
             --paginate --jq '.[].filename')
-          if echo "$FILES" | grep -E '^\.github/(scripts|tests|policy)/|^\.github/skills/migrate-podman-containerfile/|^\.github/requirements-ci\.txt$|^\.github/workflows/(probe-aka-ms|unit-tests)\.yml$|^docs/authoring-guides/(agent-authoring-guide|podman-to-docker-migration)\.md$|^utilities/agent-evaluation/' >/dev/null; then
+          if echo "$FILES" | grep -E '^\.github/(scripts|tests|policy)/|^\.github/discovery-health/|^\.github/skills/migrate-podman-containerfile/|^\.github/workflows/discovery-health|^\.github/requirements-ci\.txt$|^\.github/workflows/(probe-aka-ms|unit-tests)\.yml$|^docs/authoring-guides/(agent-authoring-guide|podman-to-docker-migration)\.md$|^utilities/agent-evaluation/' >/dev/null; then
             echo "relevant=true" >> "$GITHUB_OUTPUT"
           else
             echo "relevant=false" >> "$GITHUB_OUTPUT"

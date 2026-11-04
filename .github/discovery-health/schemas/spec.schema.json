@@ -1,0 +1,119 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Discovery Health deterministic test spec",
+  "type": "object",
+  "required": ["agent"],
+  "additionalProperties": false,
+  "properties": {
+    "agent": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]{0,63}$" },
+    "requires": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "skus": {
+          "oneOf": [
+            { "const": "auto" },
+            { "type": "array", "items": { "type": "string" }, "minItems": 1 }
+          ]
+        },
+        "variables": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "skip": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["stage", "reason", "until"],
+        "additionalProperties": false,
+        "properties": {
+          "stage": { "enum": ["build", "image-smoke", "tool-register", "tool-run", "agent-register", "round-trip"] },
+          "tool": { "type": "string" },
+          "reason": { "type": "string", "minLength": 5 },
+          "until": { "type": "string", "pattern": "^\\d{4}-\\d{2}-\\d{2}$" }
+        }
+      }
+    },
+    "toolIdPlaceholders": { "type": "object", "additionalProperties": { "type": "string" } },
+    "tools": { "type": "object", "additionalProperties": { "$ref": "#/definitions/tool" } },
+    "roundTrip": { "$ref": "#/definitions/roundTrip" }
+  },
+  "definitions": {
+    "caseName": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]{0,40}$" },
+    "expect": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "exitCode": { "type": "integer" },
+        "status": { "enum": ["Succeeded", "Failed"] },
+        "contains": { "type": "array", "items": { "type": "string", "minLength": 1 } },
+        "matches": { "type": "array", "items": { "type": "string", "minLength": 1 } },
+        "receipt": { "type": "boolean" }
+      }
+    },
+    "imageSmoke": {
+      "type": "object",
+      "required": ["name", "command"],
+      "additionalProperties": false,
+      "properties": {
+        "name": { "$ref": "#/definitions/caseName" },
+        "command": { "type": "string", "minLength": 1 },
+        "expect": { "$ref": "#/definitions/expect" }
+      }
+    },
+    "inlineFile": {
+      "type": "object",
+      "required": ["path", "content"],
+      "additionalProperties": false,
+      "properties": {
+        "path": { "type": "string", "pattern": "^[A-Za-z0-9._-]+(/[A-Za-z0-9._-]+)*$" },
+        "content": { "type": "string" }
+      }
+    },
+    "toolRun": {
+      "type": "object",
+      "required": ["name"],
+      "additionalProperties": false,
+      "properties": {
+        "name": { "$ref": "#/definitions/caseName" },
+        "action": { "type": "string" },
+        "codeEnvironment": { "type": "string" },
+        "inputs": { "type": "object" },
+        "script": { "type": "string" },
+        "command": { "type": "string" },
+        "verify": { "type": "string", "minLength": 1 },
+        "inlineFiles": { "type": "array", "items": { "$ref": "#/definitions/inlineFile" } },
+        "expect": { "$ref": "#/definitions/expect" },
+        "timeoutMinutes": { "type": "integer", "minimum": 1, "maximum": 240 }
+      }
+    },
+    "tool": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "buildContext": { "enum": ["tool", "agent"] },
+        "defaultImageSmoke": { "type": "boolean" },
+        "imageSmoke": { "type": "array", "items": { "$ref": "#/definitions/imageSmoke" } },
+        "toolRun": { "type": "array", "items": { "$ref": "#/definitions/toolRun" } }
+      }
+    },
+    "roundTrip": {
+      "type": "object",
+      "required": ["prompt"],
+      "additionalProperties": false,
+      "properties": {
+        "prompt": { "type": "string", "minLength": 10 },
+        "expect": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "toolsCalled": { "type": "array", "items": { "type": "string" } },
+            "contains": { "type": "array", "items": { "type": "string", "minLength": 1 } },
+            "matches": { "type": "array", "items": { "type": "string", "minLength": 1 } },
+            "receipt": { "type": "boolean" }
+          }
+        },
+        "timeoutMinutes": { "type": "integer", "minimum": 1, "maximum": 120 }
+      }
+    }
+  }
+}

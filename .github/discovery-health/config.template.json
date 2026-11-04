@@ -1,0 +1,39 @@
+{
+  "subscriptionId": "<test-subscription-id>",
+  "tenantId": "<tenant-id>",
+  "resourceGroup": "<test-resource-group-tagged-discovery-github-test>",
+  "location": "<azure-region>",
+  "acrName": "<test-acr-name-without-azurecr-io>",
+  "acrResourceGroup": "",
+  "acrAgentPool": "",
+  "acrTimeoutSeconds": 7200,
+  "workspaceEndpoint": "https://<workspace>.workspace.discovery.azure.com",
+  "project": "<test-project>",
+  "projectResourceId": "",
+  "apiVersion": "2026-06-01",
+  "chatModel": "<chat-model-deployment-name>",
+  "nodePools": [
+    {
+      "id": "/subscriptions/<sub>/resourceGroups/<rg>/providers/Microsoft.Discovery/supercomputers/<supercomputer>/nodepools/<cpu-nodepool>",
+      "skus": ["Standard_D4s_v6", "Standard_D8s_v6"],
+      "gpu": false
+    }
+  ],
+  "outputStorageContainerId": "",
+  "evidenceStorage": { "account": "", "container": "discovery-health", "resourceGroup": "" },
+  "scorecard": { "pagesUrl": "", "historyRuns": 12 },
+  "testTag": "discovery-github-test",
+  "acrRepositoryPrefix": "discovery-github-test",
+  "namePrefix": "dgt-",
+  "rebuild": { "mode": "changed", "maxImageAgeDays": 30 },
+  "concurrency": { "acr": 8, "toolRegister": 10, "toolRun": 6, "gpuToolRun": 2, "agentRegister": 10, "roundTrip": 6 },
+  "budgets": { "maxAcrBuilds": 250, "maxToolRuns": 250, "maxGpuToolRuns": 40, "maxRoundTrips": 150 },
+  "timeouts": { "buildMinutes": 120, "toolRegisterMinutes": 30, "toolRunQueueMinutes": 45, "toolRunMinutes": 30, "agentRegisterMinutes": 10, "roundTripMinutes": 20 },
+  "roundTrip": { "enabled": true, "maxAttempts": 2, "deleteInvestigationOnPass": true },
+  "deadlineMinutes": 330,
+  "pollSeconds": 20,
+  "cleanup": { "afterRun": "none", "retentionDays": 30, "retainFailedDays": 14, "keepImagesPerRepo": 2, "maxRunAgeHours": 8 },
+  "failOn": "contribution",
+  "templateVariables": {},
+  "staging": { "maxContextMB": 2048, "maxFiles": 20000 }
+}

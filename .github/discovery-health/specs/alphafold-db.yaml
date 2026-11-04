@@ -1,0 +1,20 @@
+# Deterministic Discovery Health spec for alphafold-db (action tool).
+# Schema: .github/discovery-health/schemas/spec.schema.json
+agent: alphafold-db
+tools:
+  alphafold-db:
+    toolRun:
+      - name: fetch-p00520
+        action: fetch_structure
+        inputs:
+          accession: P00520
+        verify: "test -s {{output_directory}}/P00520.pdb && grep -m1 '^ATOM' {{output_directory}}/P00520.pdb"
+        expect:
+          status: Succeeded
+          contains: ['ATOM']
+        timeoutMinutes: 15
+roundTrip:
+  prompt: 'Use the alphafold-db tool to fetch the AlphaFold predicted structure for UniProt accession P00520 and tell me the name of the PDB file it produced.'
+  expect:
+    toolsCalled: [alphafold-db]
+    matches: ['P00520']
