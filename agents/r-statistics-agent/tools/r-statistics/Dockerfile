@@ -1,4 +1,4 @@
-FROM r-base:4.5.3@sha256:881cf9bc036d399aafe32954e16de5bf5663d9a7aae4a68a3d87222a573a28c9
+FROM r-base:4.6.2@sha256:857b44eeca5a8c4f39b210d3912a879fa4cf4b47d9e57a5940b6a29d44c8f938
 
 COPY packages.csv install-packages.R /tmp/
 RUN Rscript --vanilla /tmp/install-packages.R \
