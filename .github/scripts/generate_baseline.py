@@ -35,7 +35,7 @@ from rules.registry import (
     run_rules,
 )
 
-GUARDED_DIRS = ("agents", "starter-kits")
+GUARDED_DIRS = ("agents", "starter-kits", "skills")
 BASELINE_PATH = Path(".github") / "policy" / "baseline.json"
 
 

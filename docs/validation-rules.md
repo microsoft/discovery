@@ -24,10 +24,10 @@ Two escape hatches exist, and neither is a way to skip review:
 
 | Rule | Summary | Applies to | Severity |
 | --- | --- | --- | --- |
-| [POL-008](#pol-008) | Files under agents/ and starter-kits/ must be source code or POL-016-compliant Markdown images, verified by content inspection. | Every changed file | error |
+| [POL-008](#pol-008) | Files under agents/, starter-kits/, and skills/ must be source code or POL-016-compliant Markdown images, verified by content inspection. | Every changed file | error |
 | [POL-014](#pol-014) | Dockerfile base images must be Docker Official Images or come from an approved registry or publisher namespace. | Every changed file | error |
 | [POL-015](#pol-015) | Added files must use an approved extension or filename from the source allowlist. | Every changed file | error |
-| [POL-016](#pol-016) | Images under agents/ or starter-kits/ must be safe Markdown formats, at most 1 MiB, and referenced by Markdown in the same catalog item. | Every changed file | error |
+| [POL-016](#pol-016) | Images under agents/, starter-kits/, or skills/ must be safe Markdown formats, at most 1 MiB, and referenced by Markdown in the same catalog item. | Every changed file | error |
 | [POL-017](#pol-017) | Base image tags should be pinned to an explicit version rather than a floating tag such as :latest. | Every changed file | warning |
 | [POL-018](#pol-018) | Catalog webpage URLs must resolve to reachable public HTML pages. | Whole repository | warning |
 | [POL-019](#pol-019) | Catalog contact email domains must exist and advertise usable mail DNS records. | Whole repository | error |
@@ -38,7 +38,7 @@ Two escape hatches exist, and neither is a way to skip review:
 
 ## POL-008
 
-Files under agents/ and starter-kits/ must be source code or POL-016-compliant Markdown images, verified by content inspection.
+Files under agents/, starter-kits/, and skills/ must be source code or POL-016-compliant Markdown images, verified by content inspection.
 
 - **Applies to:** Every changed file
 - **Severity:** error
@@ -80,7 +80,7 @@ Further reading: `docs/authoring-guides/agent-authoring-guide.md#approved-file-t
 
 ## POL-016
 
-Images under agents/ or starter-kits/ must be safe Markdown formats, at most 1 MiB, and referenced by Markdown in the same catalog item.
+Images under agents/, starter-kits/, or skills/ must be safe Markdown formats, at most 1 MiB, and referenced by Markdown in the same catalog item.
 
 - **Applies to:** Every changed file
 - **Severity:** error
@@ -88,7 +88,7 @@ Images under agents/ or starter-kits/ must be safe Markdown formats, at most 1 M
 
 **How to fix**
 
-Use PNG, JPEG, GIF, WebP, or SVG; keep the file at or below 1 MiB; and embed it from Markdown in the same agent or starter-kit folder. Re-export the image if its content does not match its extension. For SVG, remove scripts, event handler attributes, javascript: URIs, entity declarations, embedded documents, and remote references — the catalog accepts declarative artwork only.
+Use PNG, JPEG, GIF, WebP, or SVG; keep the file at or below 1 MiB; and embed it from Markdown in the same agent, starter-kit, or skill folder. Re-export the image if its content does not match its extension. For SVG, remove scripts, event handler attributes, javascript: URIs, entity declarations, embedded documents, and remote references — the catalog accepts declarative artwork only.
 
 Further reading: `docs/authoring-guides/agent-authoring-guide.md#images`
 

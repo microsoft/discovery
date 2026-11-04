@@ -2,6 +2,8 @@
 
 from pathlib import Path
 
+import pytest
+
 from catalog_validation.contribution import classify_contribution
 
 
@@ -45,6 +47,15 @@ def test_code_extensions_get_code_label(tmp_path: Path):
         tmp_path,
         ["agents/demo/tool.py", "web/component.tsx", "scripts/build.ps1"],
     )
+    assert summary.has_code
+    assert not summary.has_markdown_only
+
+
+@pytest.mark.parametrize("root", ["agents", "starter-kits", "skills"])
+@pytest.mark.parametrize("suffix", [".cjs", ".CJS"])
+def test_commonjs_changes_get_code_label(tmp_path: Path, root: str, suffix: str):
+    summary = classify(tmp_path, [f"{root}/demo/helper{suffix}"])
+
     assert summary.has_code
     assert not summary.has_markdown_only
 

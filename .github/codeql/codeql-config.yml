@@ -1,8 +1,8 @@
 # CodeQL configuration — Discovery catalog
 #
 # Scoped deliberately. This repository's threat surface is the code that public
-# contributors add under agents/ and starter-kits/, which gets baked into
-# container images and executed on Discovery infrastructure. Maintainer-owned
+# contributors add under agents/, starter-kits/, and skills/, which can run in
+# container images or a user's skill-enabled environment. Maintainer-owned
 # tooling under .github/ and utilities/ is reviewed through a different path and
 # would only add noise here.
 
@@ -11,6 +11,7 @@ name: "Discovery catalog"
 paths:
   - agents
   - starter-kits
+  - skills
 
 paths-ignore:
   # Scratch directories are local deployer artifacts (POL-012).

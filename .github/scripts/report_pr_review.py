@@ -237,7 +237,7 @@ def latest_jobs(
 
 def labels_for(report: dict[str, Any], files: list[dict[str, Any]], passed: bool) -> list[str]:
     paths = [file["filename"] for file in files]
-    catalog = any(path.startswith(("agents/", "starter-kits/")) for path in paths)
+    catalog = any(path.startswith(("agents/", "starter-kits/", "skills/")) for path in paths)
     labels = []
     if catalog:
         for flag, label in {

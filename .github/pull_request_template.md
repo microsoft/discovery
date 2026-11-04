@@ -16,6 +16,8 @@ Please fill out every section. Empty / placeholder PRs are blocked by automated 
 - [ ] Update to an existing agent
 - [ ] New starter kit (under `starter-kits/<name>/`)
 - [ ] Update to an existing starter kit
+- [ ] New skill (under `skills/<name>/`)
+- [ ] Update to an existing skill
 - [ ] Schema change (`docs/schemas/**`)
 - [ ] Workflow / script change (`.github/**`)
 - [ ] Documentation only

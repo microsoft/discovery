@@ -99,11 +99,12 @@ jobs:
         if: ${{ inputs.checks == 'all' || inputs.checks == 'catalog-validation' }}
         continue-on-error: true
         run: |
-          # Pretend every tracked file under agents/ and starter-kits/ is "changed"
+          # Pretend every tracked file under agents/, starter-kits/, and skills/ is "changed"
           # so the full rule catalogue runs against the entire repo.
           {
             git ls-files agents
             git ls-files starter-kits
+            git ls-files skills
           } > /tmp/changed-files.txt
           echo "Files under validation: $(wc -l < /tmp/changed-files.txt)"
 
@@ -131,11 +132,11 @@ jobs:
         run: |
           python .github/scripts/render_ci_summary.py catalog \
             --report /tmp/validation-results.json \
-            --title "Full agents and starter-kits validation" \
+            --title "Full agents, starter-kits, and skills validation" \
             --outcome "$CATALOG_OUTCOME" \
             --repository-url "$REPOSITORY_URL" \
             --revision "$VALIDATOR_REVISION" \
-            --rerun-command "git ls-files agents starter-kits > changed-files.txt && python .github/scripts/validate_pr.py --changed-files changed-files.txt --repo-root . --output validation-results.json"
+            --rerun-command "git ls-files agents starter-kits skills > changed-files.txt && python .github/scripts/validate_pr.py --changed-files changed-files.txt --repo-root . --output validation-results.json"
 
       - name: Validate every starter kit against current schema
         id: starter_kits

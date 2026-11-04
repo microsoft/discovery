@@ -16,7 +16,7 @@ from __future__ import annotations
 from dockerfile_parser import external_images
 from rules.base import Finding, Rule, RuleContext, Scope, Severity
 
-GUARDED_PREFIXES = ("agents/", "starter-kits/")
+GUARDED_PREFIXES = ("agents/", "starter-kits/", "skills/")
 
 
 def _is_dockerfile(rel: str) -> bool:

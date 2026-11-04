@@ -2,7 +2,7 @@
 
 > **Audience:** Anyone authoring a starter kit for the Discovery catalog. Starter kits bundle one or more existing catalog agents into a deployable, opinionated workflow that customers can launch from Discovery Studio.
 >
-> **Scope:** Defining and submitting a starter kit via `kit.json`, with optional Markdown documentation and modest documentation images.
+> **Scope:** Defining and submitting a starter kit via `kit.json`, with optional Markdown documentation, modest documentation images, and supporting CommonJS source.
 
 For agent authoring, see [`agent-authoring-guide.md`](./agent-authoring-guide.md).
 
@@ -28,7 +28,12 @@ starter-kits/
 ```
 
 Besides `kit.json`, the kit folder may contain Markdown and local PNG, JPEG,
-GIF, WebP, or inert SVG images. Each local image must be no larger than **1
+GIF, WebP, or inert SVG images, as well as CommonJS JavaScript (`.cjs`) source.
+CommonJS files, including supporting tests, are inspected as data and never
+executed by catalog validation. They must pass the shared source-content
+policies; other source-code types remain disallowed.
+
+Each local image must be no larger than **1
 MiB** and embedded by Markdown in the same kit folder. This includes the
 Markdown in `kit.json`'s `longDescription`, for example
 `![Workflow](media/workflow.png)`. Unreferenced images are rejected.
@@ -207,7 +212,7 @@ The automated PR review will validate:
 - Exactly one `agentRefs[]` entry has `role: primary` and `required: true`.
 - No duplicate refs.
 - For active kits, every `ref` resolves to an existing agent.
-- The kit folder contains only `kit.json`, Markdown, and compliant Markdown images.
+- The kit folder contains only `kit.json`, Markdown, compliant Markdown images, and CommonJS (`.cjs`) source.
 - For active kits, `samplePrompts` is non-empty.
 - Newly added kits have `lifecycle: active`.
 - Kit `name` is globally unique across the catalog.

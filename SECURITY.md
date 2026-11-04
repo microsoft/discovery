@@ -47,6 +47,13 @@ detailed rule definitions and remediation guidance are in
 [`docs/validation-rules.md`](docs/validation-rules.md) and
 [`CONTRIBUTING.md`](CONTRIBUTING.md).
 
+The public catalog contribution areas are `agents/`, `starter-kits/`, and
+`skills/`. Skills receive applicable content policies, secret and dependency
+checks, static analysis, capability reports, and weekly audits. Submitted
+skill scripts are not executed by catalog validation. Skills share the
+maintainer/contributions-reviewer CODEOWNERS gate; opening this contribution
+area does not grant access to `.github/skills/` or other trusted configuration.
+
 | Layer | Policy inventory |
 | --- | --- |
 | Trust boundary | PR Review and agent-removal validation use read-only `pull_request` jobs, trusted base-SHA code, and separate exact-head data checkouts without persisted credentials. PR feedback is published by a separate `workflow_run` job executing only trusted default-branch code. No workflow uses `pull_request_target`. |

@@ -61,7 +61,7 @@ jobs:
       - name: Install dependencies
         run: python -m pip install -r .github/requirements-ci.txt
 
-      - name: Audit every agent and starter kit
+      - name: Audit every agent, starter kit, and skill
         id: audit
         run: |
           set -uo pipefail
@@ -308,6 +308,7 @@ jobs:
           sparse-checkout: |
             /agents/
             /starter-kits/
+            /skills/
           sparse-checkout-cone-mode: false
           persist-credentials: false
 
@@ -372,18 +373,18 @@ jobs:
                                 .get("artifactLocation", {})
                                 .get("uri", ""))
                       # Only the publicly-contributed trees are in scope.
-                      if uri.startswith(("agents/", "starter-kits/")):
+                      if uri.startswith(("agents/", "starter-kits/", "skills/")):
                           counts[tool] += 1
                           break
           if counts:
               summary.extend((
-                  "| Analyzer | Findings in agents/ and starter-kits/ |",
+                  "| Analyzer | Findings in agents/, starter-kits/, and skills/ |",
                   "|---|---|",
               ))
               for tool, n in sorted(counts.items()):
                   summary.append(f"| {tool} | {n} |")
           else:
-              summary.append("No findings inside agents/ or starter-kits/.")
+              summary.append("No findings inside agents/, starter-kits/, or skills/.")
           finding_count = sum(counts.values())
           scan_status = "clean" if outcome == "success" else "error"
           actionable = finding_count > 0 or scan_status != "clean"

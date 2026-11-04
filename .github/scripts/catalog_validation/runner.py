@@ -140,7 +140,7 @@ def run_validation(
     author_association: str = "",
 ) -> ValidationRun:
     catalog_changed = any(
-        path.replace("\\", "/").startswith(("agents/", "starter-kits/"))
+        path.replace("\\", "/").startswith(("agents/", "starter-kits/", "skills/"))
         for path in changed_files
     )
     scope_failures = check_contributor_scope(
