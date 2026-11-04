@@ -1,4 +1,4 @@
-"""POL-021 protects trusted paths while allowing public utility contributions."""
+"""POL-021 protects trusted paths while allowing public skill and utility contributions."""
 
 from __future__ import annotations
 
@@ -60,7 +60,16 @@ def test_maintainer_permissions_allow_any_repository_path(permission: str) -> No
 def test_public_permissions_allow_catalog_and_documentation(permission: str) -> None:
     changed = [
         "agents/demo/metadata.yaml",
+        "agents/demo/tools/demo/helper.cjs",
         "starter-kits/demo/kit.json",
+        "starter-kits/demo/helper.cjs",
+        "skills/demo/SKILL.md",
+        "skills/demo/scripts/helper.cjs",
+        "skills/demo/scripts/build.sh",
+        "skills/demo/templates/generate_figures.py",
+        "skills/demo/templates/main.tex",
+        "skills/demo/templates/references.bib",
+        "skills/demo/requirements.txt",
         "README.md",
         "CONTRIBUTING.md",
         "docs/authoring-guides/guide.md",
@@ -72,11 +81,13 @@ def test_public_permissions_allow_catalog_and_documentation(permission: str) -> 
 
 
 @pytest.mark.parametrize("permission", ["none", "read", "triage", "unknown", ""])
-def test_public_permissions_allow_utility_code_and_root_gitignore(
+def test_public_permissions_allow_utilities_skills_and_root_gitignore(
     permission: str,
 ) -> None:
     changed = [
         ".gitignore",
+        "skills/example/SKILL.md",
+        "skills/example/scripts/helper.cjs",
         "utilities/example/run.py",
         "utilities/example/run.ps1",
         "utilities/example/run.sh",
@@ -128,6 +139,7 @@ def test_public_scope_still_protects_other_root_configuration() -> None:
 def test_public_mixed_scope_reports_each_disallowed_file() -> None:
     changed = [
         "agents/demo/metadata.yaml",
+        "skills/demo/scripts/build.sh",
         "docs/authoring-guides/guide.md",
         ".github/workflows/pr-review.yml",
         "docs/schemas/metadata-schema.json",
@@ -137,6 +149,8 @@ def test_public_mixed_scope_reports_each_disallowed_file() -> None:
         ".vscode/settings.json",
         ".gitignore",
         "scripts/new_validator.py",
+        ".github/skills/demo/SKILL.md",
+        "skills-other/demo/script.py",
     ]
 
     failures = check_contributor_scope(changed, "read", "octocat")
@@ -148,6 +162,8 @@ def test_public_mixed_scope_reports_each_disallowed_file() -> None:
         ("POL-021", ".auto-registry/agent-registry.json"),
         ("POL-021", ".vscode/settings.json"),
         ("POL-021", "scripts/new_validator.py"),
+        ("POL-021", ".github/skills/demo/SKILL.md"),
+        ("POL-021", "skills-other/demo/script.py"),
     ]
 
 
@@ -168,6 +184,12 @@ def test_public_mixed_scope_reports_each_disallowed_file() -> None:
         "utilities",
         ".gitignore/../.github/workflows/pr-review.yml",
         ".gitignore/nested/run.py",
+        "skills/../.github/workflows/pr-review.yml",
+        "skills/\\../.github/workflows/pr-review.yml",
+        "skills//demo/scripts/build.sh",
+        "skills/./demo/SKILL.md",
+        "/skills/demo/SKILL.md",
+        "skills",
     ],
 )
 def test_public_scope_rejects_noncanonical_or_escaping_paths(path: str) -> None:

@@ -7,7 +7,7 @@ Checks performed (in order):
   SKT-STR-001  name field equals parent directory name
   SKT-STR-003  Exactly one agentRef with role:primary and required:true
   SKT-STR-006  No duplicate ref values within agentRefs[]
-    SKT-STR-008  Kit folder may contain kit.json, Markdown, and image assets
+    SKT-STR-008  Kit folder may contain kit.json, Markdown, CommonJS, and image assets
   SKT-REF-001  For active kits: every agentRef.ref exists in dry-run registry build
   SKT-POL-001  Newly added kit directories must have lifecycle:active
     SKT-AST-001  logo / screenshots fields, if set, must be HTTPS URLs
@@ -167,20 +167,20 @@ def validate_kit(
             f"[{kit_rel_path}] SKT-POL-001: Newly added kit must have lifecycle:active, got '{lifecycle}'"
         )
 
-    # SKT-STR-008: permit documentation and its POL-016-governed images, but
-    # keep arbitrary source or payload files out of starter-kit metadata.
+    # SKT-STR-008: CommonJS is the only supporting source-code exception;
+    # shared catalog policies still inspect its content without executing it.
     extra_entries = sorted(
         str(p.relative_to(kit_dir)).replace(os.sep, "/")
         for p in kit_dir.rglob("*")
         if p.is_file()
         and p != kit_dir / "kit.json"
-        and p.suffix.lower() not in {".md", ".markdown"}
+        and p.suffix.lower() not in {".md", ".markdown", ".cjs"}
         and p.suffix.lower() not in MARKDOWN_IMAGE_EXTENSIONS
     )
     if extra_entries:
         errors.append(
             f"[{kit_rel_path}] SKT-STR-008: starter-kits/{kit_rel_path}/ may "
-            f"contain only kit.json, Markdown, and Markdown image assets; found "
+            f"contain only kit.json, Markdown, CommonJS (.cjs), and Markdown image assets; found "
             f"unsupported file(s): {extra_entries}."
         )
 

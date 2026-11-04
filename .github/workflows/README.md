@@ -21,8 +21,9 @@ enables GitHub's native auto-merge.
 
 ### Contributor scope and private organization membership
 
-Public contributors may modify catalog content, utility source and tests,
-documentation, and the root `.gitignore`. Utility manifests and lock files do
+Public contributors may modify catalog content (agents, starter kits, and
+top-level skills), utility source and tests, documentation, and the root
+`.gitignore`. Utility manifests and lock files do
 not require Microsoft membership or repository write access. Existing artifact
 and release validation still apply; opening author scope does not waive checks
 or approvals.
@@ -93,6 +94,11 @@ administrator cleanup is separate.
 ### Validation details and test model
 
 Catalog checks cover structure, schemas, policy, documentation, and security.
+Top-level `skills/` contributions run the applicable source-content policies,
+secret scan, dependency review, and code/capability scans, with the same
+maintainer/contributions-reviewer ownership as agents and starter kits.
+Skill scripts are inspected as data, never executed by catalog validation;
+agent/starter-kit structural and schema rules do not impose their manifests on skills.
 The blocking `POL-022` policy rejects Podman `Containerfile` names and `.in`
 preprocessing conventions; use the
 [Podman-to-Docker migration guide](../../docs/authoring-guides/podman-to-docker-migration.md)
@@ -104,7 +110,7 @@ authoring guides describe required files and content constraints. The
 [validation rule reference](../../docs/validation-rules.md) explains rule IDs
 and remediation.
 
-Changed agent and starter-kit prose is also spellchecked. `SPELL-001`
+Changed agent, starter-kit, and skill prose is also spellchecked. `SPELL-001`
 annotations are advisory warnings: they never block merge. Code, identifiers,
 URLs, and fenced Markdown examples are excluded.
 
@@ -122,9 +128,11 @@ validation does not execute submitted tool tests. Those tests may invoke
 subprocesses, download models, or require GPUs; run them in your own isolated
 environment or CI before submission.
 
-Starter-kit folders cannot contain test files. They may contain `kit.json`,
-Markdown documentation, and compliant Markdown images. Trusted schema-security
-and starter-kit validator suites cover their behavior instead.
+Starter-kit folders may contain `kit.json`, Markdown documentation, compliant
+Markdown images, and CommonJS (`.cjs`) source, including supporting tests.
+Other source-code types remain disallowed. Submitted CommonJS is inspected
+as data, not executed; trusted schema-security and starter-kit validator suites
+cover catalog validation behavior.
 
 See [validation workflow testing](../../docs/validation-workflow-testing.md)
 for focused test commands and optional candidate-branch Linux runs.
@@ -132,7 +140,7 @@ for focused test commands and optional candidate-branch Linux runs.
 ### After merge
 
 The weekly catalog audit reruns the modular rules across the full catalog and
-runs Microsoft Security DevOps over `agents/` and `starter-kits/`.
+runs Microsoft Security DevOps over `agents/`, `starter-kits/`, and `skills/`.
 URLhaus/PhishTank reputation lookups and Docker Scout base-image CVE scans are
 staged but currently disabled until their credentials, provider access, and
 representative runs are validated. See the

@@ -382,11 +382,17 @@ def test_duplicate_zip_members_zip_bombs_and_invalid_json_are_rejected(monkeypat
     (["README.md"], []),
     (["docs/schemas/schema.json"], ["docs-only"]),
     (["docs/schemas/schema.json", "README.md"], []),
+    ([".github/skills/example/SKILL.md"], []),
+    (["skills-other/example/script.py"], []),
     (["agents/example/README.md"], [
         "1p-contribution", "3p-contribution", "markdown-only",
         "contains-dockerfile", "contains-code", "needs-image-review",
     ]),
     (["starter-kits/example/kit.json"], [
+        "1p-contribution", "3p-contribution", "markdown-only",
+        "contains-dockerfile", "contains-code", "needs-image-review",
+    ]),
+    (["skills/example/scripts/build.sh"], [
         "1p-contribution", "3p-contribution", "markdown-only",
         "contains-dockerfile", "contains-code", "needs-image-review",
     ]),

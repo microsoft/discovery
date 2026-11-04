@@ -1,8 +1,8 @@
 # Contributing
 
 Thanks for helping improve Microsoft Discovery! You can contribute catalog
-agents, starter kits, utilities, and documentation here. The Discovery app's
-source code is not in this repository.
+agents, starter kits, skills, utilities, and documentation here. The Discovery
+app's source code is not in this repository.
 
 ## Choose your contribution
 
@@ -49,7 +49,9 @@ utility contributions.
    [skill authoring guide](docs/authoring-guides/skill-authoring-guide.md)
    for required files, naming, and examples.
 3. **Check your work** using the checklist below. If you include tool code,
-   test it in your own isolated environment or CI before submission. Tools
+   test it in your own isolated environment or CI before submission. Likewise,
+   test skill scripts yourself; catalog validation inspects them as data and
+   does not execute them. Tools
    developed with Podman must use the canonical `Dockerfile`; follow the
    [Podman-to-Docker migration guide](docs/authoring-guides/podman-to-docker-migration.md)
    if your source uses `Containerfile` or `.in` preprocessing.
@@ -76,6 +78,27 @@ your PR once the required checks and approvals are satisfied.
 For the PR lifecycle, automated checks, diagnostic feedback, and test model, see
 [Pull request workflow and checks](.github/workflows/README.md#pull-request-validation-and-feedback).
 You do not need to configure these workflows to contribute catalog content.
+
+CommonJS JavaScript (`.cjs`) source files are permitted under `agents/`,
+`starter-kits/`, and `skills/`. They remain subject to content-safety checks
+and CODEOWNER review, and are classified as code for reviewer feedback.
+
+### Skill contribution protections
+
+Public contributors may add or update all files within `skills/`, including
+scripts, dependency manifests, and text templates. This does not open
+`.github/skills/`, workflows, policy configuration, or schemas to public changes.
+Skills receive the same applicable source-content checks as agents and starter
+kits: content-based binary detection, approved file types, safe UTF-8, Markdown
+image safety, container-source policy, and artifact/model-weight checks.
+LaTeX (`.tex`) and BibTeX (`.bib`) text templates are approved; compiled PDFs
+and other build outputs are not.
+
+The verified-secret scan and dependency review also cover skill contributions.
+CodeQL, DevSkim, and Application Inspector provide reviewer evidence, not
+automatic approval. [CODEOWNERS](.github/CODEOWNERS) assigns skills to the
+catalog maintainers and contributions reviewers; existing required checks and
+human/CODEOWNER approval requirements still apply.
 
 ## Contributor License Agreement
 

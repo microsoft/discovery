@@ -253,6 +253,8 @@ def owners_for_path(path: str) -> list[str]:
     "README.md",
     "docs/ordinary-guide.md",
     ".github/CODEOWNERS",
+    ".github/skills/demo/SKILL.md",
+    "skills-other/demo/scripts/build.sh",
     ".github/workflows/pr-review.yml",
     ".github/scripts/validate_pr.py",
     ".github/tests-other/test_example.py",
@@ -292,6 +294,9 @@ def test_utilities_use_engineering_reviewers(path):
     ".config/dotnet-tools.json",
     "agents/molecule-visualization/agent.yaml",
     "starter-kits/example/kit.json",
+    "skills/example/SKILL.md",
+    "skills/example/scripts/build.sh",
+    "skills/example/templates/main.tex",
 ])
 def test_catalog_and_tests_allow_contributions_reviewers(path):
     assert owners_for_path(path) == [

@@ -34,6 +34,9 @@ from rules.pol_008 import RULE
     ("agents/demo/tools/t/helper.py", PE_BYTES),
     ("agents/demo/metadata.yaml", SQLITE_BYTES),
     ("starter-kits/demo/kit.json", WASM_BYTES),
+    ("agents/demo/tools/t/helper.cjs", PE_BYTES),
+    ("starter-kits/demo/helper.cjs", PE_BYTES),
+    ("skills/demo/scripts/helper.cjs", PE_BYTES),
 ])
 def test_binary_with_text_extension_is_blocked(repo, rel, payload):
     write(repo, rel, payload)
@@ -76,6 +79,9 @@ def test_claimed_images_are_delegated_to_pol_016(repo):
     ("starter-kits/demo/kit.json", '{"name": "demo", "version": "1.0.0"}\n'),
     ("agents/demo/tools/t/Dockerfile", "FROM mcr.microsoft.com/azurelinux/base/python:3.12\n"),
     ("agents/demo/tools/t/run.sh", "#!/usr/bin/env bash\nset -euo pipefail\necho hi\n"),
+    ("agents/demo/tools/t/helper.cjs", "module.exports = {};\n"),
+    ("starter-kits/demo/helper.cjs", "module.exports = {};\n"),
+    ("skills/demo/scripts/helper.cjs", "module.exports = {};\n"),
 ])
 def test_source_files_pass(repo, rel, content):
     write(repo, rel, content)

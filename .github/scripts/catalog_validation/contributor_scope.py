@@ -7,7 +7,7 @@ from .findings import Failure
 
 _MAINTAINER_PERMISSIONS = frozenset({"admin", "maintain", "write"})
 _MICROSOFT_ORG_ASSOCIATIONS = frozenset({"member", "owner"})
-_PUBLIC_CONTENT_ROOTS = frozenset({"agents", "starter-kits", "utilities"})
+_PUBLIC_CONTENT_ROOTS = frozenset({"agents", "starter-kits", "skills", "utilities"})
 _PROTECTED_ROOTS = frozenset({".auto-registry", ".github", ".vscode"})
 _PROTECTED_PATHS = frozenset({"docs/validation-rules.md"})
 _PUBLIC_ROOT_FILES = frozenset({".gitignore"})
@@ -123,7 +123,8 @@ def check_contributor_scope(
                 f"{actor} has no visible trust signal for this protected path "
                 f"(repository permission '{permission}', PR author association "
                 f"'{association or 'none'}'). Public contributors may modify catalog "
-                "content, utilities, documentation, and the root .gitignore. Other "
+                "content (agents/, starter-kits/, and skills/), utilities, "
+                "documentation, and the root .gitignore. Other "
                 "paths require repository write/maintain/admin permission or a visible "
                 "Microsoft MEMBER/OWNER association. An absent association does not "
                 "prove non-membership. Remove this file from the PR or ask a repository "

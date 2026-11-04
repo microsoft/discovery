@@ -50,6 +50,15 @@ def test_invalid_utf8_is_blocked(repo):
     assert result.findings[0].line == 2
 
 
+@pytest.mark.parametrize("root", ["agents", "starter-kits", "skills"])
+def test_commonjs_source_keeps_text_safety_checks(repo, root):
+    rel = write(repo, f"{root}/demo/helper.cjs", "// Hidden \u202e control\n")
+    result = run_rule(repo, RULE, [rel])
+
+    assert files(result) == [rel]
+    assert "U+202E" in result.findings[0].message
+
+
 def test_visible_international_and_scientific_text_passes(repo):
     rel = write(
         repo,

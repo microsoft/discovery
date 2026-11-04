@@ -5,6 +5,8 @@ from __future__ import annotations
 import json
 from pathlib import Path, PurePosixPath
 import re
+import subprocess
+import sys
 from typing import Any
 
 import yaml
@@ -22,12 +24,13 @@ CODEQL_SCOPES = {
 }
 
 CODEQL_PATHS = {
-    ".github/codeql/codeql-config.yml": {"agents", "starter-kits"},
+    ".github/codeql/codeql-config.yml": {"agents", "starter-kits", "skills"},
 }
 
 CODEQL_TRIGGER_PATHS = {
     "agents/**",
     "starter-kits/**",
+    "skills/**",
 }
 CATALOG_TRIGGER_PATHS = CODEQL_TRIGGER_PATHS
 DEPENDENCY_REVIEW_TRIGGER_PATHS = CATALOG_TRIGGER_PATHS | {
@@ -218,9 +221,78 @@ def test_weekly_msdo_checks_out_only_catalog_roots():
     assert checkout["with"]["sparse-checkout"].splitlines() == [
         "/agents/",
         "/starter-kits/",
+        "/skills/",
     ]
     assert checkout["with"]["sparse-checkout-cone-mode"] == "false"
     assert checkout["with"]["persist-credentials"] == "false"
+
+
+def test_skill_scanner_reports_are_available_to_reviewers():
+    workflow = load_workflow(CODE_SCAN_PATH)
+    steps = workflow["jobs"]["devskim"]["steps"]
+    scan = next(step for step in steps if step.get("name") == "Scan skills/")
+    assert uses_action(scan, "microsoft/DevSkim-Action")
+    assert scan["with"]["directory-to-scan"] == "skills"
+    assert scan["with"]["output-filename"] == "devskim-skills.sarif"
+    upload = next(step for step in steps if step.get("name") == "Upload skills SARIF")
+    assert upload["with"]["sarif_file"] == "devskim-skills.sarif"
+    assert upload["with"]["category"] == "devskim-skills"
+    assert "github.event.pull_request.head.repo.full_name == github.repository" in upload["if"]
+    summary = next(step["run"] for step in steps if step.get("name") == "Summarize findings")
+    assert 'summarize devskim-skills.sarif "skills/"' in summary
+    capabilities = next(
+        step["run"] for step in workflow["jobs"]["capabilities"]["steps"]
+        if step.get("name") == "Characterize contributed code"
+    )
+    assert "scan skills capabilities-skills.md" in capabilities
+    assert "head -c 10000 capabilities-skills.md" in capabilities
+
+
+def test_manual_full_catalog_validation_includes_skills():
+    workflow = load_workflow(
+        REPO_ROOT / ".github" / "workflows" / "validate-everything.yml"
+    )
+    steps = workflow["jobs"]["validate-all-agents"]["steps"]
+    catalog = next(step for step in steps if step.get("id") == "catalog")
+    assert "git ls-files skills" in catalog["run"]
+    summary = next(
+        step for step in steps if step.get("name") == "Summarize full catalog validation"
+    )
+    assert "git ls-files agents starter-kits skills" in summary["run"]
+
+
+def test_weekly_msdo_counts_skill_findings_but_not_trusted_utilities(tmp_path, monkeypatch):
+    workflow = load_workflow(
+        REPO_ROOT / ".github" / "workflows" / "weekly-deep-scan.yml"
+    )
+    command = next(
+        step["run"] for step in workflow["jobs"]["msdo"]["steps"]
+        if step.get("id") == "summarize"
+    )
+    script = command.split("python - <<'PY'\n", 1)[1].rsplit("\nPY", 1)[0]
+    sarif = tmp_path / "results.sarif"
+    sarif.write_text(json.dumps({"runs": [{
+        "tool": {"driver": {"name": "Bandit"}},
+        "results": [
+            {"locations": [{"physicalLocation": {
+                "artifactLocation": {"uri": relative},
+            }}]}
+            for relative in ("skills/demo/scripts/build.py", "utilities/demo/main.py")
+        ],
+    }]}), encoding="utf-8")
+    outputs = tmp_path / "outputs.txt"
+    summary = tmp_path / "summary.md"
+    for key, value in {
+        "SARIF_FILE": str(sarif), "MSDO_OUTCOME": "success",
+        "GITHUB_OUTPUT": str(outputs), "GITHUB_STEP_SUMMARY": str(summary),
+    }.items():
+        monkeypatch.setenv(key, value)
+
+    subprocess.run([sys.executable, "-c", script], check=True)
+
+    assert "finding_count=1\n" in outputs.read_text(encoding="utf-8")
+    assert "actionable=true\n" in outputs.read_text(encoding="utf-8")
+    assert "| Bandit | 1 |" in summary.read_text(encoding="utf-8")
 
     msdo_step = next(
         step for step in workflow["jobs"]["msdo"]["steps"]

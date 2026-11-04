@@ -1,6 +1,6 @@
 # Source allowlist — POL-008 / POL-015
 #
-# `agents/` and `starter-kits/` accept SOURCE CODE ONLY. Every added file in
+# `agents/`, `starter-kits/`, and `skills/` accept SOURCE CODE ONLY. Every added file in
 # those trees must (a) carry an extension or filename listed here, and (b) pass
 # file/libmagic content classification plus strict UTF-8 validation (see
 # .github/scripts/content_sniffer.py and rules/pol_020.py).
@@ -11,13 +11,15 @@
 #
 # To add an entry: open a PR touching this file. It is CODEOWNERS-gated.
 
-# Extensions permitted anywhere under agents/ and starter-kits/.
+# Extensions permitted anywhere under agents/, starter-kits/, and skills/.
 extensions:
   # Markup and documentation
   - .md
   - .markdown
   - .rst
   - .txt
+  - .tex
+  - .bib
 
   # Structured configuration and data
   - .yaml
@@ -49,6 +51,7 @@ extensions:
   - .rs
   - .go
   - .js
+  - .cjs
   - .ts
   - .sql
   - .cmake
