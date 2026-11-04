@@ -12,7 +12,7 @@ in two directions:
 * Unreferenced or oversized assets add repository weight without contributing
     to the rendered documentation.
 
-Applies to ``agents/`` and ``starter-kits/`` — the trees open to public
+Applies to ``agents/``, ``starter-kits/``, and ``skills/`` — the trees open to public
 contribution, and the only ones this policy governs.
 """
 
@@ -29,7 +29,7 @@ from image_inspector import (
 )
 from rules.base import Finding, Rule, RuleContext, Scope, Severity
 
-GUARDED_PREFIXES = ("agents/", "starter-kits/")
+GUARDED_PREFIXES = ("agents/", "starter-kits/", "skills/")
 
 
 def _owner_dir(ctx: RuleContext, rel: str) -> Path:
@@ -118,7 +118,7 @@ def check(ctx: RuleContext) -> list[Finding]:
             file=rel,
             message=(
                 f"'{Path(rel).name}' is not embedded by Markdown within its "
-                "agent or starter-kit folder. Remove this orphaned asset or "
+                "agent, starter-kit, or skill folder. Remove this orphaned asset or "
                 "reference it with Markdown image syntax."
             ),
         ))
@@ -128,12 +128,12 @@ def check(ctx: RuleContext) -> list[Finding]:
 
 RULE = Rule(
     id="POL-016",
-    summary="Images under agents/ or starter-kits/ must be safe Markdown formats, at most 1 MiB, and referenced by Markdown in the same catalog item.",
+    summary="Images under agents/, starter-kits/, or skills/ must be safe Markdown formats, at most 1 MiB, and referenced by Markdown in the same catalog item.",
     scope=Scope.CHANGED_FILES,
     severity=Severity.ERROR,
     remediation=(
         "Use PNG, JPEG, GIF, WebP, or SVG; keep the file at or below 1 MiB; "
-        "and embed it from Markdown in the same agent or starter-kit folder. "
+        "and embed it from Markdown in the same agent, starter-kit, or skill folder. "
         "Re-export the image if its content does not match its extension. For "
         "SVG, remove scripts, event handler "
         "attributes, javascript: URIs, entity declarations, embedded documents, "

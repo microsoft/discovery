@@ -24,6 +24,7 @@
 # Releases require maintainer review; REL-002 verifies the VSIX pointer and digest.
 /utilities/discovery-toolbox/           @microsoft/discovery-samples-maintainer
 
-# Any of the reviewers/maintainers can review/approve agents and starter-kits
+# Any of the reviewers/maintainers can review/approve agents, starter-kits, and skills
 /agents/                                @microsoft/discovery-samples-maintainer @microsoft/discovery-contributions-reviewers
 /starter-kits/                          @microsoft/discovery-samples-maintainer @microsoft/discovery-contributions-reviewers
+/skills/                                @microsoft/discovery-samples-maintainer @microsoft/discovery-contributions-reviewers

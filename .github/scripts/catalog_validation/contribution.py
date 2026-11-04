@@ -22,7 +22,7 @@ class ContributionSummary:
 
 
 _CODE_EXTENSIONS = frozenset({
-    ".bash", ".c", ".cc", ".cpp", ".cs", ".cxx", ".fs", ".fsx", ".go",
+    ".bash", ".c", ".cc", ".cjs", ".cpp", ".cs", ".cxx", ".fs", ".fsx", ".go",
     ".h", ".hpp", ".java", ".js", ".jsx", ".kt", ".kts", ".m", ".mm",
     ".php", ".pl", ".ps1", ".py", ".r", ".rb", ".rs", ".sh", ".sql",
     ".swift", ".tf", ".ts", ".tsx", ".vb", ".vue", ".wasm", ".zig",
@@ -84,7 +84,7 @@ def classify_contribution(
     image_files = sorted(
         rel
         for rel, normalized in zip(changed_files, normalized_files)
-        if normalized.startswith(("agents/", "starter-kits/"))
+        if normalized.startswith(("agents/", "starter-kits/", "skills/"))
         and is_image_path(rel)
         and (repo / rel).is_file()
     )

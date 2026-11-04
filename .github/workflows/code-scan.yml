@@ -11,7 +11,7 @@ name: Code Scan
 #                         untrusted scientific tool most needs answered.
 #
 # Every analyzer in this workflow is scoped to contributed catalog code under
-# agents/ and starter-kits/.
+# agents/, starter-kits/, and skills/.
 #
 # Rollout posture: reporting, not gating. Pointing three new analyzers at 46
 # pre-existing agents would produce a flood of findings that blocks unrelated
@@ -24,11 +24,13 @@ on:
     paths:
       - "agents/**"
       - "starter-kits/**"
+      - "skills/**"
   push:
     branches: [main]
     paths:
       - "agents/**"
       - "starter-kits/**"
+      - "skills/**"
   schedule:
     # 06:00 UTC Monday — a full-catalog sweep that *raises* pre-existing
     # breakage (e.g. a contributed file CodeQL cannot even parse). On a PR the
@@ -98,7 +100,7 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
-      # The action scans a single directory, so the two guarded trees are
+      # The action scans a single directory, so the guarded trees are
       # scanned separately and their SARIF kept apart by category below.
       - name: Scan agents/
         uses: microsoft/DevSkim-Action@4b5047945a44163b94642a1cecc0d93a3f428cc6 # v1
@@ -113,6 +115,13 @@ jobs:
           directory-to-scan: starter-kits
           output-filename: devskim-starter-kits.sarif
           ignore-globs: "**/.git/**,starter-kits/tmp/**"
+
+      - name: Scan skills/
+        uses: microsoft/DevSkim-Action@4b5047945a44163b94642a1cecc0d93a3f428cc6 # v1
+        with:
+          directory-to-scan: skills
+          output-filename: devskim-skills.sarif
+          ignore-globs: "**/.git/**"
 
       # A fork PR runs with a read-only token, so the Security tab upload is
       # not available. Skip it there rather than failing the job; the artifact
@@ -132,6 +141,14 @@ jobs:
         with:
           sarif_file: devskim-starter-kits.sarif
           category: devskim-starter-kits
+
+      - name: Upload skills SARIF
+        if: ${{ github.event.pull_request.head.repo.full_name == github.repository || github.event_name != 'pull_request' }}
+        continue-on-error: true
+        uses: github/codeql-action/upload-sarif@24c54180a607b1449ed407dd24f251e4e9147c8d # v4
+        with:
+          sarif_file: devskim-skills.sarif
+          category: devskim-skills
 
       - name: Summarize findings
         if: always()
@@ -156,6 +173,7 @@ jobs:
             echo
             summarize devskim-agents.sarif "agents/"
             summarize devskim-starter-kits.sarif "starter-kits/"
+            summarize devskim-skills.sarif "skills/"
             echo
             echo "Findings are reported, not enforced. Download the \`devskim-sarif\` artifact for detail."
           } >> "$GITHUB_STEP_SUMMARY"
@@ -205,6 +223,7 @@ jobs:
           }
           scan agents capabilities-agents.md
           scan starter-kits capabilities-starter-kits.md
+          scan skills capabilities-skills.md
 
           {
             echo "## Capability report"
@@ -222,6 +241,12 @@ jobs:
             echo "<details><summary>starter-kits/</summary>"
             echo
             head -c 10000 capabilities-starter-kits.md 2>/dev/null || echo "_No report._"
+            echo
+            echo "</details>"
+            echo
+            echo "<details><summary>skills/</summary>"
+            echo
+            head -c 10000 capabilities-skills.md 2>/dev/null || echo "_No report._"
             echo
             echo "</details>"
           } >> "$GITHUB_STEP_SUMMARY"

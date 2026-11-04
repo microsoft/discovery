@@ -9,7 +9,7 @@ from pathlib import Path
 from rules.base import Finding, Rule, RuleContext, Scope, Severity
 
 
-GUARDED_PREFIXES = ("agents/", "starter-kits/")
+GUARDED_PREFIXES = ("agents/", "starter-kits/", "skills/")
 _CPP_DIRECTIVE_RE = re.compile(
     r"^\s*#\s*(?:include|define|if|ifdef|ifndef|elif|else|endif|undef|"
     r"pragma|error|line)\b"

@@ -1,4 +1,4 @@
-"""POL-015 — approved file types under agents/ and starter-kits/."""
+"""POL-015 — approved file types under agents/, starter-kits/, and skills/."""
 
 from __future__ import annotations
 
@@ -29,12 +29,23 @@ def test_approved_types_pass(repo, rel):
     assert result.findings == []
 
 
+@pytest.mark.parametrize("root", ["agents", "starter-kits", "skills"])
+@pytest.mark.parametrize("suffix", [".cjs", ".CJS"])
+def test_commonjs_source_files_are_approved(repo, root, suffix):
+    rel = write(repo, f"{root}/demo/scripts/helper{suffix}", "module.exports = {};\n")
+
+    assert run_rule(repo, RULE, [rel]).findings == []
+
+
 @pytest.mark.parametrize("rel", [
     "agents/demo/notes.docx",
     "agents/demo/sheet.xlsx",
     "agents/demo/tools/t/archive.tar",
     "agents/demo/tools/t/lib.so",
     "agents/demo/tools/t/thing.unknownext",
+    "agents/demo/tools/t/helper.cjsx",
+    "starter-kits/demo/helper.cjsx",
+    "skills/demo/helper.cjsx",
 ])
 def test_unapproved_types_are_blocked(repo, rel):
     write(repo, rel, "content\n")

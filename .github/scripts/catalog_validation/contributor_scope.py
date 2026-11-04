@@ -7,7 +7,7 @@ from .findings import Failure
 
 _MAINTAINER_PERMISSIONS = frozenset({"admin", "maintain", "write"})
 _MICROSOFT_ORG_ASSOCIATIONS = frozenset({"member", "owner"})
-_PUBLIC_CATALOG_ROOTS = frozenset({"agents", "starter-kits"})
+_PUBLIC_CATALOG_ROOTS = frozenset({"agents", "starter-kits", "skills"})
 _PROTECTED_ROOTS = frozenset({".auto-registry", ".github", ".vscode"})
 _PROTECTED_PATHS = frozenset({"docs/validation-rules.md"})
 _PUBLIC_ROOT_DOCS = frozenset({"readme.md", "contributing.md"})
@@ -125,7 +125,8 @@ def check_contributor_scope(
                 changed_file,
                 f"{actor} is classified as a contributor with repository permission "
                 f"'{permission}'. Public contributors may modify catalog content and "
-                "documentation. Microsoft organization members may contribute to any "
+                "documentation, including agents/, starter-kits/, and skills/. "
+                "Microsoft organization members may contribute to any "
                 "repository path, subject to correctness validation and normal GitHub "
                 "review protections. Remove this file from the PR or ask a Microsoft "
                 "organization member or repository maintainer to author the change.",
