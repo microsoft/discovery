@@ -14,12 +14,12 @@ RUN tdnf -y update && \
     tdnf clean all
 
 RUN pip3 install --no-cache-dir \
-    flowio \
-    matplotlib \
-    numpy \
-    pandas \
-    scikit-learn \
-    scipy
+    flowio==1.4.0 \
+    matplotlib==3.11.2 \
+    numpy==2.5.4 \
+    pandas==3.1.0 \
+    scikit-learn==1.9.1 \
+    scipy==1.18.1
 
 RUN mkdir -p /app /workdir /input /output /tmp/matplotlib && \
     chmod 755 /app /workdir /input /output

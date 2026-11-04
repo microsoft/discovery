@@ -27,9 +27,10 @@ infra:
       pool_size: 1
 code_environments:
   - language: python3
-    command: 'python3 -u "/{{scriptName}}" > {{output_directory}}/logs.out 2>&1; cp -r /workdir/* {{output_directory}}/ 2>/dev/null || true; tail -n 100 {{output_directory}}/logs.out'
+    command: 'python3 -u "/{{scriptName}}" > {{output_directory}}/logs.out 2>&1; _EXIT=$?; cp -r /workdir/* {{output_directory}}/ 2>/dev/null || true; tail -n 100 {{output_directory}}/logs.out; exit $_EXIT'
     description: >
       Python environment with flowio, NumPy, pandas, scikit-learn, and flow_qc_utils. It reads standard FCS
-      files and produces technical QC metrics. It is not a clinical classifier or a substitute for validated
-      laboratory analysis.
+      files and produces technical QC metrics. Call flow_qc_utils.run_qc(fcs_path, output_dir) to write the
+      JSON report, channel-summary CSV, and QC dashboard for one FCS file. It is not a clinical classifier or
+      a substitute for validated laboratory analysis.
     infra_node: worker

@@ -46,8 +46,15 @@ score flags unusual measurement events only; it does not classify cells or sampl
 `flow-qc` provides a Python code environment with `flowio`, NumPy, pandas, scikit-learn, and `flow_qc_utils`.
 It can read standard FCS files, summarize event and channel values, inspect and validate stored compensation-related
 metadata, evaluate acquisition-time continuity, calculate an exploratory event-outlier fraction, and create a
-technical QC dashboard. A declared-range-limit fraction is a measurement-range check, not proof of detector
-saturation. Derived reports belong in the configured output directory.
+technical QC dashboard. A declared-range-limit fraction is the share of events at or above `$PnR - 1`, the largest
+value the instrument records; it is a measurement-range check, not proof of detector saturation. The dashboard plots
+up to 20,000 events sampled evenly across the whole acquisition. Derived reports belong in the configured output
+directory.
+
+The agent calls `flow_qc_utils.run_qc(fcs_path, output_dir)` once per FCS file. It writes
+`<stem>_qc_report.json`, `<stem>_channel_summary.csv`, and `<stem>_dashboard.png`, where `<stem>` defaults to the
+FCS file name without its extension, and returns the report with the artifact paths. If the script fails, the tool
+run exits with Python's nonzero exit status.
 
 ## Known Limitations
 
@@ -56,6 +63,9 @@ saturation. Derived reports belong in the configured output directory.
 - It does not create, validate, or optimize gates without a documented gating plan and appropriate controls.
 - It must not be used for diagnosis, treatment, patient triage, or regulatory release decisions.
 - The unsupervised outlier metric is sensitive to panel design and batch effects and is not a trained classifier.
+- Values are reported as stored in the file. Gain, log amplification (`$PnE`), and `$TIMESTEP` scaling are not applied.
+- Files with more than one data set (for example, some Beckman Coulter LMD exports) and files whose HEADER and TEXT
+  segments give different DATA offsets are rejected with an error instead of being parsed.
 
 ## Support
 
