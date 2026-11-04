@@ -194,7 +194,7 @@ old value after a dropdown changes, so check the selected value before running S
 | `managed` (managed form) | The tool should provision the Discovery network layout. | Stage 2 deploys the VNet, configured subnets and delegations, shared NSG, route tables for UDR, and private DNS zones/links. | Approved address space, target resource group/name settings, and a working outbound architecture. |
 | `byo` (BYO form) | You supply the network layout and want the tool to provision it. | Uses the same Stage 2 network template as `managed`; it is not a read-only existing-VNet mode. | Customer-approved network settings and outbound connectivity. |
 | `byo-spoke` (BYO form) | You want a Discovery spoke connected to an enterprise hub. | Uses the same Stage 2 network template; it does not create hub peering or a firewall. | Nonoverlapping spoke addressing, hub connectivity, and firewall/NVA routing, rules and SNAT when using UDR. |
-| `byo-existing` (BYO form) | Your network team has already prepared the VNet and required Discovery subnets. | Stage 1 checks the existing VNet/subnets; Stage 2 skips network-template provisioning; Stage 3 validates networking. | Existing subnets, delegations, NSGs, routes, DNS zones/links and working outbound connectivity. |
+| `byo-existing` (BYO form) | Your network team has already prepared the VNet and required Discovery subnets. | Stage 1 checks the existing VNet/subnets; Stage 2 skips network-template provisioning; Stage 3 validates networking. | Existing subnets, delegations, NSGs, routes, the storage blob DNS zone link (when `storage.access=privateEndpoint`) and working outbound connectivity. |
 
 **Existing-network caution:** `managed`, `byo` and `byo-spoke` all deploy a template that declares
 the VNet address space and subnet collection. They can change an existing VNet and are not
@@ -267,13 +267,13 @@ Notes:
     and fails `byo-subnets` on a mismatch.
   - The workspace, agent and search subnets are delegated to `Microsoft.App/environments`, and the
     management subnet to `Microsoft.ContainerService/managedClusters`.
-  - The `privatelink.*` zones listed under `privateDnsZones` in
-    `stage3-validation/dependency-spec.json` exist in `network.dnsResourceGroup` (or the network
-    RG) and are linked to the exact VNet resolved from `network.networkResourceGroup`. With
-    `byo-existing`, Stage 2 skips the network-template DNS
-    deployment. For `storage.access=privateEndpoint`, it reuses the blob zone in that DNS/network
-    RG, verifies its VNet link, and associates the storage endpoint's DNS zone group with it.
-    Stage 3 prints create/link commands for missing zones.
+  - For `storage.access=privateEndpoint`, `privatelink.blob.core.windows.net` exists in
+    `network.dnsResourceGroup` (or the network RG) and is linked to the exact VNet resolved from
+    `network.networkResourceGroup`. With `byo-existing`, Stage 2 skips the network-template DNS
+    deployment; it reuses this blob zone, verifies its VNet link, and associates the storage
+    endpoint's DNS zone group with it. No other private DNS zones are needed: the platform
+    creates its own resource-prefixed zones in the managed resource group during Stage 4.
+    Stage 3 doesn't check private DNS zones.
   - Any NSG you attach allows outbound 443 to Internet and traffic within the VNet. A subnet
     without an NSG passes, because the Azure default rules allow both.
 
