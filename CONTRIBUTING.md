@@ -11,6 +11,7 @@ source code is not in this repository.
 | Add or update an agent | `agents/<agent-name>/` | [Agent authoring guide](docs/authoring-guides/agent-authoring-guide.md) |
 | Add or update a starter kit | `starter-kits/<kit-name>/` | [Starter-kit authoring guide](docs/authoring-guides/starter-kit-authoring-guide.md) |
 | Add or fix a utility | `utilities/<utility-name>/` | Follow the utility's README and include focused tests and validation evidence. |
+| Add or update a skill | `skills/<skill-name>/` | [Skill authoring guide](docs/authoring-guides/skill-authoring-guide.md) |
 | Fix documentation | The relevant Markdown file or [docs/](docs/) | Make a focused change and check its links. |
 
 Utility source code, tests, dependency manifests, lock files, and ignore files
@@ -43,8 +44,9 @@ utility contributions.
    ```
 
 2. **Make changes.** Follow the
-   [agent authoring guide](docs/authoring-guides/agent-authoring-guide.md) or
-   [starter-kit authoring guide](docs/authoring-guides/starter-kit-authoring-guide.md)
+   [agent authoring guide](docs/authoring-guides/agent-authoring-guide.md),
+   [starter-kit authoring guide](docs/authoring-guides/starter-kit-authoring-guide.md), or
+   [skill authoring guide](docs/authoring-guides/skill-authoring-guide.md)
    for required files, naming, and examples.
 3. **Check your work** using the checklist below. If you include tool code,
    test it in your own isolated environment or CI before submission. Tools

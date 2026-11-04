@@ -515,60 +515,13 @@ function Invoke-CheckEffectiveRoutes {
 }
 
 # ---------------------------------------------------------------------------
-# FR3.6d — private DNS zones + private endpoints (formerly check_dns_and_pe.ps1)
+# FR3.6d — private endpoints (formerly check_dns_and_pe.ps1). Private DNS zones are not checked:
+# Stage 2 creates/links the zones it needs (and verifies the storage endpoint's blob zone link), and
+# the platform creates its own resource-prefixed zones in the managed resource group during Stage 4.
 # ---------------------------------------------------------------------------
 function Invoke-CheckDnsAndPe {
     param([object]$Config, [string]$Profile = 'supercomputer')
     $out = [System.Collections.Generic.List[object]]::new()
-    $defaultZones = @(
-        'privatelink.blob.core.windows.net',
-        'privatelink.queue.core.windows.net',
-        'privatelink.file.core.windows.net',
-        'privatelink.table.core.windows.net',
-        'privatelink.dfs.core.windows.net',
-        'privatelink.vaultcore.azure.net',
-        'privatelink.search.windows.net',
-        'privatelink.cognitiveservices.azure.com',
-        'privatelink.openai.azure.com',
-        'privatelink.services.ai.azure.com',
-        'privatelink.documents.azure.com'
-    )
-    function Get-DnsResourceGroup {
-        param([object]$Config)
-        if ($Config.network.PSObject.Properties.Name -contains 'dnsResourceGroup' -and $Config.network.dnsResourceGroup) { return $Config.network.dnsResourceGroup }
-        if ($Config.PSObject.Properties.Name -contains 'dnsResourceGroup' -and $Config.dnsResourceGroup) { return $Config.dnsResourceGroup }
-        if ($Config.network.PSObject.Properties.Name -contains 'networkResourceGroup' -and $Config.network.networkResourceGroup) { return $Config.network.networkResourceGroup }
-        if ($Config.PSObject.Properties.Name -contains 'resourceGroup' -and $Config.resourceGroup) { return $Config.resourceGroup }
-        return ''
-    }
-    function Get-VnetId {
-        param([object]$Config, [string]$Rg)
-        if ($Config.network.PSObject.Properties.Name -contains 'vnetId' -and $Config.network.vnetId) { return $Config.network.vnetId }
-        if (-not $Rg) { return '' }
-        if ($Config.network.PSObject.Properties.Name -contains 'vnetName' -and $Config.network.vnetName) {
-            $vnet = Get-AzJson -Args @('network', 'vnet', 'show', '-g', $Rg, '-n', $Config.network.vnetName) -AllowFail
-            if ($vnet) { return $vnet.id }
-        }
-        $vnets = @(Get-AzJson -Args @('network', 'vnet', 'list', '-g', $Rg) -AllowFail)
-        foreach ($vnet in $vnets) {
-            $spaces = if ($vnet.PSObject.Properties.Name -contains 'addressSpace' -and $vnet.addressSpace) { @($vnet.addressSpace.addressPrefixes) } else { @() }
-            foreach ($space in $spaces) {
-                if ($space -eq $Config.network.vnetCidr) { return $vnet.id }
-            }
-        }
-        return ''
-    }
-    function Get-Zones {
-        param([string]$ProfileName)
-        $specPath = Join-Path $script:Stage3ScriptRoot 'dependency-spec.json'
-        if (Test-Path -LiteralPath $specPath) {
-            try {
-                $spec = Get-Content -LiteralPath $specPath -Raw | ConvertFrom-Json -ErrorAction Stop
-                if ($spec.profiles.PSObject.Properties.Name -contains $ProfileName) { return @($spec.profiles.$ProfileName.privateDnsZones) }
-            } catch {}
-        }
-        return $defaultZones
-    }
     function Get-PrivateEndpointsResourceGroups {
         param([object]$Config, [string]$NetworkRg)
         $groups = @($NetworkRg)
@@ -582,32 +535,7 @@ function Invoke-CheckDnsAndPe {
         }
         return @($groups | Where-Object { $_ } | Sort-Object -Unique)
     }
-    $rg = Get-DnsResourceGroup -Config $Config
     $networkRg = Get-NetworkResourceGroup -Config $Config
-    $vnetId = Get-VnetId -Config $Config -Rg $networkRg
-    $zones = Get-Zones -ProfileName $Profile
-    foreach ($zoneName in $zones) {
-        $id = "private-dns-zone-$zoneName"
-        if (Test-ConfigWaiver -Config $Config -CheckId $id) {
-            $out.Add((New-CheckResult -Id $id -Name "private DNS $zoneName" -Status 'Waived' -Fr 'FR3.6d' -Detail 'Waived by config.'))
-            continue
-        }
-        $zone = if ($rg) { Get-AzJson -Args @('network', 'private-dns', 'zone', 'show', '-g', $rg, '-n', $zoneName) -AllowFail } else { $null }
-        if (-not $zone) {
-            $vnetRef = if ($vnetId) { $vnetId } else { '<vnet-resource-id>' }
-            $fix = "Create the zone and link it to the VNet: az network private-dns zone create -g $rg -n $zoneName; az network private-dns link vnet create -g $rg -z $zoneName -n link-discovery --virtual-network $vnetRef --registration-enabled false"
-            $out.Add((New-CheckResult -Id $id -Name "private DNS $zoneName" -Status 'Fail' -Fr 'FR3.6d' `
-                        -Detail "Zone not found in resource group '$rg'." -Remediation $fix `
-                        -Data ([pscustomobject]@{ zone = $zoneName; linked = $false; exists = $false })))
-            continue
-        }
-        $links = @(Get-AzJson -Args @('network', 'private-dns', 'link', 'vnet', 'list', '-g', $rg, '-z', $zoneName) -AllowFail)
-        $linked = [bool]($vnetId -and ($links | Where-Object { $_.PSObject.Properties.Name -contains 'virtualNetwork' -and $_.virtualNetwork -and $_.virtualNetwork.id -eq $vnetId }))
-        $out.Add((New-CheckResult -Id $id -Name "private DNS $zoneName" -Status ($linked ? 'Pass' : 'Fail') -Fr 'FR3.6d' `
-                    -Detail ($linked ? "linked to VNet" : "zone exists but no matching VNet link for $vnetId") `
-                    -Remediation ($linked ? '' : "Link the zone to the VNet: az network private-dns link vnet create -g $rg -z $zoneName -n link-discovery --virtual-network $(if ($vnetId) { $vnetId } else { '<vnet-resource-id>' }) --registration-enabled false") `
-                    -Data ([pscustomobject]@{ zone = $zoneName; linked = $linked; exists = $true; linkCount = @($links).Count })))
-    }
     $peGroups = Get-PrivateEndpointsResourceGroups -Config $Config -NetworkRg $networkRg
     $pes = @()
     foreach ($peRg in $peGroups) {

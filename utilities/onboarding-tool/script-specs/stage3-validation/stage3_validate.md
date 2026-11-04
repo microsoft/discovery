@@ -45,7 +45,7 @@ required SC subnets before Stage 4; these are customer checks, not enforced scri
 Each check ran as a separate sub-script before consolidation; the logic now lives in `stage3_validate.ps1`. It reads the profile dependency set from `../../scripts/stage3-validation/dependency-spec.json`.
 
 ### dependency_spec — FR3.8
-Load the dev-owned per-service dependency spec that drives which checks run per profile (subnets, delegations, DNS zones, PEs, routes, FQDNs). Fail closed if the spec version is older than the deployed platform.
+Load the dev-owned per-service dependency spec that drives which checks run per profile (subnets, delegations, PEs, routes, FQDNs). Fail closed if the spec version is older than the deployed platform.
 - Stale spec: update the dependency spec in the feature PR that changed the dependency.
 
 ### check_subnet_delegation — FR3.6a
@@ -61,8 +61,8 @@ Use `az network nic show-effective-route-table` and `az network watcher show-nex
 - Managedcluster local traffic via NVA: restore VnetLocal for its own CIDR; do not remove its required UDR Internet egress route.
 
 ### check_dns_and_pe — FR3.6d
-Confirm each FR2.5 privatelink zone exists and is linked to the configured VNet. Private endpoints must be Succeeded and Approved, with either a Succeeded private DNS zone group that references at least one zone or valid custom DNS metadata (Bookshelf expects 3 PEs approved; the Foundry endpoint carries 2 zones) — read-only. Azure can legitimately return `customDnsConfigs=[]` when DNS integration is managed by a private DNS zone group, so that field alone is not a failure.
-- Zone unlinked, PE not Succeeded/Approved, or no usable DNS zone group/custom DNS metadata: fix the link, endpoint, or approval (Stage 2 private_dns; Stage 4 PE approval). For byo-existing the customer owns the zones; the remediation prints the `az network private-dns zone create` and `link vnet create` commands.
+Private DNS zones are not checked. Stage 2 creates and links the zones it needs and verifies the BYO storage endpoint's blob zone link; the platform creates its own resource-prefixed zones in the managed resource group during Stage 4, so they cannot exist before deployment. Existing private endpoints in the network, platform and storage resource groups must be Succeeded and Approved, with either a Succeeded private DNS zone group that references at least one zone or valid custom DNS metadata (Bookshelf expects 3 PEs approved; the Foundry endpoint carries 2 zones) — read-only. Azure can legitimately return `customDnsConfigs=[]` when DNS integration is managed by a private DNS zone group, so that field alone is not a failure.
+- PE not Succeeded/Approved, or no usable DNS zone group/custom DNS metadata: fix the endpoint, approval, or zone group (Stage 2 storage private endpoint; Stage 4 PE approval).
 
 ### check_quota — FR3.6e
 Re-run the Stage 1 quota checks (shared `Get-VcpuQuotaResult` / `Get-ModelQuotaResult` in `lib/OnboardingCommon.psm1`) as a blocking gate. The supercomputer profile emits `vcpu-quota`; the workspace profile emits `model-quota` (gpt-5.4 GlobalStandard, 450K TPM). Skipped when the target supercomputer or workspace already exists and is Succeeded. Waivable with the same check id.
