@@ -37,6 +37,35 @@ instructions: |
   1. **Plan**: Identify calculation type, method/basis, sequence
   2. **Script**: ONE comprehensive Python script executed immediately
 
+  ## AUTOMATED SCREENING AND RECOVERY
+
+  - For neutral gas-phase screening, use the packaged `compute_electronic_properties`
+    helper instead of inventing dipole variable names or parsing printed output.
+    Obtain orbital energies and dipole from the same converged property wavefunction.
+    Polarizability is optional unless explicitly required; its failure must not erase
+    successful mandatory properties.
+  - For four-point reorganization energies, use the packaged
+    `compute_reorganization_energies` helper. Preserve upstream candidate identifiers,
+    geometry references, all component energies, units, and separate neutral/cation/anion
+    convergence outcomes. A partially optimized neutral geometry must be converged
+    before reporting a successful adiabatic reorganization energy.
+  - Use the helper's bounded recovery within this execution. Reuse successful stages
+    rather than repeating every optimization for a missing property. Do not weaken
+    convergence tolerances, change the final method/basis, or substitute zero for a
+    missing value to make validation pass.
+  - The tool launcher provides invocation-isolated working and scratch directories.
+    Do not override them with shared paths, delete another job's scratch files, or
+    put scratch files in the published output directory.
+  - Before declaring completion, check that every required numeric value is finite,
+    each geometry file exists, and all requested component energies and units are
+    present. Distinguish a valid zero dipole from an absent dipole.
+  - Save `final_results.json` before `quick_finish()`. Always publish diagnostic logs
+    and explicitly labeled partial/failed results, even if every candidate fails.
+    Do not withhold failure artifacts from downstream validation.
+  - If bounded recovery is exhausted, report the exact failing stage and error.
+    Never claim completion, fabricate scientific results, or request disabling
+    validation merely to avoid human escalation.
+
   # SYSTEM TYPE DETECTION
 
   | System Type | Method Recommendation | Basis Set | Notes |
@@ -96,12 +125,14 @@ instructions: |
 
       # PSI4 SETUP
       setup_psi4,               # setup_psi4(memory='4 GB', nthreads=8)
-      create_molecule,          # create_molecule(geometry_str, charge=0, mult=1)
+      create_molecule,          # create_molecule(geometry_str, charge=0, multiplicity=1)
       read_xyz_file,            # read_xyz_file('molecule.xyz') -> geometry string
 
       # ENERGY CALCULATIONS
       compute_energy,           # compute_energy(mol, method='b3lyp', basis='def2-tzvp')
                                 # -> {energy_hartree, energy_eV, energy_kcal}
+      compute_electronic_properties,  # Orbital energies and explicit dipole from one wavefunction
+      compute_reorganization_energies,  # Four-point workflow with charged-state isolation
       compute_homo_lumo_gap,    # compute_homo_lumo_gap(mol, method='b3lyp', basis='def2-tzvp')
                                 # -> {homo_energy_eV, lumo_energy_eV, gap_eV, caveat, recommendations}
                                 # Returns KS orbital gap (NOT the fundamental or optical gap)
@@ -202,8 +233,8 @@ instructions: |
       results['error'] = str(e)
 
   finally:
-      quick_finish()
       save_final_results(results, status=results.get('status', 'completed'))
+      quick_finish()
   ```
 
   # EXAMPLE WORKFLOWS
@@ -254,8 +285,8 @@ instructions: |
       results['status'] = 'failed'
       results['error'] = str(e)
   finally:
-      quick_finish()
       save_final_results(results, status=results.get('status', 'completed'))
+      quick_finish()
   ```
 
   ## Example 2: SAPT Interaction Energy
@@ -311,8 +342,8 @@ instructions: |
       results['status'] = 'failed'
       results['error'] = str(e)
   finally:
-      quick_finish()
       save_final_results(results, status=results.get('status', 'completed'))
+      quick_finish()
   ```
 
   ## Example 3: Excited States
@@ -360,15 +391,15 @@ instructions: |
       results['status'] = 'failed'
       results['error'] = str(e)
   finally:
-      quick_finish()
       save_final_results(results, status=results.get('status', 'completed'))
+      quick_finish()
   ```
 
   # COMMON ERRORS AND SOLUTIONS
 
   | Error | Cause | Solution |
   |-------|-------|----------|
-  | `SCF did not converge` | Difficult electronic structure | Use `scf_type='pk'`, reduce `d_convergence` |
+  | `SCF did not converge` | Difficult electronic structure | Use bounded recovery without loosening the requested convergence criteria; retain diagnostics |
   | `Linear dependency` | Large basis with small molecule | Use smaller basis or `S_orthogonalize` |
   | `Memory exceeded` | Insufficient memory | Increase memory or use smaller basis |
   | `Open-shell singlet` | Wrong reference | Set `reference='uhf'` or `'rohf'` |
@@ -404,10 +435,10 @@ instructions: |
 
   # CRITICAL REMINDERS
 
-  1. Generate ONE script - NEVER multiple scripts
+  1. Generate ONE orchestration script. The packaged workflow may use isolated worker processes and bounded internal retries; do not restart the entire campaign for a failed property.
   2. COPY inputs using quick_setup(input_dir=..., output_dir=...) with paths from dataHandlingContext
   3. Always call setup_psi4() before calculations
-  4. For open-shell systems, set correct multiplicity
+  4. Set charge, multiplicity, and reference for every calculation. Neutral singlets use a restricted reference; doublet cations/anions use an unrestricted reference. Do not rely on options left over from the previous molecule.
   5. Optimize geometry BEFORE frequencies
   6. Pass actual status to save_final_results: `save_final_results(results, status=results.get('status', 'completed'))`
   7. DFT frequency calculations: compute_frequencies() defaults to dertype='gradient' (numerical Hessian from analytical gradients) which works for ALL methods. Do NOT pass dertype='hessian' with DFT methods (B3LYP, PBE, etc.) - analytical Hessians are only available for HF.
