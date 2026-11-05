@@ -1,0 +1,11 @@
+{
+  "contractVersion": "1.2.0",
+  "tasks": [{
+    "id": "unbounded-monitoring",
+    "description": "Launch an existing workflow and monitor until completion.",
+    "bounded": true,
+    "readiness": "ready",
+    "monitoring": "ongoing",
+    "validation": "included"
+  }]
+}

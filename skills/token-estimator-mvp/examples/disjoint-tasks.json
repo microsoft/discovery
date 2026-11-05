@@ -1,0 +1,23 @@
+{
+  "contractVersion": "1.2.0",
+  "scopeDescription": "Two independent focused screening deliverables, each followed by a separately scoped evidence assessment; no shared work",
+  "nonOverlap": true,
+  "concurrency": 2,
+  "tasks": [{
+    "id": "screens",
+    "description": "Screen literature for a focused evidence table",
+    "count": 2,
+    "bounded": true,
+    "depth": "bounded",
+    "validation": "included",
+    "amountDescription": "Two disjoint questions, one focused session each"
+  }, {
+    "id": "reviews",
+    "profileId": "evidence-assessment",
+    "count": 2,
+    "bounded": true,
+    "depth": "bounded",
+    "validation": "separate-tasks",
+    "amountDescription": "Two independent assessments of the resulting evidence, excluding screening work"
+  }]
+}

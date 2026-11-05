@@ -1,0 +1,9 @@
+{
+  "contractVersion": "1.2.0",
+  "tasks": [
+    {
+      "id": "prediction",
+      "description": "Develop a predictive model."
+    }
+  ]
+}

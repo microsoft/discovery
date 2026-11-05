@@ -1,0 +1,13 @@
+{
+  "contractVersion": "1.2.0",
+  "scopeDescription": "One focused literature screening session producing one evidence table; included checks only",
+  "tasks": [{
+    "id": "screen",
+    "description": "Screen literature for a focused evidence table",
+    "count": 1,
+    "bounded": true,
+    "depth": "bounded",
+    "validation": "included",
+    "amountDescription": "One scoped question and one screening deliverable"
+  }]
+}

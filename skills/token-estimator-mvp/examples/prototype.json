@@ -1,0 +1,10 @@
+{
+  "contractVersion": "1.2.0",
+  "tasks": [{
+    "id": "prototype",
+    "description": "Develop one initial synthetic predictive prototype with included checks",
+    "bounded": true,
+    "depth": "bounded",
+    "validation": "included"
+  }]
+}

@@ -1,0 +1,13 @@
+{
+  "contractVersion": "1.2.0",
+  "tasks": [{
+    "id": "bounded-operation",
+    "description": "Launch an existing workflow and monitor status for at most two inspections; no further repair.",
+    "bounded": true,
+    "readiness": "ready",
+    "retryLimit": 0,
+    "monitoring": "bounded",
+    "monitoringChecks": 2,
+    "validation": "included"
+  }]
+}
