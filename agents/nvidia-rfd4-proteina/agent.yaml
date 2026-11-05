@@ -83,18 +83,26 @@ instructions: |-
   Every job must follow this pattern:
 
   ```python
-  import json, shutil
+  import json, shutil, glob
   from pathlib import Path
 
-  # 1. Read input structure
-  target_cif = Path("/input/target.cif").read_text()
+  # 1. Find the uploaded structure (do not hard-code target.cif)
+  cif_files = sorted(glob.glob("/input/*.cif") + glob.glob("/input/*.mmcif"))
+  if not cif_files:
+      Path("/output/final_results.json").write_text(json.dumps({
+          "status": "failed", "error": "No mmCIF file found in /input/"
+      }))
+      raise FileNotFoundError("No mmCIF file found in /input/")
+  target_path = cif_files[0]
+  target_name = Path(target_path).name
+  target_cif = Path(target_path).read_text()
 
   # 2. Build request
   request = {
       "task": "generation",
       "input": {
           "format": "annotated_cif",
-          "file": {"filename": "target.cif", "content": target_cif}
+          "file": {"filename": target_name, "content": target_cif}
       },
       "sampling": {"num_replicates": 10}
   }
@@ -113,10 +121,21 @@ instructions: |-
   )
   print(result.stdout)
   if result.returncode not in (0, 3):
+      Path("/output/final_results.json").write_text(json.dumps({
+          "status": "failed",
+          "error": result.stderr or f"design.py exited with code {result.returncode}"
+      }))
       raise RuntimeError(result.stderr)
 
-  # 5. Copy outputs
+  # 5. Copy outputs and write final_results.json
   shutil.copytree("/workdir/run_001", "/output/run_001")
+  summary_path = Path("/workdir/run_001/summary.json")
+  summary = json.loads(summary_path.read_text()) if summary_path.exists() else {}
+  Path("/output/final_results.json").write_text(json.dumps({
+      "status": summary.get("status", "completed"),
+      "design_count": summary.get("design_count", 0),
+      "summary": "/output/run_001/summary.json"
+  }))
   ```
 
   ## Reporting results

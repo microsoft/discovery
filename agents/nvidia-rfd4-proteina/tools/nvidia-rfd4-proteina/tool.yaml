@@ -32,9 +32,9 @@ infra:
 
 code_environments:
   - language: python3
-    command: 'python3 -u "/{{scriptName}}" > {{output_directory}}/logs.out 2>&1; cp -r /workdir/* {{output_directory}}/ 2>/dev/null || true; tail -n 100 {{output_directory}}/logs.out'
+    command: 'python3 -u "/{{scriptName}}" > {{output_directory}}/logs.out 2>&1; _exit=$?; cp -r /workdir/* {{output_directory}}/ 2>/dev/null || true; tail -n 100 {{output_directory}}/logs.out; exit $_exit'
     description: >
       Python code environment with the NVIDIA RFD4-Proteina NIM client. Calls the NVIDIA
       hosted API or a self-hosted NIM for protein design. No GPU required in the container;
-      GPU compute runs on the NIM. Key packages: requests, biopython.
+      GPU compute runs on the NIM. Uses Python standard library only (no additional dependencies).
     infra_node: worker

@@ -16,9 +16,8 @@ description: >
   or a self-hosted NIM. Powered by BioNeMo Agent Toolkit.
 tags:
   - protein-design
-  - nvidia-nim
   - diffusion-model
   - generative-model
-  - binder-design
+  - structural-biology
   - drug-discovery
   - trained-model
