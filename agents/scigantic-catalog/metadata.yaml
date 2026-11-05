@@ -1,0 +1,24 @@
+name: scigantic-catalog
+type: agent
+version: 1.0.0
+associated_tools: []
+publisher:
+  name: Scigantic
+  contact: aaron@scigantic.com
+  support_url: https://github.com/Scigantic/scigantic-mcp/issues
+  party: 3p
+description: >
+  Finds public scientific datasets and explains their structure before any data is downloaded.
+  Searches the Scigantic catalog of several thousand curated open archives (genomics, imaging,
+  structural biology, chemistry, neuroscience, earth and climate science) through the Scigantic MCP
+  server, returns each archive's schema card (format, columns, sample rows, data dictionaries) and a
+  copy-paste loader for the user's environment, and links arXiv papers to their datasets. Read-only,
+  no API key.
+tags:
+  - open-data
+  - dataset-discovery
+  - data-access
+  - schema-card
+  - life-sciences
+  - earth-science
+  - patent-chemistry
