@@ -84,7 +84,7 @@ def test_author_trust_signals_are_passed_to_validator():
     (403, 0),
     (0, 403),
 ])
-def test_author_trust_resolution_keeps_private_member_utility_scope_public(
+def test_author_trust_resolution_does_not_open_protected_utility_scope(
     permission_status, association_status,
 ):
     classify = load_workflow()["jobs"]["classify"]
@@ -154,17 +154,23 @@ new AsyncFunction('core', 'github', 'context', input.script)(core, github, conte
     )
     assert any("does not prove non-membership" in info for info in result["infos"])
     public_paths = [
-        ".gitignore", "README.md", "utilities/terraform/main.tf",
-        "utilities/terraform/.terraform.lock.hcl",
+        ".gitignore", "README.md", "skills/example/scripts/helper.cjs",
     ]
     assert check_contributor_scope(
         public_paths, result["outputs"]["permission"], "Modrats",
         author_association=result["outputs"]["association"],
     ) == []
-    assert [failure.rule_id for failure in check_contributor_scope(
-        [".github/workflows/example.yml"], result["outputs"]["permission"],
+    protected_paths = [
+        ".github/workflows/example.yml", "utilities/terraform/main.tf",
+        "utilities/terraform/.terraform.lock.hcl", "utilities/README.md",
+    ]
+    failures = check_contributor_scope(
+        protected_paths, result["outputs"]["permission"],
         "Modrats", author_association=result["outputs"]["association"],
-    )] == ["POL-021"]
+    )
+    assert [(failure.rule_id, failure.file) for failure in failures] == [
+        ("POL-021", path) for path in protected_paths
+    ]
 
 
 def test_reporter_executes_only_default_branch_code():

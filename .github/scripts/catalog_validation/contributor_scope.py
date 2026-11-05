@@ -7,8 +7,8 @@ from .findings import Failure
 
 _MAINTAINER_PERMISSIONS = frozenset({"admin", "maintain", "write"})
 _MICROSOFT_ORG_ASSOCIATIONS = frozenset({"member", "owner"})
-_PUBLIC_CONTENT_ROOTS = frozenset({"agents", "starter-kits", "skills", "utilities"})
-_PROTECTED_ROOTS = frozenset({".auto-registry", ".github", ".vscode"})
+_PUBLIC_CONTENT_ROOTS = frozenset({"agents", "starter-kits", "skills"})
+_PROTECTED_ROOTS = frozenset({".auto-registry", ".github", ".vscode", "utilities"})
 _PROTECTED_PATHS = frozenset({"docs/validation-rules.md"})
 _PUBLIC_ROOT_FILES = frozenset({".gitignore"})
 _PUBLIC_ROOT_DOCS = frozenset({"readme.md", "contributing.md"})
@@ -28,6 +28,10 @@ _DEPENDABOT_PIP_PATHS = frozenset({
     ".github/requirements-ci.txt",
     "agents/gwp-predictor/training/requirements.txt",
     "agents/zinc/tools/zinc/requirements.txt",
+})
+_DEPENDABOT_UV_PATHS = frozenset({
+    "utilities/supercomputer-cli/discovery/pyproject.toml",
+    "utilities/supercomputer-cli/discovery/uv.lock",
 })
 
 
@@ -55,6 +59,8 @@ def is_trusted_dependabot_update(path: str, author: str, head_ref: str) -> bool:
         return normalized == ".config/dotnet-tools.json"
     if head_ref.startswith("dependabot/pip/"):
         return normalized in _DEPENDABOT_PIP_PATHS
+    if head_ref.startswith("dependabot/uv/"):
+        return normalized in _DEPENDABOT_UV_PATHS
     return False
 
 
@@ -123,9 +129,9 @@ def check_contributor_scope(
                 f"{actor} has no visible trust signal for this protected path "
                 f"(repository permission '{permission}', PR author association "
                 f"'{association or 'none'}'). Public contributors may modify catalog "
-                "content (agents/, starter-kits/, and skills/), utilities, "
-                "documentation, and the root .gitignore. Other "
-                "paths require repository write/maintain/admin permission or a visible "
+                "content (agents/, starter-kits/, and skills/), documentation, and "
+                "the root .gitignore. Utilities and other protected paths require "
+                "repository write/maintain/admin permission or a visible "
                 "Microsoft MEMBER/OWNER association. An absent association does not "
                 "prove non-membership. Remove this file from the PR or ask a repository "
                 "maintainer to help with the protected-path change. Correctness "

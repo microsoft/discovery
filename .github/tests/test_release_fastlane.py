@@ -128,7 +128,7 @@ def test_release_manifest_rejects_ring_and_version_regressions(tmp_path: Path):
     ]
 
 
-@pytest.mark.parametrize("author_permission", [None, "read"])
+@pytest.mark.parametrize("author_permission", [None, "read", "write"])
 def test_toolbox_pointer_must_match_published_vsix_digest(
     tmp_path: Path, author_permission: str | None,
 ):
@@ -157,7 +157,9 @@ def test_toolbox_pointer_must_match_published_vsix_digest(
         author_association="NONE",
     )
 
-    assert result.blocking == []
+    assert [failure.rule_id for failure in result.blocking] == (
+        ["POL-021", "POL-021"] if author_permission == "read" else []
+    )
 
     document = json.loads((tmp_path / pointer).read_text(encoding="utf-8"))
     document["sha256"] = "0" * 64
@@ -167,7 +169,9 @@ def test_toolbox_pointer_must_match_published_vsix_digest(
         author_permission=author_permission, author_association="NONE",
     )
 
-    assert [failure.rule_id for failure in result.blocking] == ["REL-002"]
+    assert [failure.rule_id for failure in result.blocking] == (
+        ["POL-021", "REL-002"] if author_permission == "read" else ["REL-002"]
+    )
 
 
 def test_toolbox_rejects_unreviewed_source_surface(tmp_path: Path):

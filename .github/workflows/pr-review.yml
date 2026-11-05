@@ -111,7 +111,7 @@ jobs:
             core.info(`PR author association for @${username}: ${association}`);
             core.info(
               'An absent organization association does not prove non-membership. ' +
-              'Public catalog, utility, documentation, and root .gitignore ' +
+              'Public catalog, documentation, and root .gitignore ' +
               'contributions remain allowed.'
             );
             core.setOutput('permission', permission);
@@ -194,8 +194,8 @@ jobs:
           PR_AUTHOR: ${{ github.event.pull_request.user.login }}
           PR_HEAD_REF: ${{ github.event.pull_request.head.ref }}
           # Private organization membership may be invisible to this token.
-          # Public utility contributions do not need an organization association;
-          # protected paths still require an affirmative author trust signal.
+          # Catalog, documentation, and root .gitignore contributions remain public;
+          # utilities and other protected paths require an affirmative trust signal.
           PR_AUTHOR_PERMISSION: ${{ needs.classify.outputs.author_permission || 'unknown' }}
           PR_AUTHOR_ASSOCIATION: ${{ needs.classify.outputs.author_association || 'NONE' }}
         run: |
