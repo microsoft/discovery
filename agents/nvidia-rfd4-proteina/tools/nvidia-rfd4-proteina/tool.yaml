@@ -1,55 +1,40 @@
 name: nvidiaRfd4Proteina
-version: 1.0.0
+version: "1.0.0"
 description: >
   NVIDIA RFD4-Proteina NIM client — submits protein design requests to the NVIDIA hosted API
   or a self-hosted NIM and retrieves generated structures in mmCIF format. GPU compute runs
   on the NIM side; this container requires only CPU.
-license: Apache-2.0
 category: AI & Machine Learning
+license: Apache-2.0
 
-worker:
-  type: static
-  pool_size: 1
+infra:
+  - name: worker
+    infra_type: container
+    image:
+      acr: "{name}.azurecr.io/nvidia-rfd4-proteina:latest"
+    compute:
+      min_resources:
+        cpu: 2
+        ram: "8Gi"
+        gpu: 0
+        storage: "0Gi"
+      max_resources:
+        cpu: 16
+        ram: "64Gi"
+        gpu: 0
+        storage: "0Gi"
+      infiniband: false
+      recommended_sku:
+        - Standard_D4s_v5
+        - Standard_D8s_v5
+      pool_type: static
+      pool_size: 1
 
-  container:
-    image: nvidia-rfd4-proteina:1.0.0
-
-  resources:
-    min:
-      cpu: 2
-      memory: 8Gi
-      gpu: 0
-    max:
-      cpu: 16
-      memory: 64Gi
-      gpu: 0
-
-  infiniband: false
-
-  recommended_skus:
-    - Standard_D4s_v5
-    - Standard_D8s_v5
-
-  environment:
-    - name: NVIDIA_API_KEY
-      secret: true
-    - name: NGC_API_KEY
-      secret: true
-
-  code:
-    runtime: python3
-    script_variable: userScript
-    log_output_dir: /output
-    copy_workdir_to_output: true
-    tail_log_lines: 100
-
-capabilities:
-  - Protein binder design against a target structure
-  - Motif scaffolding around functional residues
-  - Enzyme active-site scaffolding
-  - Antibody CDR loop design
-  - Small-molecule binder design
-  - Partial diffusion for structure refinement
-  - Inverse folding (sequence design for a backbone)
-  - Hosted NVIDIA API inference via NVIDIA_API_KEY
-  - Local NIM inference (no API key required)
+code_environments:
+  - language: python3
+    command: 'python3 -u "/{{scriptName}}" > {{output_directory}}/logs.out 2>&1; cp -r /workdir/* {{output_directory}}/ 2>/dev/null || true; tail -n 100 {{output_directory}}/logs.out'
+    description: >
+      Python code environment with the NVIDIA RFD4-Proteina NIM client. Calls the NVIDIA
+      hosted API or a self-hosted NIM for protein design. No GPU required in the container;
+      GPU compute runs on the NIM. Key packages: requests, biopython.
+    infra_node: worker

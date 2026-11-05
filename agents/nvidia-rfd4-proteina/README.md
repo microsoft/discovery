@@ -1,14 +1,17 @@
 # NVIDIA RFD4-Proteina Agent
 
-Expert agent for joint protein structure and sequence design using the
-[NVIDIA RFD4-Proteina NIM](https://build.nvidia.com/ipd/rfd4-proteina).
-Powered by the [NVIDIA BioNeMo Agent Toolkit](https://github.com/NVIDIA-BioNeMo/bionemo-agent-toolkit).
+## Overview
 
-## What this agent does
+RFD4-Proteina is NVIDIA's fourth-generation protein design model, developed in collaboration
+with the Institute for Protein Design at the University of Washington. It generates protein 3D
+structures and amino acid sequences **in a single model pass** — a significant advance over
+prior-generation pipelines that required separate backbone design and sequence design steps.
 
-RFD4-Proteina generates protein 3D structures and amino acid sequences in a single
-model pass. A scientist describes what they want in natural language — the agent
-prepares the request, calls the NIM, and returns ranked design candidates.
+The [NVIDIA BioNeMo Agent Toolkit](https://github.com/NVIDIA-BioNeMo/bionemo-agent-toolkit)
+wraps this model in a conversational interface so that scientists can design protein binders,
+scaffolds, and enzymes by describing their goal in plain language. The agent translates
+natural-language requests into NIM API calls via the included tool container and returns
+ranked design candidates.
 
 **Supported design tasks:**
 
@@ -25,16 +28,17 @@ prepares the request, calls the NIM, and returns ranked design candidates.
 ## Architecture
 
 ```
-Discovery Agent (this agent.yaml)
+Discovery Agent (agent.yaml)
         │
         │  writes request.json
         ▼
 Tool Container (Dockerfile + design.py)
+  python:3.11-slim, CPU-only, no model weights
         │
         │  POST /biology/ipd/rfd4-proteina/generative
         ▼
 NVIDIA RFD4-Proteina NIM
-  (hosted: health.api.nvidia.com  OR  local: self-hosted NIM on AKS/VM)
+  GPU compute — NVIDIA hosted API or Azure AI Foundry
         │
         │  returns mmCIF structures + sequences
         ▼
@@ -45,25 +49,49 @@ NVIDIA RFD4-Proteina NIM
   └── transport.json    ← HTTP status, request SHA-256
 ```
 
-## Requirements
+## Prerequisites
 
-- Azure subscription with a Discovery workspace
-- A GPU nodepool is **not required** for this tool — GPU compute runs on the NIM
-- `NVIDIA_API_KEY` secret configured in Discovery (for hosted mode)
-- Input structures must be in **mmCIF format** (`.cif` or `.mmcif`)
+| Requirement | Details |
+|---|---|
+| **Microsoft Discovery workspace** | Desktop app or Azure-deployed Discovery workspace |
+| **NVIDIA API key** | From [build.nvidia.com/ipd/rfd4-proteina](https://build.nvidia.com/ipd/rfd4-proteina) — free credits available |
+| **Docker** | For local container build (not required when pulling from ACR) |
+| **Input format** | Target protein structure must be in **mmCIF format** (`.cif` or `.mmcif`) |
+| **GPU compute** | Not required in the tool container — GPU runs on the NIM side |
 
-## Setup
+## Configuration
 
-1. Configure `NVIDIA_API_KEY` in your Discovery workspace secrets
-2. Import this agent using the `add-example-agents` skill
-3. Place your target protein mmCIF file in the conversation or `/input`
+Register the agent with the following parameters:
 
-## Example request
+| Parameter | Value | Description |
+|---|---|---|
+| `name` | `nvidia-rfd4-proteina` | Agent identifier |
+| `toolName` | `nvidiaRfd4Proteina` | Tool identifier used in tool calls |
+| `toolId` | `{{nvidiaRfd4ProteinaToolId}}` | Unique tool ID assigned during provisioning |
+| `model` | `{{CHAT-MODEL}}` | The backing LLM deployment name |
+| `NVIDIA_API_KEY` | Workspace secret | API key for the NVIDIA hosted NIM endpoint |
 
-> "Design 10 protein binders for my PD-1 target structure. Use the annotated mmCIF
-> I uploaded. Report all designs with their sequences."
+**Steps:**
 
-## Input/Output
+1. In Discovery, run `/add-example-agents`
+2. Point to the community catalog: `https://github.com/microsoft/discovery`
+3. Select `nvidia-rfd4-proteina`
+4. Set your `NVIDIA_API_KEY` in workspace secrets
+5. Build the tool container:
+   ```bash
+   cd agents/nvidia-rfd4-proteina/tools/nvidia-rfd4-proteina
+   docker build -t nvidia-rfd4-proteina:1.0.0 .
+   ```
+
+## Usage
+
+Start designing by describing your target in plain language:
+
+> "Design 10 protein binders for my PD-1 target structure. Use the mmCIF file I uploaded."
+
+> "Scaffold the active site from residues 45-62 of my enzyme into a new stable fold."
+
+> "Find sequences that will fold into the backbone structure in target.cif."
 
 **Input:** mmCIF structure file of the target protein (from `/input` or uploaded in chat)
 
@@ -73,8 +101,7 @@ NVIDIA RFD4-Proteina NIM
 - `summary.json` — design count, validation status, model provenance, metrics
 - `transport.json` — request provenance and HTTP status
 
-## Validated scope
-
+**Validated scope:**
 - Protein binder design via `generation` task
 - Motif scaffolding
 - Inverse folding
@@ -85,7 +112,20 @@ NVIDIA RFD4-Proteina NIM
 - Small-molecule binder design
 - Enzyme active-site design with novel geometries
 
-## Relationship to existing Discovery agents
+## Tools
+
+| Tool | Path | Description |
+|---|---|---|
+| `nvidiaRfd4Proteina` | `tools/nvidia-rfd4-proteina/` | CPU-only NIM client container. Calls the NVIDIA RFD4-Proteina hosted API or a self-hosted NIM. No model weights inside — GPU compute runs on the NIM. |
+
+## Known Limitations
+
+- **mmCIF format only** — PDB files are not accepted. Renaming a `.pdb` file to `.cif` does not convert it.
+- **RFdiffusion API fields not supported** — `contigs`, `input_pdb`, and `hotspot_res` are from the older RFdiffusion API and are not valid for RFD4-Proteina.
+- **Experimental tasks** — small-molecule binder design and enzyme design with novel active sites are unvalidated and should be confirmed with the user before running.
+- **Exit code 3** — HTTP 202 (accepted/pending) is not a failure. Preserve the request ID and do not re-POST the job.
+
+## Relationship to rfdiffusion
 
 This agent complements the existing `rfdiffusion` agent:
 
@@ -97,14 +137,20 @@ This agent complements the existing `rfdiffusion` agent:
 | Compute | Runs locally in container | Calls NVIDIA NIM (hosted or self-hosted) |
 | Input format | PDB | mmCIF |
 
-## License
+## Contributing
 
-Wrapper code (agent.yaml, Dockerfile, design.py): Apache-2.0
-
-Third-party components retain their own licenses — see THIRD_PARTY_NOTICES.md.
+This project welcomes contributions and suggestions. Please see the repository's top-level
+[CONTRIBUTING guidelines](https://github.com/microsoft/discovery/blob/main/CONTRIBUTING.md)
+for details on how to contribute.
 
 ## Support
 
 - BioNeMo Agent Toolkit: https://github.com/NVIDIA-BioNeMo/bionemo-agent-toolkit
 - NVIDIA RFD4-Proteina NIM: https://build.nvidia.com/ipd/rfd4-proteina
 - Discovery community: https://techcommunity.microsoft.com/category/azure/discussions/microsoft-discovery-discussions
+
+## License
+
+Wrapper code (agent.yaml, Dockerfile, design.py): Apache-2.0
+
+Third-party components retain their own licenses — see THIRD_PARTY_NOTICES.md.
