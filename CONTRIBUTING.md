@@ -1,8 +1,8 @@
 # Contributing
 
 Thanks for helping improve Microsoft Discovery! You can contribute catalog
-agents, starter kits, skills, and documentation here. The Discovery app's source code
-is not in this repository.
+agents, starter kits, skills, and documentation here. The Discovery
+app's source code is not in this repository.
 
 ## Choose your contribution
 
@@ -13,10 +13,20 @@ is not in this repository.
 | Add or update a skill | `skills/<skill-name>/` | [Skill authoring guide](docs/authoring-guides/skill-authoring-guide.md) |
 | Fix documentation | The relevant Markdown file or [docs/](docs/) | Make a focused change and check its links. |
 
+The root `.gitignore` may also be updated for contribution-related build
+artifacts. Correctness checks, CLA, and normal CODEOWNER review still apply.
+
 For product bugs, questions, or ideas, use
 [Discussions](https://techcommunity.microsoft.com/category/azure/discussions/microsoft-discovery-discussions).
-For schema, workflow, or executable utility changes, propose an idea there
-so a Microsoft maintainer can land the agreed change.
+For changes to `utilities/` (including its documentation), protected schemas,
+workflows, validator policy, or other trusted repository configuration, propose
+an idea there so a Microsoft maintainer can land the agreed change.
+A visible Microsoft `MEMBER`/`OWNER` association or
+repository write/maintain/admin access permits broader author scope, but private
+organization membership may not be visible to Actions. An absent association is
+not proof that someone is outside Microsoft and does not grant protected-path
+access. Configured Dependabot manifest updates retain their narrowly scoped
+exception.
 
 ## Quick start
 

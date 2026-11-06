@@ -66,7 +66,6 @@ jobs:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
             const username = context.payload.pull_request.user.login;
-            const trustedAssociations = new Set(['MEMBER', 'OWNER']);
             const knownPermissions = new Set([
               'admin', 'maintain', 'write', 'triage', 'read', 'none'
             ]);
@@ -109,9 +108,11 @@ jobs:
             }
 
             core.info(`Repository permission for @${username}: ${permission}`);
+            core.info(`PR author association for @${username}: ${association}`);
             core.info(
-              `Microsoft organization trust for @${username}: ` +
-              `${trustedAssociations.has(association)}`
+              'An absent organization association does not prove non-membership. ' +
+              'Public catalog, documentation, and root .gitignore ' +
+              'contributions remain allowed.'
             );
             core.setOutput('permission', permission);
             core.setOutput('association', association);
@@ -192,10 +193,9 @@ jobs:
           # Exempt requires BOTH author and head ref to match.
           PR_AUTHOR: ${{ github.event.pull_request.user.login }}
           PR_HEAD_REF: ${{ github.event.pull_request.head.ref }}
-          # POL-021 treats an absent or failed lookup as public scope.
-          # Microsoft organization members may contribute to any repository
-          # path without receiving repository write access; correctness checks
-          # and normal GitHub review protections remain authoritative.
+          # Private organization membership may be invisible to this token.
+          # Catalog, documentation, and root .gitignore contributions remain public;
+          # utilities and other protected paths require an affirmative trust signal.
           PR_AUTHOR_PERMISSION: ${{ needs.classify.outputs.author_permission || 'unknown' }}
           PR_AUTHOR_ASSOCIATION: ${{ needs.classify.outputs.author_association || 'NONE' }}
         run: |

@@ -1,4 +1,4 @@
-"""POL-021 protects trusted code while keeping documentation public."""
+"""POL-021 protects trusted paths, including the entire utilities tree."""
 
 from __future__ import annotations
 
@@ -8,9 +8,53 @@ from catalog_validation.runner import run_validation
 from validate_pr import check_contributor_scope
 
 
+_TERRAFORM_PR_PATHS = [
+    ".gitignore",
+    "README.md",
+    "utilities/README.md",
+    "utilities/terraform/.gitignore",
+    "utilities/terraform/.terraform.lock.hcl",
+    "utilities/terraform/README.md",
+    "utilities/terraform/locals.tf",
+    "utilities/terraform/main.tf",
+    "utilities/terraform/modules/control-plane/bookshelf/README.md",
+    "utilities/terraform/modules/control-plane/bookshelf/main.tf",
+    "utilities/terraform/modules/control-plane/bookshelf/outputs.tf",
+    "utilities/terraform/modules/control-plane/bookshelf/variables.tf",
+    "utilities/terraform/modules/control-plane/bookshelf/versions.tf",
+    "utilities/terraform/modules/control-plane/supercomputer/README.md",
+    "utilities/terraform/modules/control-plane/supercomputer/main.tf",
+    "utilities/terraform/modules/control-plane/supercomputer/outputs.tf",
+    "utilities/terraform/modules/control-plane/supercomputer/variables.tf",
+    "utilities/terraform/modules/control-plane/supercomputer/versions.tf",
+    "utilities/terraform/modules/control-plane/tool/README.md",
+    "utilities/terraform/modules/control-plane/tool/main.tf",
+    "utilities/terraform/modules/control-plane/tool/outputs.tf",
+    "utilities/terraform/modules/control-plane/tool/variables.tf",
+    "utilities/terraform/modules/control-plane/tool/versions.tf",
+    "utilities/terraform/modules/control-plane/workspace/README.md",
+    "utilities/terraform/modules/control-plane/workspace/main.tf",
+    "utilities/terraform/modules/control-plane/workspace/outputs.tf",
+    "utilities/terraform/modules/control-plane/workspace/variables.tf",
+    "utilities/terraform/modules/control-plane/workspace/versions.tf",
+    "utilities/terraform/modules/platform/main.tf",
+    "utilities/terraform/modules/platform/outputs.tf",
+    "utilities/terraform/modules/platform/variables.tf",
+    "utilities/terraform/modules/platform/versions.tf",
+    "utilities/terraform/outputs.tf",
+    "utilities/terraform/providers.tf",
+    "utilities/terraform/terraform.tfvars.example",
+    "utilities/terraform/tests/platform-readiness.tftest.hcl",
+    "utilities/terraform/variables.tf",
+]
+
+
 @pytest.mark.parametrize("permission", ["admin", "maintain", "write"])
 def test_maintainer_permissions_allow_any_repository_path(permission: str) -> None:
-    changed = ["README.md", ".github/workflows/pr-review.yml", "docs/guide.md"]
+    changed = [
+        "README.md", ".github/workflows/pr-review.yml", "docs/guide.md",
+        "utilities/example/run.py", "utilities/example/README.md",
+    ]
 
     assert check_contributor_scope(changed, permission, "maintainer") == []
 
@@ -32,11 +76,90 @@ def test_public_permissions_allow_catalog_and_documentation(permission: str) -> 
         "README.md",
         "CONTRIBUTING.md",
         "docs/authoring-guides/guide.md",
+        "docs/utilities/guide.md",
         "includes/media/screenshot.png",
-        "utilities/example/README.md",
     ]
 
     assert check_contributor_scope(changed, permission, "contributor") == []
+
+
+@pytest.mark.parametrize("permission", ["none", "read", "triage", "unknown", ""])
+def test_public_permissions_allow_skills_and_root_gitignore(
+    permission: str,
+) -> None:
+    changed = [
+        ".gitignore",
+        "skills/example/SKILL.md",
+        "skills/example/scripts/helper.cjs",
+    ]
+
+    assert check_contributor_scope(
+        changed, permission, "octocat", author_association="NONE",
+    ) == []
+
+
+@pytest.mark.parametrize("permission", ["none", "read", "triage", "unknown", ""])
+def test_public_permissions_reject_entire_utility_tree(permission: str) -> None:
+    changed = [
+        "utilities/README.md",
+        "utilities/example/README.MD",
+        "utilities/example/guide.markdown",
+        "utilities/example/run.py",
+        "utilities/example/run.ps1",
+        "utilities/example/run.sh",
+        "utilities/example/main.tf",
+        "utilities/example/terraform.tfvars.example",
+        "utilities/example/.terraform.lock.hcl",
+        "utilities/example/.gitignore",
+        "utilities/example/Dockerfile",
+        "utilities/example/pyproject.toml",
+        "utilities/example/uv.lock",
+        "utilities\\example\\tests\\test_run.py",
+    ]
+
+    failures = check_contributor_scope(
+        changed, permission, "octocat", author_association="NONE",
+    )
+
+    assert [(failure.rule_id, failure.file) for failure in failures] == [
+        ("POL-021", path) for path in changed
+    ]
+    assert "Utilities and other protected paths require" in failures[0].message
+
+
+@pytest.mark.parametrize("permission", ["none", "read", "unknown"])
+@pytest.mark.parametrize("association", ["NONE", "", "CONTRIBUTOR"])
+def test_terraform_utility_scope_requires_visible_author_trust(
+    permission: str, association: str,
+) -> None:
+    assert len(_TERRAFORM_PR_PATHS) == 37
+    failures = check_contributor_scope(
+        _TERRAFORM_PR_PATHS, permission, "Modrats", "add-terraform-utility",
+        author_association=association,
+    )
+
+    assert [(failure.rule_id, failure.file) for failure in failures] == [
+        ("POL-021", path)
+        for path in _TERRAFORM_PR_PATHS if path.startswith("utilities/")
+    ]
+
+
+def test_public_scope_still_protects_other_root_configuration() -> None:
+    changed = [
+        ".gitattributes",
+        ".gitmodules",
+        ".github/CODEOWNERS",
+        "utilities-other/run.py",
+        "scripts/new_validator.py",
+    ]
+
+    failures = check_contributor_scope(
+        changed, "read", "octocat", author_association="NONE",
+    )
+
+    assert [(failure.rule_id, failure.file) for failure in failures] == [
+        ("POL-021", path) for path in changed
+    ]
 
 
 def test_public_mixed_scope_reports_each_disallowed_file() -> None:
@@ -65,7 +188,6 @@ def test_public_mixed_scope_reports_each_disallowed_file() -> None:
         ("POL-021", "utilities/example/run.py"),
         ("POL-021", ".auto-registry/agent-registry.json"),
         ("POL-021", ".vscode/settings.json"),
-        ("POL-021", ".gitignore"),
         ("POL-021", "scripts/new_validator.py"),
         ("POL-021", ".github/skills/demo/SKILL.md"),
         ("POL-021", "skills-other/demo/script.py"),
@@ -81,6 +203,14 @@ def test_public_mixed_scope_reports_each_disallowed_file() -> None:
         "starter-kits/./demo/kit.json",
         "/agents/demo/metadata.yaml",
         "agents",
+        "utilities/../.github/workflows/pr-review.yml",
+        "utilities/\\../.github/workflows/pr-review.yml",
+        "utilities///example/run.py",
+        "utilities/./example/run.py",
+        "/utilities/example/run.py",
+        "utilities",
+        ".gitignore/../.github/workflows/pr-review.yml",
+        ".gitignore/nested/run.py",
         "skills/../.github/workflows/pr-review.yml",
         "skills/\\../.github/workflows/pr-review.yml",
         "skills//demo/scripts/build.sh",
@@ -105,6 +235,7 @@ def test_microsoft_org_member_can_modify_any_repository_content(
         "docs/discovery-app/releases/manifests/preview.json",
         "utilities/discovery-toolbox/vsix/DiscoveryToolbox-v1.9.11.vsix",
         "utilities/discovery-toolbox/vsix/latest.json",
+        "utilities/example/README.md",
         "utilities/agent-evaluation/evaluators/pipeline.py",
         ".github/workflows/pr-review.yml",
         "docs/schemas/metadata-schema.json",
@@ -150,6 +281,66 @@ def test_non_catalog_validation_allows_microsoft_org_member_utility(
     )
 
     assert result.blocking == []
+
+
+def test_non_catalog_validation_rejects_utility_fork_without_visible_trust(
+    tmp_path,
+) -> None:
+    for relative in _TERRAFORM_PR_PATHS:
+        path = tmp_path / relative
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text("# Terraform contribution fixture\n", encoding="utf-8")
+
+    result = run_validation(
+        tmp_path,
+        _TERRAFORM_PR_PATHS,
+        author_permission="read",
+        author="Modrats",
+        head_ref="add-terraform-utility",
+        author_association="NONE",
+    )
+
+    assert [(failure.rule_id, failure.file) for failure in result.blocking] == [
+        ("POL-021", path)
+        for path in _TERRAFORM_PR_PATHS if path.startswith("utilities/")
+    ]
+
+
+def test_public_utility_validation_rejects_code_without_executing_it(
+    tmp_path,
+) -> None:
+    relative = "utilities/example/run.py"
+    path = tmp_path / relative
+    path.parent.mkdir(parents=True)
+    path.write_text(
+        'raise RuntimeError("PR utility code must not execute")\n',
+        encoding="utf-8",
+    )
+
+    result = run_validation(
+        tmp_path, [relative], author_permission="read", author_association="NONE",
+    )
+
+    assert [failure.rule_id for failure in result.blocking] == ["POL-021"]
+
+
+@pytest.mark.parametrize(
+    ("permission", "expected_rules"),
+    [("read", ["POL-021", "POL-010"]), ("write", ["POL-010"])],
+)
+def test_utility_validation_still_rejects_environment_artifacts(
+    tmp_path, permission: str, expected_rules: list[str],
+) -> None:
+    relative = "utilities/example/.env"
+    path = tmp_path / relative
+    path.parent.mkdir(parents=True)
+    path.write_text("EXAMPLE_SETTING=value\n", encoding="utf-8")
+
+    result = run_validation(
+        tmp_path, [relative], author_permission=permission, author_association="NONE",
+    )
+
+    assert [failure.rule_id for failure in result.blocking] == expected_rules
 
 
 def test_public_contributor_cannot_add_executable_under_docs() -> None:
@@ -199,6 +390,13 @@ def test_trusted_registry_refresh_bot_can_update_generated_files() -> None:
             "dependabot/pip/agents/zinc/tools/zinc/pip-123",
         ),
         (
+            "utilities/supercomputer-cli/discovery/pyproject.toml",
+            (
+                "dependabot/uv/utilities/supercomputer-cli/discovery/"
+                "anyio-4.14.2"
+            ),
+        ),
+        (
             "utilities/supercomputer-cli/discovery/uv.lock",
             (
                 "dependabot/uv/utilities/supercomputer-cli/discovery/"
@@ -207,7 +405,7 @@ def test_trusted_registry_refresh_bot_can_update_generated_files() -> None:
         ),
     ],
 )
-def test_dependabot_can_update_configured_protected_manifests(
+def test_dependabot_can_update_configured_manifests(
     path: str,
     head_ref: str,
 ) -> None:
@@ -266,8 +464,33 @@ def test_dependabot_grouped_update_can_span_configured_pip_directories() -> None
         ),
         (
             "utilities/supercomputer-cli/discovery/uv.lock",
+            "octocat",
+            "dependabot/uv/utilities/supercomputer-cli/discovery/anyio-4.14.2",
+        ),
+        (
+            "utilities/supercomputer-cli/discovery/uv.lock",
+            "dependabot[bot]",
+            "feature/update-dependencies",
+        ),
+        (
+            "utilities/supercomputer-cli/discovery/uv.lock",
             "dependabot[bot]",
             "dependabot/pip/utilities/supercomputer-cli/discovery/anyio-4.14.2",
+        ),
+        (
+            "utilities/other/uv.lock",
+            "dependabot[bot]",
+            "dependabot/uv/utilities/supercomputer-cli/discovery/anyio-4.14.2",
+        ),
+        (
+            "utilities/supercomputer-cli/discovery/README.md",
+            "dependabot[bot]",
+            "dependabot/uv/utilities/supercomputer-cli/discovery/anyio-4.14.2",
+        ),
+        (
+            ".github/requirements-ci.txt",
+            "dependabot[bot]",
+            "dependabot/uv/utilities/supercomputer-cli/discovery/anyio-4.14.2",
         ),
     ],
 )
@@ -296,4 +519,21 @@ def test_dependabot_exception_remains_scoped_per_changed_file() -> None:
 
     assert [(failure.rule_id, failure.file) for failure in failures] == [
         ("POL-021", ".github/dependabot.yml"),
+    ]
+
+
+def test_dependabot_uv_exception_remains_scoped_per_changed_file() -> None:
+    failures = check_contributor_scope(
+        [
+            "utilities/supercomputer-cli/discovery/pyproject.toml",
+            "utilities/supercomputer-cli/discovery/uv.lock",
+            "utilities/supercomputer-cli/discovery/README.md",
+        ],
+        "none",
+        "dependabot[bot]",
+        "dependabot/uv/utilities/supercomputer-cli/discovery/anyio-4.14.2",
+    )
+
+    assert [(failure.rule_id, failure.file) for failure in failures] == [
+        ("POL-021", "utilities/supercomputer-cli/discovery/README.md"),
     ]
