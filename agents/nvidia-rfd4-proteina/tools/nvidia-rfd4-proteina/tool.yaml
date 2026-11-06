@@ -1,0 +1,40 @@
+name: nvidiaRfd4Proteina
+version: "1.0.0"
+description: >
+  NVIDIA RFD4-Proteina NIM client — submits protein design requests to the NVIDIA hosted API
+  or a self-hosted NIM and retrieves generated structures in mmCIF format. GPU compute runs
+  on the NIM side; this container requires only CPU.
+category: AI & Machine Learning
+license: Apache-2.0
+
+infra:
+  - name: worker
+    infra_type: container
+    image:
+      acr: "{name}.azurecr.io/nvidia-rfd4-proteina:latest"
+    compute:
+      min_resources:
+        cpu: 2
+        ram: "8Gi"
+        gpu: 0
+        storage: "0Gi"
+      max_resources:
+        cpu: 16
+        ram: "64Gi"
+        gpu: 0
+        storage: "0Gi"
+      infiniband: false
+      recommended_sku:
+        - Standard_D4s_v5
+        - Standard_D8s_v5
+      pool_type: static
+      pool_size: 1
+
+code_environments:
+  - language: python3
+    command: 'python3 -u "/{{scriptName}}" > {{output_directory}}/logs.out 2>&1; _exit=$?; cp -r /workdir/* {{output_directory}}/ 2>/dev/null || true; tail -n 100 {{output_directory}}/logs.out; exit $_exit'
+    description: >
+      Python code environment with the NVIDIA RFD4-Proteina NIM client. Calls the NVIDIA
+      hosted API or a self-hosted NIM for protein design. No GPU required in the container;
+      GPU compute runs on the NIM. Uses Python standard library only (no additional dependencies).
+    infra_node: worker
