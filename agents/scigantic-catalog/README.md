@@ -21,9 +21,10 @@ schema card.
 
 The catalog spans genomics and transcriptomics, medical and microscopy imaging, cryo-EM and
 structural biology, chemistry and ADMET, neuroscience, ecology, earth observation, weather and
-climate, and materials. Every archive is read-only public data on S3, GCS, Hugging Face, Zenodo
-or plain HTTP. The same MCP server also exposes SureChEMBL patent chemistry tools, which the agent
-uses when asked about patents.
+climate, and materials. The catalog indexes read-only locations on S3, GCS, Hugging Face, Zenodo
+and plain HTTP. Most are openly readable, but some upstream locations require credentials; see
+[Known Limitations](#known-limitations). The same MCP server also exposes SureChEMBL patent
+chemistry tools, which the agent uses when asked about patents.
 
 Intended users: computational biologists, chemists, data scientists and anyone who needs to locate
 and understand a public dataset before committing compute to it. A successful outcome is a dataset
@@ -49,7 +50,7 @@ The MCP server is anonymous and read-only. It exposes these catalog tools:
 
 | Tool | What it returns |
 | --- | --- |
-| `search_archives(query, category?, limit?)` | Ranked archives with id, title, category, summary, `probeStatus` and `objectCountEstimate` |
+| `search_archives(query, category?, limit?)` | Ranked archives with `id`, `title`, `category`, `author`, `cloudProvider`, `summary`, `sourceUrl`, `probeStatus` (`ok`, `empty` or `null` when not yet probed), `objectCountEstimate` and `objectCountTruncated` |
 | `get_archive(id)` | Full metadata for one archive, including its schema card |
 | `get_schema_card(id)` | File format, columns, sample rows or headers, inlined READMEs and data dictionaries, caveats, starter cell |
 | `get_data_access(id, language?)` | Storage location plus loader snippets for the user's own environment |
@@ -139,7 +140,11 @@ begin analysis on the dataset it recommends.
   environment.
 - **Some archives are credentialed.** The catalog lists archives whose storage turned out to need
   credentials. These carry `probeStatus: empty` and the agent is instructed to skip them, but the
-  flag comes from a periodic probe and can lag a change in the upstream bucket.
+  flag comes from a periodic probe and can lag a change in the upstream bucket. Archives that have
+  not been probed carry `probeStatus: null`, and the agent says access is unconfirmed for those.
+- **Catalog text is third-party content.** Schema cards, inlined READMEs and patent text come from
+  the dataset and patent publishers. The agent treats them as untrusted data and ignores any
+  instructions embedded in them.
 - **Search ranking is approximate.** Highly specific queries can rank a near-topic archive above
   the best one. The agent rewords the query and checks schema cards before recommending an archive.
 - **Schema cards are sampled.** A card is built from a sample of files and rows, so a rare column
@@ -154,7 +159,7 @@ For questions about the catalog, the MCP server or the data behind an archive, o
 <https://github.com/Scigantic/scigantic-mcp/issues> or write to <aaron@scigantic.com>.
 
 For issues with this catalog entry, open a discussion in the
-[Microsoft Discovery repository](https://techcommunity.microsoft.com/category/azure/discussions/microsoft-discovery-discussions).
+[Microsoft Discovery discussions](https://techcommunity.microsoft.com/category/azure/discussions/microsoft-discovery-discussions).
 
 ## Contributing
 
