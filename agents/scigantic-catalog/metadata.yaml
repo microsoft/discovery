@@ -15,10 +15,11 @@ description: >
   copy-paste loader for the user's environment, and links arXiv papers to their datasets. Read-only,
   no API key.
 tags:
-  - open-data
-  - dataset-discovery
-  - data-access
-  - schema-card
+  - database
+  - research
+  - api
+  - data-analysis
   - life-sciences
-  - earth-science
-  - patent-chemistry
+  - climate
+  - chemistry
+  - patent-analysis
