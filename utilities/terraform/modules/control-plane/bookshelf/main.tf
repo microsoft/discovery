@@ -42,7 +42,7 @@ resource "azapi_resource" "main" {
     }
 
     precondition {
-      condition = var.key_vault_properties == null || contains(
+      condition = var.key_vault_properties == null ? true : contains(
         var.workload_identity_client_ids,
         var.key_vault_properties.identity_client_id,
       )

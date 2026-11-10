@@ -75,13 +75,12 @@ variable "node_pools" {
         "Standard_NV72ads_A10_v5",
       ], node_pool.vm_size) &&
       node_pool.max_node_count >= 1 &&
-      (node_pool.min_node_count == null || node_pool.min_node_count >= 0) &&
-      (node_pool.min_node_count == null || node_pool.min_node_count <= node_pool.max_node_count) &&
-      (node_pool.scale_set_priority == null || contains(["Regular", "Spot"], node_pool.scale_set_priority)) &&
-      (node_pool.os_disk_size_gb == null || (node_pool.os_disk_size_gb >= 30 && node_pool.os_disk_size_gb <= 2048)) &&
-      (node_pool.image_cache_lower_threshold == null || (node_pool.image_cache_lower_threshold >= 0 && node_pool.image_cache_lower_threshold <= 100)) &&
-      (node_pool.image_cache_upper_threshold == null || (node_pool.image_cache_upper_threshold >= 0 && node_pool.image_cache_upper_threshold <= 100)) &&
-      (node_pool.image_cache_lower_threshold == null || node_pool.image_cache_upper_threshold == null || node_pool.image_cache_lower_threshold <= node_pool.image_cache_upper_threshold)
+      (node_pool.min_node_count == null ? true : node_pool.min_node_count >= 0 && node_pool.min_node_count <= node_pool.max_node_count) &&
+      (node_pool.scale_set_priority == null ? true : contains(["Regular", "Spot"], node_pool.scale_set_priority)) &&
+      (node_pool.os_disk_size_gb == null ? true : node_pool.os_disk_size_gb >= 30 && node_pool.os_disk_size_gb <= 2048) &&
+      (node_pool.image_cache_lower_threshold == null ? true : node_pool.image_cache_lower_threshold >= 0 && node_pool.image_cache_lower_threshold <= 100) &&
+      (node_pool.image_cache_upper_threshold == null ? true : node_pool.image_cache_upper_threshold >= 0 && node_pool.image_cache_upper_threshold <= 100) &&
+      (node_pool.image_cache_lower_threshold == null || node_pool.image_cache_upper_threshold == null ? true : node_pool.image_cache_lower_threshold <= node_pool.image_cache_upper_threshold)
     ])
     error_message = "Each node pool must satisfy the Discovery node pool name, count, priority, disk, and cache threshold constraints."
   }
@@ -99,7 +98,7 @@ variable "outbound_type" {
   default     = null
 
   validation {
-    condition     = var.outbound_type == null || contains(["LoadBalancer", "None"], var.outbound_type)
+    condition     = var.outbound_type == null ? true : contains(["LoadBalancer", "None"], var.outbound_type)
     error_message = "outbound_type must be LoadBalancer or None."
   }
 }
@@ -110,7 +109,7 @@ variable "system_sku" {
   default     = null
 
   validation {
-    condition     = var.system_sku == null || contains(["Standard_D4s_v4", "Standard_D4s_v5", "Standard_D4s_v6"], var.system_sku)
+    condition     = var.system_sku == null ? true : contains(["Standard_D4s_v4", "Standard_D4s_v5", "Standard_D4s_v6"], var.system_sku)
     error_message = "system_sku must be Standard_D4s_v4, Standard_D4s_v5, or Standard_D4s_v6."
   }
 }
@@ -121,7 +120,7 @@ variable "customer_managed_keys" {
   default     = null
 
   validation {
-    condition     = var.customer_managed_keys == null || contains(["Disabled", "Enabled"], var.customer_managed_keys)
+    condition     = var.customer_managed_keys == null ? true : contains(["Disabled", "Enabled"], var.customer_managed_keys)
     error_message = "customer_managed_keys must be Disabled or Enabled."
   }
 }

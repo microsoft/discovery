@@ -1,3 +1,7 @@
+variables {
+  workspace_contributor_principal_ids = []
+}
+
 mock_provider "azurerm" {
   mock_data "azurerm_resource_group" {
     defaults = {
@@ -18,6 +22,171 @@ mock_provider "azurerm" {
       id = "/subscriptions/00000000-0000-0000-0000-000000000001/resourceGroups/rg-discovery-test/providers/Microsoft.Storage/storageAccounts/stgtest"
     }
   }
+
+  mock_resource "azurerm_virtual_network" {
+    defaults = {
+      id = "/subscriptions/00000000-0000-0000-0000-000000000001/resourceGroups/rg-discovery-test/providers/Microsoft.Network/virtualNetworks/vnet-test"
+    }
+  }
+
+  mock_resource "azurerm_subnet" {
+    defaults = {
+      id = "/subscriptions/00000000-0000-0000-0000-000000000001/resourceGroups/rg-discovery-test/providers/Microsoft.Network/virtualNetworks/vnet-test/subnets/test"
+    }
+  }
+
+  mock_resource "azurerm_private_dns_zone" {
+    defaults = {
+      id = "/subscriptions/00000000-0000-0000-0000-000000000001/resourceGroups/rg-discovery-test/providers/Microsoft.Network/privateDnsZones/privatelink.blob.core.windows.net"
+    }
+  }
+
+  mock_resource "azurerm_user_assigned_identity" {
+    defaults = {
+      id           = "/subscriptions/00000000-0000-0000-0000-000000000001/resourceGroups/rg-discovery-test/providers/Microsoft.ManagedIdentity/userAssignedIdentities/test"
+      principal_id = "00000000-0000-0000-0000-000000000006"
+      client_id    = "00000000-0000-0000-0000-000000000007"
+    }
+  }
+}
+
+run "same_region_bookshelf" {
+  command = plan
+
+  variables {
+    resource_group_name = "rg-discovery-test"
+    location            = "uksouth"
+    enable_bookshelf    = true
+  }
+
+  assert {
+    condition     = length(module.bookshelf) == 1
+    error_message = "A same-region Bookshelf must remain supported."
+  }
+}
+
+run "reject_workspace_region_mismatch" {
+  command = plan
+
+  variables {
+    resource_group_name                       = "rg-discovery-test"
+    location                                  = "uksouth"
+    workspace_managed_resource_group_location = "eastus"
+  }
+
+  expect_failures = [var.workspace_managed_resource_group_location]
+}
+
+run "reject_bookshelf_region_mismatch" {
+  command = plan
+
+  variables {
+    resource_group_name                       = "rg-discovery-test"
+    location                                  = "uksouth"
+    enable_bookshelf                          = true
+    bookshelf_managed_resource_group_location = "eastus"
+  }
+
+  expect_failures = [var.bookshelf_managed_resource_group_location]
+}
+
+run "reject_shared_region_mismatch" {
+  command = plan
+
+  variables {
+    resource_group_name             = "rg-discovery-test"
+    location                        = "uksouth"
+    enable_bookshelf                = true
+    managed_resource_group_location = "eastus"
+  }
+
+  expect_failures = [
+    var.workspace_managed_resource_group_location,
+    var.bookshelf_managed_resource_group_location,
+  ]
+}
+
+run "specific_regions_override_shared_region" {
+  command = plan
+
+  variables {
+    resource_group_name                       = "rg-discovery-test"
+    location                                  = "uksouth"
+    enable_bookshelf                          = true
+    managed_resource_group_location           = "eastus"
+    workspace_managed_resource_group_location = "uksouth"
+    bookshelf_managed_resource_group_location = "uksouth"
+  }
+
+  assert {
+    condition = (
+      module.platform.supercomputer_infrastructure_location == "eastus" &&
+      local.managed_resource_group_locations.workspace == "uksouth" &&
+      local.managed_resource_group_locations.bookshelf == "uksouth"
+    )
+    error_message = "Specific overrides must win without blocking independent Supercomputer placement."
+  }
+}
+
+run "independent_supercomputer_region" {
+  command = plan
+
+  variables {
+    resource_group_name                           = "rg-discovery-test"
+    location                                      = "uksouth"
+    supercomputer_managed_resource_group_location = "eastus"
+  }
+
+  assert {
+    condition     = module.platform.supercomputer_infrastructure_location == "eastus"
+    error_message = "The Supercomputer VNet must follow its independent region."
+  }
+}
+
+run "unused_bookshelf_override" {
+  command = plan
+
+  variables {
+    resource_group_name                       = "rg-discovery-test"
+    location                                  = "uksouth"
+    enable_bookshelf                          = false
+    bookshelf_managed_resource_group_location = "eastus"
+  }
+
+  assert {
+    condition     = length(module.bookshelf) == 0
+    error_message = "A disabled Bookshelf must not constrain regional placement."
+  }
+}
+
+run "nonisolated_workspace_override" {
+  command = plan
+
+  variables {
+    resource_group_name                       = "rg-discovery-test"
+    location                                  = "uksouth"
+    network_isolation                         = false
+    workspace_managed_resource_group_location = "eastus"
+  }
+
+  assert {
+    condition     = local.managed_resource_group_locations.workspace == "eastus"
+    error_message = "A Workspace without attached subnets must not inherit their regional restriction."
+  }
+}
+
+run "nonisolated_workspace_still_rejects_bookshelf_mismatch" {
+  command = plan
+
+  variables {
+    resource_group_name                       = "rg-discovery-test"
+    location                                  = "uksouth"
+    network_isolation                         = false
+    enable_bookshelf                          = true
+    bookshelf_managed_resource_group_location = "eastus"
+  }
+
+  expect_failures = [var.bookshelf_managed_resource_group_location]
 }
 
 mock_provider "azapi" {}
@@ -31,7 +200,7 @@ mock_provider "random" {
 }
 
 run "cluster_permissions" {
-  command = plan
+  command = apply
 
   module {
     source = "./modules/platform"
@@ -45,8 +214,7 @@ run "cluster_permissions" {
   }
 
   override_resource {
-    target          = azurerm_user_assigned_identity.cluster
-    override_during = plan
+    target = azurerm_user_assigned_identity.cluster
     values = {
       id           = "/subscriptions/00000000-0000-0000-0000-000000000001/resourceGroups/rg-discovery-test/providers/Microsoft.ManagedIdentity/userAssignedIdentities/uami-cluster"
       principal_id = "00000000-0000-0000-0000-000000000002"
@@ -54,8 +222,7 @@ run "cluster_permissions" {
   }
 
   override_resource {
-    target          = azurerm_user_assigned_identity.kubelet
-    override_during = plan
+    target = azurerm_user_assigned_identity.kubelet
     values = {
       id           = "/subscriptions/00000000-0000-0000-0000-000000000001/resourceGroups/rg-discovery-test/providers/Microsoft.ManagedIdentity/userAssignedIdentities/uami-kubelet"
       principal_id = "00000000-0000-0000-0000-000000000003"
@@ -63,16 +230,14 @@ run "cluster_permissions" {
   }
 
   override_resource {
-    target          = azurerm_subnet.aks
-    override_during = plan
+    target = azurerm_subnet.aks
     values = {
       id = "/subscriptions/00000000-0000-0000-0000-000000000001/resourceGroups/rg-discovery-test/providers/Microsoft.Network/virtualNetworks/vnet-sc/subnets/aksSubnet"
     }
   }
 
   override_resource {
-    target          = azurerm_subnet.supercomputer_nodepool
-    override_during = plan
+    target = azurerm_subnet.supercomputer_nodepool
     values = {
       id = "/subscriptions/00000000-0000-0000-0000-000000000001/resourceGroups/rg-discovery-test/providers/Microsoft.Network/virtualNetworks/vnet-sc/subnets/supercomputerNodepoolSubnet"
     }
@@ -150,7 +315,7 @@ run "managed_regions_follow_location" {
 }
 
 run "workspace_user_access" {
-  command = plan
+  command = apply
 
   variables {
     resource_group_name = "rg-discovery-test"
@@ -162,10 +327,16 @@ run "workspace_user_access" {
   }
 
   override_resource {
-    target          = module.workspace.azapi_resource.main
-    override_during = plan
+    target = module.workspace.azapi_resource.main
     values = {
       id = "/subscriptions/00000000-0000-0000-0000-000000000001/resourceGroups/rg-discovery-test/providers/Microsoft.Discovery/workspaces/ws-test"
+    }
+  }
+
+  override_resource {
+    target = module.supercomputer.azapi_resource.main
+    values = {
+      id = "/subscriptions/00000000-0000-0000-0000-000000000001/resourceGroups/rg-discovery-test/providers/Microsoft.Discovery/supercomputers/sc-test"
     }
   }
 

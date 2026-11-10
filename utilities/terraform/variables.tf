@@ -41,12 +41,30 @@ variable "workspace_managed_resource_group_location" {
   description = "Region for the Workspace managed resource group"
   type        = string
   default     = null
+
+  validation {
+    condition = !var.network_isolation || coalesce(
+      var.workspace_managed_resource_group_location,
+      var.managed_resource_group_location,
+      var.location,
+    ) == var.location
+    error_message = "With network_isolation enabled, the resolved Workspace managed-resource-group region must equal location, where its subnets are created. Set workspace_managed_resource_group_location to location or remove the conflicting shared override."
+  }
 }
 
 variable "bookshelf_managed_resource_group_location" {
   description = "Region for the Bookshelf managed resource group"
   type        = string
   default     = null
+
+  validation {
+    condition = !var.enable_bookshelf || coalesce(
+      var.bookshelf_managed_resource_group_location,
+      var.managed_resource_group_location,
+      var.location,
+    ) == var.location
+    error_message = "With enable_bookshelf enabled, the resolved Bookshelf managed-resource-group region must equal location, where its private endpoint and search subnets are created. Set bookshelf_managed_resource_group_location to location or remove the conflicting shared override."
+  }
 }
 
 # ---- tags -------------------------------------------------------------------

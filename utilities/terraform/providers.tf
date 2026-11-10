@@ -22,7 +22,7 @@ terraform {
   required_providers {
     azurerm = {
       source  = "hashicorp/azurerm"
-      version = "~> 4.20"
+      version = "~> 4.81"
     }
     azapi = {
       source  = "Azure/azapi"
@@ -40,12 +40,14 @@ terraform {
 }
 
 provider "azurerm" {
-  features {}
+  features {
+    storage {
+      # The private endpoint depends on storage creation completing first.
+      data_plane_available = false
+    }
+  }
 
-  # `shared_access_key_enabled = false` on our storage account means the
-  # post-create data-plane readiness poll must use AAD instead of keys.
-  # Requires the terraform-runner identity to hold a blob data role on the
-  # storage account (or its RG/subscription). See the README quickstart.
+  # Use Entra authentication if additional data-plane resources are composed.
   storage_use_azuread = true
 }
 

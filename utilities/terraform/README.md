@@ -42,13 +42,9 @@ LOCATION="uksouth"
 # 1. create the RG (kept out of Terraform state on purpose)
 az group create --name "$RG_NAME" --location "$LOCATION"
 
-# 2. grant yourself blob data access on the RG (needed because the storage account disables shared keys)
-MY_OID=$(az ad signed-in-user show --query id -o tsv)
+# 2. configure the AzureRM subscription explicitly
 SUB_ID=$(az account show --query id -o tsv)
 export ARM_SUBSCRIPTION_ID="$SUB_ID"
-az role assignment create --assignee "$MY_OID" \
-  --role "Storage Blob Data Owner" \
-  --scope "/subscriptions/$SUB_ID/resourceGroups/$RG_NAME"
 
 # 3. init / validate / plan / apply
 terraform init
@@ -106,7 +102,9 @@ One resource group containing:
 * A Discovery **Supercomputer** (+ node pool), **Workspace** (+ chat model + project), and a **Storage Container** binding.
 * Optionally a **Bookshelf** (`enable_bookshelf`, off by default).
 
-Discovery-managed resource groups can use independent regions via per-resource MRG location tags.
+The Supercomputer managed resource group and VNet can use an independent region.
+Network-attached Workspace and enabled Bookshelf managed resource groups must
+remain in the region of their platform subnets.
 
 ## How to deploy
 
@@ -123,7 +121,8 @@ The Bookshelf is off by default (`enable_bookshelf = false`); see [The Bookshelf
 
 ## Prerequisites
 
-* Install Azure CLI 2.60+ and Terraform 1.9+.
+* Install Azure CLI 2.60+ and Terraform 1.9+. The root requires AzureRM 4.81+
+  within major version 4; use the committed provider lockfile.
 * Use an Azure subscription where you can `az login`, with Owner or Contributor plus Role Based Access Control Administrator. Plain Contributor cannot create the module's role assignments.
 * Register `Microsoft.Discovery` and its dependency resource providers using the Toolbox checks and remediation actions.
 * Install [Discovery Toolbox](../discovery-toolbox/README.md#install) in VS Code for the readiness workflow below. Terraform itself can run without VS Code, but this utility does not provide a headless Azure-readiness gate.
@@ -174,7 +173,12 @@ Resource-specific managed-resource-group overrides control the
 not have a Terraform region allowlist. Check service availability and network
 placement requirements before changing them. The Workspace VNet and storage
 remain in `location`; the Supercomputer VNet follows its managed-infrastructure
-region.
+region. With `network_isolation = true`, the resolved Workspace managed-resource-
+group region must equal `location`. An enabled Bookshelf always receives platform
+subnets, so its resolved region must also equal `location`, regardless of the
+Workspace isolation setting. Terraform rejects mismatches during planning,
+including those inherited from the deprecated shared override. An unused
+Bookshelf override does not block deployment when Bookshelf is disabled.
 
 Workload VM sizes in both the root input and standalone Supercomputer module
 are restricted to the
@@ -184,8 +188,13 @@ This conservative allowlist remains unchanged while the
 is reconciled. Subscription quota and regional availability alone do not expand
 the allowlist.
 
-The storage account disables shared keys. Grant the Terraform runner blob data
-access as shown in the quickstart, and allow RBAC assignments time to propagate.
+The storage account disables public access and shared keys. The root disables
+AzureRM storage data-plane readiness polling so the account can finish creating
+before its private endpoint exists. Its storage configuration uses management-
+plane APIs and does not require a blob data role for the Terraform runner.
+When composing the platform module independently, set the AzureRM provider's
+storage feature `data_plane_available = false` and use AzureRM 4.81 or later
+within major version 4.
 
 The root waits for the entire platform module before creating Discovery
 resources, including role assignments, VNet peerings, and the storage private
@@ -250,8 +259,7 @@ and all its data, not when migrating a live deployment to another region.
    rather than blindly forcing deletion.
 
 3. Configure a new customer resource-group name and the desired region in
-   `terraform.tfvars`. Create the new group outside Terraform and grant the
-   signed-in Terraform runner blob data access. Match `$rg` and `$location` to
+   `terraform.tfvars`. Create the new group outside Terraform. Match `$rg` and `$location` to
    the new configuration; use a group name not occupied by an earlier attempt:
 
    ```powershell
@@ -262,13 +270,16 @@ and all its data, not when migrating a live deployment to another region.
    $location = "uksouth"
    az group create --subscription $sub --name $rg --location $location
    if ($LASTEXITCODE -ne 0) { throw "Resource group creation failed" }
-   $oid = az ad signed-in-user show --query id -o tsv
-   if ($LASTEXITCODE -ne 0) { throw "Cannot determine runner object ID" }
-   az role assignment create --subscription $sub --assignee-object-id $oid --assignee-principal-type User --role "Storage Blob Data Owner" --scope "/subscriptions/$sub/resourceGroups/$rg"
-   if ($LASTEXITCODE -ne 0) { throw "Blob data role assignment failed" }
    ```
 
-   Service-principal runners need their own principal ID/type instead.
+   The root uses Storage management-plane operations and disables AzureRM's
+   storage data-plane readiness polling (`features.storage.data_plane_available
+   = false`). Storage creation can therefore finish before its private endpoint
+   exists, without granting the runner blob data access. Public and shared-key
+   access remain disabled. Additional data-plane resources or manual blob access
+   require private connectivity and appropriate blob data roles; an RBAC grant
+   alone does not provide network connectivity.
+
    Confirm provider registration, operator role-assignment permissions, the
    subscription network-security prerequisite above, and regional readiness
    through Toolbox. The [provider registration utility](../resource-provider-registration/Register-DiscoveryResourceProviders.ps1)
@@ -472,8 +483,9 @@ terraform validate
 terraform test
 ```
 
-The focused tests use mocked providers and plan-only runs. They check regional
-configuration and AKS role assignments without creating Azure resources or
+The focused tests use mocked providers, with plan runs for input validation and
+mocked apply runs for assertions on computed identities and resource IDs. They check null-safe
+optional inputs, regional alignment and AKS role assignments without creating Azure resources or
 modifying deployment state. They do not prove live quota, capacity, permissions,
 or RBAC propagation.
 

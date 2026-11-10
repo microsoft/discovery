@@ -59,7 +59,7 @@ variable "public_network_access" {
   default     = null
 
   validation {
-    condition     = var.public_network_access == null || contains(["Disabled", "Enabled"], var.public_network_access)
+    condition     = var.public_network_access == null ? true : contains(["Disabled", "Enabled"], var.public_network_access)
     error_message = "public_network_access must be Disabled or Enabled."
   }
 }
@@ -70,7 +70,7 @@ variable "customer_managed_keys" {
   default     = null
 
   validation {
-    condition     = var.customer_managed_keys == null || contains(["Disabled", "Enabled"], var.customer_managed_keys)
+    condition     = var.customer_managed_keys == null ? true : contains(["Disabled", "Enabled"], var.customer_managed_keys)
     error_message = "customer_managed_keys must be Disabled or Enabled."
   }
 }
@@ -120,7 +120,7 @@ variable "chat_model_deployments" {
     condition = alltrue([
       for key, deployment in var.chat_model_deployments :
       can(regex("^[a-zA-Z0-9-]{3,24}$", coalesce(deployment.name, key))) &&
-      (deployment.capacity == null || deployment.capacity >= 1)
+      (deployment.capacity == null ? true : deployment.capacity >= 1)
     ])
     error_message = "Chat model names must contain 3 to 24 alphanumeric or hyphen characters, and capacity must be at least 1."
   }
@@ -140,7 +140,7 @@ variable "projects" {
     condition = alltrue([
       for key, project in var.projects :
       can(regex("^[a-zA-Z0-9-]{3,24}$", coalesce(project.name, key))) &&
-      (project.behavior_preferences == null || length(project.behavior_preferences) <= 5000)
+      (project.behavior_preferences == null ? true : length(project.behavior_preferences) <= 5000)
     ])
     error_message = "Project names must contain 3 to 24 alphanumeric or hyphen characters, and behavior preferences cannot exceed 5000 characters."
   }

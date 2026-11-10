@@ -8,8 +8,10 @@ location            = "uksouth"
 # workspace_contributor_principal_ids = ["00000000-0000-0000-0000-000000000001"]
 
 # Managed infrastructure defaults to `location`; no overrides are needed for
-# same-region deployment. For intentional cross-region placement, replace null
-# with a verified region and uncomment the relevant override.
+# same-region deployment. The Supercomputer VNet follows its override.
+# Workspace must resolve to `location` when network_isolation is true.
+# An enabled Bookshelf must resolve to `location` because it uses platform subnets.
+# These restrictions also apply to the deprecated shared override.
 # supercomputer_managed_resource_group_location = null
 # workspace_managed_resource_group_location     = null
 # bookshelf_managed_resource_group_location     = null

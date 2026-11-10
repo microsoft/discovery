@@ -36,7 +36,7 @@ variable "public_network_access" {
   default     = null
 
   validation {
-    condition     = var.public_network_access == null || contains(["Disabled", "Enabled"], var.public_network_access)
+    condition     = var.public_network_access == null ? true : contains(["Disabled", "Enabled"], var.public_network_access)
     error_message = "public_network_access must be Disabled or Enabled."
   }
 }
@@ -59,7 +59,7 @@ variable "customer_managed_keys" {
   default     = null
 
   validation {
-    condition     = var.customer_managed_keys == null || contains(["Disabled", "Enabled"], var.customer_managed_keys)
+    condition     = var.customer_managed_keys == null ? true : contains(["Disabled", "Enabled"], var.customer_managed_keys)
     error_message = "customer_managed_keys must be Disabled or Enabled."
   }
 }
