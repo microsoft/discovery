@@ -16,9 +16,10 @@ from an inventory. Do not substitute the earlier timed snapshot.
 
 The large ZIP's SHA-256 is
 `bfc939735a574ccc2375ae9808e9242fb79efc545d5b3f314cc38e5d0cefa076`.
-It exceeds GitHub's normal single-file limit, so its exact bytes must be served
-from a versioned repository release, not committed as a regular Git object.
-There is deliberately no fabricated download link while that upload is pending.
+Its 168,396,900 bytes exceed GitHub's 100 MiB limit for a normal Git file;
+this is a repository storage limit, not a download-length limit. The exact ZIP
+can be offered as a versioned repository-release download once publication is
+approved. There is no fabricated link while that upload is pending.
 
 ## What is inside the small ZIP?
 
@@ -27,14 +28,6 @@ offline guard, tests, manifest and **validation folder**. Reference receipts
 and stage logs in that validation folder remain inside the exact archive.
 Unpacking it makes those files appear, just as in the local CDK-demo project.
 Nothing inside the ZIP was edited, and the large ZIP is not unpacked by this README.
-
-## Reference screenshots
-
-The original `BioPharmaTemplateAshScenarioRun1.docx` is retained alongside these
-files in the private author working copy. It is not required to run the scenario
-and is not published automatically with session/screenshot content. Its public
-sharing needs a separate review. The guide and its scientific inputs must work
-without that document or the author's saved project.
 
 ## Distribution status
 

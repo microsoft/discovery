@@ -12,7 +12,7 @@ Keep the same core across verticals. Replace `[Fill in]` placeholders; use **N/A
 | Audience / vertical | Chip design and verification |
 | Delivery mode | App |
 | Tested configuration / profile identifier | `corespi-app-win11-x64-dockerdesktop-v1.1`; current reference run `results/corespi-hb-20261105T172838-f045862f`. Catalog retrieval and native gates were exercised with an existing authorized implementation contract; fresh-project contract creation is not yet validated. Historical v1.0 run: `results/corespi-20261105T013140181Z-9f62c8ad`. |
-| Owner / recipe version / last validated date | ai4semi; 1.1; 2026-11-05 (bounded current-run validation; publication gaps below). |
+| Owner / recipe version / last validated date | Scenario maintainers; 1.1; 2026-11-05 (bounded current-run validation; publication gaps below). |
 
 ## 2. Configuration matrix
 
@@ -148,7 +148,7 @@ For prompt runs, completion means **end-to-end time to a validated response**, i
   - Follow-up message to a finished agent is rejected → preserve the rejection and report that no follow-up executed. Do not imply coverage gaps were closed. A new authorized narrow engineering stage, if needed, must be explicitly recorded; any adopted RTL change requires all final gates again.
   - Host Python exits 9009 → Windows Store `python.exe` alias → use a full Python installation path.
   - `report-gen` exits 2 with "VCD exceeds 1000000 value records" → inspect console JSON, preserve the first report and rerender to a new file with an explicit justified limit. Current run used `--max-changes 3000000`, producing `report-full.html` with exit 0 and no evidence issues; optional `--signals` requires exact scoped names (at most 12). Do not discard transitions or suppress evidence errors.
-  - Escalation contact: ai4semi.
+  - Escalation contact: scenario maintainers.
 - **Cleanup:** Stop Docker Desktop when finished; agents run containers with `--rm`, so no containers persist. Remove old image tags if storage is needed (`docker image rm <tag>`). Retain or delete `results/<unique-run-id>/` per your data policy. Delete the Bookshelf from **AI Capabilities** > **Bookshelves** if no longer needed. The App path creates no cloud resources; model usage is billed per your Discovery/model access terms (costs not recorded).
 - **Optional vertical addendum:** Chip design and verification. PASS is bounded zero-delay functional verification against an original specification. It is not exhaustive parameter proof, vendor CoreSPI equivalence, CDC/RDC signoff, timing closure, FPGA qualification or physical signoff. Asynchronous `PRESETN` release is not synchronized internally; handle it during integration. The `report-gen` agent invocation diagram is parent-recorded attribution, not an activation audit.
 

@@ -8,13 +8,13 @@ description: >-
   with a generated profile or infer permission from examples.
 compatibility: Requires file and command tools and the capabilities stated by the selected full guide. Author-only download preparation uses Python 3.10+.
 metadata:
-  author: QuickStart Scenarios contributors; adapted from Joe's runner design
+   author: QuickStart Scenarios contributors
   version: "0.2.0"
 ---
 
 # QuickStart Scenarios runner
 
-This is the shared runner. Joe's original skill remains unchanged with the
+This is the shared runner. The original scenario skill remains unchanged with the
 SiPhy files; this adaptation is separately identified and still awaiting an
 end-to-end test. **The selected full QuickStart Markdown is authoritative.**
 Do not shorten it, rewrite its science/prompt, replace it with a generated

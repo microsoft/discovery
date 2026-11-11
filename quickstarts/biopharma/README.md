@@ -1,9 +1,10 @@
 # BioPharma — start here
 
 Run **[Quick-Start-BioPharma LeadGen v0.11.md](Quick-Start-BioPharma%20LeadGen%20v0.11.md)**.
-This is the full 113,732-byte guide from the prepared CDK folder, unchanged.
-It includes setup, all 14 dependencies, prompts, expected outputs and the
-original scientific appendix. This README only tells you how to start it.
+This is the full guide from the prepared CDK folder, with personal attribution
+removed for publication. Setup, all 14 dependencies, prompts, expected outputs
+and the original scientific appendix are unchanged. This README only tells
+you how to start it.
 
 ## 1. Get the guide and its files
 

@@ -1,14 +1,14 @@
 # SiPhy — start here
 
 Run **[QuickStart-Spec-to-RTL.md](QuickStart-Spec-to-RTL.md)**.
-This is Joe's complete v1.1 owner guide, unchanged: **29,025 bytes**. Its
-filename is made descriptive; no paragraphs, prompts, results or checklist
-items have been shortened or rewritten.
+This is the complete v1.1 guide, with personal owner/contact identifiers
+removed for publication. Its filename is made descriptive; scientific
+instructions, prompts, results and checklist items are unchanged.
 
 ## 1. Get the supplied files
 
 - The full QuickStart Markdown above.
-- [Joe's original skill 1.md](skill%201.md), **unchanged**.
+- [Original scenario skill](skill%201.md), **unchanged**.
 - The exact `ship.tar` package described on [the files page](files/README.md).
 
 Put these in a new short local folder. The tar is still a local, unpublished
@@ -31,8 +31,8 @@ full SiPhy guide and send:
 > older archive and skill instructions. Check readiness and obtain the required
 > setup and execution decisions before running the four chip specialists.
 
-If you explicitly test Joe's original skill instead, supply both original
-files and require it to stop on a conflict. His older skill/README assumed
+If you explicitly test the original scenario skill instead, supply both original
+files and require it to stop on a conflict. The older skill/README assumed
 mandatory Bookshelf use and contained an automatic Recommended instruction.
 The supplied v1.1 guide supersedes those assumptions. The original skill is
 kept for review, not silently patched or advertised as a validated v1.1 runner.

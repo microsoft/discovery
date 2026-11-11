@@ -2,7 +2,7 @@
 
 | Original supplied material | Location / status |
 | --- | --- |
-| Andre's moisturizer brief | [moisturizer-prompt.md](moisturizer-prompt.md), original contents unchanged; descriptive filename only |
+| Original moisturizer brief | [moisturizer-prompt.md](moisturizer-prompt.md), original contents unchanged; descriptive filename only |
 | Fourteen-paper source manifest | [corpus.manifest.json](corpus.manifest.json), original bytes unchanged |
 | `OneDrive_1_11-3-2026.zip` | Exact 26,140,796-byte archive staged in this local folder; not published because readability and distribution rights are unresolved |
 

@@ -8,7 +8,7 @@ start from another person's project, sessions or installed environment.
 | Scenario | Start here | Full QuickStart guide | Supporting files |
 | --- | --- | --- | --- |
 | BioPharma | [Instructions](biopharma/README.md) | [Full v0.11 guide](biopharma/Quick-Start-BioPharma%20LeadGen%20v0.11.md) | [BioPharma files](biopharma/files/README.md) |
-| SiPhy | [Instructions](siphy/README.md) | [Full Spec-to-RTL guide](siphy/QuickStart-Spec-to-RTL.md) | [SiPhy files](siphy/files/README.md) and [Joe's original skill](siphy/skill%201.md) |
+| SiPhy | [Instructions](siphy/README.md) | [Full Spec-to-RTL guide](siphy/QuickStart-Spec-to-RTL.md) | [SiPhy files](siphy/files/README.md) and [original scenario skill](siphy/skill%201.md) |
 | CMS | [Status and inputs](cms/README.md) | Completed owner guide awaited | [CMS files](cms/files/README.md) |
 | Bookshelf | [Status and papers](bookshelf/README.md) | Completed owner guide awaited | [Bookshelf files](bookshelf/files/README.md) |
 
@@ -17,7 +17,7 @@ start from another person's project, sessions or installed environment.
 Use the [shared QuickStart runner](../skills/quickstart-runner/SKILL.md), with
 [installation instructions](../skills/quickstart-runner/README.md). It reads
 the full selected guide; it does not replace that guide with another profile
-or silently change the scenario. Joe's original SiPhy skill is also retained
+or silently change the scenario. The original SiPhy skill is also retained
 unchanged, as supplied. The SiPhy README explains its older-guide differences.
 
 ## Start a run
@@ -39,15 +39,16 @@ each files page. No release has been published yet: a GitHub source-code ZIP
 alone does not currently contain every runtime input. The files pages say
 exactly what is present locally and what still needs a public download.
 
-The original BioPharma guide, SiPhy guide, Joe skill, archives and integrity
-attachments are not shortened, reformatted or repacked internally. Some owner
-guides retain historical result links and open publication items; keeping the
-original text is not a claim those references are available or newly validated.
+The BioPharma and SiPhy guides are retained in full, with personal attribution
+removed from the public copies. Scientific instructions, prompts, results and
+checklists are unchanged. The original scenario skill, archives and integrity
+attachments remain byte-for-byte unchanged. Historical result links and open
+publication items are not claims of newly available or validated evidence.
 
 ## Plan for completing publication
 
 1. **Now — agree the skeleton.** Review these scenario folders, full supplied
-   guides, start READMEs, original small attachments, shared runner and Ryan's
+   guides, start READMEs, original small attachments, shared runner and the
    [unchanged template](templates/Quick-Start-Template.md). CMS and Bookshelf
    keep clearly labelled spaces for their completed owner guides.
 2. **Next — complete each handoff.** Add the missing owner guides and reference
@@ -67,3 +68,12 @@ its required input files, and any scenario skill. No customer should need to
 understand a second profile, file-inventory document or duplicate requirements
 file to start. Repository review and actual clean-start validation remain
 separate from the raw E2E handoff to Engineering.
+
+## Repository support files
+
+- `.gitattributes` preserves checked-in guide and attachment bytes across
+   Windows/macOS/Linux checkouts; the navigation READMEs use standard line endings.
+- `.gitignore` prevents large or private local files and generated caches from
+   being committed accidentally. It does not delete those local files.
+- This README is the scenario index and start page. Customers do not need to
+   edit either Git settings file to use a QuickStart.

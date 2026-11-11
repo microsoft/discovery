@@ -2,7 +2,7 @@
 
 This is a **separate Bookshelf QuickStart Scenario**, not the Bookshelf data
 used by CMS or SiPhy. Its proposed public corpus is fifteen SCLC papers.
-It does not replace Rebecca's fixed internal leukemia regression dataset.
+It does not replace the fixed internal leukemia regression dataset.
 
 The [files folder](files/README.md) holds the original selection and paper
 metadata, with every filename, source URL, DOI, licence and checksum. The

@@ -27,9 +27,9 @@ install Python/packages, index a corpus or start scientific work for you.
 
 ## Which version?
 
-This shared adaptation retains Joe's setup banner, phase explanations, ordered
-validation and mode choices, but reads the selected full guide instead of an
-embedded CoreSPI profile. [Joe's original skill](../../quickstarts/siphy/skill%201.md)
+This shared adaptation retains the original runner's setup banner, phase
+explanations, ordered validation and mode choices, but reads the selected full
+guide instead of an embedded CoreSPI profile. [The original scenario skill](../../quickstarts/siphy/skill%201.md)
 is preserved unchanged. SiPhy v1.1 supersedes conflicting older prompt,
 Bookshelf and connection instructions; do not silently treat the old skill as
 validated against the newer guide.

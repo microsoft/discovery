@@ -3,11 +3,12 @@
 Customers start with the scenario README and full owner guide. They do not
 need this inventory or the packaging script to understand or run the scenario.
 
-`downloads.json` records the actual expected source bytes. It is an internal
-download inventory, **not** a second scientific profile. Guide content, archive
-contents, original checksums and supporting attachments are never reformatted
-or silently repacked. Renaming the supplied SiPhy guide for display does not
-change its bytes. Git attributes preserve those bytes through checkout.
+`downloads.json` records the actual expected published-file bytes. It is an
+internal download inventory, **not** a second scientific profile. The complete
+guides have only personal attribution removed; their original source digests
+and the published-copy digests are recorded separately. Scientific instructions
+are not shortened. Archive contents, checksums and supporting attachments are
+unchanged. Git attributes preserve the recorded bytes through checkout.
 
 ## Local verification and review download
 
@@ -38,9 +39,9 @@ replace them with inventory-only documentation or fake URLs. The script makes
 local bundles only; no upload is performed by it.
 
 Before upload, verify rights, absence of private content, account/destination,
-author approval and exact filenames/checksums. Joe's unchanged tar includes
+author approval and exact filenames/checksums. The unchanged SiPhy tar includes
 papers with no collection-wide redistribution permission. The CMS archive is
-protected and unapproved; screenshot documents are private reference material.
+protected and unapproved.
 Do not remove Git exclusions to bypass those decisions. No public sharing of
 these files is authorized merely because a local copy exists.
 
@@ -51,6 +52,6 @@ claimed. A source-code ZIP alone currently omits ignored, unpublished files.
 
 The originals may retain missing historical output links; list those as
 missing in the scenario README, never silently rewrite the owner Markdown.
-Ryan's [original blank template](../../../quickstarts/templates/Quick-Start-Template.md)
+The [original blank template](../../../quickstarts/templates/Quick-Start-Template.md)
 is included unchanged. Do not replace it with the completed SiPhy guide or a
 generated template.

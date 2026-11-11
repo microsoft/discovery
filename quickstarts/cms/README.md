@@ -1,6 +1,6 @@
 # CMS — scenario in preparation
 
-This folder is reserved for **Andre's complete CMS QuickStart Markdown and
+This folder is reserved for **the complete CMS QuickStart Markdown and
 its associated files**, not a shortened replacement for that document.
 The completed customer guide has not been supplied locally yet, so there is
 no ready QuickStart to run here.

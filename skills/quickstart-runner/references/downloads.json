@@ -4,7 +4,7 @@
   "packages": {
     "biopharma": {
       "title": "BioPharma",
-      "guide": {"path":"quickstarts/biopharma/Quick-Start-BioPharma LeadGen v0.11.md","name":"Quick-Start-BioPharma LeadGen v0.11.md","bytes":113732,"sha256":"1f1046aedcc1d7a323ebf38ab5352b152071de690b967ac95bfec450fb08ec49"},
+      "guide": {"path":"quickstarts/biopharma/Quick-Start-BioPharma LeadGen v0.11.md","name":"Quick-Start-BioPharma LeadGen v0.11.md","bytes":113714,"sha256":"5a3ea6518974fc96a1398237cd34ec70c41c37b5dbb6688e83bc661ff2ed6994","sourceBytes":113732,"sourceSha256":"1f1046aedcc1d7a323ebf38ab5352b152071de690b967ac95bfec450fb08ec49","publicationEdits":"Personal attribution removed; all other source bytes, including prompts and scientific content, retained."},
       "files": [
         {"path":"quickstarts/biopharma/files/cdk_operational_bundle_v1.zip","name":"cdk_operational_bundle_v1.zip","bytes":50301,"sha256":"874eba9d9e1ee72d38c257f7904d93953bcb8dc2ec55cf4c2732009c57e74f2f"},
         {"path":"quickstarts/biopharma/files/cdk_operational_bundle_v1.sha256","name":"cdk_operational_bundle_v1.sha256","bytes":97,"sha256":"a793e0bb6e34945ad04e230d1b185f66eebd1861219962f9afcff31ebeb46325"},
@@ -16,12 +16,12 @@
       "publicationApproved": false,
       "publicationReason": "Exact local package prepared; no versioned repository-release upload approved/performed in this change. Source notice records MIT campaign code and separate ChEMBL/KIBA/AqSolDB/wwPDB terms; retain all originals.",
       "releaseUrl": null,
-      "referenceOnly": ["BioPharmaTemplateAshScenarioRun1.docx: private screenshot record, not a runtime input or automatic public upload"],
+      "referenceOnly": [],
       "runtimeStatus": "Proposed v0.11 guide; revised shared runner not yet tested end to end"
     },
     "siphy": {
       "title": "SiPhy",
-      "guide": {"path":"quickstarts/siphy/QuickStart-Spec-to-RTL.md","name":"QuickStart-Spec-to-RTL.md","bytes":29025,"sha256":"cc31845bb7220eb2c3da4243a78455b877adb6bf23030ca4defc1bcaf637a8db"},
+      "guide": {"path":"quickstarts/siphy/QuickStart-Spec-to-RTL.md","name":"QuickStart-Spec-to-RTL.md","bytes":29051,"sha256":"c00effcadce2674c35481f2dd7e6e186795b6eef1f867f6970eaae0448da897a","sourceBytes":29025,"sourceSha256":"cc31845bb7220eb2c3da4243a78455b877adb6bf23030ca4defc1bcaf637a8db","publicationEdits":"Personal owner/contact identifiers replaced with role-based references; all other source bytes, including prompts and scientific content, retained."},
       "files": [
         {"path":"quickstarts/siphy/files/ship.tar","name":"ship.tar","bytes":40992256,"sha256":"f06834009e5e28b0c2cb18f3b7ff5227d1cb8ee2ecbd84f41eda157f8907159c"},
         {"path":"quickstarts/siphy/skill 1.md","name":"skill 1.md","bytes":38469,"sha256":"4c87f20765a007658bbbb247351c9e1790e99e06dc37093cf4c6a33e758111ff"}

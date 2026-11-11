@@ -1,6 +1,6 @@
 # QuickStart Scenarios templates
 
-Start with **[Ryan's original Quick-Start-Template.md](Quick-Start-Template.md)**.
+Start with **[Quick-Start-Template.md](Quick-Start-Template.md)**.
 It is included in full, byte-for-byte unchanged. This folder contains the
 blank template and this README, not a shortened replacement or another format.
 
