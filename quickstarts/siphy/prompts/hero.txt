@@ -1,0 +1,10 @@
+First, use hardware-spec-dev agent to create the CoreSPI specification document (select 'Recommended' if prompted by chat).
+Next, create a specification markdown document in knowledge directory for the CORESPI_HB device.
+Then use these three agents in order to implement and verify the design described in knowledge/CORESPI_HB.md:
+
+chip-rtl-design: Read the specification, create synthesizable veirlog, and run the design checks.
+chip-rtl-lint: Check the RTL with the default lint rules and canonical formatting check. Fix any issues before continuing.
+chip-functional-verification: Create an independent, self-checking testbench from the specification, run simulation, and produce a VCD waveform.
+If the RTL changes, repeat all checks on the final version. Report PASS only when design checks, lint, formatting, and simulation all pass. Otherwise, report the actual failure.
+
+Save the RTL, testbench, waveform, and a short results summary, and provide links to them. Save all generated files—including RTL, testbench, logs, waveform, and results summaries—under results/<unique-run-id>/ in this project, rather than under sessions/.

@@ -1,0 +1,29 @@
+{
+  "schemaVersion": 1,
+  "id": "siphy",
+  "title": "SiPhy CoreSPI-inspired specification to verified RTL",
+  "vertical": "SiPhy",
+  "version": "0.1.0",
+  "status": "draft",
+  "guide": "README.md",
+  "profile": "profile.md",
+  "assetManifest": "assets.json",
+  "files": ["README.md", "profile.md", "FILES.md", "prompts/hero.txt", "data/corpus.csv", "assets.json", "scenario.json"],
+  "prompt": {"path": "prompts/hero.txt", "sha256": "ea95ba698976582dd1c19794353f8f1f9a2167b79da5b09ddef6b68ae2d8ee68", "status": "owner-supplied", "source": "Exact test prompt from owner archive ship/README.md; line endings normalized to LF."},
+  "components": [
+    {"id":"hardware-spec-dev","kind":"agent","status":"unpublished","repository":null,"revision":null,"path":null,"note":"Exact supplied agent not in inspected upstream; requires portable Microchip binding."},
+    {"id":"chip-rtl-design","kind":"agent-tool","status":"unpublished","repository":null,"revision":null,"path":null,"note":"Exact agent and rtl-design context require canonical publication."},
+    {"id":"chip-rtl-lint","kind":"agent-tool","status":"unpublished","repository":null,"revision":null,"path":null,"note":"Exact agent and rtl-lint context require canonical publication."},
+    {"id":"chip-functional-verification","kind":"agent-tool","status":"unpublished","repository":null,"revision":null,"path":null,"note":"Exact agent and functional-verification context require canonical publication."},
+    {"id":"report-gen","kind":"skill","status":"unpublished","repository":null,"revision":null,"path":null,"note":"Owner rendering skill/scripts/templates/tests supplied in archive; public component unavailable."},
+    {"id":"catalog-installer-reference","kind":"skill","status":"repository","repository":"microsoft/discovery","revision":"88a2a1cd1664b7d609659dc86c65f7f632686715","path":"skills/add-example-agents/SKILL.md","note":"Canonical installer reference for compatibility review only, not a claimed drop-in replacement for owner discovery-add-agents."},
+    {"id":"bookshelf","kind":"host-capability","status":"host","repository":null,"revision":null,"path":null,"note":"Design-Best-Practices with authorized exact corpus and verified retrieval; bindings are per project."}
+  ],
+  "blockers": [
+    {"id":"component-publication","detail":"Four exact agents, tool contexts and report skill need approved canonical sources and image/version pins."},
+    {"id":"corpus-rights","detail":"Forty-paper collection explicitly lacks blanket redistribution permission; approved acquisition needed."},
+    {"id":"model-and-guide","detail":"Completed owner template and tested model/settings need confirmation."},
+    {"id":"mcp-and-reference","detail":"Required MCP route previously failed; publishable reference outputs and clean-project verification missing."}
+  ],
+  "validation": {"package":"not-run","workflow":"not-run","scientific":"not-run","evidence":null}
+}

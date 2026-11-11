@@ -1,0 +1,23 @@
+{
+  "schemaVersion": 1,
+  "id": "biopharma",
+  "title": "BioPharma CDK frozen-reference computation",
+  "vertical": "BioPharma",
+  "version": "0.1.0",
+  "status": "draft",
+  "guide": "README.md",
+  "profile": "profile.md",
+  "assetManifest": "assets.json",
+  "files": ["README.md", "profile.md", "FILES.md", "requirements.txt", "prompts/frozen.txt", "assets.json", "scenario.json"],
+  "prompt": {"path": "prompts/frozen.txt", "sha256": "0ef0346f70ff178468eba07dc68677441fb1e2a5762ae095b4dce2c43802a342", "status": "owner-supplied", "source": "Frozen launch prompt in proposed guide revision 0.11, preserving text and normalizing LF only; packaging still needs owner acceptance."},
+  "components": [
+    {"id": "coordinator", "kind": "host-capability", "status": "host", "repository": null, "revision": null, "path": null, "note": "Existing Discovery chat with gpt-6-astra and local tools; observe actual model/grants. Not a fabricated catalog agent."},
+    {"id": "operational-launcher", "kind": "local-runtime", "status": "unpublished", "repository": null, "revision": null, "path": null, "note": "Exact operational ZIP inventoried in assets.json; no public source locator supplied."}
+  ],
+  "blockers": [
+    {"id": "public-assets", "detail": "Approved anonymous release URLs and rights for both archives/attachments unresolved."},
+    {"id": "owner-review", "detail": "Owner acceptance of packaging/runtime setup corrections pending."},
+    {"id": "fresh-project-run", "detail": "New shared runner, activation, clean setup and frozen run not executed together."}
+  ],
+  "validation": {"package": "not-run", "workflow": "not-run", "scientific": "not-run", "evidence": null}
+}
