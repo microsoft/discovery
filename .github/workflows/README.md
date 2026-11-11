@@ -19,27 +19,32 @@ of diagnostic labels. At least one CODEOWNERS approval and all other configured
 review requirements must be satisfied. A maintainer then merges the PR or
 enables GitHub's native auto-merge.
 
-### Contributor scope and private organization membership
+### Contributor access and review
 
-Public contributors may modify catalog content (agents, starter kits, and
-top-level skills), documentation outside protected paths, and the root
-`.gitignore`. The entire `utilities/` tree, including Markdown documentation,
-is protected. Configured Dependabot manifest updates retain their narrowly
-scoped exception. Existing artifact and release validation still apply;
-author scope does not waive checks or approvals.
+PR Review does not restrict contribution paths by author identity. Microsoft
+organization members, including private members, bot-authored contributions,
+and public contributors may propose changes anywhere in the repository.
+`POL-021` is retired because the read-only repository token cannot reliably
+classify private organization membership or the human behind a delegated bot
+contribution. The workflow no longer performs author permission or association
+lookups, and does not need an organization-membership credential.
 
-PR Review uses the current API-reported author association as a positive trust
-signal, not as an authoritative negative membership lookup. Private Microsoft
-members can appear as `NONE` to `GITHUB_TOKEN`; that does not prove
-non-membership or grant protected-path access. Protected paths need a visible
-`MEMBER`/`OWNER` association or repository write/maintain/admin access.
-Unavailable lookups produce warnings and do not grant protected-path access.
+This removes contributor-scope blocking for everyone, not just Microsoft
+members. It does not grant direct push or merge rights. Content requirements,
+including schema, release, generated-registry, artifact and secret checks,
+and required human/CODEOWNER approvals remain in force. PR code is still
+inspected as data by trusted base-SHA validators, never executed by them.
 
 Utilities use engineering CODEOWNERS, while root files use the default
 maintainer owner; Discovery Toolbox retains its maintainer-owned exception.
 Draft PRs do not automatically request CODEOWNER reviews. After a new push,
 check the latest commit's required checks and approval requirements rather than
 relying on an older approval or diagnostic label.
+
+Land validator changes on the trusted base branch before requesting fresh
+checks on affected PRs. Refresh those PRs against the updated base; rerunning
+an old event alone can still execute the old base-SHA validator and report
+the retired rule.
 
 ### Workflow responsibilities
 

@@ -1,7 +1,7 @@
 # Contributing
 
 Thanks for helping improve Microsoft Discovery! You can contribute catalog
-agents, starter kits, skills, and documentation here. The Discovery
+agents, starter kits, skills, utilities, repository automation, and documentation here. The Discovery
 app's source code is not in this repository.
 
 ## Choose your contribution
@@ -18,15 +18,13 @@ artifacts. Correctness checks, CLA, and normal CODEOWNER review still apply.
 
 For product bugs, questions, or ideas, use
 [Discussions](https://techcommunity.microsoft.com/category/azure/discussions/microsoft-discovery-discussions).
-For changes to `utilities/` (including its documentation), protected schemas,
-workflows, validator policy, or other trusted repository configuration, propose
-an idea there so a Microsoft maintainer can land the agreed change.
-A visible Microsoft `MEMBER`/`OWNER` association or
-repository write/maintain/admin access permits broader author scope, but private
-organization membership may not be visible to Actions. An absent association is
-not proof that someone is outside Microsoft and does not grant protected-path
-access. Configured Dependabot manifest updates retain their narrowly scoped
-exception.
+All contributors may propose changes to any repository path through a pull
+request, including `utilities/`, schemas, workflows, and validator policy.
+The former contributor path-scope rule, `POL-021`, is retired: private Microsoft
+organization membership and bot-authored contributions cannot be reliably
+classified from the PR author's visible association. Author identity does not
+block these contributions. This does not grant direct push or merge rights;
+content checks, CLA, and required human/CODEOWNER approvals still apply.
 
 ## Quick start
 
@@ -82,8 +80,9 @@ and CODEOWNER review, and are classified as code for reviewer feedback.
 ### Skill contribution protections
 
 Public contributors may add or update all files within `skills/`, including
-scripts, dependency manifests, and text templates. This does not open
-`.github/skills/`, workflows, policy configuration, or schemas to public changes.
+scripts, dependency manifests, and text templates. Changes to
+`.github/skills/`, workflows, policy configuration, and schemas also require
+their normal checks and human/CODEOWNER review.
 Skills receive the same applicable source-content checks as agents and starter
 kits: content-based binary detection, approved file types, safe UTF-8, Markdown
 image safety, container-source policy, and artifact/model-weight checks.

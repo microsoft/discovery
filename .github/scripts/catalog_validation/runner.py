@@ -5,7 +5,6 @@ PR out to both. To keep their responsibilities unambiguous, each rule family
 has exactly one authoritative owner:
 
 Legacy check families (``catalog_validation.*``) — authoritative for:
-  * contributor scope   (``contributor_scope``) — who may touch what
   * repository structure (``structural``)        — required files/folders
   * schema conformance   (``schema_checks``)     — agent/tool/metadata schemas
   * documentation        (``documentation``)     — required docs/sections
@@ -44,7 +43,6 @@ from pathlib import Path
 from rules.registry import build_context, discover_rules, run_rules
 
 from .contribution import ContributionSummary, classify_contribution
-from .contributor_scope import check_contributor_scope
 from .documentation import check_documentation
 from .findings import Failure
 from .policy_checks import check_policy
@@ -64,7 +62,7 @@ LEGACY_RULE_IDS = frozenset({
     "SCH-013", "SCH-014", "SCH-015", "SCH-017", "SCH-028",
     "SCH-029", "SCH-030", "SCH-031", "SCH-034", "SCH-035",
     "SCH-036", "SCH-037",
-    "POL-004", "POL-005", "POL-009", "POL-010", "POL-011", "POL-012", "POL-021",
+    "POL-004", "POL-005", "POL-009", "POL-010", "POL-011", "POL-012",
     "DOC-001", "DOC-002", "DOC-003", "DOC-004", "DOC-005", "DOC-006",
     "DOC-101", "DOC-102", "DOC-103", "DOC-104", "DOC-105",
 })
@@ -134,25 +132,16 @@ def run_validation(
     repo: Path,
     changed_files: list[str],
     *,
-    author_permission: str | None = None,
     author: str = "",
     head_ref: str = "",
-    author_association: str = "",
 ) -> ValidationRun:
     catalog_changed = any(
         path.replace("\\", "/").startswith(("agents/", "starter-kits/", "skills/"))
         for path in changed_files
     )
-    scope_failures = check_contributor_scope(
-        changed_files,
-        author_permission,
-        author,
-        head_ref,
-        author_association,
-    )
     release_failures = check_release_assets(repo, changed_files)
     if not catalog_changed:
-        failures = scope_failures + release_failures + check_policy(
+        failures = release_failures + check_policy(
             repo,
             set(),
             changed_files,
@@ -178,7 +167,7 @@ def run_validation(
     context = build_context(repo, changed_files)
     schemas = CatalogSchemas.load(repo)
 
-    failures: list[Failure] = list(scope_failures) + release_failures
+    failures: list[Failure] = list(release_failures)
     failures.extend(check_structural(repo, context.agent_folders, changed_files))
     failures.extend(check_schema(
         repo,

@@ -11,6 +11,26 @@ and retirement of any previously deployed event exception, see the
 [workflow trust boundary and rollout guide](actions-execution-policy.md). Passing local
 tests does not prove GitHub event delivery or change live settings.
 
+## Test contributor access without identity-based path blocking
+
+`POL-021` is retired. Run the contributor-path regressions with the directly
+related content and workflow tests:
+
+```powershell
+python -m pytest .github\tests\test_contributor_paths.py `
+  .github\tests\test_release_fastlane.py `
+  .github\tests\test_skill_contributions.py `
+  .github\tests\test_pr_review_workflow_security.py `
+  .github\tests\test_security_automation.py -q
+```
+
+The CLI fixtures cover private or unavailable membership signals, visible
+membership, Copilot authorship, and public contributors across formerly
+restricted paths. Submitted Python code is never executed, and content
+violations still fail. These tests do not grant GitHub push or merge rights.
+Land the fix on the trusted base branch and refresh affected PRs against that
+base for fresh checks; rerunning an old event can still use the old validator.
+
 ## Test the PR Review reporting split
 
 PR Review runs read-only on `pull_request`; PR Review Report publishes feedback
