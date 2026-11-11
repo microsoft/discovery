@@ -49,12 +49,12 @@ setup steps. Fresh-project skill activation and E2E behavior remain to be tested
 
 ## Download status
 
-The guide/skill/small text files are repository content. The BioPharma
-168,396,900-byte snapshot cannot be a normal Git blob. Large scenario downloads
-will be **assets of a versioned release in this same repository**, linked from
-each files page. No release has been published yet: a GitHub source-code ZIP
-alone does not currently contain every runtime input. The files pages say
-exactly what is present locally and what still needs a public download.
+The guides, skills, small supporting files and the complete
+[SiPhy tar archive](siphy/files/ship.tar) are repository content. The BioPharma
+168,396,900-byte snapshot exceeds the normal Git file limit and still needs an
+approved **versioned release download in this same repository**. No such release
+has been published yet: a source-code ZIP does not contain every scenario's
+runtime inputs. Each files page distinguishes included files from pending downloads.
 
 The BioPharma and SiPhy guides are retained in full, with personal attribution
 removed from the public copies. Scientific instructions, prompts, results and

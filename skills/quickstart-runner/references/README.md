@@ -39,9 +39,11 @@ replace them with inventory-only documentation or fake URLs. The script makes
 local bundles only; no upload is performed by it.
 
 Before upload, verify rights, absence of private content, account/destination,
-author approval and exact filenames/checksums. The unchanged SiPhy tar includes
-papers with no collection-wide redistribution permission. The CMS archive is
-protected and unapproved.
+author approval and exact filenames/checksums. The complete SiPhy tar is now
+included directly after the contributor confirmed public-sharing permission
+for the archive and all bundled papers on 2026-11-11. Original source notices
+remain intact; the confirmation is not an independent rights audit. The CMS
+archive remains protected and unapproved.
 Do not remove Git exclusions to bypass those decisions. No public sharing of
 these files is authorized merely because a local copy exists.
 

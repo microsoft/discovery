@@ -3,6 +3,7 @@
 biopharma/files/* -text
 siphy/QuickStart-Spec-to-RTL.md -text
 "siphy/skill 1.md" -text
+siphy/files/ship.tar -text
 cms/files/* -text
 bookshelf/files/* -text
 templates/Quick-Start-Template.md -text

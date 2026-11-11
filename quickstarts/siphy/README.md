@@ -9,12 +9,13 @@ instructions, prompts, results and checklist items are unchanged.
 
 - The full QuickStart Markdown above.
 - [Original scenario skill](skill%201.md), **unchanged**.
-- The exact `ship.tar` package described on [the files page](files/README.md).
+- The original [ship.tar](files/ship.tar), with its contents and checksum
+	described on [the files page](files/README.md).
 
-Put these in a new short local folder. The tar is still a local, unpublished
-archive; public sharing of its bundled papers needs permission. Do not assume
-the repository source ZIP currently supplies it or that an asset inventory is
-the archive itself.
+All three supplied files are available on this branch. Download them into a
+new short local folder, preserving their names. The complete tar is included
+directly, not replaced by an asset inventory. Its presence does not complete
+the remaining setup, reference-evidence or fresh-project validation work below.
 
 ## 2. Create a fresh Discovery project
 

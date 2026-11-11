@@ -26,8 +26,8 @@
         {"path":"quickstarts/siphy/files/ship.tar","name":"ship.tar","bytes":40992256,"sha256":"f06834009e5e28b0c2cb18f3b7ff5227d1cb8ee2ecbd84f41eda157f8907159c"},
         {"path":"quickstarts/siphy/skill 1.md","name":"skill 1.md","bytes":38469,"sha256":"4c87f20765a007658bbbb247351c9e1790e99e06dc37093cf4c6a33e758111ff"}
       ],
-      "publicationApproved": false,
-      "publicationReason": "Unchanged tar contains forty papers with no blanket redistribution permission. Obtain appropriate public-sharing approval; do not silently replace it with a code-only archive.",
+      "publicationApproved": true,
+      "publicationReason": "Contributor confirmed permission to publish the complete original archive, including all forty papers, on 2026-11-11. Archive included as a regular repository file; original notices unchanged. This is recorded contributor confirmation, not an independent rights audit or E2E validation.",
       "releaseUrl": null,
       "referenceOnly": ["Five owner v1.1 result links and native reference tree were not supplied; preserve guide text and record missing evidence"],
       "runtimeStatus": "Owner warm-run v1.1 native gates reported; fresh contract/setup, portable Catalog configuration and runner reconciliation unvalidated"
