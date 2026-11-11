@@ -12,10 +12,13 @@ The runner is instructions for the assistant, not another application to run.
 
 | Scenario | Start here | Full QuickStart guide | Supporting files |
 | --- | --- | --- | --- |
-| BioPharma | [Instructions](biopharma/README.md) | [Full v0.11 guide](biopharma/Quick-Start-BioPharma%20LeadGen%20v0.11.md) | [BioPharma files](biopharma/files/README.md) |
-| SiPhy | [Instructions](siphy/README.md) | [Full Spec-to-RTL guide](siphy/QuickStart-Spec-to-RTL.md) | [SiPhy files](siphy/files/README.md) and [original scenario skill](siphy/skill%201.md) |
-| CMS | [Status and inputs](cms/README.md) | Completed owner guide awaited | [CMS files](cms/files/README.md) |
-| Bookshelf | [Status and papers](bookshelf/README.md) | Completed owner guide awaited | [Bookshelf files](bookshelf/files/README.md) |
+| BioPharma | [Instructions](biopharma/README.md) | [Full v0.11 guide](biopharma/QuickStart-BioPharma%20LeadGen%20v0.11.md) | [BioPharma files](biopharma/README.md#supporting-files) |
+| SiPhy | [Instructions](siphy/README.md) | [Full Spec-to-RTL guide](siphy/QuickStart-Spec-to-RTL.md) | [SiPhy files](siphy/README.md#supporting-files) and [original scenario skill](siphy/skill%201.md) |
+| CMS | [Status and inputs](cms/README.md) | Completed owner guide awaited | [CMS files](cms/README.md#supporting-files) |
+| Bookshelf | [Status and papers](bookshelf/README.md) | Completed owner guide awaited | [Bookshelf files](bookshelf/README.md#supporting-files) |
+
+Each scenario has one README for its instructions and supporting-file details.
+Its `files/` folder holds the files themselves, without a second README to open.
 
 ## Which skill do I use?
 
@@ -54,7 +57,7 @@ The guides, skills, small supporting files and the complete
 168,396,900-byte snapshot exceeds the normal Git file limit and still needs an
 approved **versioned release download in this same repository**. No such release
 has been published yet: a source-code ZIP does not contain every scenario's
-runtime inputs. Each files page distinguishes included files from pending downloads.
+runtime inputs. Each scenario README distinguishes included files from pending downloads.
 
 The BioPharma and SiPhy guides are retained in full, with personal attribution
 removed from the public copies. Scientific instructions, prompts, results and
@@ -66,7 +69,7 @@ publication items are not claims of newly available or validated evidence.
 
 1. **Now — agree the skeleton.** Review these scenario folders, full supplied
    guides, start READMEs, original small attachments, shared runner and the
-   [unchanged template](templates/Quick-Start-Template.md). CMS and Bookshelf
+   [unchanged template](templates/QuickStart-Template.md). CMS and Bookshelf
    keep clearly labelled spaces for their completed owner guides.
 2. **Next — complete each handoff.** Add the missing owner guides and reference
    outputs, confirm which files may be shared publicly, and test the selected

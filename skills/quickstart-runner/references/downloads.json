@@ -4,7 +4,7 @@
   "packages": {
     "biopharma": {
       "title": "BioPharma",
-      "guide": {"path":"quickstarts/biopharma/Quick-Start-BioPharma LeadGen v0.11.md","name":"Quick-Start-BioPharma LeadGen v0.11.md","bytes":113714,"sha256":"5a3ea6518974fc96a1398237cd34ec70c41c37b5dbb6688e83bc661ff2ed6994","sourceBytes":113732,"sourceSha256":"1f1046aedcc1d7a323ebf38ab5352b152071de690b967ac95bfec450fb08ec49","publicationEdits":"Personal attribution removed; all other source bytes, including prompts and scientific content, retained."},
+      "guide": {"path":"quickstarts/biopharma/QuickStart-BioPharma LeadGen v0.11.md","name":"QuickStart-BioPharma LeadGen v0.11.md","bytes":113713,"sha256":"c0d6912612536c532731593363b5fadc876791cb429dc497c56ca4a0016d16d1","sourceBytes":113732,"sourceSha256":"1f1046aedcc1d7a323ebf38ab5352b152071de690b967ac95bfec450fb08ec49","publicationEdits":"Personal attribution removed and current guide filename normalized to QuickStart; all other source bytes, including prompts and scientific content, retained. Original archive member filenames are unchanged."},
       "files": [
         {"path":"quickstarts/biopharma/files/cdk_operational_bundle_v1.zip","name":"cdk_operational_bundle_v1.zip","bytes":50301,"sha256":"874eba9d9e1ee72d38c257f7904d93953bcb8dc2ec55cf4c2732009c57e74f2f"},
         {"path":"quickstarts/biopharma/files/cdk_operational_bundle_v1.sha256","name":"cdk_operational_bundle_v1.sha256","bytes":97,"sha256":"a793e0bb6e34945ad04e230d1b185f66eebd1861219962f9afcff31ebeb46325"},

@@ -5,10 +5,11 @@ need this inventory or the packaging script to understand or run the scenario.
 
 `downloads.json` records the actual expected published-file bytes. It is an
 internal download inventory, **not** a second scientific profile. The complete
-guides have only personal attribution removed; their original source digests
-and the published-copy digests are recorded separately. Scientific instructions
-are not shortened. Archive contents, checksums and supporting attachments are
-unchanged. Git attributes preserve the recorded bytes through checkout.
+guides have only personal attribution removed and published filename references
+normalized to QuickStart; their original source digests and published-copy
+digests are recorded separately. Scientific instructions are not shortened.
+Archive contents, checksums and supporting attachments are unchanged. Git
+attributes preserve the recorded bytes through checkout.
 
 ## Local verification and review download
 
@@ -48,12 +49,12 @@ Do not remove Git exclusions to bypass those decisions. No public sharing of
 these files is authorized merely because a local copy exists.
 
 After an approved release is actually uploaded, put the **real download links**
-on the scenario files page and in the recorded release location, and verify
+in the scenario README's supporting-files section and the recorded release location, and verify
 anonymous download bytes. Only then can “download all files from the repo” be
 claimed. A source-code ZIP alone currently omits ignored, unpublished files.
 
 The originals may retain missing historical output links; list those as
 missing in the scenario README, never silently rewrite the owner Markdown.
-The [original blank template](../../../quickstarts/templates/Quick-Start-Template.md)
+The [original blank template](../../../quickstarts/templates/QuickStart-Template.md)
 is included unchanged. Do not replace it with the completed SiPhy guide or a
 generated template.

@@ -25,7 +25,7 @@ it has run successfully. No extra profile or requirements copy is needed.
 
 ## Use in a fresh project
 
-1. Obtain the selected full guide and every input named on its files page.
+1. Obtain the selected full guide and every input listed in its scenario README.
 2. Put them in a fresh local folder. Open/create a Discovery project there.
 3. Use the host's supported project-skill loading route for this folder, with
    `SKILL.md` at `.github/skills/quickstart-runner/SKILL.md` where supported.

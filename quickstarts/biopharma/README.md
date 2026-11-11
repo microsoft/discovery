@@ -1,6 +1,6 @@
 # BioPharma — start here
 
-Run **[Quick-Start-BioPharma LeadGen v0.11.md](Quick-Start-BioPharma%20LeadGen%20v0.11.md)**.
+Run **[QuickStart-BioPharma LeadGen v0.11.md](QuickStart-BioPharma%20LeadGen%20v0.11.md)**.
 This is the full guide from the prepared CDK folder, with personal attribution
 removed for publication. Setup, all 14 dependencies, prompts, expected outputs
 and the original scientific appendix are unchanged. This README only tells
@@ -9,7 +9,7 @@ you how to start it.
 ## 1. Get the guide and its files
 
 Download the guide above and the **six required files** listed on
-[the files page](files/README.md). Keep their exact filenames. The large
+[Supporting files](#supporting-files) below. Keep the input filenames exactly as supplied. The large
 snapshot still needs its public repository-release download; do not begin with
 only the guide. An author holding the supplied local copies can test that path
 separately from public-download readiness.
@@ -87,3 +87,42 @@ recorded test. Keep the guide's scientific limitations visible.
 The v0.11 guide is a proposed revision pending owner review. Windows x64 has
 historical reference evidence; other scientific-platform routes are unvalidated.
 No installation, scientific run or release approval occurs by reading these files.
+
+## Supporting files
+
+Download these six original files into the same new local folder as the full
+v0.11 guide. They are copied unchanged from the prepared CDK handoff, not
+reconstructed from an inventory. Do not substitute the earlier timed snapshot.
+
+| Original filename | Purpose | Repository download |
+| --- | --- | --- |
+| `cdk_operational_bundle_v1.zip` | Small launcher bundle, 50,301 bytes | [Download](files/cdk_operational_bundle_v1.zip) |
+| `cdk_operational_bundle_v1.sha256` | Exact checksum for the small ZIP | [Download](files/cdk_operational_bundle_v1.sha256) |
+| `cdk_operational_bundle_v1_manifest.csv` | Original member paths, sizes and hashes | [Download](files/cdk_operational_bundle_v1_manifest.csv) |
+| `cdk_operational_bundle_v1_validation.json` | Original handoff verification record | [Download](files/cdk_operational_bundle_v1_validation.json) |
+| `cdk_non_md_deliverables.zip` | Exact frozen scientific snapshot, 168,396,900 bytes | **Local copy staged; public release download not published yet** |
+| `cdk_non_md_deliverables.sha256` | Exact checksum for the large ZIP | [Download](files/cdk_non_md_deliverables.sha256) |
+
+The large ZIP's SHA-256 is
+`bfc939735a574ccc2375ae9808e9242fb79efc545d5b3f314cc38e5d0cefa076`.
+Its 168,396,900 bytes exceed GitHub's 100 MiB limit for a normal Git file;
+this is a repository storage limit, not a download-length limit. The exact ZIP
+can be offered as a versioned repository-release download once publication is
+approved. There is no fabricated link while that upload is pending.
+
+### What is inside the small ZIP?
+
+The original `workflow.py`, `profile.json`, `launch.ps1`, `acceptance.py`,
+offline guard, tests, manifest and **validation folder**. Reference receipts
+and stage logs remain inside that exact archive. Unpacking it makes those
+files appear, just as in the local CDK-demo project. Nothing inside the ZIP
+was edited; its older guide keeps its manifest-listed filename. The large
+snapshot is unpacked by the approved launcher, not by this README.
+
+### Distribution status
+
+The small files and full guide are repository content. Exact large files and
+an all-in-one author review download are staged locally. Public snapshot
+publication and the new end-to-end test are still outstanding. The source
+snapshot contains MIT campaign-code and source-specific data notices; retain
+them all. Do not infer rights for unrelated papers or private logs.
