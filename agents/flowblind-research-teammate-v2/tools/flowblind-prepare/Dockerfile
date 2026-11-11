@@ -1,7 +1,7 @@
 # Both bases are pinned to their linux/amd64 manifests; build with --platform linux/amd64.
 FROM node:26.13.0-bookworm-slim@sha256:add5c17c14752c54d2f3d519ec46a3815684d41c33f198bcb09fb998f7dcbf68 AS node-runtime
 
-FROM python:3.15.0-slim@sha256:f5b92f2a669a4c347044f29367f31983280b648250ca94dea66f98c53bc87e58
+FROM python:3.12.14-slim@sha256:2fe5997d249a808b8eeea52c58a1dbffbba28754dc11699ef5c029f2d818ce79
 
 LABEL org.opencontainers.image.title="FlowBlind prepare study v2"
 LABEL org.opencontainers.image.version="2.0.0"
