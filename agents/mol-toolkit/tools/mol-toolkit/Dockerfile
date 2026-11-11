@@ -48,6 +48,7 @@ RUN mamba create -y -n molenv -c conda-forge \
       scipy \
       seaborn \
       sympy \
+      umap-learn \
  && mamba clean -a -y
 
 # ---- Patch base conda env (Trivy scans all site-packages dirs) ----
@@ -82,6 +83,8 @@ ENV CONDA_PREFIX=/opt/conda/envs/molenv
 ENV PATH=/opt/conda/envs/molenv/bin:/opt/conda/bin:$PATH
 ENV PYTHONPATH=/app
 ENV PYTHONUNBUFFERED=1
+
+RUN mamba run -n molenv python /app/smoke_umap.py
 
 # Create common mount points / working dirs (single layer)
 RUN mkdir -p /workdir

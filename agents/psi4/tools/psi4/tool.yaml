@@ -37,7 +37,7 @@ infra:
 
 code_environments:
   - language: python3
-    command: "python3 -u \"/{{scriptName}}\" > {{output_directory}}/logs.out 2>&1; cp -r /app/workdir/* {{output_directory}}/ 2>/dev/null || true; tail -n 100 {{output_directory}}/logs.out"
+    command: "/opt/conda/envs/psi4env/bin/python -u /usr/local/lib/run_psi4_job.py \"/{{scriptName}}\" \"{{output_directory}}\""
     description: |
       Python code environment with Psi4 for ab initio quantum chemistry calculations.
       Use this for complete automated workflows including single-point energies,

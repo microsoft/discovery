@@ -33,6 +33,7 @@ import shutil
 import logging
 import subprocess
 import multiprocessing
+import tempfile
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple, Any, Union
 
@@ -51,12 +52,13 @@ OUTPUT_DIR: str = ''
 _DIRS_CONFIGURED = False
 
 # Psi4 specific directories
-PSI4_SCRATCH = os.environ.get('PSI_SCRATCH', '/tmp/psi4_scratch')
+PSI4_SCRATCH = os.environ.get('PSI_SCRATCH', '')
 
 # Physical constants
 HARTREE_TO_EV = 27.211386245988
 HARTREE_TO_KCAL = 627.5094740631
 HARTREE_TO_KJ = 2625.4996394799
+DIPOLE_AU_TO_DEBYE = 2.5417464518950259
 BOHR_TO_ANGSTROM = 0.529177210903
 ANGSTROM_TO_BOHR = 1.8897259886
 
@@ -105,13 +107,18 @@ def setup_directories(input_dir, output_dir, work_dir=None, copy_input=True):
     Args:
         input_dir: Path to the input directory (required).
         output_dir: Path to the output directory (required).
-        work_dir: Path to the working directory. If None, works directly in output_dir.
-        copy_input: If True and work_dir is set, copy input files to work_dir.
+        work_dir: Working directory; PSI4_WORK_DIR takes precedence. Otherwise unique.
+        copy_input: If True, copy matching input files to the working directory.
     """
-    global INPUT_DIR, WORK_DIR, OUTPUT_DIR, _DIRS_CONFIGURED
-    INPUT_DIR = input_dir
-    OUTPUT_DIR = output_dir
-    WORK_DIR = work_dir if work_dir is not None else '/app/workdir'
+    global INPUT_DIR, WORK_DIR, OUTPUT_DIR, PSI4_SCRATCH, _DIRS_CONFIGURED
+    INPUT_DIR = os.path.abspath(input_dir)
+    OUTPUT_DIR = os.path.abspath(output_dir)
+    WORK_DIR = os.path.abspath(os.environ.get('PSI4_WORK_DIR') or work_dir or
+                              tempfile.mkdtemp(prefix='psi4-work-', dir=OUTPUT_DIR
+                                               if os.path.isdir(OUTPUT_DIR) else os.getcwd()))
+    PSI4_SCRATCH = os.path.abspath(
+        os.environ.get('PSI_SCRATCH') or os.path.join(WORK_DIR, 'scratch'))
+    os.environ['PSI_SCRATCH'] = PSI4_SCRATCH
     _DIRS_CONFIGURED = True
     os.makedirs(WORK_DIR, exist_ok=True)
     os.makedirs(OUTPUT_DIR, exist_ok=True)
@@ -122,7 +129,7 @@ def setup_directories(input_dir, output_dir, work_dir=None, copy_input=True):
     logging.info(f"Output directory: {OUTPUT_DIR}")
     logging.info(f"Detected {NUM_CORES} CPU cores available")
     logging.info(f"Psi4 scratch directory: {PSI4_SCRATCH}")
-    if copy_input and work_dir is not None:
+    if copy_input and Path(INPUT_DIR) != Path(WORK_DIR):
         copy_input_files()
 
 
@@ -296,8 +303,15 @@ def setup_psi4(memory: str = '4 GB', nthreads: int = None, output_file: str = No
     Returns:
         psi4 module reference
     """
+    scratch = (os.environ.get('PSI_SCRATCH') or PSI4_SCRATCH or
+               tempfile.mkdtemp(prefix='psi4-scratch-', dir=os.getcwd()))
+    os.makedirs(scratch, exist_ok=True)
+    with tempfile.TemporaryFile(dir=scratch) as probe:
+        probe.write(b'psi4 scratch preflight')
+    os.environ['PSI_SCRATCH'] = os.path.abspath(scratch)
     import psi4
 
+    psi4.core.IOManager.shared_object().set_default_path(os.path.abspath(scratch))
     psi4.set_memory(memory)
 
     if nthreads is None:
@@ -309,7 +323,6 @@ def setup_psi4(memory: str = '4 GB', nthreads: int = None, output_file: str = No
 
     psi4.set_options({
         'scf_type': 'df',  # Density fitting for efficiency
-        'reference': 'rhf',  # Closed-shell reference
     })
 
     logging.info(f"Psi4 initialized: {memory} memory, {nthreads} threads")
@@ -491,6 +504,22 @@ def write_xyz_file(molecule, filename: str, comment: str = ""):
 
 # ============= ENERGY CALCULATIONS =============
 
+def _calculation_options(molecule, basis, options):
+    """Select a reference per calculation, never inheriting another state's reference."""
+    options = {str(key).lower(): value for key, value in options.items()}
+    multiplicity = molecule.multiplicity()
+    if not isinstance(multiplicity, int) or isinstance(multiplicity, bool) or multiplicity < 1:
+        raise ValueError("Multiplicity must be positive.")
+    reference = str(options.pop('reference', 'rhf' if multiplicity == 1 else 'uhf')).lower()
+    if reference not in {'rhf', 'uhf', 'rohf'}:
+        raise ValueError("reference must be rhf, uhf, or rohf (also for DFT).")
+    if multiplicity != 1 and reference == 'rhf':
+        raise ValueError("Restricted closed-shell RHF is incompatible with open-shell multiplicity.")
+    if options.get('fail_on_maxiter') is False:
+        raise ValueError("fail_on_maxiter=False would accept unconverged SCF states.")
+    return {'basis': basis, **options, 'reference': reference, 'fail_on_maxiter': True}
+
+
 def compute_energy(molecule, method: str = 'hf', basis: str = 'cc-pvdz',
                    return_wfn: bool = False, **kwargs) -> Dict:
     """Compute single-point energy.
@@ -517,7 +546,8 @@ def compute_energy(molecule, method: str = 'hf', basis: str = 'cc-pvdz',
     """
     import psi4
 
-    psi4.set_options({'basis': basis, **kwargs})
+    options = _calculation_options(molecule, basis, kwargs)
+    psi4.set_options(options)
 
     logging.info(f"Computing {method.upper()}/{basis} energy...")
 
@@ -526,6 +556,8 @@ def compute_energy(molecule, method: str = 'hf', basis: str = 'cc-pvdz',
     else:
         energy = psi4.energy(method, molecule=molecule)
         wfn = None
+    if not np.isfinite(energy):
+        raise ValueError("Psi4 returned a nonfinite electronic energy.")
 
     result = {
         'energy_hartree': energy,
@@ -533,6 +565,7 @@ def compute_energy(molecule, method: str = 'hf', basis: str = 'cc-pvdz',
         'energy_kcal': energy * HARTREE_TO_KCAL,
         'method': method.upper(),
         'basis': basis,
+        'reference': options['reference'],
     }
 
     if return_wfn:
@@ -624,16 +657,19 @@ def compute_homo_lumo_gap(molecule, method: str = 'b3lyp', basis: str = 'def2-tz
     """
     import psi4
 
-    psi4.set_options({'basis': basis, **kwargs})
+    result = compute_energy(molecule, method, basis, return_wfn=True, **kwargs)
+    return _orbital_gap_result(result['energy_hartree'], result['wfn'], method, basis)
 
-    logging.info(f"Computing {method.upper()}/{basis} HOMO-LUMO gap...")
 
-    energy, wfn = psi4.energy(method, molecule=molecule, return_wfn=True)
+def _orbital_gap_result(energy, wfn, method, basis):
+    """Format existing alpha-spin orbital-gap contract from a computed wavefunction."""
 
     # Extract orbital energies (handles multi-irrep wavefunctions like D2h benzene)
     occ_energies, virt_energies = _extract_orbital_energies(wfn)
     nocc = len(occ_energies)
     nvirt = len(virt_energies)
+    if not nocc or not nvirt:
+        raise ValueError("Orbital gap requires occupied and virtual alpha orbitals.")
 
     homo_energy = float(occ_energies[-1])
     lumo_energy = float(virt_energies[0])
@@ -687,6 +723,146 @@ def compute_homo_lumo_gap(molecule, method: str = 'b3lyp', basis: str = 'def2-tz
     logging.info(f"HOMO-LUMO gap: {gap:.6f} Hartree ({gap * HARTREE_TO_EV:.4f} eV)")
     logging.info(f"NOTE: {caveat}")
 
+    return result
+
+
+def _dipole_result(wfn):
+    import psi4
+
+    # A title scopes the documented vector variable to this wavefunction/property call.
+    psi4.oeprop(wfn, 'DIPOLE', title='DISCOVERY')
+    vector = np.asarray(wfn.variable('DISCOVERY DIPOLE'), dtype=float).reshape(-1)
+    if vector.size != 3 or not np.all(np.isfinite(vector)):
+        raise ValueError("Psi4 returned an invalid dipole vector; expected three finite atomic units.")
+    debye = vector * DIPOLE_AU_TO_DEBYE
+    magnitude = float(np.linalg.norm(debye))
+    if not np.all(np.isfinite(debye)) or not np.isfinite(magnitude):
+        raise ValueError("Dipole conversion returned a nonfinite vector or magnitude.")
+    return {
+        'dipole_vector_au': vector.tolist(),
+        'dipole_vector_debye': debye.tolist(),
+        'dipole_moment_debye': magnitude,
+        'dipole_origin_note': 'Psi4 molecular coordinate origin; charged-species dipoles depend on origin.',
+    }
+
+
+def compute_dipole_moment(molecule, method='b3lyp', basis='def2-tzvp', **kwargs):
+    """Compute an explicit one-electron dipole from the returned wavefunction."""
+    energy = compute_energy(molecule, method, basis, return_wfn=True, **kwargs)
+    return {**{key: value for key, value in energy.items() if key != 'wfn'},
+            **_dipole_result(energy['wfn'])}
+
+
+def compute_electronic_properties(molecule, method='b3lyp', basis='def2-tzvp', **kwargs):
+    """Compute energy, alpha-spin orbital gap and dipole using a single wavefunction."""
+    energy = compute_energy(molecule, method, basis, return_wfn=True, **kwargs)
+    return {**_orbital_gap_result(energy['energy_hartree'], energy['wfn'], method, basis),
+            'reference': energy['reference'], **_dipole_result(energy['wfn'])}
+
+
+def _geometry_text(molecule):
+    return '\n'.join(
+        f'{molecule.symbol(i)} {molecule.x(i) * BOHR_TO_ANGSTROM:.12f} '
+        f'{molecule.y(i) * BOHR_TO_ANGSTROM:.12f} {molecule.z(i) * BOHR_TO_ANGSTROM:.12f}'
+        for i in range(molecule.natom()))
+
+
+def _run_reorganization_state(directory, name, request):
+    """Use argv (never shell interpolation), isolated scratch and persistent state evidence."""
+    state_dir = directory / name
+    state_dir.mkdir()
+    request_path = state_dir / 'request.json'
+    request_path.write_text(json.dumps(request, indent=2, allow_nan=False), encoding='utf-8')
+    with (state_dir / 'worker.out').open('w', encoding='utf-8') as log:
+        process = subprocess.run([sys.executable, str(Path(__file__).with_name('psi4_state_job.py')),
+                                  str(request_path)], cwd=state_dir, stdout=log,
+                                 stderr=subprocess.STDOUT, check=False)
+    result_path = state_dir / 'result.json'
+    result = json.loads(result_path.read_text(encoding='utf-8')) if result_path.exists() else {}
+    if process.returncode or result.get('status') != 'success':
+        raise RuntimeError(f"{name} failed (exit {process.returncode}): "
+                           f"{result.get('error', 'not converged; inspect state artifacts')}")
+    energy = result.get('energy_hartree')
+    if energy is None or not np.isfinite(energy):
+        raise ValueError(f'{name} returned a missing/nonfinite energy.')
+    return result
+
+
+def compute_reorganization_energies(molecule, candidate_id, method='b3lyp-d3bj',
+                                   optimization_basis='def2-svp', energy_basis='def2-tzvp',
+                                   neutral_multiplicity=1, cation_multiplicity=2,
+                                   anion_multiplicity=2, **kwargs):
+    """Gas-phase four-point hole/electron reorganization; reoptimize every state.
+
+    Each optimization/state energy runs in a fresh process with its own scratch.
+    Return JSON-safe candidate-tagged status, all available components, and artifact path.
+    A failed state stops this candidate without claiming a lambda or converged result.
+    """
+    directory = Path(tempfile.mkdtemp(prefix='reorganization-', dir=WORK_DIR or os.getcwd()))
+    artifact_parent = OUTPUT_DIR or os.environ.get('PSI4_OUTPUT_DIR') or str(directory.parent)
+    result = {
+        'candidate_id': candidate_id, 'status': 'failed', 'method': method,
+        'optimization_basis': optimization_basis, 'energy_basis': energy_basis,
+        'energy_units': 'hartree', 'components': {}, 'states': {},
+        'artifact_directory': str(Path(artifact_parent) / directory.name),
+    }
+    try:
+        if molecule.molecular_charge() != 0:
+            raise ValueError('Four-point input must be a neutral molecule.')
+        geometry = _geometry_text(molecule)
+        states = {
+            'neutral': (0, neutral_multiplicity),
+            'cation': (1, cation_multiplicity),
+            'anion': (-1, anion_multiplicity),
+        }
+        # Validate all spin/reference choices before spending computation on any state.
+        for name, (charge, multiplicity) in states.items():
+            state = molecule.clone()
+            state.set_molecular_charge(charge)
+            state.set_multiplicity(multiplicity)
+            options = _calculation_options(state, optimization_basis, kwargs)
+            result['states'][name] = {'charge': charge, 'multiplicity': multiplicity,
+                                     'reference': options['reference'], 'converged': False}
+        common = {'method': method, 'optimization_basis': optimization_basis,
+                  'energy_basis': energy_basis,
+                  'options': {str(key).lower(): value for key, value in kwargs.items()}}
+        for name, (charge, multiplicity) in states.items():
+            state_result = _run_reorganization_state(directory, f'opt_{name}', {
+                **common, 'geometry': geometry, 'charge': charge,
+                'multiplicity': multiplicity, 'optimize': True,
+            })
+            if not state_result.get('converged'):
+                raise RuntimeError(f'{name} optimization did not converge.')
+            result['states'][name].update({
+                'converged': True, 'geometry': state_result['optimized_geometry'],
+                'geometry_units': 'angstrom',
+                'optimization_attempts': state_result['optimization_attempts'],
+                'optimization_energy_hartree': state_result['optimized_energy_hartree'],
+            })
+            result['components'][f'E_{name}_at_{name}'] = state_result['energy_hartree']
+        for state, at in [('cation', 'neutral'), ('neutral', 'cation'),
+                          ('anion', 'neutral'), ('neutral', 'anion')]:
+            charge, multiplicity = states[state]
+            state_result = _run_reorganization_state(directory, f'{state}_at_{at}', {
+                **common, 'geometry': result['states'][at]['geometry'],
+                'charge': charge, 'multiplicity': multiplicity, 'optimize': False,
+            })
+            result['components'][f'E_{state}_at_{at}'] = state_result['energy_hartree']
+        energies = result['components']
+        for carrier, ion in [('hole', 'cation'), ('electron', 'anion')]:
+            ion_term = energies[f'E_{ion}_at_neutral'] - energies[f'E_{ion}_at_{ion}']
+            neutral_term = energies[f'E_neutral_at_{ion}'] - energies['E_neutral_at_neutral']
+            value = ion_term + neutral_term
+            if not np.isfinite(value):
+                raise ValueError(f'{carrier} reorganization energy is nonfinite.')
+            result[f'{carrier}_reorganization_hartree'] = value
+            result[f'{carrier}_reorganization_eV'] = value * HARTREE_TO_EV
+        result['status'] = 'success'
+    except (OSError, ValueError, TypeError, KeyError, RuntimeError, subprocess.SubprocessError) as error:
+        result['error'] = str(error)
+        result['error_type'] = type(error).__name__
+    (directory / 'reorganization_result.json').write_text(
+        json.dumps(result, indent=2, allow_nan=False), encoding='utf-8')
     return result
 
 
@@ -879,11 +1055,14 @@ def optimize_geometry(molecule, method: str = 'hf', basis: str = 'cc-pvdz',
     """
     import psi4
 
+    if isinstance(geom_maxiter, bool) or not isinstance(geom_maxiter, int) or geom_maxiter < 1:
+        raise ValueError("geom_maxiter must be a positive integer.")
+    options = _calculation_options(molecule, basis, kwargs)
     psi4.set_options({
         'basis': basis,
         'geom_maxiter': geom_maxiter,
         'full_hess_every': full_hess_every,
-        **kwargs
+        **options
     })
 
     logging.info(f"Optimizing geometry with {method.upper()}/{basis}...")
@@ -893,14 +1072,25 @@ def optimize_geometry(molecule, method: str = 'hf', basis: str = 'cc-pvdz',
     initial_energy = psi4.energy(method, molecule=molecule)
 
     # Run optimization
-    try:
-        opt_energy, opt_wfn = psi4.optimize(method, molecule=molecule, return_wfn=True)
-        converged = True
-    except psi4.OptimizationConvergenceError as e:
-        logging.warning(f"Optimization did not converge: {e}")
-        opt_energy = psi4.core.variable('CURRENT ENERGY')
-        converged = False
-        opt_wfn = None
+    converged = False
+    opt_energy = float('nan')
+    for attempt in range(2):
+        psi4.set_options({'geom_maxiter': geom_maxiter * (attempt + 1)})
+        try:
+            opt_energy, opt_wfn = psi4.optimize(method, molecule=molecule, return_wfn=True)
+            molecule = opt_wfn.molecule()
+            converged = True
+            break
+        except psi4.OptimizationConvergenceError as error:
+            logging.warning("Optimization attempt %s did not converge: %s", attempt + 1, error)
+            # Psi4 exposes the last iterate on the exception wavefunction.
+            last_wfn = getattr(error, 'wfn', None)
+            if last_wfn is None:
+                break
+            molecule = last_wfn.molecule()
+            opt_energy = last_wfn.energy()
+    if converged and not np.isfinite(opt_energy):
+        raise ValueError("Optimization returned a nonfinite energy.")
 
     # Get optimized geometry
     opt_mol = molecule  # Psi4 modifies molecule in place
@@ -918,6 +1108,8 @@ def optimize_geometry(molecule, method: str = 'hf', basis: str = 'cc-pvdz',
         'initial_energy_hartree': initial_energy,
         'energy_change_kcal': (opt_energy - initial_energy) * HARTREE_TO_KCAL,
         'converged': converged,
+        'optimization_attempts': attempt + 1,
+        'reference': options['reference'],
         'optimized_geometry': geometry_str.strip(),
         'molecule': opt_mol,
     }
@@ -1582,8 +1774,8 @@ def quick_setup(input_dir, output_dir, work_dir=None, copy_input=True) -> List[s
     Args:
         input_dir: Path to the input directory (required).
         output_dir: Path to the output directory (required).
-        work_dir: Path to the working directory. If None, works directly in output_dir.
-        copy_input: If True and work_dir is set, copy input files to work_dir.
+        work_dir: Working directory; PSI4_WORK_DIR takes precedence. Otherwise unique.
+        copy_input: If True, copy matching input files to the working directory.
 
     Returns:
         List of copied input files (empty if copy_input is False or work_dir is None)
