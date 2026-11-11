@@ -1,9 +1,27 @@
 # QuickStart runner — how to load it
 
-This is the **one shared runner** linked from the
-[QuickStart Scenarios](../../quickstarts/README.md) home page. The original
-scenario guide remains the full source of setup, prompts and scientific checks.
-You do not need to open a profile or requirements copy to use it.
+**Looking to run a scenario? Start at [QuickStart Scenarios](../../quickstarts/README.md)
+and select its README. This folder is the shared skill source, not a separate
+scientific workflow.**
+
+The [SKILL.md](SKILL.md) file tells the assistant how to follow the full guide
+you supply: check what is missing, request the right approvals, explain each
+phase, follow the documented steps and inspect the outputs. It is not a Python
+program, an app installer or a background engine. The full scenario Markdown
+still specifies the inputs, model, scientific procedure and success criteria.
+
+## Why this folder exists
+
+The repository keeps reusable skills under `skills/<skill-name>/`. This one
+copy can support several QuickStart Scenarios without duplicating setup rules
+inside every scenario. Links from the QuickStart home page and scenario READMEs
+bring customers here directly; its storage location does not mean they should
+know to browse the skills catalog first.
+
+For the guided route, use **this shared skill and the selected full guide**.
+The original SiPhy skill is a separately retained reference/variant, not another
+mandatory step. File presence alone does not register the shared skill or prove
+it has run successfully. No extra profile or requirements copy is needed.
 
 ## Use in a fresh project
 

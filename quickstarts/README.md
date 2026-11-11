@@ -5,6 +5,11 @@ then follow its README in a new Discovery project.** The QuickStart Markdown
 is the instruction the assistant follows; the files are its inputs. Do not
 start from another person's project, sessions or installed environment.
 
+**Start here:** choose a scenario below. For its guided run, get the
+**[shared runner skill](../skills/quickstart-runner/SKILL.md)** as well as the
+full scenario guide and input files. [How to load the skill](../skills/quickstart-runner/README.md#use-in-a-fresh-project).
+The runner is instructions for the assistant, not another application to run.
+
 | Scenario | Start here | Full QuickStart guide | Supporting files |
 | --- | --- | --- | --- |
 | BioPharma | [Instructions](biopharma/README.md) | [Full v0.11 guide](biopharma/Quick-Start-BioPharma%20LeadGen%20v0.11.md) | [BioPharma files](biopharma/files/README.md) |
@@ -14,11 +19,23 @@ start from another person's project, sessions or installed environment.
 
 ## Which skill do I use?
 
-Use the [shared QuickStart runner](../skills/quickstart-runner/SKILL.md), with
-[installation instructions](../skills/quickstart-runner/README.md). It reads
-the full selected guide; it does not replace that guide with another profile
-or silently change the scenario. The original SiPhy skill is also retained
-unchanged, as supplied. The SiPhy README explains its older-guide differences.
+Use **one shared runner plus one full scenario guide**. The runner supplies the
+common readiness, approval and progress flow; the guide supplies the actual
+scenario steps and scientific checks. The runner does not replace the guide
+or make an incomplete scenario runnable.
+
+The single source lives at `skills/quickstart-runner/`, following the
+[repository skill layout](https://github.com/microsoft/discovery/blob/88a2a1cd1664b7d609659dc86c65f7f632686715/docs/authoring-guides/skill-authoring-guide.md).
+That is a repository organization choice, not a customer starting point or
+proof that Discovery loaded it. Start from **this page or the selected scenario
+README**; both link directly to the shared runner. No search through repository
+folders is required, and no second runner copy is needed inside every scenario.
+
+The [original SiPhy skill](siphy/skill%201.md) is retained unchanged for reference
+or explicit testing of that variant. Do **not** run both skills in sequence.
+The SiPhy README explains its differences from the newer guide. The runner's
+scripts/tests/reference inventory are maintainer utilities, not extra customer
+setup steps. Fresh-project skill activation and E2E behavior remain to be tested.
 
 ## Start a run
 

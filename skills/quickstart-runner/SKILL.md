@@ -7,9 +7,7 @@ description: >-
   execution approvals, and validate actual outputs. Do not replace the guide
   with a generated profile or infer permission from examples.
 compatibility: Requires file and command tools and the capabilities stated by the selected full guide. Author-only download preparation uses Python 3.10+.
-metadata:
-   author: QuickStart Scenarios contributors
-  version: "0.2.0"
+metadata: {author: QuickStart Scenarios contributors, version: "0.2.0"}
 ---
 
 # QuickStart Scenarios runner
