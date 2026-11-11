@@ -47,6 +47,20 @@ def test_non_catalog_change_skips_new_catalog_configuration(tmp_path):
     assert result.contribution.image_files == []
 
 
+def test_non_catalog_utility_validation_is_author_agnostic(tmp_path):
+    changed = [
+        ".gitignore",
+        "utilities/terraform/.terraform.lock.hcl",
+        "utilities/terraform/main.tf",
+        "utilities/terraform/tests/optional-inputs.tftest.hcl",
+    ]
+
+    result = run_validation(tmp_path, changed)
+
+    assert result.passed, result.to_dict()
+    assert result.blocking == []
+
+
 def test_non_catalog_change_keeps_legacy_hidden_artifact_check(tmp_path):
     path = tmp_path / "utilities" / "example" / ".env"
     path.parent.mkdir(parents=True)
