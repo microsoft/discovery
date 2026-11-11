@@ -52,7 +52,7 @@ def test_public_skill_scripts_and_paper_templates_pass_without_execution(skill_r
         write(skill_repo, "skills/paper/requirements.txt", "matplotlib>=3.9\n"),
     ]
 
-    result = run_validation(skill_repo, files, author_permission="read", author="octocat")
+    result = run_validation(skill_repo, files)
 
     assert result.passed, result.to_dict()
     assert result.contribution.has_code
@@ -67,7 +67,7 @@ def test_commonjs_only_skill_change_is_permitted_and_classified_as_code(skill_re
         "throw new Error('Submitted CommonJS must not execute during validation');\n",
     )
 
-    result = run_validation(skill_repo, [relative], author_permission="read")
+    result = run_validation(skill_repo, [relative])
 
     assert result.passed, result.to_dict()
     assert result.contribution.has_code
@@ -86,21 +86,18 @@ def test_commonjs_only_skill_change_is_permitted_and_classified_as_code(skill_re
 def test_skill_content_violations_still_block(skill_repo, filename, content, rule_id):
     relative = write(skill_repo, f"skills/demo/{filename}", content)
 
-    result = run_validation(
-        skill_repo, [relative], author_permission="none", author="octocat"
-    )
+    result = run_validation(skill_repo, [relative])
 
     assert not result.passed
     assert (rule_id, relative) in {
         (failure.rule_id, failure.file) for failure in result.blocking
     }
-    assert not any(failure.rule_id == "POL-021" for failure in result.blocking)
 
 
 def test_skill_dockerfiles_keep_reproducibility_warnings(skill_repo):
     relative = write(skill_repo, "skills/demo/Dockerfile", "FROM python:latest\n")
 
-    result = run_validation(skill_repo, [relative], author_permission="read")
+    result = run_validation(skill_repo, [relative])
 
     assert result.passed, result.to_dict()
     assert [(failure.rule_id, failure.file) for failure in result.warnings] == [
@@ -113,7 +110,7 @@ def test_skill_changes_fail_closed_on_invalid_policy(skill_repo):
     relative = write(skill_repo, "skills/demo/SKILL.md", "# Demo\n")
     write(skill_repo, ".github/policy/source-allowlist.yaml", "not: [valid: yaml\n")
 
-    result = run_validation(skill_repo, [relative], author_permission="read")
+    result = run_validation(skill_repo, [relative])
 
     assert not result.passed
     assert any(failure.rule_id == "CFG-002" for failure in result.blocking)
@@ -126,13 +123,13 @@ def test_skill_images_are_classified_and_revalidated_on_markdown_edits(skill_rep
         '<svg xmlns="http://www.w3.org/2000/svg" width="1" height="1"/>',
     )
 
-    result = run_validation(skill_repo, [markdown, image], author_permission="read")
+    result = run_validation(skill_repo, [markdown, image])
 
     assert result.passed, result.to_dict()
     assert result.contribution.image_files == [image]
 
     write(skill_repo, markdown, "# Diagram removed\n")
-    result = run_validation(skill_repo, [markdown], author_permission="read")
+    result = run_validation(skill_repo, [markdown])
 
     assert [(failure.rule_id, failure.file) for failure in result.blocking] == [
         ("POL-016", image),

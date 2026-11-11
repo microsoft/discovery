@@ -8,9 +8,6 @@ import subprocess
 import pytest
 import yaml
 
-from validate_pr import check_contributor_scope
-
-
 WORKFLOW_PATH = Path(__file__).resolve().parents[1] / "workflows" / "pr-review.yml"
 REPORT_WORKFLOW_PATH = WORKFLOW_PATH.with_name("pr-review-report.yml")
 CODEOWNERS_PATH = Path(__file__).resolve().parents[1] / "CODEOWNERS"
@@ -48,129 +45,24 @@ def test_untrusted_jobs_do_not_checkout_before_shell_execution():
     assert "trufflehog git file:///tmp/pr-history" in command
 
 
-def test_author_trust_signals_are_passed_to_validator():
+def test_validation_does_not_depend_on_author_trust_signals():
     workflow = load_workflow()
     classify = workflow["jobs"]["classify"]
-    permission_step = next(
-        step for step in classify["steps"] if step.get("id") == "author_permission"
+    assert "author_permission" not in classify["outputs"]
+    assert "author_association" not in classify["outputs"]
+    assert not any(
+        step.get("id") == "author_permission" for step in classify["steps"]
     )
-
-    assert "getCollaboratorPermissionLevel" in permission_step["with"]["script"]
-    assert classify["outputs"]["author_permission"] == (
-        "${{ steps.author_permission.outputs.permission }}"
-    )
-    assert classify["outputs"]["author_association"] == (
-        "${{ steps.author_permission.outputs.association }}"
-    )
-    assert "github.rest.pulls.get" in permission_step["with"]["script"]
-    assert "response.data.author_association" in permission_step["with"]["script"]
 
     validator = next(
         step
         for step in workflow["jobs"]["validate"]["steps"]
         if step.get("id") == "run_validator"
     )
-    assert validator["env"]["PR_AUTHOR_PERMISSION"] == (
-        "${{ needs.classify.outputs.author_permission || 'unknown' }}"
-    )
-    assert validator["env"]["PR_AUTHOR_ASSOCIATION"] == (
-        "${{ needs.classify.outputs.author_association || 'NONE' }}"
-    )
-
-
-@pytest.mark.parametrize(("permission_status", "association_status"), [
-    (0, 0),
-    (404, 0),
-    (403, 0),
-    (0, 403),
-])
-def test_author_trust_resolution_does_not_open_protected_utility_scope(
-    permission_status, association_status,
-):
-    classify = load_workflow()["jobs"]["classify"]
-    script = next(
-        step["with"]["script"] for step in classify["steps"]
-        if step.get("id") == "author_permission"
-    )
-    harness = r"""
-const fs = require('fs');
-const input = JSON.parse(fs.readFileSync(0, 'utf8'));
-const outputs = {}, warnings = [], calls = [], infos = [];
-const core = {
-  setOutput: (key, value) => outputs[key] = value,
-  warning: message => warnings.push(message),
-  info: message => infos.push(message),
-};
-const respond = async (name, options, status, data) => {
-  calls.push({name, options});
-  if (status) throw Object.assign(new Error('Lookup unavailable'), {status});
-  return {data};
-};
-const github = {rest: {
-  repos: {getCollaboratorPermissionLevel: async options =>
-    respond('permission', options, input.permission_status, {permission: 'read'})},
-  pulls: {get: async options =>
-    respond('association', options, input.association_status, {author_association: 'NONE'})},
-}};
-const context = {
-  repo: {owner: 'microsoft', repo: 'discovery'},
-  payload: {pull_request: {
-    number: 103, user: {login: 'Modrats'}, author_association: 'MEMBER',
-  }},
-};
-const AsyncFunction = Object.getPrototypeOf(async function(){}).constructor;
-new AsyncFunction('core', 'github', 'context', input.script)(core, github, context)
-  .then(() => console.log(JSON.stringify({outputs, warnings, calls, infos})))
-  .catch(error => {console.error(error); process.exitCode = 1;});
-"""
-    process = subprocess.run(
-        ["node", "-e", harness],
-        input=json.dumps({
-            "script": script,
-            "permission_status": permission_status,
-            "association_status": association_status,
-        }),
-        capture_output=True, text=True,
-    )
-    assert process.returncode == 0, process.stderr
-    result = json.loads(process.stdout)
-    assert result["outputs"] == {
-        "permission": (
-            "none" if permission_status == 404
-            else "unknown" if permission_status else "read"
-        ),
-        "association": "NONE",
-    }
-    assert result["calls"] == [
-        {"name": "permission", "options": {
-            "owner": "microsoft", "repo": "discovery", "username": "Modrats",
-        }},
-        {"name": "association", "options": {
-            "owner": "microsoft", "repo": "discovery", "pull_number": 103,
-        }},
-    ]
-    assert len(result["warnings"]) == (
-        int(permission_status not in {0, 404}) + int(bool(association_status))
-    )
-    assert any("does not prove non-membership" in info for info in result["infos"])
-    public_paths = [
-        ".gitignore", "README.md", "skills/example/scripts/helper.cjs",
-    ]
-    assert check_contributor_scope(
-        public_paths, result["outputs"]["permission"], "Modrats",
-        author_association=result["outputs"]["association"],
-    ) == []
-    protected_paths = [
-        ".github/workflows/example.yml", "utilities/terraform/main.tf",
-        "utilities/terraform/.terraform.lock.hcl", "utilities/README.md",
-    ]
-    failures = check_contributor_scope(
-        protected_paths, result["outputs"]["permission"],
-        "Modrats", author_association=result["outputs"]["association"],
-    )
-    assert [(failure.rule_id, failure.file) for failure in failures] == [
-        ("POL-021", path) for path in protected_paths
-    ]
+    assert "PR_AUTHOR_PERMISSION" not in validator["env"]
+    assert "PR_AUTHOR_ASSOCIATION" not in validator["env"]
+    assert "PR_AUTHOR" in validator["env"]
+    assert "PR_HEAD_REF" in validator["env"]
 
 
 def test_reporter_executes_only_default_branch_code():

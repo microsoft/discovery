@@ -27,8 +27,6 @@ jobs:
       has_agents: ${{ steps.changed.outputs.has_agents }}
       has_catalog: ${{ steps.changed.outputs.has_catalog }}
       has_docs_only: ${{ steps.changed.outputs.has_docs_only }}
-      author_permission: ${{ steps.author_permission.outputs.permission }}
-      author_association: ${{ steps.author_permission.outputs.association }}
     steps:
       # The API supplies the authoritative changed-file list without a checkout.
       - name: Get and classify changed files
@@ -58,64 +56,6 @@ jobs:
               String(names.length > 0 && names.every(name => name.startsWith('docs/schemas/'))),
             );
             core.info(`Changed files (${names.length}):\n${names.join('\n')}`);
-
-      - name: Resolve PR author trust
-        id: author_permission
-        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
-        with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          script: |
-            const username = context.payload.pull_request.user.login;
-            const knownPermissions = new Set([
-              'admin', 'maintain', 'write', 'triage', 'read', 'none'
-            ]);
-            let permission = 'unknown';
-            let association = 'NONE';
-
-            try {
-              const response = await github.rest.repos.getCollaboratorPermissionLevel({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                username,
-              });
-              const reported = String(response.data.permission || '').toLowerCase();
-              permission = knownPermissions.has(reported) ? reported : 'unknown';
-            } catch (error) {
-              if (error.status === 404) {
-                permission = 'none';
-              } else {
-                core.warning(
-                  `Could not resolve repository permission for @${username}; ` +
-                  `applying public-contributor scope. ${error.message}`
-                );
-              }
-            }
-
-            try {
-              const response = await github.rest.pulls.get({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                pull_number: context.payload.pull_request.number,
-              });
-              association = String(
-                response.data.author_association || 'NONE'
-              ).toUpperCase();
-            } catch (error) {
-              core.warning(
-                `Could not resolve current organization association for @${username}; ` +
-                `applying public-contributor scope. ${error.message}`
-              );
-            }
-
-            core.info(`Repository permission for @${username}: ${permission}`);
-            core.info(`PR author association for @${username}: ${association}`);
-            core.info(
-              'An absent organization association does not prove non-membership. ' +
-              'Public catalog, documentation, and root .gitignore ' +
-              'contributions remain allowed.'
-            );
-            core.setOutput('permission', permission);
-            core.setOutput('association', association);
 
   # ── Stages 2–4: Structure + Schema + Policy (including Containerfiles) + Docs
   validate:
@@ -193,11 +133,6 @@ jobs:
           # Exempt requires BOTH author and head ref to match.
           PR_AUTHOR: ${{ github.event.pull_request.user.login }}
           PR_HEAD_REF: ${{ github.event.pull_request.head.ref }}
-          # Private organization membership may be invisible to this token.
-          # Catalog, documentation, and root .gitignore contributions remain public;
-          # utilities and other protected paths require an affirmative trust signal.
-          PR_AUTHOR_PERMISSION: ${{ needs.classify.outputs.author_permission || 'unknown' }}
-          PR_AUTHOR_ASSOCIATION: ${{ needs.classify.outputs.author_association || 'NONE' }}
         run: |
           # Invoke validator from the trusted checkout (base SHA) against PR content.
           python trusted/.github/scripts/validate_pr.py \
