@@ -1,7 +1,0 @@
-Using only the attached, verified public SCLC Bookshelf, identify three evidence-backed findings about systemic therapy in extensive-stage small-cell lung cancer: first-line chemo-immunotherapy, treatment after platinum-based therapy, and DLL3-targeted approaches.
-
-For each finding, explain the study population, study design, treatment setting, relevant reported result and the main limitations. Distinguish primary trials, subgroup analyses, observational comparisons and review articles. Do not treat indirect comparisons across different studies as proof that one treatment is superior.
-
-Provide a compact evidence table and cite the actual passages you retrieved, identifying the document title, PMC ID or DOI, and page or section where available. Do not invent measurements, sources, passage locations or missing evidence. State uncertainty and any question the supplied corpus cannot answer.
-
-This is a research-literature demonstration, not individualized medical advice. Do not browse the live web or add documents to the fixed corpus during this task.

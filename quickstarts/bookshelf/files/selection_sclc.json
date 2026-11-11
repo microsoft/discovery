@@ -1,0 +1,17 @@
+[
+ {"id": "R1", "role": "guideline: ES-SCLC management consensus", "prefix": "PMC10378571.1"},
+ {"id": "R2", "role": "review: first-line chemo-immunotherapy", "prefix": "PMC9174785.1"},
+ {"id": "R3", "role": "systematic review + meta-analysis: first-line chemo-immunotherapy", "prefix": "PMC9776593.1"},
+ {"id": "R4", "role": "review: lurbinectedin (second line)", "prefix": "PMC9469650.1"},
+ {"id": "R5", "role": "review: DLL3-targeted therapies", "prefix": "PMC10290806.1"},
+ {"id": "R6", "role": "review: targeted therapies and subtypes", "prefix": "PMC10218846.1"},
+ {"id": "P1", "role": "primary: CASPIAN molecular subtypes and IO biomarkers", "prefix": "PMC11137956.1"},
+ {"id": "P2", "role": "primary: CASPIAN Japan subgroup (durvalumab first line)", "prefix": "PMC8134304.1"},
+ {"id": "P3", "role": "primary: real-world eligibility for chemo-ICI", "prefix": "PMC9520052.1"},
+ {"id": "P4", "role": "primary: lurbinectedin second-line bridging study", "prefix": "PMC10864288.1"},
+ {"id": "P5", "role": "primary: lurbinectedin real-world (IFCT-2105 LURBICLIN)", "prefix": "PMC11635664.1"},
+ {"id": "P6", "role": "primary: randomised phase 2b belotecan vs topotecan", "prefix": "PMC7884704.1"},
+ {"id": "P7", "role": "primary: phase 2 nab-paclitaxel relapsed SCLC (NABSTER)", "prefix": "PMC7341887.1"},
+ {"id": "P8", "role": "primary: tarlatamab DeLLphi-304 Japanese subgroup", "prefix": "PMC13710598.1"},
+ {"id": "P9", "role": "primary: tarlatamab vs real-world physician's choice", "prefix": "PMC12459094.1"}
+]

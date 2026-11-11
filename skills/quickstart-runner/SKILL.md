@@ -1,133 +1,102 @@
 ---
 name: quickstart-runner
 description: >-
-  Guide one selected QuickStart Scenario from fresh-project readiness through
-  separately approved setup and bounded execution. Use for run this quickstart,
-  QuickStart Scenarios, SiPhy, BioPharma, CMS, or Bookshelf scenario setup.
-  Read the supplied versioned guide and profile; stop on unresolved draft
-  blockers. Not a cloud deployer, scenario author or permission bypass.
-compatibility: Requires a host with local file/command tools; execution additionally needs the scenario's declared Discovery capabilities. Packaging helpers use Python 3.10+ standard library only.
+  Follow a supplied full QuickStart Scenario guide and its exact input files
+  from a fresh Discovery project. Use for run this QuickStart, BioPharma,
+  SiPhy, CMS or Bookshelf setup. Check readiness, obtain separate setup and
+  execution approvals, and validate actual outputs. Do not replace the guide
+  with a generated profile or infer permission from examples.
+compatibility: Requires file and command tools and the capabilities stated by the selected full guide. Author-only download preparation uses Python 3.10+.
 metadata:
-  author: Discovery QuickStart Scenarios contributors
-  version: "0.1.0"
+  author: QuickStart Scenarios contributors; adapted from Joe's runner design
+  version: "0.2.0"
 ---
 
 # QuickStart Scenarios runner
 
-**Draft; customer-path activation and execution not yet validated.** Adapted
-from Joe's supplied `quickstart-siphy-spec2rtl-1` design: immediate prerequisite
-checks, separate setup banner, phase explanations, autonomous/walk-through
-modes, ordered handoffs and evidence-based reporting. Scenario logic is outside
-this skill. Attribution does not replace contributor/publication review.
+This is the shared runner. Joe's original skill remains unchanged with the
+SiPhy files; this adaptation is separately identified and still awaiting an
+end-to-end test. **The selected full QuickStart Markdown is authoritative.**
+Do not shorten it, rewrite its science/prompt, replace it with a generated
+manifest/profile, or execute a different scenario because setup is difficult.
 
-Read [the execution protocol](references/execution.md) before acting. The
-[README](README.md) explains packaging and limitations. The prototype formerly
-kept in a personal skills folder is not a dependency of this package.
+## Start
 
-## 1. Resolve the scenario without guessing
+1. Read the full guide the user attached or selected and the adjacent README.
+   If no completed guide exists, say so and stop; do not invent one at runtime.
+2. Identify its exact version, model, default scope, input filenames, skill and
+   native success checks. Only the chosen guide supplies scenario rules.
+3. Inspect the new project and user-supplied file locations. Do not use earlier
+   sessions, environments, cached indexes or another person's project as inputs.
+   Historical output links are reference evidence, never new-run results.
 
-1. Read the explicitly selected scenario's `scenario.json`, `README.md`,
-   `profile.md` and exact prompt. A staged project has
-   `quickstart-selection.json` at its root. Resolve that record relative to
-   the **project root**, not the skill folder. Otherwise ask which of the
-   available scenario guides the user intends. Never silently default to a
-   chip-design profile or infer readiness from the conversation title.
-2. Verify manifest and prompt integrity using the supplied packaging helper
-   in the repository before staging. For a staged project inspect its
-   `staged-files.json`; verify its hashes before using executable content.
-   A locally generated digest proves consistency, not publisher authenticity.
-3. Keep the guide's science, fixed prompt and owner acceptance checks unchanged.
-   If guide/profile/source disagree, stop and identify the conflict rather
-   than choose the less restrictive rule. Do not repair the scenario at run time.
-4. A draft can be inspected. Show its unresolved blockers first. Missing
-   components, missing rights, unapproved prompts or unknown required settings
-   stop execution. `--allow-draft` is only a packaging preview, never consent
-   or a way to bypass these blockers.
+## One-time setup
 
-## 2. Inspect readiness immediately
+Show **One-time setup — computation has not started**. Collect independently
+observable readiness checks: OS/CPU architecture, interpreter version/path,
+model, required tools/agents, exact input file hashes, space and destination.
+Show missing/mismatched/unknown items together in normal chat. Do not infer
+capability activation from files on disk or content readiness from a health dot.
 
-Start with **One-time setup — preparing the environment; computation has not
-started.** Collect independent read-only checks together: host/App version,
-OS and hardware architecture, interpreter version/bitness/path, supplied asset
-hashes, free storage and target location, tool/agent availability, and corpus
-readiness when applicable. Distinguish Unknown, Missing and Mismatched.
+Ask for the guide's dependency selection in its required channel. Ordinary-chat
+Yes/No stays ordinary chat. Show its full required dependency list even when
+another check is blocked. Selection is not installation or computation approval.
+Do not blindly recommend Allow for every host permission prompt.
 
-Show one short `Item | Observed | Required action` table in normal chat.
-Do not install, index, extract, dispatch agents or load serialized models as a
-readiness probe. An agent lookup that invokes a hosted model is not a free
-read-only check. File presence and a green index status do not prove activation
-or usable document text.
+Python must be obtained from the version/platform-specific publisher source
+when missing; pip installs Python packages, not the interpreter. Do not silently
+change pins, install latest, remove another Python, disable TLS or bypass policy.
+Recheck the actual interpreter after the user resolves a mismatch.
 
-The scenario's platform declaration governs. App installers for a platform
-are not evidence this scenario works there. Do not offer emulation, a runtime
-downgrade, system-Python removal or a different dependency set as an automatic
-fix. Give the exact publisher/version option and wait for an explicit decision;
-verify the resulting interpreter instead of trusting PATH or an alias.
+Before installing: verify the supplied archives and complete member manifests,
+obtain permission for a short new destination and safe extraction, and never
+overwrite an existing file. Preserve nested paths, original archive bytes,
+checksum attachments and the full guide. If the guide says the launcher
+extracts a snapshot itself, leave that archive unopened. An older bundled guide
+remains at its manifest path but does not override the selected newer guide.
 
-## 3. Apply separate decisions in the correct order
+After source/runtime/destination checks pass, separately request installation
+approval for exactly the guide's set and required transitives, including any
+unlocked versions. Report the package index without credentials. Use the supplied
+setup command when one exists; do not invent a duplicate requirements file or
+partial install. Verify its printed interpreter, package checks and native
+preflight. Keep approvals scoped to the actual set, version and destination.
 
-The profile declares the question channel and scope. Plain Yes/No dependency
-selection requested in ordinary chat must remain ordinary chat, not a card or
-form. Show every required item and its purpose, including already-installed
-items. A selection does **not** authorize installation or computation.
+For Bookshelf/configuration work, obtain its own appropriate approval and record
+the exact source/index settings. Agent probes and indexing may use resources;
+they are not automatically read-only. Required missing rights, bindings or input
+content stop the run. Publicly visible paper URLs do not waive publisher terms.
 
-Obtain distinct, scoped approvals as applicable for:
+## Run
 
-1. Asset acquisition/staging (destinations, integrity, licences, no overwrite).
-2. Runtime or dependency installation (exact versions, destination and necessary
-   transitive dependencies; explain any incompletely locked dependencies).
-3. Bookshelf creation/indexing or capability configuration (corpus, cost and
-   available permissions; never self-grant access).
-4. Scientific/agent execution, after setup and native preflight pass (fixed
-   steps, resource bounds, time expectations and exclusions).
+Ask autonomous end-to-end versus walk-through when setup is complete. Mode is
+not consent. Before scientific execution obtain the guide's separate bounded
+approval with actual scope, resource limits, exclusions and measured historical
+timing distinguished from estimates. No inherited or example approvals.
 
-Do not obtain installation approval before the destination is known; do not
-run a launcher's preflight before verifying its source and inputs. A package
-download or file-tool permission prompt is not a scientific approval. When an
-authorized run-owned environment satisfies all pins, skip needless installation
-but retain the scenario's required dependency selection and compute decision.
+Explain every phase: **Why / Who / Outputs / Done when / Heads-up**; in
+walk-through mode wait for that phase's confirmation. Follow the guide's exact
+prompt, responsible parent/specialist roles and sequence. Validate native outputs
+before handoff. Never use local commands as substitutes for a required agent.
 
-Ask for autonomous end-to-end or walk-through **after setup**; mode selection
-does not grant any approval. Recommend a mode with an alternative and a Stop
-option. Autonomous means no unnecessary checkpoints, not no safety boundaries.
+Respect guide-specific exclusions and retry rules. If it records no run-wide
+retry/time budget, agree one before long work rather than inherit an older
+skill's policy. No automatic new investigation or workload to diagnose silence.
+Use host completion notifications and the guide's observation cadence; do not
+poll aggressively or invent a guarantee from one historical duration.
 
-## 4. Execute the profile, not an improvised workflow
+Honor Stop and safety issues. Preserve failed attempts and checkpoints; do not
+delete shared resources/locks or restart compute without inspecting ownership
+and obtaining applicable approval. Do not automatically deploy cloud resources,
+change grants, publish files or sign in on the user's behalf.
 
-- Execute the fixed steps in order, one at a time; honor each step's declared
-  `local` or named-agent role. Never substitute one for the other.
-- Before every phase show Why / Who / Discovery capability / Outputs / Done
-  when / Heads-up. In walk-through mode wait for permission for that phase.
-  Use plain text in dialogs, Markdown in chat. Debrief each actual result.
-- Apply the scenario's retry/repair rules. Default to **no retry** when absent;
-  a profile may name a finite repair cycle. A successful retry does not erase
-  the initial failure. Never weaken a failed check.
-- Keep output locations explicitly declared. A native launcher may own
-  `runs/<id>/` while the coordinator owns `results/<id>/`; link them, never
-  move or merge their trees. App-managed chat state may live under `sessions/`;
-  scientific outputs must not be hidden there.
-- Enforce scenario exclusions, including any ban on CLIO/investigation or
-  fresh data. Do not start extra work to diagnose a quiet launcher. Explain
-  measured historical silent periods as observations, not guaranteed timers.
-  Use host completion notifications where available; no rapid polling or
-  artificial sleep loops. Follow the profile's evidence-read cadence.
-- Honor user cancellation and new safety issues immediately. Do not overwrite
-  or delete an old run, stale lock, environment, shelf or shared resource.
-  Recovery requires inspected native state and appropriate approval.
+## Finish
 
-## 5. Report evidence, never assumed success
+Check the actual guide-defined output artifacts, native receipts, citations and
+required human/scientific review. Report **environment readiness**, **workflow
+completion** and **scientific acceptance** separately. A model's prose, file
+existence, historical report or metadata record is not proof of execution.
 
-Keep three statuses separate: **environment readiness**, **workflow completion**
-and **scientific acceptance**. Validate actual artifacts and native receipts,
-including required tool paths, not just model prose or file existence.
-Reference results bundled with the inputs are never a new run's results.
-
-Record versions, source/prompt/input hashes, selected profile, native run IDs,
-approval scope and actual outcomes under the run-owned evidence folder. Retain
-failed/unrun checks and limitations. Do not inherit approvals from another
-chat or a sample in the guide. End with PASS only if the owner's full required
-criteria passed; otherwise use BLOCKED, FAILED, STOPPED or NEEDS OWNER REVIEW.
-Link partial outputs honestly, without a success-shaped final deliverable.
-
-Never upload private logs or papers, enable telemetry, deploy, publish a PR,
-or change authentication as part of this skill. Sign-in remains under the
-user's control in their external browser.
+Return real output links and failures/caveats. A native-gate pass does not erase
+requirement-coverage limitations. Report unrun work as unrun. Do not change the
+owner's guide or success criteria to make the run pass.

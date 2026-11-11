@@ -1,0 +1,11 @@
+# Preserve supplied guides and attachments byte-for-byte, including CRLF/BOM.
+"biopharma/Quick-Start-BioPharma LeadGen v0.11.md" -text
+biopharma/files/* -text
+siphy/QuickStart-Spec-to-RTL.md -text
+"siphy/skill 1.md" -text
+cms/files/* -text
+bookshelf/files/* -text
+templates/Quick-Start-Template.md -text
+
+# Our navigation READMEs are not source originals; use normal portable Markdown.
+*/files/README.md text eol=lf

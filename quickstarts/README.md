@@ -1,48 +1,69 @@
 # QuickStart Scenarios
 
-**Draft skeleton for maintainer and scenario-owner review. None of these
-packages is currently designated ready for external execution.**
+**Choose a scenario, download its full QuickStart guide and supporting files,
+then follow its README in a new Discovery project.** The QuickStart Markdown
+is the instruction the assistant follows; the files are its inputs. Do not
+start from another person's project, sessions or installed environment.
 
-A QuickStart Scenario packages a particular scientific workflow: its fixed
-prompt, inputs, capabilities, setup, outputs and evidence-based acceptance.
-The goal is a fresh-project customer path, without a contributor's machine,
-saved chats, prebuilt indexes or personal skills. This is separate from the
-raw E2E scenario handoff used by Engineering's own test harnesses.
+| Scenario | Start here | Full QuickStart guide | Supporting files |
+| --- | --- | --- | --- |
+| BioPharma | [Instructions](biopharma/README.md) | [Full v0.11 guide](biopharma/Quick-Start-BioPharma%20LeadGen%20v0.11.md) | [BioPharma files](biopharma/files/README.md) |
+| SiPhy | [Instructions](siphy/README.md) | [Full Spec-to-RTL guide](siphy/QuickStart-Spec-to-RTL.md) | [SiPhy files](siphy/files/README.md) and [Joe's original skill](siphy/skill%201.md) |
+| CMS | [Status and inputs](cms/README.md) | Completed owner guide awaited | [CMS files](cms/files/README.md) |
+| Bookshelf | [Status and papers](bookshelf/README.md) | Completed owner guide awaited | [Bookshelf files](bookshelf/files/README.md) |
 
-Start with [Getting started](GETTING-STARTED.md). Author another scenario using
-[the authoring guide](AUTHORING.md) and [the template](templates/SCENARIO.md).
+## Which skill do I use?
 
-| Scenario | Intended outcome | Current evidence and blockers |
-| --- | --- | --- |
-| [SiPhy](siphy/README.md) | CoreSPI-inspired specification to verified RTL | Owner prompt/setup supplied; required MCP route previously failed; component publication, corpus rights and clean-project verification unresolved. |
-| [BioPharma](biopharma/README.md) | Frozen-input CDK decision scoring, solubility inference and ranking | Historical frozen run passed 7/7; modified runner/customer path untested; public archive locations and owner acceptance unresolved. |
-| [CMS](cms/README.md) | Evidence-grounded first round of five moisturizer formulations | Owner prompt and corpus hashes supplied; source PDFs were not usable through the tested ingestion path; distribution, configuration and E2E evidence unresolved. |
-| [Bookshelf](bookshelf/README.md) | Grounded evidence comparison over a public SCLC corpus | Fifteen paper records with hashes and publisher URLs; proposed prompt only; indexing recipe and owner-approved answer checks unvalidated. |
+Use the [shared QuickStart runner](../skills/quickstart-runner/SKILL.md), with
+[installation instructions](../skills/quickstart-runner/README.md). It reads
+the full selected guide; it does not replace that guide with another profile
+or silently change the scenario. Joe's original SiPhy skill is also retained
+unchanged, as supplied. The SiPhy README explains its older-guide differences.
 
-## What is included
+## Start a run
 
-Each folder has a guide, execution profile, fixed/proposed prompt with digest,
-asset inventory and component references. [Source inventory](SOURCE-INVENTORY.md)
-accounts for inputs that cannot yet be published. The shared
-[runner](../skills/quickstart-runner/SKILL.md) includes an offline helper to
-validate text packages, stage a new review folder and verify existing assets.
+1. Open the selected scenario's **README**, not a JSON manifest.
+2. Obtain its **full guide and every required file** from the listed locations.
+3. Put them in a new short local folder and open/create a Discovery project
+   there. Do not install scientific packages before the guide checks readiness.
+4. Load the shared runner and attach the full QuickStart guide. Send the
+   starting instruction in that scenario's README.
+5. Follow its separate setup and execution approvals. Verify its actual outputs.
 
-Shared catalog agents, installation skills and tool implementations stay at
-their canonical repository locations. They are referenced at inspected source
-revisions, not duplicated into each scenario. Missing publications remain
-explicitly missing. A package is self-contained only when all required inputs
-are either included with permission or reproducibly obtainable from verified
-public locations; a missing URL cannot be fixed by a personal file handoff.
+## Download status
 
-## Evidence and publication
+The guide/skill/small text files are repository content. The BioPharma
+168,396,900-byte snapshot cannot be a normal Git blob. Large scenario downloads
+will be **assets of a versioned release in this same repository**, linked from
+each files page. No release has been published yet: a GitHub source-code ZIP
+alone does not currently contain every runtime input. The files pages say
+exactly what is present locally and what still needs a public download.
 
-Keep **package integrity**, **environment readiness**, **workflow completion**
-and **scientific acceptance** separate. Offline checks are not a new scientific
-run. Proposed statements and historical measurements are labelled. No new
-catalog UI, automatic deployment, permission grant or universal platform
-support is implied.
+The original BioPharma guide, SiPhy guide, Joe skill, archives and integrity
+attachments are not shortened, reformatted or repacked internally. Some owner
+guides retain historical result links and open publication items; keeping the
+original text is not a claim those references are available or newly validated.
 
-Repository maintainers must approve this new top-level layout and its future
-validation integration. This PR does not edit trusted workflows, policy,
-schemas under `docs/schemas`, generated registries or existing agents.
-See [the package contract](PACKAGE-CONTRACT.md) for the local JSON format.
+## Plan for completing publication
+
+1. **Now — agree the skeleton.** Review these scenario folders, full supplied
+   guides, start READMEs, original small attachments, shared runner and Ryan's
+   [unchanged template](templates/Quick-Start-Template.md). CMS and Bookshelf
+   keep clearly labelled spaces for their completed owner guides.
+2. **Next — complete each handoff.** Add the missing owner guides and reference
+   outputs, confirm which files may be shared publicly, and test the selected
+   guide from a fresh project. Do not infer permission or success from a file
+   being present in an internal source folder.
+3. **Then — publish the downloads.** Upload the approved exact large archives
+   as versioned releases in this repository, replace the pending download
+   notices with real links, and verify download checksums. No archive upload
+   is part of the skeleton push; the scenario is ready only after its stated
+   setup and output checks actually pass.
+
+## Add another scenario
+
+See [Templates](templates/README.md). Deliver the completed original template,
+its required input files, and any scenario skill. No customer should need to
+understand a second profile, file-inventory document or duplicate requirements
+file to start. Repository review and actual clean-start validation remain
+separate from the raw E2E handoff to Engineering.

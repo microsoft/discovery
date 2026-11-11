@@ -1,177 +1,88 @@
-# QuickStart Scenarios — BioPharma
+# BioPharma — start here
 
-**Draft.** This package describes the owner-supplied CDK frozen-reference
-workflow. Archive publication, owner review of these packaging changes and a
-fresh-project test of the shared runner remain blockers. It is not a new
-full discovery campaign or a published scenario-catalog entry.
+Run **[Quick-Start-BioPharma LeadGen v0.11.md](Quick-Start-BioPharma%20LeadGen%20v0.11.md)**.
+This is the full 113,732-byte guide from the prepared CDK folder, unchanged.
+It includes setup, all 14 dependencies, prompts, expected outputs and the
+original scientific appendix. This README only tells you how to start it.
 
-## 1. Scenario identity
+## 1. Get the guide and its files
 
-Recompute decision scoring, saved-model solubility inference for 1,100 eligible
-parents and ranking/native exports for 100 exploratory structures. Preserve
-the owner profile `cdk-frozen-reference-v1`. Evidence curation, receptor/ligand
-preparation, 6,600 primary docking pairs, fitted-model training and report
-narrative are **reused**. No new docking, training or scientific retrieval.
+Download the guide above and the **six required files** listed on
+[the files page](files/README.md). Keep their exact filenames. The large
+snapshot still needs its public repository-release download; do not begin with
+only the guide. An author holding the supplied local copies can test that path
+separately from public-download readiness.
 
-Source: Ash's operational bundle v1 and proposed guide revision 0.11, with
-historical reference work dated 2026-11-02 and a second-machine run dated
-2026-11-05. This shorter repository entry preserves the frozen prompt and
-points to the owner asset inventory; it does not replace the separately
-approved fresh-science extension or claim that extension is packaged here.
+Create a new short folder, for example `CDK-run` in Downloads. Put the guide,
+both unopened ZIPs, both checksum files, manifest CSV and validation JSON in it.
+Do not copy old sessions, virtual environments or a previous Discovery project.
+The small ZIP already contains the launcher and `validation/` reference files;
+they need not be downloaded individually or recreated.
 
-## 2. Configuration matrix
+## 2. Create the project and load the runner
 
-| Component | Frozen reference |
-| --- | --- |
-| Host/model | Discovery App coordinating chat with `gpt-6-astra`; backend revision/settings not recorded. Direct CLI compute does not use a model. |
-| Agents | Existing coordinator and local command/file capability; no new specialist agents, CLIO, Scientific Reasoning, Bookshelf or Discovery Engine. |
-| Skills | Shared runner, explicitly loaded in a fresh project; its activation/run is not yet validated. |
-| Runtime | Python **3.13.14**, 64-bit, exact pins in [requirements.txt](requirements.txt). |
-| Execution | One scientific stage at a time, one numerical thread, no GPU; 1,800-second timeout per stage, no automatic retry. |
-| Input | Exact clean snapshot in [assets.json](assets.json); never substitute the timed archive. |
-| Output location | Launcher's `runs/<id>/` beneath the approved bundle root; coordinator evidence separate under `results/<id>/`. |
+Open Discovery and choose its new/local-project action for this folder. A
+folder picker hides files; this does not mean the folder is empty. Initialize
+the project if prompted and start a **new session**.
 
-The original `workflow.py`, `acceptance.py`, `profile.json`, PowerShell wrapper,
-offline guard, tests and sanitized reference receipts are in the operational
-archive. Do not copy different historical scripts in their place.
+Select **GPT-6 Astra (`gpt-6-astra`)**. Follow the
+[shared runner instructions](../../skills/quickstart-runner/README.md), then
+attach the full v0.11 guide. Send:
 
-## 3. System requirements
+> Use the quickstart-runner skill to follow the attached BioPharma v0.11
+> QuickStart guide from these supplied files. Run the default frozen-reference
+> scenario. Check readiness first, prepare the supplied bundle when approved,
+> and keep dependency selection, installation and computation approvals separate.
 
-Historical path: Windows 11 x64; second-machine App Stable 0.0.2 with a fresh
-Python installation. Other scenario platforms are **unvalidated**, not proven
-unsupported. App platform availability is separate. Use a short writable local
-bundle path below 180 characters, outside App session trees. The launcher
-requires 3,000,000,000 free bytes as a safety allowance, not a measured minimum.
-It extracts approximately 1.05 GB per new run, plus environments and outputs.
-RAM minimum was not established.
+The skill and Markdown are instructions for the assistant, not Python programs
+to execute. If the runtime does not discover the skill, explicitly attach its
+SKILL.md too and record that manual-loading route; do not claim discovery worked.
 
-## 4. Prerequisites
+## 3. Follow setup in the guide
 
-Both archives and integrity attachments are enumerated in
-[the asset manifest](assets.json), with exact size/hash metadata. No approved
-anonymous public archive URL has been supplied; external distribution is
-blocked, even though an author with the original inputs can inspect them.
-Verify source/provenance before loading the saved joblib model; a hash alone
-does not make an untrusted model safe.
+The assistant checks the model, OS/architecture, Python, files, space and access.
+The reference needs **Python 3.13.14, 64-bit**. If absent, the guide supplies
+the publisher installation steps; then the assistant rechecks the exact
+interpreter. **pip installs packages, not Python itself.** Do not automatically
+uninstall or downgrade another Python to resolve a mismatch.
 
-If the exact Python is missing, use the
-[Python 3.13.14 release page](https://www.python.org/downloads/release/python-31314/)
-and the installer appropriate to an approved platform profile. A newer 3.13
-is not this pin. Do not silently downgrade/uninstall existing Python, change
-global PATH or assume a native ARM/emulation route works. An installer conflict
-is a blocker to resolve with the user/IT; keep other projects intact.
+It shows **all 14 packages** from the guide and asks the full-set **Yes/No in
+ordinary chat**. Yes selects them; it does not authorize installation. After
+source integrity, a short destination and other readiness checks pass, approve
+the required file preparation and installation separately.
 
-## 5. Setup
+The assistant verifies both ZIPs and the complete supplied manifest, safely
+unpacks the **small operational ZIP only** into the new project root, and leaves
+the large snapshot zipped beside the launcher. It preserves the older bundled
+guide at its manifest-listed path but follows your attached v0.11 instead.
 
-Follow [Getting started](../GETTING-STARTED.md) to create a fresh project with
-the bundled runner. Display the readiness table in ordinary chat and present
-all 14 dependencies even when Python or another prerequisite is unresolved.
+The approved owner `workflow.py setup --consent-install` creates an isolated
+environment and uses pip for the pinned packages. There is no separately
+invented requirements file here: the actual requirements come from the
+snapshot and are installed by the supplied setup. Use its printed interpreter
+for package checks and preflight, not whichever Python happens to be on PATH.
 
-- **NumPy 2.4.3 — Required**\
-  Numerical arrays and scoring calculations.
-- **SciPy 1.17.1 — Required**\
-  Scientific algorithms and statistics.
-- **pandas 2.2.3 — Required**\
-  Compound tables, predictions and CSV outputs.
-- **scikit-learn 1.8.0 — Required**\
-  Saved-model inference and clustering.
-- **joblib 1.5.3 — Required**\
-  Trusted, hash-verified saved-model loading.
-- **RDKit 2025.9.6 — Required**\
-  Structures, descriptors, fingerprints and native exports.
-- **Meeko 0.7.1 — Required**\
-  Molecular preparation/file-format support; no new docking authorized.
-- **Gemmi 0.7.5 — Required**\
-  Crystallographic and structural file handling.
-- **Biopython 1.86 — Required**\
-  Biological sequence and structure utilities.
-- **Requests 2.32.5 — Required**\
-  Source-script HTTP support; frozen science does not retrieve new data.
-- **Markdown 3.10.2 — Required**\
-  Retained report conversion to HTML.
-- **Beautiful Soup 4.13.4 — Required**\
-  HTML parsing; distribution name `beautifulsoup4`.
-- **openpyxl 3.1.5 — Required**\
-  Excel file handling.
-- **Pillow 12.1.1 — Required**\
-  Images used by reporting.
+## 4. Approve and run the frozen computation
 
-Ask exactly in ordinary chat, not a selectable UI:
+After successful setup/preflight, choose the offered run mode and separately
+approve bounded computation. The native command is
+`workflow.py run --approve-compute` with the verified isolated Python.
+The guide's prompts and safety gates govern, not an implied approval in this README.
 
-> Do you select all 14 required dependencies listed above? Reply Yes or No in
-> ordinary chat. This selects dependencies only; it does not authorize
-> installation or computation.
+Default scope recomputes scoring, saved-model inference and ranking; it reuses
+docking, training, evidence and narrative. No CLIO, fresh retrieval, new docking
+or training is required. A historical first run was quiet for about 37 minutes
+before stage 1; that is an observation, not a guaranteed duration. Follow the
+guide's progress instructions, honor cancellation and preserve errors.
 
-Yes selects the full set; No/ambiguous pauses, not partial installation. Next,
-verify and obtain approval for the short bundle destination and safe launcher
-extraction. Keep the large snapshot **unextracted** beside the launcher. Keep
-the older bundled guide at its manifest-listed path but ignore it for
-instructions; do not move it and waive the resulting integrity failure.
+## 5. Check the result
 
-After runtime/destination/source gates pass, ask **separate installation
-approval**, naming all pins, destination and necessary transitive dependencies
-(not fully locked). Report the active pip index without credentials. Only then
-use the verified owner's `setup --consent-install`, which creates a new
-environment and prints its exact interpreter. It installs packages, not Python.
-Use that interpreter for `pip check`, pin verification and native preflight.
+Use the **new run's** receipt, semantic acceptance, stage logs, dashboard and
+100-structure exports. Historical files inside `validation/` are comparison
+evidence, not this run's outputs. A previous frozen run passed seven listed
+semantic comparisons; this updated customer route is still awaiting its own
+recorded test. Keep the guide's scientific limitations visible.
 
-Only after preflight passes ask **separate computation approval**, naming the
-bounded scope and exclusions. Mode choice and file-tool permission are not
-compute consent. See [profile.md](profile.md) for ordering and native paths.
-
-## 6. Fixed prompt and matching output
-
-[The frozen launch prompt](prompts/frozen.txt) is retained from the proposed
-v0.11 guide with line endings normalized to LF and its hash recorded. It applies
-**after** approved launcher preparation; the starting folder need not already
-contain extracted source. It is not consent by itself.
-
-The native acceptance script compares four decision/ranking JSON results and
-three CSV results (all fields/order), plus SMILES, 100 valid SDF structures,
-identities and coordinates, and the same 1,100 parents across six targets.
-Numeric relative/absolute tolerance is $10^{-10}$; coordinate absolute
-tolerance is $10^{-4}\,\mathrm{\mathring{A}}$. It requires the exact added
-caution “No all-CDK selectivity claim.” in the ranking summary.
-
-The expected native receipt is `completed`, all five stages passed and
-`semantic_acceptance.json` passed (seven listed comparisons plus structural/
-pair assertions). Reconcile recomputed values against the retained baseline,
-not against preexisting output filenames. Link the new report, dashboard,
-CSV/SDF/SMILES exports, receipts, logs and artifact hashes.
-
-Zero experimentally established broad threefold-selective leads and the
-failed CDK7 native-pose gate remain explicit. Solubility is not full ADME;
-docking is not experimental potency/selectivity validation.
-
-## 7. Runtime
-
-One historical second-machine run measured setup at about 46 minutes and run
-wall time at 45 minutes 16 seconds. About 37 minutes preceded the first stage
-while extracting, hashing 33,442 payloads and checkpointing; five stages then
-took about 2.5 minutes. This is one observed run, not a guaranteed wait or a
-cross-platform benchmark. That run does not validate this new packaging.
-
-## 8. Troubleshooting and cleanup
-
-Record package/index host and actual HTTP/TLS error without credentials;
-do not change pins, disable TLS or bypass organization policy. A quiet initial
-verification phase is not a scientific-stage timeout. Read progress evidence
-no more frequently than the profile permits; honor cancellation and safety
-issues. Do not start CLIO or unrelated science to diagnose the delay.
-
-Standalone preflight produces `preflight-<id>.json` at the bundle root.
-The native run later owns `runs/<id>/preflight.json`. Resume requires exact
-checkpoint/launcher hashes and explicit approval. Preserve failed attempts;
-do not remove a lock without checking its exact process. A Python socket guard
-is not an OS sandbox. Cleanup requires explicit approval for run-owned paths.
-
-## 9. Publication checklist
-
-- [ ] Archive public location, code/data rights and release notices confirmed.
-- [ ] Owner accepts this focused guide/profile adaptation.
-- [ ] Clean-project runner activation, exact-runtime setup and full run tested.
-- [ ] Recomputed/native output checks and scientific limitations reviewed.
-- [ ] Maintainer approves packaging and release status.
-
-See [file accounting](FILES.md) and [scenario.json](scenario.json). Historical
-7/7 acceptance is reference evidence only; all new execution remains Not run.
+The v0.11 guide is a proposed revision pending owner review. Windows x64 has
+historical reference evidence; other scientific-platform routes are unvalidated.
+No installation, scientific run or release approval occurs by reading these files.
