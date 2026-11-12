@@ -86,6 +86,7 @@ namespaces:
 # Tags that float — the image you scanned is not the image you build. Reported
 # as a warning rather than a hard failure so existing agents are not broken.
 floating_tags:
+  - beta
   - latest
   - edge
   - devel
