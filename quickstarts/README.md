@@ -7,7 +7,7 @@ guides, supporting files, and instructions for a fresh project below.
 
 | Vertical / collection | QuickStart | Availability |
 | --- | --- | --- |
-| [BioPharma](biopharma/README.md) | [CDK frozen-reference replay](biopharma/cdk-frozen-reference/README.md) | Guide and operational files available; scientific snapshot download not yet available. |
+| [BioPharma](biopharma/README.md) | [CDK frozen-reference replay](biopharma/cdk-frozen-reference/README.md) | Guide and all required files available; scientific snapshot downloads from the `cdk-frozen-reference-v0.11` release. |
 | [Silicon and Physics](siphy/README.md) | [Specification to verified RTL](siphy/spec-to-rtl/README.md) | Guide and setup archive available; see scenario requirements and reference-evidence limitations. |
 | [Chemistry and Materials Science](cms/README.md) | [Moisturizer formulation](cms/moisturizer-formulation/README.md) | In preparation; prompt and corpus metadata available. |
 | [Bookshelf](bookshelf/README.md) | [SCLC literature research](bookshelf/sclc-literature/README.md) | In preparation; paper metadata and source links available. |

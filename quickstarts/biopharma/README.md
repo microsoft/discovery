@@ -2,7 +2,7 @@
 
 | QuickStart | Description | Availability |
 | --- | --- | --- |
-| [CDK frozen-reference replay](cdk-frozen-reference/README.md) | Recompute decision scoring, solubility predictions, and candidate ranking from a fixed snapshot. | Guide and operational files available; required scientific snapshot download not yet available. |
+| [CDK frozen-reference replay](cdk-frozen-reference/README.md) | Recompute decision scoring, solubility predictions, and candidate ranking from a fixed snapshot. | Guide and all required files available; the scientific snapshot downloads from the `cdk-frozen-reference-v0.11` release. |
 
 ## Supporting files
 
