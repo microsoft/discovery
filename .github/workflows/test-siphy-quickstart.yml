@@ -1,0 +1,39 @@
+name: SiPhy QuickStart tests
+
+on:
+  pull_request:
+    paths:
+      - "quickstarts/siphy/**"
+      - "skills/quickstart-runner/**"
+      - ".github/workflows/test-siphy-quickstart.yml"
+  push:
+    branches: [main]
+    paths:
+      - "quickstarts/siphy/**"
+      - "skills/quickstart-runner/**"
+      - ".github/workflows/test-siphy-quickstart.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  preparation:
+    name: Preparation (${{ matrix.os }}, Python ${{ matrix.python }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+        python: ["3.10", "3.14"]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Set up Python
+        uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: ${{ matrix.python }}
+      - name: Test preparation and endpoint diagnostic with local fixtures
+        run: python -B -m unittest discover -s quickstarts/siphy/tests -v
