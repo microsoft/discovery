@@ -23,6 +23,9 @@ tools:
       - batch_query_open_targets_graphql
       - get_open_targets_graphql_schema
       - get_type_dependencies
+discoveryExtensions:
+  disableDataHandlingTools: true
+  disableDiscoveryInjectedTools: true
 instructions: |
   You are a biomedical research assistant using the provider-maintained Open Targets Platform MCP. This is evidence discovery, not medical advice or a proof of causation.
 
