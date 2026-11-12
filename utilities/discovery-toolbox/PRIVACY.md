@@ -8,20 +8,18 @@ where it goes, what it writes to disk, and how to remove it.
 
 > **TL;DR**
 >
-> - **No telemetry.** The extension does not send any usage data, error
->   reports, or analytics anywhere.
-> - **No third-party data brokers.** All network calls go to Azure (your
->   subscription), Microsoft Graph (your identity), GitHub (the public
->   Discovery catalog + docs), or your own deployed Discovery workspace.
+> - **No automatic telemetry or run-history upload from the public Toolbox.**
+>   User-invoked Azure operations, AI features, exports and feedback still
+>   transfer the data described below.
+> - **No third-party data brokers.** Service calls support the selected Azure
+>   scope, directory inspection, catalog/docs access and requested AI work.
 > - **Local artifacts.** The extension writes JSONL logs of validation runs,
 >   conversations, scorecard runs, and agent deploys under `~/.md-toolbox/`.
->   These contain workspace metadata and, for conversations + scorecards,
->   the full text of prompts and responses you exchanged with agents. They
->   never leave your machine and you can delete them at any time.
-> - **No persistent credentials.** Azure and GitHub access tokens are
->   acquired through VS Code's built-in authentication providers, held in
->   memory, and discarded; they are never written to any file the extension
->   controls.
+>   These can contain resource and identity metadata, prompts, responses and
+>   provider errors. Review them before sharing; local storage is not a promise
+>   that data selected for an AI call or export never leaves the machine.
+> - **Authentication tokens are not deliberately persisted by Toolbox.**
+>   VS Code and external sign-in tools manage their own credential stores.
 
 ---
 
@@ -44,40 +42,49 @@ The extension uses VS Code's built-in authentication providers:
 | `microsoft` | All Azure ARM and Discovery data-plane calls | ~1 hour, auto-refreshed by VS Code |
 | `github` | Reading the public [`microsoft/discovery`](https://github.com/microsoft/discovery) catalog repository | Per your VS Code GitHub sign-in |
 
-**Tokens are never written to disk by this extension.** They are obtained
-on demand from VS Code's secure credential store, held in memory only for
-the duration of an outbound HTTP request, and discarded. The in-memory
-activity log explicitly excludes `Authorization` headers and never stores
-raw bearer tokens.
+Toolbox obtains tokens through the selected authentication provider and uses
+them in memory. HTTP logging redacts authentication values and known
+token values and recognized secret patterns. User-authored prompts, files and
+provider error text can still contain sensitive content; review exports before
+sharing them rather than treating redaction as a complete privacy filter.
 
-The extension queries Microsoft Graph once per session to resolve the
-signed-in user's display name (shown in the welcome banner). No other
-identity data is retrieved.
+Microsoft Graph reads can resolve account/display labels and directory objects
+used by permission and service-principal inspection. Silent diagnostics may
+report account/tenant identifiers, granted scopes, HTTP status and request IDs,
+but do not return bearer tokens or request new consent to make a check green.
+Denied reads stay unverified and do not establish that an identity is missing.
+Eligible public-catalog 401/403 responses may be retried anonymously without
+forwarding the GitHub credential; private/custom repositories and explicit
+backoff do not use that fallback.
 
 ## 3. Network endpoints
 
-Every host the extension may contact, and what for:
+Common service families and their purpose are listed below. Selected resource
+endpoints, configured catalogs and user-invoked links can add feature-specific
+destinations; this is not an exhaustive hostname allowlist.
 
 | Host | Purpose | Auth |
 |---|---|---|
 | `management.azure.com` | Azure Resource Manager — list/read/create/delete resources in **your** subscription | Microsoft session token |
-| `graph.microsoft.com` | Resolve your display name; verify the Discovery control-plane service principal exists in your tenant (all workspaces — network hardening is on by default) | Microsoft session token |
+| `graph.microsoft.com` | Directory labels, principal/permission inspection and silent Graph diagnostics | Microsoft session token |
 | `*.azurecr.io` | Pull/push container images to **your** Azure Container Registry | ACR credentials sourced from ARM |
 | `<workspace>.<region>.api.discovery.microsoft.com` (and similar) | Discovery workspace data plane — investigations, agents, conversations | Microsoft session token |
 | `mcp.discovery.azure.com` (when MCP enabled) | Discovery MCP server for tool invocation | Microsoft session token |
-| `learn.microsoft.com` | Open documentation links in your browser (no fetch from the extension) | None |
+| `learn.microsoft.com` | Documentation content and browser links | None |
 | `raw.githubusercontent.com/MicrosoftDocs/azure-docs/...` | Fetch Microsoft Discovery documentation pages for the in-extension Docs view | Anonymous HTTP GET |
 | `api.github.com` / `raw.githubusercontent.com/microsoft/discovery` | Fetch the Discovery catalog (tool + agent definitions) | Your GitHub session token if you're signed in; anonymous (rate-limited) otherwise |
-| `api.github.com/repos/microsoft/discovery/contents/utilities/discovery-toolbox/...` | Fetch the toolbox update manifest + new VSIX from the release folder | Your GitHub session token while the repo is private; anonymous once it goes public |
+| `api.github.com/repos/microsoft/discovery/contents/utilities/discovery-toolbox/...` | Fetch the public update manifest and VSIX | GitHub session when available, or anonymous access |
 
-The extension does not contact any other host. It does not send error
-reports, crash dumps, or "phone home" to any Microsoft or third-party
-service.
+AI-assisted features also use VS Code's selected language-model provider as
+described below. The public Toolbox does not automatically upload operational
+history to a maintainer dashboard. Other installed extensions have their own
+data-handling policies.
 
 ## 4. Local files
 
-The extension writes to two locations on your machine. Both are
-user-purgeable: delete the directory and the data is gone.
+Artifacts, temporary working files and VS Code-managed state are stored
+locally. Configurable export paths may point elsewhere. Removing a local file
+does not recall copies already shared or delete Azure resources.
 
 ### `~/.md-toolbox/`
 
@@ -86,28 +93,34 @@ Default location: `%USERPROFILE%\.md-toolbox\` (Windows),
 
 | Subfolder | Contents |
 |---|---|
-| `deploys/*.jsonl` | One file per agent deploy. Stage logs (image build, ARM PUT, agent upsert), timings, resource IDs. Does **not** contain prompts. |
+| `deploys/*.jsonl` | Deploy stages, timings, resource IDs, provider details and remediation text. Treat returned service text as potentially sensitive. |
 | `conversations/*.jsonl` | One file per conversation thread you've held with a deployed agent. **Includes the full text of every prompt you sent and every response the agent returned.** Includes workspace ARM id, project, investigation, conversation, and agent names. |
 | `agent-scorecards/*.jsonl` | One file per scorecard run. **Includes the full prompt sent to each agent, the full response, the LLM judge's rationale, and the judge's confidence bucket.** Includes workspace ARM id, project, and agent names. |
-| `validations/*.jsonl` | One file per validation run. Stage outcomes, timings, resource IDs, error messages. Does **not** contain prompts or agent responses. |
-| `.cache/discovery-catalog/` | Cached copy of the public `microsoft/discovery-catalog` repository for offline use. |
+| `validations/*.jsonl` | Stage events/payloads, resource and scope IDs, source-host/build/plan identity, errors and recovery accounting; interaction-related payloads may contain prompts or responses. |
+| `manifests/` | Human-reviewable deployment inputs, names, scopes, agent instructions/questions and verification expectations. |
+| `reports/` | Exported preflight and diagnostic evidence, including scope and service identifiers. |
 
-You can delete any subfolder (or the whole `~/.md-toolbox/` directory) at
-any time. The extension will recreate empty subfolders the next time the
-relevant feature runs.
+Feature-specific caches, run records and explicit output paths can contain
+additional local artifacts. Use the displayed artifact path when reviewing or
+removing a particular result.
+
+Stop active operations before removing their files. Retain required evidence
+and review the selected paths before deletion. Missing directories may be
+recreated when the relevant feature runs.
 
 ### OS temp directory
 
 The extension stages Bicep parameter files and container build contexts
 under your OS temp directory (`%TEMP%` / `/tmp`) for the duration of a
-deploy. These are cleaned up by the OS automatically.
+deploy. Files can remain after interruption; do not assume immediate cleanup.
 
 ### VS Code workspace storage
 
-Some user-interface preferences (drawer widths, dashboard layout) are
-saved to VS Code's `localStorage`. No customer data is stored there.
+Settings, cached selections, UI state and operation history can be retained in
+VS Code-managed storage. These may include resource names or scope metadata;
+they are not limited to visual preferences.
 
-## 5. AI calls (LLM judge in Agent Scorecard)
+## 5. AI-assisted features
 
 The **Agent Scorecard** feature uses an LLM to score the responses your
 deployed agents return to a sample prompt. The judging call is made
@@ -121,52 +134,45 @@ and rationale. The extension itself does not call any Azure OpenAI
 endpoint directly for judging — it delegates to whichever model your
 Copilot subscription resolves to.
 
-If you do not want this data sent to Copilot, do not run the Agent
-Scorecard feature.
+Validation judging, agent drafting and the chat surface can also send selected
+prompts, responses, tool results or configuration context through VS Code's
+language-model API. Use these features only with data permitted for that
+provider. Their transport and retention policies are separate from Toolbox's
+local artifact storage.
 
-All other AI interactions (conversations on the Validation Interactions
-page, MCP tool invocations) go **only** to the Discovery workspace you
-deployed yourself, in your subscription, in your chosen Azure region.
+Discovery conversations and MCP calls send the selected prompts/inputs to the
+workspace or service endpoint involved in that operation. Do not invoke AI
+features with content you are not permitted to send to those services.
 
 ## 6. Activity log
 
 The "Activity Log" view shows the most recent ~500 HTTP requests and
 actions the extension has performed in the current session. It is
-in-memory only and is cleared when you reload the window. It is never
-written to disk and never sent off the machine.
+in-memory by default and is cleared when you reload the window. Related
+operation errors and correlation details can also be retained in persisted
+run/deploy artifacts or user-requested exports and chat-tool responses. Review
+that content before sharing it.
 
-## 7. Personal data we never collect
+## 7. Sensitive operational data
 
-To make this explicit: this extension does not collect, transmit, or
-store:
-
-- Your name, email, phone, address, or any contact information beyond
-  the display name VS Code's auth provider already gives us
-- Your IP address (the extension makes no calls that go to anything we
-  control)
-- Browser fingerprints, screen dimensions, OS version, or any device
-  fingerprint
-- Source code, file contents, or anything from your other VS Code
-  workspaces
-- Keystrokes outside the prompts you deliberately send to deployed
-  agents (and even those stay in `~/.md-toolbox/conversations/` on your
-  own machine)
+Toolbox does not add background behavioral tracking or keystroke collection.
+Operational data can nevertheless include account labels, directory IDs,
+tenant/subscription IDs, source-host names, resource names and user-selected
+file or prompt content. Network services receive ordinary request metadata.
+Keep credentials out of prompts and manifests, review diagnostic output, and
+apply your organization's retention and sharing rules to local artifacts.
 
 ## 8. How to remove all extension data
 
-```bash
-# All local artifacts (validation runs, conversations, scorecards, deploys, cache):
-rm -rf ~/.md-toolbox
-
-# VS Code-managed preferences (drawer widths etc.):
-# Use VS Code's Command Palette: "Developer: Reload Window" then
-# "Settings: Clear All" — or manually delete the extension's entry
-# under your VS Code globalStorage path.
-
-# Azure resources created by deploys:
-# Use the Inventory → Tear down… action, or delete the resource group
-# in the Azure portal.
-```
+1. Finish or safely stop active operations and retain any evidence you need.
+2. Review and remove the desired artifacts under `~/.md-toolbox/` and any
+  explicitly selected output paths. This does not recall exported copies.
+3. Use Toolbox's **Reset to First-Run** for its settings/state, reviewing the
+  confirmation. VS Code account credentials are managed separately by VS Code
+  and any external authentication tools.
+4. Azure resource deletion is a separate, explicitly approved operation. Use
+  scoped inventory/cleanup previews; removing local files or uninstalling the
+  extension does not delete deployed resources.
 
 ## 9. Reporting privacy concerns
 
@@ -184,6 +190,6 @@ pre-filled body before submitting — the GitHub issue is public.
 
 ---
 
-<sub>Privacy notice for Discovery Toolbox **v1.11.58** · built from `91ab79d` on 2026-11-10T18:20:30.953Z.</sub>
+<sub>Privacy notice for Discovery Toolbox **v1.11.62** · built from `addc512` on 2026-11-11T23:15:52.906Z.</sub>
 
-<sub>This document is maintained in the open in the [`microsoft/discovery`](https://github.com/microsoft/discovery/tree/main/utilities/discovery-toolbox) repository. It covers only this extension; for VS Code's own privacy practices see the [VS Code privacy statement](https://code.visualstudio.com/license).</sub>
+<sub>This public Toolbox notice is distributed in the [`microsoft/discovery`](https://github.com/microsoft/discovery/tree/main/utilities/discovery-toolbox) release folder. Other installed extensions have their own policies; for VS Code's privacy practices see the [VS Code privacy statement](https://code.visualstudio.com/license).</sub>
