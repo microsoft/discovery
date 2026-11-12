@@ -4,7 +4,7 @@
 
 Microsoft Discovery is the AI for Science platform that enables agentic-driven scientific research and development. Discovery Toolbox provides an end-to-end deployment and management experience — including instantiation of agents, tools, models, knowledge bases (Bookshelves), and the supercomputer compute pool — plus subscription-wide resource inventory with cascade tear-down, declarative validation plans, live agent chat, and a `@discovery` chat participant for natural-language operations.
 
-**Current version:** `v1.11.58`
+**Current version:** `v1.11.62`
 
 ---
 
@@ -17,6 +17,9 @@ Microsoft Discovery is the AI for Science platform that enables agentic-driven s
 3. Reload VS Code when prompted, then click the **Discovery Toolbox** icon in the Activity Bar to open the **Welcome** page. From there, jump into the **Onboarding Journey** for a guided walk-through.
 
 > **Updating.** The toolbox checks for new releases on activation and shows a banner on the Welcome page. Click **Install Now** to upgrade in place, or repeat the steps above with a newer `.vsix`.
+
+Finish active Toolbox operations before installation/reload. An extension
+update does not rewrite existing Azure resources or deployed agent instructions.
 
 ---
 
@@ -46,7 +49,7 @@ Microsoft Discovery is the AI for Science platform that enables agentic-driven s
 - **Role Summary** — 3-persona capability matrix (Platform Admin · Scientist · Reader) showing what each persona can and can't do based on current role assignments.
 - **Quota Management** — vCPU and AI Foundry TPM quotas per region with one-click quota-form data generation; NetApp Files reported informationally.
 - **Region Readiness** — Per-region readiness preflight: vCPU/GPU headroom, node-pool SKU availability (with an allowlisted-alternative recommendation), model TPM, and network/security guardrails side-by-side, with a region picker (home regions by default; add any region to vet a cross-region target).
-- **Network Security** — Four checks for the AIFSPInfrastructure service principal (existence, NSP Perimeter Joiner role, role assignment, Reader at subscription scope) with one-click create/assign actions. Required for every deploy (network hardening is on by default), not just hardened mode.
+- **Network Security** — Inspect the Discovery control-plane identity, NSP Perimeter Joiner role, assignment and subscription Reader. Unreadable identity remains unverified; evidence quality and current deployment blocking are separate. Permission-writing actions require a verified assignee.
 - **Checklist** — The end-to-end Validation Checklist: one dense, linear table that walks a whole deployment top-to-bottom (every pre-flight check, then every validation stage) with live status, collapsible detail, and an Input column of the resource names each stage will create. Reflects both chat- and UI-driven runs.
 - **Pre-flight** — One consolidated page over the whole check catalogue, in a prescriptive run order, with per-check age (a freshly-run check never makes the rest look fresh), a blockers-first report you can export as Markdown or HTML, and **Export to PowerShell** — a standalone bundle generated from the same declarative specs the in-product checkers use, so it cannot drift into a second implementation. Checks that would create Azure resources are opt-in and are named when skipped, because a skipped check is not a passing one.
 - **Run Manifest** — Export, hand-edit and re-validate the exact manifest an end-to-end run will execute, so a run can be reviewed before it costs hours.
@@ -77,6 +80,35 @@ or through confirmation-guarded `discovery_applySetting`. These settings do not
 grant Azure permissions or bypass per-action approval. Discovery project
 administration does not automatically grant Entra tenant administration.
 Do not reload VS Code while an operation is running.
+
+### Catalog instructions and access
+
+Catalog agents retain the complete YAML instruction text, including paragraphs,
+line breaks and indentation. If an older deployment received only part of its
+instructions, update the instructions or redeploy that agent through an approved
+workflow after updating Toolbox. A source change or extension install alone
+does not repair the server-side agent.
+
+The known public catalog may recover anonymously after an eligible authenticated
+401/403. Access details retain the observed GitHub response and request IDs;
+they do not assume an expired token or missing organization consent. This
+fallback does not apply to private/custom repositories or explicit backoff.
+
+### Review the evidence before acting
+
+- An unreadable Graph identity is unverified, not proof of a missing service
+	principal or role. Silent diagnostics do not grant permissions or request
+	consent. Existing authentication, policy, quota and safety gates still apply.
+- Exported manifests can carry explicit node-count bounds and cleanup overlap
+	without changing settings. New-workspace execution uses those compute values;
+	export, import and offline validation share count checks. Explicit zero and
+	legacy omissions remain supported. Overlap does not authorize parallel runs,
+	extra cleanup, or weaker capacity checks.
+- Probe readiness and cleanup are different results. A DELETE accepted by Azure
+	is not confirmed absence. Subnet-association diagnosis uses observed link
+	properties and bounded owner reads; incomplete evidence stays unverified.
+	Preserve provider errors and correlation IDs for supported investigation.
+	Do not force-delete or patch an association to bypass a cleanup blocker.
 
 The **About** and **Chat Assistant** pages, `@discovery /help` and
 `discovery_listCapabilities` use one capability catalogue. It covers pre-flight
@@ -114,4 +146,4 @@ Found a bug, want a feature, or have general feedback? Open an issue on the [mic
 
 ---
 
-<sub>Published version **v1.11.58** &middot; built from `91ab79d` on 2026-11-10T18:20:30.953Z.</sub>
+<sub>Package version **v1.11.62** &middot; built from `addc512` on 2026-11-11T23:15:52.906Z.</sub>
