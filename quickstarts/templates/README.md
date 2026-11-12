@@ -9,8 +9,9 @@ Download a copy and complete it for your tested scenario.
    scenario you actually ran.
 2. Record the model, setup, inputs, prompt, results, and validation evidence.
    Label unverified requirements and distinguish measured results from estimates.
-3. Put the full completed Markdown beside the scenario README, and its exact
-   required input files in that scenario's `files/` folder.
+3. Create `quickstarts/<vertical>/<scenario>/` with a descriptive scenario name.
+   Put the full completed Markdown beside its README, required inputs in its
+   `files/` folder, and link the scenario from the vertical's README.
 4. Include any required scenario-specific skill and its version. The
    [shared runner](../../skills/quickstart-runner/README.md) follows the full
    guide; conflicts with older skill versions must be reconciled explicitly.
@@ -18,6 +19,6 @@ Download a copy and complete it for your tested scenario.
    Large approved files can be repository-release assets with exact checksums.
 
 Completed examples already available:
-[BioPharma v0.11](../biopharma/QuickStart-BioPharma%20LeadGen%20v0.11.md) and
-[Silicon and Physics: Spec-to-RTL](../siphy/QuickStart-Spec-to-RTL.md). Check each scenario's
+[BioPharma v0.11](../biopharma/cdk-frozen-reference/QuickStart-BioPharma%20LeadGen%20v0.11.md) and
+[Silicon and Physics: Spec-to-RTL](../siphy/spec-to-rtl/QuickStart-Spec-to-RTL.md). Check each scenario's
 README for current availability and validation scope.

@@ -5,12 +5,15 @@ guides, supporting files, and instructions for a fresh project below.
 
 ## Choose a scenario
 
-| Scenario | Description | Availability |
+| Vertical / collection | QuickStart | Availability |
 | --- | --- | --- |
-| [BioPharma](biopharma/README.md) | Reproduce a frozen-reference lead-generation workflow. | [Guide](biopharma/QuickStart-BioPharma%20LeadGen%20v0.11.md) and operational files available; scientific snapshot download not yet available. |
-| [Silicon and Physics](siphy/README.md) | Generate and verify register-transfer level (RTL) hardware designs from a specification. | [Guide](siphy/QuickStart-Spec-to-RTL.md) and setup archive available; see scenario requirements and reference-evidence limitations. |
-| [Chemistry and Materials Science](cms/README.md) | Formulation workflow using literature and experimental design. | In preparation; prompt and corpus metadata available. |
-| [Bookshelf](bookshelf/README.md) | Literature-grounded research using a public SCLC paper collection. | In preparation; paper metadata and source links available. |
+| [BioPharma](biopharma/README.md) | [CDK frozen-reference replay](biopharma/cdk-frozen-reference/README.md) | Guide and operational files available; scientific snapshot download not yet available. |
+| [Silicon and Physics](siphy/README.md) | [Specification to verified RTL](siphy/spec-to-rtl/README.md) | Guide and setup archive available; see scenario requirements and reference-evidence limitations. |
+| [Chemistry and Materials Science](cms/README.md) | [Moisturizer formulation](cms/moisturizer-formulation/README.md) | In preparation; prompt and corpus metadata available. |
+| [Bookshelf](bookshelf/README.md) | [SCLC literature research](bookshelf/sclc-literature/README.md) | In preparation; paper metadata and source links available. |
+
+Each QuickStart has its own folder under its vertical or collection. Open a
+vertical to browse its scenarios, or select a QuickStart directly above.
 
 ## Start a run
 
@@ -29,4 +32,5 @@ approval. Do not start a scenario while required inputs are unavailable.
 
 Use the [QuickStart template](templates/README.md) to document your scenario,
 required inputs, setup, fixed prompt, and validated results. Include supporting
-files with their provenance and distribution terms.
+files with their provenance and distribution terms. Add each scenario in its
+own folder under the appropriate vertical and link it from that vertical's README.

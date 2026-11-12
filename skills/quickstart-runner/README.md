@@ -34,7 +34,7 @@ and end-to-end behavior have not been validated for this version. Manual loading
 must be distinguished from automatic discovery when recording a run.
 
 For SiPhy, follow the v1.1 guide over conflicting older instructions. See the
-[original runner notes](../../quickstarts/siphy/README.md#optional-original-runner)
+[original runner notes](../../quickstarts/siphy/spec-to-rtl/README.md#optional-original-runner)
 before choosing that alternative.
 
 ## For maintainers only
