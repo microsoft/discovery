@@ -21,7 +21,7 @@
     },
     "siphy": {
       "title": "SiPhy",
-      "guide": {"path":"quickstarts/siphy/spec-to-rtl/QuickStart-Spec-to-RTL.md","name":"QuickStart-Spec-to-RTL.md","bytes":29051,"sha256":"c00effcadce2674c35481f2dd7e6e186795b6eef1f867f6970eaae0448da897a","sourceBytes":29025,"sourceSha256":"cc31845bb7220eb2c3da4243a78455b877adb6bf23030ca4defc1bcaf637a8db","publicationEdits":"Personal owner/contact identifiers replaced with role-based references; Public file locations added to section 0 and section 5 on 2026-11-12. All other source bytes, including prompts and scientific content, retained."},
+      "guide": {"path":"quickstarts/siphy/spec-to-rtl/QuickStart-Spec-to-RTL.md","name":"QuickStart-Spec-to-RTL.md","bytes":29051,"sha256":"c00effcadce2674c35481f2dd7e6e186795b6eef1f867f6970eaae0448da897a","sourceBytes":29025,"sourceSha256":"cc31845bb7220eb2c3da4243a78455b877adb6bf23030ca4defc1bcaf637a8db","publicationEdits":"Personal owner/contact identifiers replaced with role-based references; all other source bytes, including prompts and scientific content, retained."},
       "files": [
         {"path":"quickstarts/siphy/spec-to-rtl/files/ship.tar","name":"ship.tar","bytes":40992256,"sha256":"f06834009e5e28b0c2cb18f3b7ff5227d1cb8ee2ecbd84f41eda157f8907159c"},
         {"path":"quickstarts/siphy/spec-to-rtl/skill 1.md","name":"skill 1.md","bytes":38469,"sha256":"4c87f20765a007658bbbb247351c9e1790e99e06dc37093cf4c6a33e758111ff"}
