@@ -1,12 +1,13 @@
 # Preserve checked-in guide and attachment bytes, including CRLF/BOM.
-"biopharma/QuickStart-BioPharma LeadGen v0.11.md" -text
-biopharma/files/* -text
-siphy/QuickStart-Spec-to-RTL.md -text
-"siphy/skill 1.md" -text
-siphy/files/ship.tar -text
-cms/files/* -text
-bookshelf/files/* -text
+"biopharma/cdk-frozen-reference/QuickStart-BioPharma LeadGen v0.11.md" -text
+biopharma/cdk-frozen-reference/files/* -text
+siphy/spec-to-rtl/QuickStart-Spec-to-RTL.md -text
+"siphy/spec-to-rtl/skill 1.md" -text
+siphy/spec-to-rtl/files/ship.tar -text
+cms/moisturizer-formulation/files/* -text
+bookshelf/sclc-literature/files/* -text
 templates/QuickStart-Template.md -text
 
 # Our navigation READMEs are not source originals; use normal portable Markdown.
 */README.md text eol=lf
+*/*/README.md text eol=lf

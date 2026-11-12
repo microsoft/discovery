@@ -4,14 +4,14 @@
   "packages": {
     "biopharma": {
       "title": "BioPharma",
-      "guide": {"path":"quickstarts/biopharma/QuickStart-BioPharma LeadGen v0.11.md","name":"QuickStart-BioPharma LeadGen v0.11.md","bytes":113713,"sha256":"c0d6912612536c532731593363b5fadc876791cb429dc497c56ca4a0016d16d1","sourceBytes":113732,"sourceSha256":"1f1046aedcc1d7a323ebf38ab5352b152071de690b967ac95bfec450fb08ec49","publicationEdits":"Personal attribution removed and current guide filename normalized to QuickStart; all other source bytes, including prompts and scientific content, retained. Original archive member filenames are unchanged."},
+      "guide": {"path":"quickstarts/biopharma/cdk-frozen-reference/QuickStart-BioPharma LeadGen v0.11.md","name":"QuickStart-BioPharma LeadGen v0.11.md","bytes":113713,"sha256":"c0d6912612536c532731593363b5fadc876791cb429dc497c56ca4a0016d16d1","sourceBytes":113732,"sourceSha256":"1f1046aedcc1d7a323ebf38ab5352b152071de690b967ac95bfec450fb08ec49","publicationEdits":"Personal attribution removed and current guide filename normalized to QuickStart; all other source bytes, including prompts and scientific content, retained. Original archive member filenames are unchanged."},
       "files": [
-        {"path":"quickstarts/biopharma/files/cdk_operational_bundle_v1.zip","name":"cdk_operational_bundle_v1.zip","bytes":50301,"sha256":"874eba9d9e1ee72d38c257f7904d93953bcb8dc2ec55cf4c2732009c57e74f2f"},
-        {"path":"quickstarts/biopharma/files/cdk_operational_bundle_v1.sha256","name":"cdk_operational_bundle_v1.sha256","bytes":97,"sha256":"a793e0bb6e34945ad04e230d1b185f66eebd1861219962f9afcff31ebeb46325"},
-        {"path":"quickstarts/biopharma/files/cdk_operational_bundle_v1_manifest.csv","name":"cdk_operational_bundle_v1_manifest.csv","bytes":2130,"sha256":"04bfa2ab5f0b4095dcf94d3e37ba1019e5f8d4fe6dfa281835ca9a389bbac474"},
-        {"path":"quickstarts/biopharma/files/cdk_operational_bundle_v1_validation.json","name":"cdk_operational_bundle_v1_validation.json","bytes":1152,"sha256":"0709258b42b18800e7eb4414c965862715370ce1c28f5d9721c3bcb1eceea71f"},
-        {"path":"quickstarts/biopharma/files/cdk_non_md_deliverables.zip","name":"cdk_non_md_deliverables.zip","bytes":168396900,"sha256":"bfc939735a574ccc2375ae9808e9242fb79efc545d5b3f314cc38e5d0cefa076"},
-        {"path":"quickstarts/biopharma/files/cdk_non_md_deliverables.sha256","name":"cdk_non_md_deliverables.sha256","bytes":95,"sha256":"702e1df41eb1b1d22106487e0c003b3b5109c06bdbb0c4e4504af110cd24c07b"}
+        {"path":"quickstarts/biopharma/cdk-frozen-reference/files/cdk_operational_bundle_v1.zip","name":"cdk_operational_bundle_v1.zip","bytes":50301,"sha256":"874eba9d9e1ee72d38c257f7904d93953bcb8dc2ec55cf4c2732009c57e74f2f"},
+        {"path":"quickstarts/biopharma/cdk-frozen-reference/files/cdk_operational_bundle_v1.sha256","name":"cdk_operational_bundle_v1.sha256","bytes":97,"sha256":"a793e0bb6e34945ad04e230d1b185f66eebd1861219962f9afcff31ebeb46325"},
+        {"path":"quickstarts/biopharma/cdk-frozen-reference/files/cdk_operational_bundle_v1_manifest.csv","name":"cdk_operational_bundle_v1_manifest.csv","bytes":2130,"sha256":"04bfa2ab5f0b4095dcf94d3e37ba1019e5f8d4fe6dfa281835ca9a389bbac474"},
+        {"path":"quickstarts/biopharma/cdk-frozen-reference/files/cdk_operational_bundle_v1_validation.json","name":"cdk_operational_bundle_v1_validation.json","bytes":1152,"sha256":"0709258b42b18800e7eb4414c965862715370ce1c28f5d9721c3bcb1eceea71f"},
+        {"path":"quickstarts/biopharma/cdk-frozen-reference/files/cdk_non_md_deliverables.zip","name":"cdk_non_md_deliverables.zip","bytes":168396900,"sha256":"bfc939735a574ccc2375ae9808e9242fb79efc545d5b3f314cc38e5d0cefa076"},
+        {"path":"quickstarts/biopharma/cdk-frozen-reference/files/cdk_non_md_deliverables.sha256","name":"cdk_non_md_deliverables.sha256","bytes":95,"sha256":"702e1df41eb1b1d22106487e0c003b3b5109c06bdbb0c4e4504af110cd24c07b"}
       ],
       "publicationApproved": false,
       "publicationReason": "Exact local package prepared; no versioned repository-release upload approved/performed in this change. Source notice records MIT campaign code and separate ChEMBL/KIBA/AqSolDB/wwPDB terms; retain all originals.",
@@ -21,10 +21,10 @@
     },
     "siphy": {
       "title": "SiPhy",
-      "guide": {"path":"quickstarts/siphy/QuickStart-Spec-to-RTL.md","name":"QuickStart-Spec-to-RTL.md","bytes":29051,"sha256":"c00effcadce2674c35481f2dd7e6e186795b6eef1f867f6970eaae0448da897a","sourceBytes":29025,"sourceSha256":"cc31845bb7220eb2c3da4243a78455b877adb6bf23030ca4defc1bcaf637a8db","publicationEdits":"Personal owner/contact identifiers replaced with role-based references; all other source bytes, including prompts and scientific content, retained."},
+      "guide": {"path":"quickstarts/siphy/spec-to-rtl/QuickStart-Spec-to-RTL.md","name":"QuickStart-Spec-to-RTL.md","bytes":29051,"sha256":"c00effcadce2674c35481f2dd7e6e186795b6eef1f867f6970eaae0448da897a","sourceBytes":29025,"sourceSha256":"cc31845bb7220eb2c3da4243a78455b877adb6bf23030ca4defc1bcaf637a8db","publicationEdits":"Personal owner/contact identifiers replaced with role-based references; all other source bytes, including prompts and scientific content, retained."},
       "files": [
-        {"path":"quickstarts/siphy/files/ship.tar","name":"ship.tar","bytes":40992256,"sha256":"f06834009e5e28b0c2cb18f3b7ff5227d1cb8ee2ecbd84f41eda157f8907159c"},
-        {"path":"quickstarts/siphy/skill 1.md","name":"skill 1.md","bytes":38469,"sha256":"4c87f20765a007658bbbb247351c9e1790e99e06dc37093cf4c6a33e758111ff"}
+        {"path":"quickstarts/siphy/spec-to-rtl/files/ship.tar","name":"ship.tar","bytes":40992256,"sha256":"f06834009e5e28b0c2cb18f3b7ff5227d1cb8ee2ecbd84f41eda157f8907159c"},
+        {"path":"quickstarts/siphy/spec-to-rtl/skill 1.md","name":"skill 1.md","bytes":38469,"sha256":"4c87f20765a007658bbbb247351c9e1790e99e06dc37093cf4c6a33e758111ff"}
       ],
       "publicationApproved": true,
       "publicationReason": "Contributor confirmed permission to publish the complete original archive, including all forty papers, on 2026-11-11. Archive included as a regular repository file; original notices unchanged. This is recorded contributor confirmation, not an independent rights audit or E2E validation.",
@@ -36,9 +36,9 @@
       "title": "CMS",
       "guide": null,
       "files": [
-        {"path":"quickstarts/cms/files/moisturizer-prompt.md","name":"moisturizer-prompt.md","bytes":2506,"sha256":"c0c44ecff300130419f6af8e48095331e060f68248c3da224853b87e78048c9d"},
-        {"path":"quickstarts/cms/files/corpus.manifest.json","name":"corpus.manifest.json","bytes":2708,"sha256":"a171da400b11d2e73d229b3a5558b38721e91304263f0424d6b76966ebaa9b75"},
-        {"path":"quickstarts/cms/files/OneDrive_1_11-3-2026.zip","name":"OneDrive_1_11-3-2026.zip","bytes":26140796,"sha256":"7dd62653464765e8bc9f0b405f43bee21ea8b7755485dfab8841e673e3dc430c"}
+        {"path":"quickstarts/cms/moisturizer-formulation/files/moisturizer-prompt.md","name":"moisturizer-prompt.md","bytes":2506,"sha256":"c0c44ecff300130419f6af8e48095331e060f68248c3da224853b87e78048c9d"},
+        {"path":"quickstarts/cms/moisturizer-formulation/files/corpus.manifest.json","name":"corpus.manifest.json","bytes":2708,"sha256":"a171da400b11d2e73d229b3a5558b38721e91304263f0424d6b76966ebaa9b75"},
+        {"path":"quickstarts/cms/moisturizer-formulation/files/OneDrive_1_11-3-2026.zip","name":"OneDrive_1_11-3-2026.zip","bytes":26140796,"sha256":"7dd62653464765e8bc9f0b405f43bee21ea8b7755485dfab8841e673e3dc430c"}
       ],
       "publicationApproved": false,
       "publicationReason": "Completed owner guide not supplied; protected corpus readability and public redistribution unresolved",
@@ -50,10 +50,10 @@
       "title": "Bookshelf",
       "guide": null,
       "files": [
-        {"path":"quickstarts/bookshelf/files/manifest.json","name":"manifest.json","bytes":12791,"sha256":"1e7d9a3bd2ba69a9f87282f52c9b42a647228ce9b8ddf0c42585c430bfc1da15"},
-        {"path":"quickstarts/bookshelf/files/selection_sclc.json","name":"selection_sclc.json","bytes":1534,"sha256":"72b1fa2ad83fc4c1ac94e1d58c01427ca37134e5c9e62efbd2fcb2622d9be53e"}
+        {"path":"quickstarts/bookshelf/sclc-literature/files/manifest.json","name":"manifest.json","bytes":12791,"sha256":"1e7d9a3bd2ba69a9f87282f52c9b42a647228ce9b8ddf0c42585c430bfc1da15"},
+        {"path":"quickstarts/bookshelf/sclc-literature/files/selection_sclc.json","name":"selection_sclc.json","bytes":1534,"sha256":"72b1fa2ad83fc4c1ac94e1d58c01427ca37134e5c9e62efbd2fcb2622d9be53e"}
       ],
-      "paperManifest": "quickstarts/bookshelf/files/manifest.json",
+      "paperManifest": "quickstarts/bookshelf/sclc-literature/files/manifest.json",
       "publicationApproved": false,
       "publicationReason": "Full owner QuickStart/model/index/prompt/reference answer still needed; retain article licence/attribution and review release terms",
       "releaseUrl": null,

@@ -6,6 +6,13 @@ cms/files/OneDrive_1_11-3-2026.zip
 cms/files/papers/
 bookshelf/files/papers/*.pdf
 
+# Scenario-scoped copies of held inputs; legacy exclusions above also remain.
+biopharma/cdk-frozen-reference/files/cdk_non_md_deliverables.zip
+biopharma/cdk-frozen-reference/files/*.docx
+cms/moisturizer-formulation/files/OneDrive_1_11-3-2026.zip
+cms/moisturizer-formulation/files/papers/
+bookshelf/sclc-literature/files/papers/*.pdf
+
 # Generated author-only download bundles and verification records.
 .local/
 **/__pycache__/

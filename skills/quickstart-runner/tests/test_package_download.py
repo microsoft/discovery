@@ -22,13 +22,13 @@ class DownloadTests(unittest.TestCase):
         self.dest = Path(self.tmp.name) / "customer"
         self.guide = b"\xef\xbb\xbf# Exact guide\r\n\r\nOriginal prompt.\r\n"
         self.binary = b"opaque exact archive\x00\x01\xff"
-        self.put("quickstarts/biopharma/Original Guide.md", self.guide)
-        self.put("quickstarts/biopharma/files/input.zip", self.binary)
+        self.put("quickstarts/biopharma/cdk-frozen-reference/Original Guide.md", self.guide)
+        self.put("quickstarts/biopharma/cdk-frozen-reference/files/input.zip", self.binary)
         self.put("skills/quickstart-runner/SKILL.md", b"---\nname: quickstart-runner\ndescription: Run guide\n---\nRead the complete guide.\n")
         self.put("LICENSE", b"Test licence\n")
         self.data = {"formatVersion": 1, "packages": {"biopharma": {
-            "title": "BioPharma", "guide": self.entry("quickstarts/biopharma/Original Guide.md", "Original Guide.md", self.guide),
-            "files": [self.entry("quickstarts/biopharma/files/input.zip", "input.zip", self.binary)],
+            "title": "BioPharma", "guide": self.entry("quickstarts/biopharma/cdk-frozen-reference/Original Guide.md", "Original Guide.md", self.guide),
+            "files": [self.entry("quickstarts/biopharma/cdk-frozen-reference/files/input.zip", "input.zip", self.binary)],
             "publicationApproved": False, "publicationReason": "Not yet approved",
             "releaseUrl": None, "runtimeStatus": "not run"}}}
         self.save()
@@ -51,15 +51,15 @@ class DownloadTests(unittest.TestCase):
         self.assertFalse(result["publicationReady"])
 
     def test_wrong_hash_fails(self):
-        self.put("quickstarts/biopharma/files/input.zip", b"changed")
+        self.put("quickstarts/biopharma/cdk-frozen-reference/files/input.zip", b"changed")
         self.assertEqual(package.check(self.root, "biopharma")["status"], "failed")
 
     def test_reformatted_guide_is_not_exact(self):
-        self.put("quickstarts/biopharma/Original Guide.md", self.guide.replace(b"\r\n", b"\n"))
+        self.put("quickstarts/biopharma/cdk-frozen-reference/Original Guide.md", self.guide.replace(b"\r\n", b"\n"))
         self.assertEqual(package.check(self.root, "biopharma")["status"], "failed")
 
     def test_missing_input_blocks(self):
-        (self.root / "quickstarts/biopharma/files/input.zip").unlink()
+        (self.root / "quickstarts/biopharma/cdk-frozen-reference/files/input.zip").unlink()
         self.assertEqual(package.check(self.root, "biopharma")["status"], "blocked")
 
     def test_no_completed_guide_blocks_download(self):
@@ -86,7 +86,7 @@ class DownloadTests(unittest.TestCase):
         self.assertFalse(self.dest.exists())
 
     def test_exact_files_in_new_folder_and_outer_zip(self):
-        self.put("quickstarts/cms/private.txt", b"must not be copied")
+        self.put("quickstarts/cms/moisturizer-formulation/private.txt", b"must not be copied")
         self.put("sessions/old.json", b"must not be copied")
         result = package.prepare(self.root, "biopharma", self.dest, True, True)
         self.assertEqual(result["status"], "prepared-local-review")
@@ -101,7 +101,23 @@ class DownloadTests(unittest.TestCase):
             self.assertEqual(archive.read("Original Guide.md"), self.guide)
             self.assertEqual(archive.read("input.zip"), self.binary)
             self.assertFalse(any("private" in x for x in archive.namelist()))
-        self.assertEqual((self.root / "quickstarts/biopharma/Original Guide.md").read_bytes(), self.guide)
+        self.assertEqual((self.root / "quickstarts/biopharma/cdk-frozen-reference/Original Guide.md").read_bytes(), self.guide)
+
+    def test_sibling_scenario_not_bundled(self):
+        sibling_readme = b"Sibling scenario must not be copied\n"
+        self.put("quickstarts/biopharma/other-scenario/README.md", sibling_readme)
+        self.put("quickstarts/biopharma/other-scenario/files/unrelated.zip", b"unrelated archive")
+        result = package.prepare(self.root, "biopharma", self.dest, True, True)
+        self.assertEqual(result["status"], "prepared-local-review")
+        expected = {
+            "Original Guide.md", "input.zip", "LICENSE", "quickstart-runner.md",
+            ".github/skills/quickstart-runner/SKILL.md", "README.md", "PACKAGE-SHA256SUMS.txt",
+        }
+        self.assertEqual({p.relative_to(self.dest).as_posix() for p in self.dest.rglob("*") if p.is_file()}, expected)
+        self.assertNotIn(sibling_readme, (self.dest / "README.md").read_bytes())
+        with zipfile.ZipFile(self.dest.with_suffix(".zip")) as archive:
+            self.assertEqual(set(archive.namelist()), expected)
+            self.assertNotIn(sibling_readme, archive.read("README.md"))
 
     def test_existing_folder_not_overwritten(self):
         self.dest.mkdir()
@@ -115,7 +131,7 @@ class DownloadTests(unittest.TestCase):
         self.assertFalse(self.dest.exists())
 
     def test_bad_input_leaves_no_partial_output(self):
-        self.put("quickstarts/biopharma/files/input.zip", b"wrong")
+        self.put("quickstarts/biopharma/cdk-frozen-reference/files/input.zip", b"wrong")
         self.assertEqual(package.prepare(self.root, "biopharma", self.dest, True, True)["status"], "failed")
         self.assertFalse(self.dest.exists())
 
@@ -139,7 +155,7 @@ class DownloadTests(unittest.TestCase):
         self.assertEqual(package.check(self.root, "biopharma")["status"], "failed")
 
     def test_symlink_source_rejected(self):
-        path = self.root / "quickstarts/biopharma/files/input.zip"
+        path = self.root / "quickstarts/biopharma/cdk-frozen-reference/files/input.zip"
         outside = Path(self.tmp.name) / "other.zip"
         outside.write_bytes(self.binary)
         path.unlink()
