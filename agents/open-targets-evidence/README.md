@@ -16,7 +16,7 @@ Use an authorized Discovery Studio and Foundry environment, an existing compatib
 
 ## Configuration
 
-Set `{{CHAT-MODEL}}` to an existing model deployment. See the [MCP connection and testing guide](mcp/README.md) for all five tools, connection details, rights, setup, runtime distinctions and limitations. The guide is included in this package; it does not add a server or wrapper.
+Set `{{CHAT-MODEL}}` to an existing model deployment. See the [MCP connection and testing guide](mcp/README.md) for all five tools, connection details, rights, setup, runtime distinctions and limitations, and [test results](TEST_RESULTS.md) for observed checks and gaps. The guide is included in this package; it does not add a server or wrapper.
 
 ## Usage
 
