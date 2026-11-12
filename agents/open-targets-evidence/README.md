@@ -6,7 +6,7 @@ This draft prompt agent targets the Discovery Studio and Microsoft Foundry workf
 
 ## Architecture
 
-The agent uses a model deployment and the provider-maintained [Open Targets Platform MCP](https://github.com/opentargets/platform-mcp) at `https://mcp.platform.opentargets.org/mcp`. It inspects the live schema as needed, constructs bounded read-only GraphQL queries, and separates association scores from individual evidence. The MCP server is external and experimental; the catalog definition does not provision, host, or license the service. No custom wrapper or container is included.
+The agent uses a model deployment and the provider-maintained [Open Targets Platform MCP](https://github.com/opentargets/platform-mcp) at `https://mcp.platform.opentargets.org/mcp`. Its instructions request small read-only GraphQL queries and separate association scores from individual evidence. The MCP server is external and experimental; the catalog definition does not provision, host, or license the service. No custom wrapper or container is included.
 
 The output includes disease and target identifiers, retrieved evidence identifiers and source links, query parameters, date when available, data release when actually returned, and explicit uncertainties. If the user omits a target or evidence limit, the agent defaults respectively to at most two target associations or one individual evidence record per selected target. It reports successful earlier results as partial if a later call fails. The agent cannot guarantee source verification or scientific completeness.
 
@@ -29,6 +29,7 @@ No scientific GraphQL query is supplied. Inspect actual tool calls, output, and 
 ## Known Limitations
 
 - The scope and disease phenotype must be agreed with a scientist before a real comparison. A small first page is not exhaustive and may not establish a ranking.
+- Retrieval sizes, call counts and batch sizes are prompt-level instructions, not runtime-enforced ceilings. The GraphQL tools can accept larger queries and batches; use a runtime or service-side limiter if hard resource bounds are required. The MCP tool allowlist and requested per-call approval are separate controls whose effective behavior must be verified in the target runtime.
 - Schema fields and results may change; live introspection, permission and network failures must be surfaced rather than guessed. When a data release or citation is unavailable, state that it was not returned.
 - Registry records, regulatory assessments, conference abstracts and individual primary research publications are different evidence types. A link constructed from an identifier is not independent verification. An association score is not a probability, causal effect, or clinical benefit.
 - The project cannot demonstrate complete isolation from other host capabilities merely by restricting MCP grants or issuing prompt instructions.

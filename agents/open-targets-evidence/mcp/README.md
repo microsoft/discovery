@@ -12,6 +12,8 @@ This guide describes the existing provider-maintained remote MCP connection and 
 
 These are the five tools documented by the provider and observed in the earlier hosted-server tool list. The earlier two-tool allowlist was a deliberate local restriction, not a provider limitation. Category or dependency outputs may be large; the agent can use focused introspection instead. Batch query executions are counted individually, separately from MCP tool calls.
 
+The agent's requested sample, query and batch budgets are prompt instructions, not enforced limits on MCP inputs or remote execution. The GraphQL tools can accept larger queries and batches. If hard limits are required, use a separately verified runtime or service-side limiter; the tool allowlist and requested per-call approval do not themselves impose size ceilings.
+
 ## Prerequisites
 
 - An authorized Discovery Studio and Foundry environment for the intended integration test, with a compatible model deployment and access to the Open Targets MCP endpoint. A direct Foundry technical test is a separate path and its accepted configuration format must be verified there.
