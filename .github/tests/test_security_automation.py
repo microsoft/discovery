@@ -605,6 +605,12 @@ def test_registry_refresh_cannot_rewrite_or_self_approve_generated_prs():
     assert "gh auth setup-git" in source
     assert "chore/registry-refresh-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}" in source
     assert "git push --set-upstream" in source
+    app_token = next(
+        step for step in workflow["jobs"]["update-registry"]["steps"]
+        if step.get("name") == "Generate App installation token"
+    )
+    assert app_token["with"]["permission-contents"] == "write"
+    assert app_token["with"]["permission-pull-requests"] == "write"
     assert "A human CODEOWNER must approve this PR" in source
     assert "A maintainer must merge it or enable GitHub auto-merge" in source
     assert not (

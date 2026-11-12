@@ -189,6 +189,8 @@ jobs:
         with:
           app-id: ${{ secrets.REGISTRY_APP_ID }}
           private-key: ${{ secrets.REGISTRY_APP_PRIVATE_KEY }}
+          permission-contents: write
+          permission-pull-requests: write
 
       - name: Commit updated registry to a PR
         if: steps.diff.outputs.changed == 'true' && steps.app_check.outputs.configured == 'true'
