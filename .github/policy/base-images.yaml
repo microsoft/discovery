@@ -67,9 +67,26 @@ namespaces:
       Community EDA toolchain images (Xyce). No official or verified-publisher
       equivalent exists for open-source silicon tooling.
 
+  - ref: docker.io/ghdl
+    publisher: GHDL project
+    status: reviewed-exception
+    note: >
+      Upstream publisher of the GHDL VHDL simulator and the ghdl/synth
+      Yosys+GHDL synthesis images used by RTL design and functional
+      verification agents. No Docker Official Image exists for GHDL.
+
+  - ref: docker.io/verilator
+    publisher: Verilator project
+    status: reviewed-exception
+    note: >
+      Upstream publisher of the Verilator SystemVerilog simulator used by
+      functional verification agents. No Docker Official Image exists for
+      Verilator.
+
 # Tags that float — the image you scanned is not the image you build. Reported
 # as a warning rather than a hard failure so existing agents are not broken.
 floating_tags:
+  - beta
   - latest
   - edge
   - devel
