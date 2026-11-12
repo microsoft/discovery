@@ -21,6 +21,9 @@ APPROVED = [
     "mambaorg/micromamba:1.5-jammy",
     "opencfd/openfoam-run:2512",
     "hdlc/xyce:latest",
+    "docker.io/ghdl/ghdl:5.1.1-gcc-ubuntu-22.04",
+    "ghdl/synth:beta",
+    "docker.io/verilator/verilator:v5.036",
 ]
 
 REJECTED = [
