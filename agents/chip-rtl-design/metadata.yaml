@@ -1,0 +1,19 @@
+name: chip-rtl-design
+type: agent
+version: 1.2.0
+associated_tools:
+- agents/chip-rtl-design/tools/rtl-design
+publisher:
+  name: Microsoft
+  contact: discovery-catalog@microsoft.com
+  support_url: https://techcommunity.microsoft.com/category/azure/discussions/microsoft-discovery-discussions
+  party: 1p
+description: |
+  Node-agnostic RTL design agent. The agent authors synthesizable RTL and the tool verifies it in the same run, so authored RTL is never reported as good until it has elaborated and passed hygiene. Screens inferred latches, undriven and multiply-driven nets, and reset hygiene read structurally from the elaborated Yosys netlist (mixed async/sync style, mixed polarity, reset sampled as data, reset tied off). Node-agnostic (no PDK binding required).
+tags:
+- hardware-design
+- digital-design
+- rtl
+- synthesis
+- linting
+- eda
