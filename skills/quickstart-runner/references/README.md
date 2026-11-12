@@ -3,13 +3,11 @@
 Customers start with the scenario README and full owner guide. They do not
 need this inventory or the packaging script to understand or run the scenario.
 
-`downloads.json` records the actual expected published-file bytes. It is an
-internal download inventory, **not** a second scientific profile. The complete
-guides have only personal attribution removed and published filename references
-normalized to QuickStart; their original source digests and published-copy
-digests are recorded separately. Scientific instructions are not shortened.
-Archive contents, checksums and supporting attachments are unchanged. Git
-attributes preserve the recorded bytes through checkout.
+`downloads.json` records required filenames, byte lengths, SHA-256 hashes,
+and publication status. It includes required inputs that are not yet publicly
+available, so a clean checkout may report missing files. This inventory is
+for packaging, not scientific execution. Source and published guide hashes are
+recorded separately where they differ; archive bytes remain unchanged.
 
 ## Local verification and review download
 
@@ -28,33 +26,26 @@ exact inputs/guide into one new folder, adds the shared skill and short start
 instructions, and creates a sibling ZIP containing the same bytes. ZIPs/tars
 inside that outer download remain byte-identical to the originals.
 
-The helper checks all available source files but refuses to make a runnable
-download without a completed guide. It never fabricates CMS/Bookshelf recipes.
-Byte checks prove consistency, not permissions, active skills or runtime success.
+The helper requires all listed source files and a completed guide before it
+can prepare a bundle. Byte checks establish consistency, not permissions,
+active skills, or runtime success.
 
 ## Public repository release
 
 The BioPharma 168,396,900-byte snapshot exceeds GitHub's normal Git-object limit.
-Large archives should be **versioned release assets on the repository**; do not
-replace them with inventory-only documentation or fake URLs. The script makes
-local bundles only; no upload is performed by it.
+Use versioned repository releases for approved large files. The script creates
+local bundles only; it does not upload them.
 
 Before upload, verify rights, absence of private content, account/destination,
-author approval and exact filenames/checksums. The complete SiPhy tar is now
-included directly after the contributor confirmed public-sharing permission
-for the archive and all bundled papers on 2026-11-11. Original source notices
-remain intact; the confirmation is not an independent rights audit. The CMS
-archive remains protected and unapproved.
-Do not remove Git exclusions to bypass those decisions. No public sharing of
-these files is authorized merely because a local copy exists.
+author approval and exact filenames/checksums. Preserve original source and
+licence notices. The SiPhy archive is included in Git; BioPharma's large snapshot
+and the protected CMS archive are not public downloads. Local file availability
+and checksum verification do not establish redistribution rights.
 
 After an approved release is actually uploaded, put the **real download links**
-in the scenario README's supporting-files section and the recorded release location, and verify
-anonymous download bytes. Only then can “download all files from the repo” be
-claimed. A source-code ZIP alone currently omits ignored, unpublished files.
+in the scenario README's supporting-files section and the inventory, and verify
+anonymous download bytes. Repository source-code ZIPs omit ignored files.
 
-The originals may retain missing historical output links; list those as
-missing in the scenario README, never silently rewrite the owner Markdown.
-The [original blank template](../../../quickstarts/templates/QuickStart-Template.md)
-is included unchanged. Do not replace it with the completed SiPhy guide or a
-generated template.
+List unavailable reference outputs in the scenario README. Keep source guides
+and scientific criteria intact; use the [blank template](../../../quickstarts/templates/QuickStart-Template.md)
+when authoring a new scenario.
