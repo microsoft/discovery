@@ -1,0 +1,21 @@
+name: pdi-expertai
+type: agent
+version: 1.0.0
+associated_tools: []
+publisher:
+  name: expert.ai
+  contact: CRN@expert.ai
+  support_url: https://pdi.expertcustomers.ai/support
+  party: 3p
+description: >
+  An AI agent that combines clinical trial data, outcomes and scientific
+  literature to identify relevant historical studies, benchmark protocol designs,
+  assess clinical evidence, and provide evidence-based recommendations for
+  protocol optimization. Built on expert.ai Protocol Design Intelligence (PDI);
+  the current dataset covers breast cancer. Requires a PDI access token from
+  expert.ai.
+tags:
+  - clinical-trials
+  - biomedical
+  - literature-search
+  - drug-discovery
