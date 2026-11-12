@@ -1,0 +1,39 @@
+name: functional-verification
+description: >
+  Compile and simulate immutable RTL with a supplied independent testbench.
+  Mount sources and params.json at /input; CDE is /output/common_design_envelope.json.
+version: 1.2.0
+category: "Chip Design"
+infra:
+  - name: worker
+    infra_type: container
+    image:
+      acr: "{name}.azurecr.io/functional-verification:latest"
+    compute:
+      pool_type: static
+      pool_size: 1
+      recommended_sku: [Standard_D2as_v6]
+      min_resources: {cpu: 1, ram: "2Gi", storage: "10Gi", gpu: 0}
+      max_resources: {cpu: 8, ram: "32Gi", storage: "40Gi", gpu: 0}
+actions:
+  - name: run
+    description: >
+      One operation from /input/params.json (see bundled params.schema.json).
+      scenario: run_sim (or lint / gls); rtl or rtl_files; testbench or
+      testbench_files for simulation; top is testbench top, normally tb.
+      Icarus self-check success requires exactly one COMPARISONS=n MISMATCHES=m
+      summary with n > 0 and m = 0, an exact standalone TEST PASSED, no errors
+      or failure markers, native compile/simulator exits 0 and a nonempty VCD.
+      generation defaults to 2012; wave_format to vcd. Optional defines,
+      include_dirs, library_dirs, libraries, warnings, plusargs and timescale
+      retain worker behavior. SDF requires sdf_scope; annotation errors fail.
+      GHDL and cocotb paths remain available but are not this Icarus self-check contract.
+      Requires caller-configured /input read-only, /output, /workdir, /tmp,
+      /var/tmp, /home/worker, /run and /dev/shm mounts; see package README.
+      This declaration alone does not register an action in the local app.
+    infra_node: worker
+    command: "python3 -B -u /app/run.py --params-file /input/params.json"
+    input_schema:
+      type: object
+      properties: {}
+      required: []
