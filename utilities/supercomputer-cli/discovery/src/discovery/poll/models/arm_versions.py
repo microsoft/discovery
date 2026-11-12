@@ -25,6 +25,27 @@ then update the corresponding unit tests.
 
 from __future__ import annotations
 
+from enum import Enum
+
+
+# ---------------------------------------------------------------------------
+# Tools — the resource type and properties envelope are shared across versions.
+# Python deployments explicitly select GA by default; the packaged ARM template
+# retains its legacy fallback for standalone callers.
+# ---------------------------------------------------------------------------
+
+TOOL_ARM_API_VERSION = "2026-06-01"
+LEGACY_TOOL_ARM_API_VERSION = "2025-07-01-preview"
+
+
+class ToolArmApiVersion(str, Enum):
+    """Verified tool ARM APIs, independent of the selected data-plane API."""
+
+    V2025_07_01_PREVIEW = LEGACY_TOOL_ARM_API_VERSION
+    V2025_12_01_PREVIEW = "2025-12-01-preview"
+    V2026_02_01_PREVIEW = "2026-02-01-preview"
+    V2026_06_01 = TOOL_ARM_API_VERSION
+
 
 # ---------------------------------------------------------------------------
 # V2 storage family — Microsoft.Discovery/storageContainers (+ /storageAssets)
@@ -64,7 +85,10 @@ DATAASSET_ARM_API_VERSION = "2025-07-01-preview"
 __all__ = [
     "DATAASSET_ARM_API_VERSION",
     "DATACONTAINER_ARM_API_VERSION",
+    "LEGACY_TOOL_ARM_API_VERSION",
     "NODEPOOL_ARM_API_VERSION",
     "STORAGEASSET_ARM_API_VERSION",
     "STORAGECONTAINER_ARM_API_VERSION",
+    "TOOL_ARM_API_VERSION",
+    "ToolArmApiVersion",
 ]

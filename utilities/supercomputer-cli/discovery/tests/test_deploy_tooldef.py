@@ -3,13 +3,17 @@
 from __future__ import annotations
 
 import json
+from dataclasses import replace
 
 import pytest
 
 from discovery.poll import deploy_tooldef
+from discovery.poll.models.arm_versions import LEGACY_TOOL_ARM_API_VERSION, ToolArmApiVersion
 
 
-def _default_inputs() -> deploy_tooldef.ToolDefinitionInputs:
+def _default_inputs(
+    *, mpi: bool = False, pool_size: int | None = None
+) -> deploy_tooldef.ToolDefinitionInputs:
     return deploy_tooldef.ToolDefinitionInputs(
         name="demo",
         description="desc",
@@ -18,13 +22,75 @@ def _default_inputs() -> deploy_tooldef.ToolDefinitionInputs:
         version="2.0",
         environment={"VAR": "value"},
         tags={"rg": {"key": "value"}},
+        mpi=mpi,
+        pool_size=pool_size,
     )
 
 
 def test_render_tool_definition_replaces_placeholders() -> None:
     inputs = _default_inputs()
     template = deploy_tooldef.render_tool_definition(inputs)
-    assert template["infra"][0]["image"]["acr"] == inputs.image
+    infra = template["infra"][0]
+    assert infra["image"]["acr"] == inputs.image
+    assert infra["infra_type"] == "container"
+    assert infra["compute"]["pool_size"] == 1
+    assert "mpi" not in infra
+    assert "internal_ports" not in infra
+    assert "infiniband" not in infra["compute"]
+
+
+@pytest.mark.parametrize(
+    ("mpi", "pool_size", "infiniband"),
+    [(True, 2, False), (True, 3, False), (True, 2, True), (False, 3, False), (False, 1, True)],
+)
+def test_deploy_tool_definition_serializes_compute_options(
+    mpi: bool, pool_size: int, infiniband: bool
+) -> None:
+    """Creation options survive rendering and the ARM definitionContent wrapper."""
+    inputs = replace(_default_inputs(), mpi=mpi, pool_size=pool_size, infiniband=infiniband)
+    result = deploy_tooldef.deploy_tool_definition(
+        subscription_id="sub",
+        resource_group="rg",
+        inputs=inputs,
+        execute=False,
+    )
+    tool_def = json.loads(result["parameters"]["parameters"]["outDefinitionContent"]["value"])
+    infra = tool_def["infra"][0]
+    assert infra["infra_type"] == "container"
+    assert infra["compute"]["pool_size"] == pool_size
+    if mpi:
+        assert infra["mpi"] == {"follower_command": "/opt/Microsoft.Discovery/mpid"}
+        assert infra["internal_ports"] == [{"destination": 22, "protocol": "tcp"}]
+    else:
+        assert "mpi" not in infra
+        assert "internal_ports" not in infra
+    if infiniband:
+        assert infra["compute"]["infiniband"] is True
+    else:
+        assert "infiniband" not in infra["compute"]
+
+
+@pytest.mark.parametrize(("mpi", "expected_size"), [(False, 1), (True, 2)])
+def test_tool_definition_uses_valid_mode_default(mpi: bool, expected_size: int) -> None:
+    """Omitted size renders two pods for MPI and preserves one for non-MPI."""
+    inputs = _default_inputs(mpi=mpi)
+    tool_def = deploy_tooldef.render_tool_definition(inputs)
+    assert inputs.pool_size == expected_size
+    assert tool_def["infra"][0]["compute"]["pool_size"] == expected_size
+
+
+@pytest.mark.parametrize("pool_size", [0, -1, 1])
+def test_tool_definition_rejects_insufficient_mpi_pool_size(pool_size: int) -> None:
+    """The creation input model enforces MPI's leader-plus-worker minimum."""
+    with pytest.raises(ValueError, match="pool_size must be at least 2 for MPI tools"):
+        _default_inputs(mpi=True, pool_size=pool_size)
+
+
+@pytest.mark.parametrize("pool_size", [0, -1])
+def test_tool_definition_rejects_nonpositive_pool_size(pool_size: int) -> None:
+    """Invalid replica counts fail before deployment."""
+    with pytest.raises(ValueError, match="pool_size must be at least 1"):
+        replace(_default_inputs(), pool_size=pool_size)
 
 
 def test_build_arm_parameters_injects_environment() -> None:
@@ -34,6 +100,46 @@ def test_build_arm_parameters_injects_environment() -> None:
     env_vars = params["parameters"]["OutEnvironmentVariables"]["value"]
     assert json.loads(env_vars)["VAR"] == "value"
     assert params["parameters"]["outToolVersion"]["value"] == "2.0"
+
+
+@pytest.mark.parametrize("api_version", list(ToolArmApiVersion))
+def test_tool_arm_api_routes_same_resource_and_preserves_payload(
+    api_version: ToolArmApiVersion,
+) -> None:
+    """API selection changes routing, not the verified tool properties/content."""
+    inputs = replace(_default_inputs(), api_version=api_version.value, mpi=True, pool_size=3)
+    result = deploy_tooldef.deploy_tool_definition("sub", "rg", inputs, execute=False)
+    template = result["template"]
+    resource = template["resources"][0]
+    parameters = result["parameters"]["parameters"]
+
+    assert resource["type"] == "Microsoft.Discovery/tools"
+    assert resource["apiVersion"] == "[variables('apiVersion')]"
+    assert template["variables"]["apiVersion"] == "[parameters('outApiVersion')]"
+    assert parameters["outApiVersion"]["value"] == api_version.value
+    assert set(resource["properties"]) == {"definitionContent", "version", "environmentVariables"}
+    assert json.loads(parameters["OutEnvironmentVariables"]["value"]) == {"VAR": "value"}
+    assert parameters["outTagsByResource"]["value"] == {"rg": {"key": "value"}}
+    definition = json.loads(parameters["outDefinitionContent"]["value"])
+    infra = definition["infra"][0]
+    assert infra["mpi"] == {"follower_command": "/opt/Microsoft.Discovery/mpid"}
+    assert infra["internal_ports"] == [{"destination": 22, "protocol": "tcp"}]
+    assert infra["compute"]["pool_size"] == 3
+
+
+def test_tool_arm_default_is_explicit_ga_without_rewriting_legacy_template() -> None:
+    """Python selects GA; standalone legacy template use remains available."""
+    result = deploy_tooldef.deploy_tool_definition("sub", "rg", _default_inputs(), execute=False)
+    assert result["parameters"]["parameters"]["outApiVersion"]["value"] == "2026-06-01"
+    assert result["template"]["parameters"]["outApiVersion"]["defaultValue"] == (
+        LEGACY_TOOL_ARM_API_VERSION
+    )
+
+
+def test_tool_definition_rejects_unknown_arm_api() -> None:
+    """Do not silently substitute a different protocol version."""
+    with pytest.raises(ValueError, match="ToolArmApiVersion"):
+        replace(_default_inputs(), api_version="unsupported")
 
 
 def test_deploy_tool_definition_execute_false() -> None:
