@@ -6,6 +6,11 @@ Reproduce a frozen-reference lead-generation workflow with the
 **Availability:** The guide and operational files are available. The required
 scientific snapshot has no public download yet; do not start without it.
 
+The authorized publication target is the dedicated `cdk-frozen-reference-v0.11`
+release in `microsoft/discovery`. **Publication is pending a maintainer upload.**
+The preparation command below fails closed until that exact asset is publicly
+available; an approved target is not evidence that the file has been published.
+
 ## 1. Get the guide and its files
 
 Obtain the guide and the **six required files** listed under
@@ -15,6 +20,36 @@ Create a new short folder, for example `CDK-run` in Downloads. Put the guide,
 both unopened ZIPs, both checksum files, manifest CSV and validation JSON in it.
 Do not copy old sessions or installed environments. The small ZIP includes
 the launcher and historical validation files.
+
+### Starting from the GitHub scenario URL
+
+Give Discovery this scenario's GitHub URL and ask it to read this README before
+following the full guide. A repository URL alone is not proof that its release
+assets were downloaded or its runner activated.
+
+Obtain a checkout or GitHub source-code ZIP of `microsoft/discovery`, retaining
+the repository layout. From its root, use an existing Python 3.10+ interpreter:
+
+```console
+python quickstarts/biopharma/cdk-frozen-reference/download_inputs.py --destination ../CDK-run
+```
+
+Choose a **new, short destination outside the checkout** whose parent exists.
+On Windows, keep the checkout short too; deep paths can exceed filesystem limits.
+This preparation helper uses only Python's standard library. The scientific
+workflow still requires the separate Python 3.13.14 interpreter described below.
+
+The helper copies the full guide and five small original files from the checkout,
+downloads the unchanged scientific ZIP from the dedicated upstream release, and
+checks all seven files against the existing exact-byte inventory. It also copies
+the shared runner as `quickstart-runner.md` and the repository licence. Both ZIPs
+remain unopened. No installation, scientific work or automatic skill activation
+occurs. It refuses existing destinations, missing releases and incorrect bytes;
+there is no private-path, alternate-host or different-snapshot fallback.
+
+Only after preparation succeeds, open the destination in Discovery and attach
+the full guide and `quickstart-runner.md` explicitly (manual skill loading).
+Continue with the approval gates below. Keep the checkout for the instructions.
 
 ## 2. Create the project and load the runner
 
@@ -107,3 +142,28 @@ follow the attached v0.11 guide for instructions. The launcher extracts the
 large snapshot during the approved workflow.
 
 Retain the snapshot's MIT campaign-code licence and source-specific data notices.
+
+### Maintainer publication gate
+
+Publish only the original `cdk_non_md_deliverables.zip`, **168,396,900 bytes**,
+with SHA-256
+`bfc939735a574ccc2375ae9808e9242fb79efc545d5b3f314cc38e5d0cefa076`.
+Use the dedicated `cdk-frozen-reference-v0.11` release in `microsoft/discovery`,
+not a personal fork, and do not mark it as the repository's latest product release.
+Review the retained source-specific rights and absence of private material before
+upload. Never overwrite a conflicting tag, release or asset.
+
+The downloader's fixed target is the following **pending endpoint, not an
+available download**:
+
+```text
+https://github.com/microsoft/discovery/releases/download/cdk-frozen-reference-v0.11/cdk_non_md_deliverables.zip
+```
+
+After publication, anonymously download and verify the exact size and SHA-256,
+then update the availability notice, supporting-files table and only the
+BioPharma entry in the shared
+[download inventory](../../../skills/quickstart-runner/references/downloads.json).
+Until then, retain the unavailable status and `publicationApproved: false`.
+That inventory flag is the packaging gate, not evidence that approval to create
+the release is absent. Do not mark the scenario runnable based on local bytes.
