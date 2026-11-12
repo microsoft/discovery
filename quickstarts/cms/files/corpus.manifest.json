@@ -1,0 +1,29 @@
+{
+  "schemaVersion": 1,
+  "id": "cms-skincare-reference",
+  "version": "0.1.0",
+  "description": "Exact 14-file archive supplied by the scenario contributor. Completeness against the owner's indexed reference remains unconfirmed. Sequence 04 is absent; do not invent it.",
+  "archiveSha256": "7dd62653464765e8bc9f0b405f43bee21ea8b7755485dfab8841e673e3dc430c",
+  "rights": {
+    "redistribution": "pending",
+    "publicDownload": null,
+    "licenseEvidence": null,
+    "note": "Local preparation only. Access to a download is not permission to redistribute; repository code licence does not cover third-party papers."
+  },
+  "documents": [
+    {"path": "01_hyaluronic_acid_skin_aging.pdf", "bytes": 2206746, "sha256": "2614563b899ace40363c6644998659a2dc82e295b54f41733c6fa7f349cee63e"},
+    {"path": "02_ha_glycerin_centella_24h_hydration.pdf", "bytes": 334885, "sha256": "bed4f448e81afa0fbe217cc69539a54fcdea990af367c5e7f2f57dac6f5d11c5"},
+    {"path": "03_ceramide_cream_hydration.pdf", "bytes": 492862, "sha256": "6011d590c6bc3454e55fd40117954c0694f1929e2f9c56a498c5cd9bc0f23c93"},
+    {"path": "05_biomimetic_lamellar_cream.pdf", "bytes": 725167, "sha256": "5627cb0509d294de8f09cd79bae5574c34571e0698071721a6ad686d63b09223"},
+    {"path": "06_niacinamide_stratum_corneum.pdf", "bytes": 2762596, "sha256": "2c7107b0f5be2dc257d4c6f496c4c49e8abc95aa7ea30e1487f58e0f7892c1d1"},
+    {"path": "07_niacinamide_permeability.pdf", "bytes": 1525090, "sha256": "f73c11a06a91d81404e6a3a4b85cb7ca25f7782eceb7a46c9aea75674e5b1b5b"},
+    {"path": "08_xerosis_panthenol_niacinamide.pdf", "bytes": 658434, "sha256": "61160da3fc70c26f11c13cb8a60681e3ffc9cacad04b38774f083914e3024083"},
+    {"path": "09_centella_cream_vs_hydrogel.pdf", "bytes": 950819, "sha256": "70e31acae5e2837f12024fdc67c15706029d4f07f71f67b1268d9acbd0d776c0"},
+    {"path": "10_centella_wound_healing.pdf", "bytes": 1083492, "sha256": "5f8841eeb2e96a8f00ed978185e405dbd3d3122379b0a68f62ecefea42fc7dd4"},
+    {"path": "11_vitamin_c.pdf", "bytes": 203326, "sha256": "3b19ab386be20e8127976149e5b6b86e8d6dabe9ca13c12ae378b772f986162f"},
+    {"path": "12_os01_peptide_barrier.pdf", "bytes": 1439771, "sha256": "1df7e67629cd1ec911db7765076641d8bd0f03600ea5a435dbdcaafadd16a249"},
+    {"path": "13_exosome_peptide_landscape.pdf", "bytes": 2029665, "sha256": "62f30a87aa2c417648f6c4cd28b4f3d4c8920620f0a0554b520220e9863d6002"},
+    {"path": "14_bakuchiol_terminalia_photoaging.pdf", "bytes": 1042550, "sha256": "c4eea37e631661d885c1da7951f2ac073e74328ca92530e5ab587d122cdb3d0e"},
+    {"path": "15_peptide_bakuchiol_emulsion.pdf", "bytes": 10683191, "sha256": "8c3320cf0ed6254d9388ab9748d2623659da5bd668e9d499ace9b662ca3454cd"}
+  ]
+}
