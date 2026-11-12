@@ -1,0 +1,27 @@
+{
+  "ring": "stable",
+  "latestVersion": "0.0.4",
+  "minimumVersion": "0.0.1",
+  "schemaVersion": 1,
+  "platforms": {
+    "osx-arm64": {
+      "installerUrl": "https://aka.ms/discovery/download/stable/osx/current",
+      "sha256": "8d6041edb89f3ca0b4a58a88cce102181424fb12be33c0d07407c779b3b2b2eb"
+    },
+    "rhel-x64": {
+      "installerUrl": "https://aka.ms/discovery/download/stable/rhel/current",
+      "sha256": "88f29a4081512c08430f5f4fe1d8242d8a7a481774ab5220fa26f94a644d7571"
+    },
+    "win-arm64": {
+      "installerUrl": "https://aka.ms/discovery/download/stable/arm64/current",
+      "sha256": "074410e8f4dec0419799c526777c03e88a5573478982470bd2e146260ad107e5"
+    },
+    "win-x64": {
+      "installerUrl": "https://aka.ms/discovery/download/stable/x64/current",
+      "sha256": "c1d134e5e41a83092f51b75617c66078c5e946aee10ff4205f22c3db29597dfc"
+    }
+  },
+  "releaseNotesUrl": "",
+  "releaseNotesSummary": "",
+  "releasedAt": "2026-11-11T08:57:42Z"
+}
