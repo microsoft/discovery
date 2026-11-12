@@ -8,6 +8,26 @@ scientific snapshot is downloaded from the
 [`cdk-frozen-reference-v0.11` release](https://github.com/microsoft/discovery/releases/tag/cdk-frozen-reference-v0.11);
 the other five files are in this scenario's [`files`](files/) folder.
 
+## Quick start: paste the guide link into Discovery
+
+1. In **Microsoft Discovery Stable**, click **New project**, create and select a
+   new empty folder (for example `QuickStart-BioPharma` in Downloads), and click
+   **Open local project**. Click **New session**.
+2. In the chat's model menu, select **GPT-6 Astra**.
+3. Paste this message and send it:
+
+```text
+Run this QuickStart: https://github.com/microsoft/discovery/blob/main/quickstarts/biopharma/cdk-frozen-reference/QuickStart-BioPharma%20LeadGen%20v0.11.md
+Read the whole guide, download its required files into this project, and walk me through setup, the default frozen-reference run, and checking my results against the reference. Ask me before downloading, installing anything or starting the computation.
+```
+
+4. Answer the assistant's questions. It asks separately before downloading
+   files (about 169 MB), selecting and installing packages, and starting the
+   run. The run needs **Python 3.13.14, 64-bit**; if it is missing, the
+   assistant gives you the installer link. Python is not installed automatically.
+
+The steps below are the manual alternative.
+
 ## 1. Get the guide and its files
 
 Obtain the guide and the **six required files** listed under
