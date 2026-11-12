@@ -19,5 +19,5 @@ Download a copy and complete it for your tested scenario.
 
 Completed examples already available:
 [BioPharma v0.11](../biopharma/QuickStart-BioPharma%20LeadGen%20v0.11.md) and
-[SiPhy Spec-to-RTL](../siphy/QuickStart-Spec-to-RTL.md). Check each scenario's
+[Silicon and Physics: Spec-to-RTL](../siphy/QuickStart-Spec-to-RTL.md). Check each scenario's
 README for current availability and validation scope.

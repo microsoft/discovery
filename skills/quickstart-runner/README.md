@@ -10,7 +10,7 @@ still specifies the inputs, model, scientific procedure and success criteria.
 
 Use **this shared skill and the selected full guide**. Scenario-specific
 requirements and acceptance criteria come from the guide. The optional original
-SiPhy runner is a separate version, not an additional setup step.
+Silicon and Physics (SiPhy) runner is a separate version, not an additional setup step.
 
 ## Use in a fresh project
 

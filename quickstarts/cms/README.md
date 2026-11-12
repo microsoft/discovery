@@ -1,6 +1,7 @@
-# CMS — scenario in preparation
+# Chemistry and Materials Science — formulation
 
 Explore the supplied materials for a literature-informed formulation workflow.
+The supplied materials abbreviate Chemistry and Materials Science as **CMS**.
 **This scenario is not yet runnable:** the full guide, readable permitted
 corpus, tested configuration, and reference output are not available.
 

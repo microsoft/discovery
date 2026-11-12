@@ -1,8 +1,8 @@
 # Bookshelf — public SCLC scenario in preparation
 
 Explore a collection of fifteen small-cell lung cancer (SCLC) papers for
-literature-grounded research. This collection is separate from the CMS and
-SiPhy scenario inputs.
+literature-grounded research. This collection is separate from the Chemistry
+and Materials Science and Silicon and Physics scenario inputs.
 
 **This scenario is in preparation.** A complete guide, fixed research prompt,
 validated index configuration, and reference answer are not yet available.

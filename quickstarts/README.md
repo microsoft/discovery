@@ -8,8 +8,8 @@ guides, supporting files, and instructions for a fresh project below.
 | Scenario | Description | Availability |
 | --- | --- | --- |
 | [BioPharma](biopharma/README.md) | Reproduce a frozen-reference lead-generation workflow. | [Guide](biopharma/QuickStart-BioPharma%20LeadGen%20v0.11.md) and operational files available; scientific snapshot download not yet available. |
-| [SiPhy](siphy/README.md) | Generate and verify RTL from a hardware specification. | [Guide](siphy/QuickStart-Spec-to-RTL.md) and setup archive available; see scenario requirements and reference-evidence limitations. |
-| [CMS](cms/README.md) | Formulation workflow using literature and experimental design. | In preparation; prompt and corpus metadata available. |
+| [Silicon and Physics](siphy/README.md) | Generate and verify register-transfer level (RTL) hardware designs from a specification. | [Guide](siphy/QuickStart-Spec-to-RTL.md) and setup archive available; see scenario requirements and reference-evidence limitations. |
+| [Chemistry and Materials Science](cms/README.md) | Formulation workflow using literature and experimental design. | In preparation; prompt and corpus metadata available. |
 | [Bookshelf](bookshelf/README.md) | Literature-grounded research using a public SCLC paper collection. | In preparation; paper metadata and source links available. |
 
 ## Start a run

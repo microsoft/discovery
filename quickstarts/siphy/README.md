@@ -1,7 +1,8 @@
-# SiPhy — start here
+# Silicon and Physics — specification to verified RTL
 
-Generate and verify RTL from a hardware specification using the
-**[SiPhy v1.1 QuickStart guide](QuickStart-Spec-to-RTL.md)**.
+Generate and verify register-transfer level (RTL) hardware designs from a
+specification using the **[v1.1 QuickStart guide](QuickStart-Spec-to-RTL.md)**.
+The supplied materials abbreviate Silicon and Physics as **SiPhy**.
 
 ## Requirements
 
@@ -20,7 +21,8 @@ settings. On restricted networks, use an organization-approved dependency source
 
 1. Download the full guide and [ship.tar](files/ship.tar) into a new short local
   folder. Verify the archive checksum under [Supporting files](#supporting-files).
-2. Open/create a Discovery project there and start a new session.
+2. Open/create a Discovery project there, select **`gpt-6.1-sol`** as the parent
+  model specified by the v1.1 guide, and start a new session.
 3. [Load the shared runner](../../skills/quickstart-runner/README.md), attach
   the full guide, and send:
 
