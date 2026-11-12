@@ -3,8 +3,10 @@
 Reproduce a frozen-reference lead-generation workflow with the
 **[BioPharma v0.11 QuickStart guide](QuickStart-BioPharma%20LeadGen%20v0.11.md)**.
 
-**Availability:** The guide and operational files are available. The required
-scientific snapshot has no public download yet; do not start without it.
+**Availability:** All required files are publicly available. The 168 MB
+scientific snapshot is downloaded from the
+[`cdk-frozen-reference-v0.11` release](https://github.com/microsoft/discovery/releases/tag/cdk-frozen-reference-v0.11);
+the other five files are in this scenario's [`files`](files/) folder.
 
 ## 1. Get the guide and its files
 
@@ -91,12 +93,13 @@ setup; a different snapshot is not interchangeable with this reference.
 | `cdk_operational_bundle_v1.sha256` | Exact checksum for the small ZIP | [Download](files/cdk_operational_bundle_v1.sha256) |
 | `cdk_operational_bundle_v1_manifest.csv` | Original member paths, sizes and hashes | [Download](files/cdk_operational_bundle_v1_manifest.csv) |
 | `cdk_operational_bundle_v1_validation.json` | Original handoff verification record | [Download](files/cdk_operational_bundle_v1_validation.json) |
-| `cdk_non_md_deliverables.zip` | Exact frozen scientific snapshot, 168,396,900 bytes | **Public download not yet available** |
+| `cdk_non_md_deliverables.zip` | Exact frozen scientific snapshot, 168,396,900 bytes | [Download from release](https://github.com/microsoft/discovery/releases/download/cdk-frozen-reference-v0.11/cdk_non_md_deliverables.zip) |
 | `cdk_non_md_deliverables.sha256` | Exact checksum for the large ZIP | [Download](files/cdk_non_md_deliverables.sha256) |
 
 The large ZIP's SHA-256 is
 `bfc939735a574ccc2375ae9808e9242fb79efc545d5b3f314cc38e5d0cefa076`.
-The snapshot is not included in the repository checkout or source-code ZIP.
+It is too large for a regular repository file, so it is hosted in the release
+above and is not included in a repository checkout or source-code ZIP.
 
 ### What is inside the small ZIP?
 
