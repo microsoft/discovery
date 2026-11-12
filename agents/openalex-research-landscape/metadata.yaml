@@ -1,0 +1,20 @@
+name: openalex-research-landscape
+type: agent
+version: 1.0.0
+associated_tools: []
+publisher:
+  name: Microsoft
+  contact: discovery-catalog@microsoft.com
+  support_url: https://techcommunity.microsoft.com/category/azure/discussions/microsoft-discovery-discussions
+  party: 1p
+description: >
+  Maps the research landscape for a scientific topic from OpenAlex scholarly metadata through the
+  official OpenAlex MCP server: relevant works, leading authors, institutions, and venues,
+  publication trends, and citation verification. Returns evidence tables with OpenAlex and DOI
+  links plus the exact query that ran. Read-only. Each user signs in with a free OpenAlex account,
+  and queries spend that user's OpenAlex budget.
+tags:
+  - research
+  - literature-search
+  - data-analysis
+  - database
