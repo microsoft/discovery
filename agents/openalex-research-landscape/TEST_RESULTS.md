@@ -20,6 +20,11 @@ Only public research inputs were sent to OpenAlex. No paid plan was purchased. T
 tenant/subscription IDs, project names, connection resource IDs, user identities, tokens, consent
 links, and raw response traces.
 
+**Scope caveat.** The tested connection was created with an extra, unadvertised `offline_access`
+scope alongside `openalex:query`, and consent still completed. Code review found that the provider
+advertises only `openalex:query`, so the setup documentation now requests only that scope. That
+documented `openalex:query`-only configuration has not been re-run end to end.
+
 ## Observed results
 
 | Check | Result |

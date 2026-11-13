@@ -99,7 +99,7 @@ $ConnectionBody = @{
         credentials = @{ clientId = 'pending-registration'; clientSecret = 'pending-registration' }
         authorizationUrl = 'https://mcp.openalex.org/authorize'
         tokenUrl = 'https://mcp.openalex.org/oauth/token'
-        scopes = @('openalex:query', 'offline_access')
+        scopes = @('openalex:query')
         peRequirement = 'NotRequired'
     }
 }
@@ -142,7 +142,8 @@ not repeatedly register clients or overwrite a working connection.
 Leave `token_endpoint_auth_method` out of the registration request. OpenAlex defaults to
 `client_secret_basic` and also accepts credentials in the token request body. Include the exact
 Foundry-generated redirect URL; do not invent one. OpenAlex grants `openalex:query` and issues
-refresh tokens; `offline_access` is included for Foundry's refresh flow.
+refresh tokens independently of the requested scope. Request only `openalex:query`: the provider's
+OAuth metadata advertises no other scope, so do not add `offline_access`.
 
 ## 4. Attach MCP without replacing Discovery's tools
 
@@ -355,7 +356,7 @@ explicit and nonempty.
   connection before client expiry; expect users to authorize again. Refresh and renewal were not
   tested. Rotating the user's OpenAlex API key can require reconnection.
 - **Foundry UI alternative:** the equivalent settings are a custom OAuth `RemoteTool` connection,
-  the endpoint and OAuth URLs above, scopes `openalex:query offline_access`, and this same allowlist.
+  the endpoint and OAuth URLs above, scope `openalex:query`, and this same allowlist.
   The UI creation/edit workflow was not exercised. Do not treat a portal configuration screenshot
   as proof that a Discovery tool call succeeded.
 - **Workspace writes:** OpenAlex queries are read-only, but the agent's Discovery resource tools can

@@ -90,7 +90,7 @@ deployment provisions. Configure them after deploying the agent:
 | Client ID and secret | From registering an OAuth client with OpenAlex, using the Foundry redirect URL |
 | Auth URL | `https://mcp.openalex.org/authorize` |
 | Token URL and Refresh URL | `https://mcp.openalex.org/oauth/token` |
-| Scopes | `openalex:query offline_access` |
+| Scopes | `openalex:query` (the only scope the provider advertises) |
 | Allowed tools | The 13 read-only tools listed in [Architecture](#architecture) |
 | Approval | Auto-approve; only read-only tools are allowed |
 
