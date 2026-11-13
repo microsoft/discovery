@@ -1,4 +1,4 @@
-# BioPharma — start here
+# QuickStart BioPharma — CDK Target Selection and Lead Discovery
 
 Reproduce a frozen-reference lead-generation workflow with the
 **[BioPharma v0.11 QuickStart guide](QuickStart-BioPharma%20LeadGen%20v0.11.md)**.
@@ -8,7 +8,12 @@ scientific snapshot is downloaded from the
 [`cdk-frozen-reference-v0.11` release](https://github.com/microsoft/discovery/releases/tag/cdk-frozen-reference-v0.11);
 the other five files are in this scenario's [`files`](files/) folder.
 
-## Quick start: paste the guide link into Discovery
+## How to run this QuickStart
+
+You run this QuickStart by giving Discovery the link to its guide. The
+assistant reads the guide, downloads every required file into your project,
+and walks you through setup, the run and checking your results. You don't
+download, attach or unzip anything yourself.
 
 1. In **Microsoft Discovery Stable**, click **New project**, create and select a
    new empty folder (for example `QuickStart-BioPharma` in Downloads), and click
@@ -26,37 +31,11 @@ Read the whole guide, download its required files into this project, and walk me
    run. The run needs **Python 3.13.14, 64-bit**; if it is missing, the
    assistant gives you the installer link. Python is not installed automatically.
 
-The steps below are the manual alternative.
+## What happens next
 
-## 1. Get the guide and its files
+The assistant follows the guide and asks you before each step.
 
-Obtain the guide and the **six required files** listed under
-[Supporting files](#supporting-files). Keep their original filenames.
-
-Create a new short folder, for example `CDK-run` in Downloads. Put the guide,
-both unopened ZIPs, both checksum files, manifest CSV and validation JSON in it.
-Do not copy old sessions or installed environments. The small ZIP includes
-the launcher and historical validation files.
-
-## 2. Create the project and load the runner
-
-Open Discovery and choose its new/local-project action for this folder. A
-folder picker hides files; this does not mean the folder is empty. Initialize
-the project if prompted and start a **new session**.
-
-Select **GPT-6 Astra (`gpt-6-astra`)**. Follow the
-[shared runner instructions](../../../skills/quickstart-runner/README.md), then
-attach the full v0.11 guide. Send:
-
-> Use the quickstart-runner skill to follow the attached BioPharma v0.11
-> QuickStart guide from these supplied files. Run the default frozen-reference
-> scenario. Check readiness first, prepare the supplied bundle when approved,
-> and keep dependency selection, installation and computation approvals separate.
-
-If the runtime does not discover the skill, attach its SKILL.md explicitly
-alongside the guide. Neither Markdown file is a Python program.
-
-## 3. Follow setup in the guide
+### Setup
 
 The assistant checks the model, OS/architecture, Python, files, space and access.
 The reference needs **Python 3.13.14, 64-bit**. If absent, the guide supplies
@@ -72,13 +51,13 @@ the required file preparation and installation separately.
 The assistant verifies both ZIPs and the complete supplied manifest, safely
 unpacks the **small operational ZIP only** into the new project root, and leaves
 the large snapshot zipped beside the launcher. It preserves the older bundled
-guide at its manifest-listed path but follows your attached v0.11 instead.
+guide at its manifest-listed path but follows the v0.11 guide instead.
 
 The supplied `workflow.py setup --consent-install` creates an isolated
 environment and installs the pinned packages from the snapshot. Use its
 printed interpreter for package checks and preflight.
 
-## 4. Approve and run the frozen computation
+### Run the experiment
 
 After successful setup/preflight, choose the offered run mode and separately
 approve bounded computation. The native command is
@@ -91,7 +70,7 @@ or training is required. A historical first run was quiet for about 37 minutes
 before stage 1; that is an observation, not a guaranteed duration. Follow the
 guide's progress instructions, honor cancellation and preserve errors.
 
-## 5. Check the result
+### Check your results
 
 Use the **new run's** receipt, semantic acceptance, stage logs, dashboard and
 100-structure exports. Historical files inside `validation/` are comparison
@@ -102,10 +81,32 @@ recorded test. Keep the guide's scientific limitations visible.
 The supplied v0.11 guide is a proposed revision. Windows x64 has historical
 reference evidence; other scientific-platform routes are unvalidated.
 
+## If the assistant can't open the link
+
+Use this only if the assistant reports that it cannot open GitHub links or
+download files. Note exactly what it said, then:
+
+1. Download the [guide](QuickStart-BioPharma%20LeadGen%20v0.11.md) and the
+   six files under [Supporting files](#supporting-files) into a new empty
+   folder, for example `QuickStart-BioPharma` in Downloads. Keep the original
+   filenames and don't unzip anything. On GitHub file pages, use
+   **Download raw file**; don't save the web page.
+2. In Discovery Stable, click **New project**, select that folder, click
+   **Open local project**, then **New session**. Select **GPT-6 Astra**.
+3. Attach `QuickStart-BioPharma LeadGen v0.11.md` with the chat's attachment
+   control and send:
+
+```text
+Run the attached BioPharma QuickStart using the files in this project. Read the whole guide, then walk me through setup, the default frozen-reference run, and checking my results against the reference. Ask me before installing anything or starting the computation.
+```
+
+Everything under [What happens next](#what-happens-next) then applies.
+
 ## Supporting files
 
-Place these six files beside the full v0.11 guide. Verify the checksums before
-setup; a different snapshot is not interchangeable with this reference.
+The assistant downloads these six files for you. They are listed here for
+reference and for the fallback above. A different snapshot is not
+interchangeable with this reference.
 
 | Original filename | Purpose | Repository download |
 | --- | --- | --- |
@@ -126,7 +127,7 @@ above and is not included in a repository checkout or source-code ZIP.
 The ZIP contains `workflow.py`, `profile.json`, `launch.ps1`, `acceptance.py`,
 the offline guard, tests, manifest, and a **validation folder** with reference
 receipts and stage logs. Preserve all member paths, including the older guide;
-follow the attached v0.11 guide for instructions. The launcher extracts the
+follow the v0.11 guide for instructions. The launcher extracts the
 large snapshot during the approved workflow.
 
 Retain the snapshot's MIT campaign-code licence and source-specific data notices.
