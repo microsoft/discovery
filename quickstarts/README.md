@@ -32,8 +32,11 @@ with a GitHub Copilot subscription to sign in.
    project before you can chat.)
 2. Click **New session**.
 3. Select the model named in the scenario README.
-4. Type `Run this QuickStart: ` and paste the guide link from the scenario
-   README. Press **Enter**.
+4. Send the README's three prompts in order: **set up and confirm the
+   environment**, **run the experiment**, and **verify the results against
+   the validated reference**. Each step has a prompt for when the assistant
+   downloads the files from the guide link (recommended) and one for when you
+   download them yourself.
 5. Answer the assistant's questions. It asks before downloading files,
    installing anything and starting the run.
 

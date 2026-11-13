@@ -26,9 +26,15 @@ Download a copy and complete it for your tested scenario.
    lists a **direct download link, size and SHA-256 for every required file**.
    Start the README with a plain-English explanation of what the scenario does
    and what the user will see at the end, and name the project folder after the
-   scenario (for example `QuickStart-CDK-Lead-Discovery`). The assistant must
-   open the link and download the files itself; don't add manual download
-   steps for the user. See the
+   scenario (for example `QuickStart-CDK-Lead-Discovery`). Every scenario
+   README follows the same layout: a very short numbered **Checklist** at the
+   top; what the scenario does; **What you need** (including the model);
+   estimated time for each stage; what's in the files; and **three steps with
+   copy-paste prompts**: (1) set up and confirm the environment, (2) run the
+   experiment, (3) verify the results against the validated reference. Give
+   each step a prompt for both routes: **A**, the assistant downloads the files
+   from the guide link (recommended), and **B**, the user downloaded the files
+   and attaches the guide. See the
    [BioPharma README](../biopharma/cdk-frozen-reference/README.md) for the pattern.
 
 Completed examples already available:
