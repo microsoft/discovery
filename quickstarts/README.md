@@ -22,6 +22,11 @@ link into a Discovery chat.** You only need the Discovery app. The assistant
 reads the guide, downloads what it needs, and walks you through setup, the run
 and checking your results. You don't download, attach or unzip anything.
 
+**Don't have the app yet?** Download it from the
+[Discovery download page](../README.md) and follow the
+[install guide](../docs/discovery-app/install.md). You need a GitHub account
+with a GitHub Copilot subscription to sign in.
+
 1. Open **Microsoft Discovery**. On **Projects**, click **New project**, create
    a new empty folder, and click **Open local project**. (Discovery needs a
    project before you can chat.)

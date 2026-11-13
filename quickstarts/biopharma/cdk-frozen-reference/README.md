@@ -9,7 +9,13 @@ recalculates decision scores, predicts solubility for 1,100 molecules, ranks
 You only need the Discovery app. You don't download, attach or unzip any files:
 the assistant reads the guide from its link and gets everything it needs.
 
-1. **Open Microsoft Discovery** (Stable). Sign in if it asks.
+**Don't have the app yet?** Download it from the
+[Discovery download page](../../../README.md) and follow the
+[install guide](../../../docs/discovery-app/install.md). You need a
+**GitHub account with a GitHub Copilot subscription** to sign in, and about
+3 GB of free disk space.
+
+1. **Open Microsoft Discovery** (Stable). Sign in with your GitHub account if it asks.
 2. **Create a project.** The app opens on **Projects**. Click **New project**.
    In the folder window, open **Documents**, click **New folder**, name it
    `QuickStart-BioPharma`, select it, and click **Open local project**.
