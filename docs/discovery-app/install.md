@@ -1,5 +1,9 @@
 # Install Microsoft Discovery
 
+> **Applies to the Preview app.** For the separate Stable app proposal and
+> downloads, see [Stable app documentation](../stable-app/README.md).
+> Don't use these Preview setup or upgrade steps for Stable.
+
 This guide walks through installing the Microsoft Discovery app. For the conceptual tour, see the [Quick Start](quickstart.md).
 
 The Microsoft Discovery app is a self-contained application available for Windows x64, Windows Arm64, macOS ARM, and Red Hat (Enterprise Linux) x64. The installer bundles everything it needs to run; you don't have to separately install an SDK, an IDE, or a runtime.
