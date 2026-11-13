@@ -3,6 +3,14 @@
 Reproduce a frozen-reference lead-generation workflow with the
 **[BioPharma v0.11 QuickStart guide](QuickStart-BioPharma%20LeadGen%20v0.11.md)**.
 
+**Guide link to give Discovery:**
+
+```text
+https://github.com/microsoft/discovery/blob/main/quickstarts/biopharma/cdk-frozen-reference/QuickStart-BioPharma%20LeadGen%20v0.11.md
+```
+
+The steps below show exactly where to paste it.
+
 **Availability:** All required files are publicly available. The 168 MB
 scientific snapshot is downloaded from the
 [`cdk-frozen-reference-v0.11` release](https://github.com/microsoft/discovery/releases/tag/cdk-frozen-reference-v0.11);

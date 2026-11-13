@@ -4,6 +4,10 @@
 
 Keep the same core across verticals. Replace `[Fill in]` placeholders; use **N/A** for non-applicable items, not unknowns. Conditional App/Services fields apply only to the selected path. Publish one minimal tested reference path before adding separately identified variants.
 
+> **How this QuickStart runs:** The user opens a new Discovery project, gives you this guide's GitHub link and asks you to run it. Read this entire guide first, then follow section 5. Download every file listed under **Required files** below into the open project folder, after asking the user's permission, and verify each size and SHA-256 before setup. The user does not need to download, attach or unzip anything. If you cannot open the link or download files, say exactly what failed and point the user to the fallback steps in this scenario's README. Reading or downloading this guide is not permission to install or compute.
+>
+> **Required files:** [Fill in one row per file: original filename; direct download URL (repository raw link, or release asset for files over 100 MiB); size in bytes; SHA-256].
+
 ## 1. Recipe identity — required
 
 | Field | Value |
