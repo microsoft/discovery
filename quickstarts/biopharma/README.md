@@ -2,11 +2,11 @@
 
 | QuickStart | Description | Availability |
 | --- | --- | --- |
-| [CDK frozen-reference replay](cdk-frozen-reference/README.md) | Recompute decision scoring, solubility predictions, and candidate ranking from a fixed snapshot. | Guide and all required files available; the scientific snapshot downloads from the `cdk-frozen-reference-v0.11` release. |
+| [CDK Target Selection and Lead Discovery](cdk-frozen-reference/README.md) | Recompute decision scoring, solubility predictions, and candidate ranking from a fixed snapshot, then compare with the original run. | Ready to run: select GPT-6 Astra and paste the guide link. All required files available. |
 
 ## Supporting files
 
-See the [CDK replay downloads and requirements](cdk-frozen-reference/README.md#supporting-files).
+See the [CDK Target Selection and Lead Discovery downloads](cdk-frozen-reference/README.md#supporting-files).
 
 ## Contribute a QuickStart
 

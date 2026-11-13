@@ -4,6 +4,10 @@
 
 Keep the same core across verticals. Replace `[Fill in]` placeholders; use **N/A** for non-applicable items, not unknowns. Conditional App/Services fields apply only to the selected path. Publish one minimal tested reference path before adding separately identified variants.
 
+> **How this QuickStart runs:** The user opens Discovery, creates a new empty project, selects [Fill in: model] and sends "Run this QuickStart:" followed by this guide's GitHub link. That message is the whole request; the user may know nothing about Discovery or this scenario. If the link is a `github.com/.../blob/...` page, read the raw file. Read this entire guide first, then run [Fill in: default scenario and section]. In plain language, tell the user what the experiment does, then ask permission before downloading every file listed under **Required files** below into the open project folder, and verify each size and SHA-256. Walk the user through setup, the run and checking their results against [Fill in: reference outputs], asking before each install and before computation. The user does not need to download, attach or unzip anything. **Opening the link is your job:** if you can't read the `github.com` page, fetch the raw file or download it with a local command; use the same methods for the required files. Never ask the user to download, attach or unzip files instead. Only if every method fails, tell the user exactly what failed, including the error message. Reading or downloading this guide is not permission to install or compute.
+>
+> **Required files:** [Fill in one row per file: original filename; direct download URL (repository raw link, or release asset for files over 100 MiB); size in bytes; SHA-256].
+
 ## 1. Recipe identity — required
 
 | Field | Value |
