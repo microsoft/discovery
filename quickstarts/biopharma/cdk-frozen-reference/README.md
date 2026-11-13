@@ -59,6 +59,12 @@ the assistant opens the guide from its link and gets everything it needs.
    Reply in the chat. When it finishes, it shows your results and whether they
    match the original run.
 
+   The app also shows **Allow once** boxes each time the assistant opens a
+   link or runs a command. To avoid clicking through each one, click the
+   arrow next to **Allow once** and choose **Allow for this session**. That
+   only applies to this chat, and the assistant still asks you in the chat
+   before downloading, installing or starting the run.
+
 **One thing you may have to install yourself:** the experiment needs
 **Python 3.13.14 (64-bit)**. If you don't have it, the assistant tells you and
 gives you the download link. It does not install Python for you.
