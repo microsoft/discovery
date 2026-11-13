@@ -1,4 +1,21 @@
-# ⬇️ Download the Discovery app
+# Choose your Microsoft Discovery experience
+
+Use the documentation and installer for your app channel. **Stable** and
+**Preview** are different experiences; don't assume that their workflows,
+agent definitions, or tools are interchangeable.
+
+| Experience | Start here | Downloads |
+| --- | --- | --- |
+| **Stable app** | [Stable app documentation proposal](docs/stable-app/README.md) and [community scenarios](docs/stable-app/scenarios.md). Target build: **0.0.5**. | [Windows x64](https://aka.ms/discovery/download/stable/x64/current), [macOS](https://aka.ms/discovery/download/stable/osx/current), [RHEL](https://aka.ms/discovery/download/stable/rhel/current). |
+| **Preview app** | [Preview installation](docs/discovery-app/install.md) and [Preview quickstart](docs/discovery-app/quickstart.md). | The Preview download section below. |
+| **Microsoft Discovery services** | [Microsoft Learn](https://learn.microsoft.com/azure/microsoft-discovery/) for enterprise deployment and service workflows. | Follow service onboarding; don't use a desktop installer. |
+
+> **Release proposal:** The Stable documentation and download destinations are
+> being prepared for release. This isn't an availability announcement.
+> Check the downloaded package's channel and version before installation.
+> The Stable channel name doesn't establish enterprise support or an SLA.
+
+# ⬇️ Download the Preview app
 
 <table>
   <tr>
@@ -19,7 +36,7 @@
   </tr>
 </table>
 
-**Previous release** — this repo keeps only the current and the immediately preceding version available for download.
+**Previous release** — the Preview channel keeps only the current and the immediately preceding version available for download.
 
 | Version | Date | Platform | Installer |
 | --- | --- | --- | --- |
@@ -36,12 +53,15 @@ Welcome to the **Microsoft Discovery community** — the public home for the Dis
 
 > **Microsoft Discovery is an extensible platform that brings together agentic orchestration, advanced reasoning, a graph-based knowledge foundation, and high-performance computing for accelerating scientific research and R&D workflows.**
 
-Microsoft Discovery is offered in two complementary experiences: an enterprise-grade platform powered by Azure, and a local app with select features and capabilities. The two share the same core concepts and features.
+Microsoft Discovery includes services and desktop app experiences. The Stable app
+is intended to align with service capabilities, while the Preview app has its own
+workflows. Shared terminology doesn't establish identical setup, limits, or compatibility.
 
 | Experience | What it is | Where to start |
 | --- | --- | --- |
-| 🖥️ **Microsoft Discovery app** | A local, desktop client for individual evaluation. **Distributed from this repository.** | [`docs/discovery-app/`](docs/discovery-app/) — install, quickstart, feedback |
-| ☁️ **Microsoft Discovery** | The cloud-hosted, team-scale experience on Azure. | [Microsoft Learn](https://learn.microsoft.com/en-us/azure/microsoft-discovery/) — full reference |
+| **Stable app** | Desktop research experience with project sessions, agents, bookshelves, and tools. | [`docs/stable-app/`](docs/stable-app/) — release proposal, downloads, and community scenarios. |
+| **Preview app** | Existing Preview desktop experience with separate installation and workflow guidance. | [`docs/discovery-app/`](docs/discovery-app/) — Preview install, quickstart, feedback. |
+| **Microsoft Discovery services** | The cloud-hosted, team-scale experience on Azure. | [Microsoft Learn](https://learn.microsoft.com/en-us/azure/microsoft-discovery/) — service guidance. |
 
 In addition, this repository hosts the **public Discovery Catalog** — the canonical metadata catalog of AI research **agents** and **starter kits** contributed by Microsoft and ecosystem partners. Agent code, container images, and model weights live in each contributor's own infrastructure; the metadata and documentation that describe them live here, where they are PR-reviewed, schema-validated, and surfaced to every Discovery user.
 
@@ -49,7 +69,14 @@ In addition, this repository hosts the **public Discovery Catalog** — the cano
 
 ## 🧭 Core concepts
 
-The canonical conceptual reference for both the app and the services is [Microsoft Discovery on Microsoft Learn](https://learn.microsoft.com/en-us/azure/microsoft-discovery/). The starting points most users want:
+[Microsoft Learn](https://learn.microsoft.com/en-us/azure/microsoft-discovery/)
+owns the product documentation. The proposed Stable app track separates its
+concepts and procedures from services; this repository owns community examples
+and contribution guidance. Until that track is published, start with the
+[Stable app proposal](docs/stable-app/README.md).
+
+The following existing Learn articles primarily describe **services** and aren't
+substitutes for Stable app procedures:
 
 - [Microsoft Discovery & the Microsoft Discovery app](https://learn.microsoft.com/azure/microsoft-discovery/concept-discovery-and-discovery-app) - detailed comparison of Discovery experiences
 - [Discovery Agent concepts](https://learn.microsoft.com/azure/microsoft-discovery/concept-discovery-agent) — what an agent is and how it's invoked
@@ -57,7 +84,9 @@ The canonical conceptual reference for both the app and the services is [Microso
 - [Bookshelf and Knowledge Bases](https://learn.microsoft.com/azure/microsoft-discovery/concept-bookshelf-knowledge-bases) — how indexing and retrieval work
 - [Tasks and investigations](https://learn.microsoft.com/azure/microsoft-discovery/concept-tasks-investigations) — the task-graph model
 
-For an app-specific 15-minute hands-on tour, see [`docs/discovery-app/quickstart.md`](docs/discovery-app/quickstart.md).
+For the **Preview app** hands-on tour, see
+[`docs/discovery-app/quickstart.md`](docs/discovery-app/quickstart.md).
+For Stable examples, see [community scenarios](docs/stable-app/scenarios.md).
 
 ---
 
@@ -80,9 +109,13 @@ For an app-specific 15-minute hands-on tour, see [`docs/discovery-app/quickstart
 
 ### Install and use the Discovery app
 
-The Microsoft Discovery app is a **self-contained desktop application** — no SDK, no cloud setup, no IT ticket. Download the latest release installer and follow the [Quickstart guide](docs/discovery-app/quickstart.md) to get started.
+Choose [Stable app](docs/stable-app/README.md) or
+[Preview app](docs/discovery-app/README.md) before downloading.
+Don't follow the Preview quickstart for Stable. A local project doesn't imply
+offline model processing; review the data-handling guidance for your channel.
 
-**Have feedback?** See [`docs/discovery-app/feedback.md`](docs/discovery-app/feedback.md).
+**Have feedback?** Use the [Stable feedback guide](docs/stable-app/feedback.md)
+or [Preview feedback guide](docs/discovery-app/feedback.md), and identify the channel and version.
 
 ### Browse the catalog
 
@@ -179,7 +212,8 @@ discovery/
 │   ├── agent-registry.json                   ← Aggregated agent metadata from agents/*/
 │   └── starter-kit-registry.json             ← Aggregated starter-kit metadata from starter-kits/*/
 ├── docs/
-│   ├── discovery-app/                        ← End-user docs for the Discovery app
+│   ├── stable-app/                           ← Stable app entry point, community scenarios, and compatibility
+│   ├── discovery-app/                        ← Preview app docs; existing paths are preserved
 │   │   ├── install.md
 │   │   ├── quickstart.md
 │   │   └── feedback.md
