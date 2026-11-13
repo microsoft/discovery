@@ -1,43 +1,41 @@
 # QuickStart BioPharma — CDK Target Selection and Lead Discovery
 
-Reproduce a frozen-reference lead-generation workflow with the
-**[BioPharma v0.11 QuickStart guide](QuickStart-BioPharma%20LeadGen%20v0.11.md)**.
+Reproduce the final stages of a CDK drug-discovery experiment: Discovery
+recalculates decision scores, predicts solubility for 1,100 molecules, ranks
+100 candidate structures, and checks your results against the original run.
 
-**Guide link to give Discovery:**
+## How to run this QuickStart
 
-```text
-https://github.com/microsoft/discovery/blob/main/quickstarts/biopharma/cdk-frozen-reference/QuickStart-BioPharma%20LeadGen%20v0.11.md
-```
+You only need the Discovery app. You don't download, attach or unzip any files:
+the assistant reads the guide from its link and gets everything it needs.
 
-The steps below show exactly where to paste it.
+1. **Open Microsoft Discovery** (Stable). Sign in if it asks.
+2. **Create a project.** The app opens on **Projects**. Click **New project**.
+   In the folder window, open **Documents**, click **New folder**, name it
+   `QuickStart-BioPharma`, select it, and click **Open local project**.
+   (Discovery needs a project before you can chat. If a project is already
+   open, click its name at the top left to get back to **Projects**.)
+3. **Open a chat.** Click **New session** on the left.
+4. **Select the model.** In the chat box, open the model menu and choose
+   **GPT-6 Astra**.
+5. **Paste the guide link.** Right-click this link and choose **Copy link**:
+   **[BioPharma QuickStart guide](QuickStart-BioPharma%20LeadGen%20v0.11.md)**.
+   In the chat box, type `Run this QuickStart: `, paste the link
+   (**Ctrl+V**), and press **Enter**.
+6. **Answer the assistant's questions.** It asks before it downloads the files
+   (about 169 MB), before it installs anything, and before it starts the run.
+   Reply in the chat. When it finishes, it shows your results and whether they
+   match the original run.
+
+**One thing you may have to install yourself:** the experiment needs
+**Python 3.13.14 (64-bit)**. If you don't have it, the assistant tells you and
+gives you the download link. It does not install Python for you.
 
 **Availability:** All required files are publicly available. The 168 MB
 scientific snapshot is downloaded from the
 [`cdk-frozen-reference-v0.11` release](https://github.com/microsoft/discovery/releases/tag/cdk-frozen-reference-v0.11);
 the other five files are in this scenario's [`files`](files/) folder.
-
-## How to run this QuickStart
-
-You run this QuickStart by giving Discovery the link to its guide. The
-assistant reads the guide, downloads every required file into your project,
-and walks you through setup, the run and checking your results. You don't
-download, attach or unzip anything yourself.
-
-1. In **Microsoft Discovery Stable**, click **New project**, create and select a
-   new empty folder (for example `QuickStart-BioPharma` in Downloads), and click
-   **Open local project**. Click **New session**.
-2. In the chat's model menu, select **GPT-6 Astra**.
-3. Paste this message and send it:
-
-```text
-Run this QuickStart: https://github.com/microsoft/discovery/blob/main/quickstarts/biopharma/cdk-frozen-reference/QuickStart-BioPharma%20LeadGen%20v0.11.md
-Read the whole guide, download its required files into this project, and walk me through setup, the default frozen-reference run, and checking my results against the reference. Ask me before downloading, installing anything or starting the computation.
-```
-
-4. Answer the assistant's questions. It asks separately before downloading
-   files (about 169 MB), selecting and installing packages, and starting the
-   run. The run needs **Python 3.13.14, 64-bit**; if it is missing, the
-   assistant gives you the installer link. Python is not installed automatically.
+Button labels were checked against Discovery Stable 0.0.4 on Windows.
 
 ## What happens next
 

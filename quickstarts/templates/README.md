@@ -17,14 +17,15 @@ Download a copy and complete it for your tested scenario.
    guide; conflicts with older skill versions must be reconciled explicitly.
 5. Provide actual reference outputs and identify public distribution rights.
    Large approved files can be repository-release assets with exact checksums.
-6. **Make it runnable from one link (standard for every QuickStart).** At the
-   top of the guide, keep the **How this QuickStart runs** note from the
-   template and list a **direct download link, size and SHA-256 for every
-   required file**. At the top of the scenario README, put the guide's GitHub
-   link, then the steps: new project → model → paste one starting message that
-   includes the link. Add a short fallback for when the assistant can't open
-   links. See the [BioPharma README](../biopharma/cdk-frozen-reference/README.md)
-   for the pattern.
+6. **Make it runnable from one link (standard for every QuickStart).** A user
+   with only the Discovery app must be able to: create a project, click
+   **New session**, select the model, and send `Run this QuickStart:` plus the
+   guide link — nothing else. So the scenario README starts with those exact
+   steps and names the model. The guide starts with the template's **How this
+   QuickStart runs** note (default scenario, approvals, what to compare) and
+   lists a **direct download link, size and SHA-256 for every required file**.
+   Add a short fallback for when the assistant can't open links. See the
+   [BioPharma README](../biopharma/cdk-frozen-reference/README.md) for the pattern.
 
 Completed examples already available:
 [BioPharma v0.11](../biopharma/cdk-frozen-reference/QuickStart-BioPharma%20LeadGen%20v0.11.md) and

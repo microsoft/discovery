@@ -1,7 +1,7 @@
 # QuickStart Scenarios
 
-Explore guided workflows for Microsoft Discovery. Find available QuickStart
-guides, supporting files, and instructions for a fresh project below.
+Explore guided workflows for Microsoft Discovery. Pick a scenario, then run it
+by pasting its guide link into a Discovery chat.
 
 ## Choose a scenario
 
@@ -17,23 +17,25 @@ vertical to browse its scenarios, or select a QuickStart directly above.
 
 ## Start a run
 
-Every QuickStart runs the same way: **you give Discovery the link to the
-scenario's guide.** The assistant reads the guide, downloads the required
-files into your project, and walks you through setup, the run and checking
-your results. You don't download, attach or unzip anything yourself.
+Every QuickStart runs the same way: **select the model and paste the guide
+link into a Discovery chat.** You only need the Discovery app. The assistant
+reads the guide, downloads what it needs, and walks you through setup, the run
+and checking your results. You don't download, attach or unzip anything.
 
-1. Open the scenario README. Its **guide link** is at the top.
-2. In Microsoft Discovery, create a **New project** in a new empty folder and
-   click **New session**. Select the model the README names.
-3. Paste the README's starting message, which includes the guide link, and send it.
-4. Answer the assistant's questions. It asks separately before downloading
-   files, installing anything and starting the computation.
+1. Open **Microsoft Discovery**. On **Projects**, click **New project**, create
+   a new empty folder, and click **Open local project**. (Discovery needs a
+   project before you can chat.)
+2. Click **New session**.
+3. Select the model named in the scenario README.
+4. Type `Run this QuickStart: ` and paste the guide link from the scenario
+   README. Press **Enter**.
+5. Answer the assistant's questions. It asks before downloading files,
+   installing anything and starting the run.
 
-Each README also has a fallback for when the assistant can't open the link.
+Each scenario README gives the exact clicks, the model and the guide link.
 Available now: **BioPharma**. Silicon and Physics, Chemistry and Materials
 Science, and Bookshelf are being moved to this format; until then, follow the
-steps in their own READMEs. Do not start a scenario while required inputs are
-unavailable.
+steps in their own READMEs.
 
 ## Add another scenario
 
