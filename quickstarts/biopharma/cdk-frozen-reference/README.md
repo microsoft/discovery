@@ -40,8 +40,11 @@ the assistant opens the guide from its link and gets everything it needs.
 
 1. **Open Microsoft Discovery.** Sign in with your GitHub account if it asks.
 2. **Create a project.** The app opens on **Projects**. Click **New project**.
-   In the folder window, open **Documents**, click **New folder**, name it
-   `QuickStart-CDK-Lead-Discovery`, select it, and click **Open local project**.
+   In the folder window, click **Downloads** on the left, then click
+   **New folder** at the top left. Name it `QuickStart-CDK-Lead-Discovery`,
+   click it once to select it, and click **Open local project**.
+   (Avoid OneDrive-synced folders such as Documents or Desktop; syncing can
+   interfere with the run.)
    (Discovery needs a project before you can chat. If a project is already
    open, click its name at the top left to get back to **Projects**.)
 3. **Open a chat.** Click **New session** on the left.
