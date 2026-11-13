@@ -5,6 +5,7 @@
 1. Install the [Discovery app](../../../README.md) and sign in.
 2. Create a project in a new `Downloads\QuickStart-CDK-Lead-Discovery` folder and click **New session**.
 3. Select **GPT-6 Astra**.
+   *(Prefer to download the files yourself? Do [Route B](#route-b-download-the-files-yourself) here.)*
 4. Send the [Step 1 prompt](#step-1-set-up-and-confirm-the-environment): set up and confirm the environment.
 5. Send the [Step 2 prompt](#step-2-run-the-experiment): run the experiment.
 6. Send the [Step 3 prompt](#step-3-verify-your-results-against-the-validated-reference): **your results**, compared with the validated reference.
@@ -101,13 +102,39 @@ sending the next one, and answer the assistant's questions along the way.
 
 There are two ways to get the files, and each step has a prompt for both:
 
-- **The assistant downloads them (recommended):** use the **A** prompts.
-- **You download them yourself:** first download the
-  [guide](QuickStart-BioPharma%20LeadGen%20v0.11.md) and the six files under
-  [Supporting files](#supporting-files) into your
-  `QuickStart-CDK-Lead-Discovery` folder. On a GitHub file page, click
-  **Download raw file**; don't save the web page. Keep the original filenames
-  and **don't unzip anything**. Then use the **B** prompts.
+- **A. The assistant downloads them (recommended):** skip straight to
+  [Step 1](#step-1-set-up-and-confirm-the-environment) and use the **A** prompts.
+- **B. You download them yourself:** follow the steps below, then use the
+  **B** prompts.
+
+### Route B: download the files yourself
+
+1. **Download these seven files.** Right-click each link, choose
+   **Save link as**, and save it into your
+   `Downloads\QuickStart-CDK-Lead-Discovery` project folder. Keep each
+   filename exactly as it is.
+
+   | # | File | What it is |
+   | --- | --- | --- |
+   | 1 | [QuickStart-BioPharma LeadGen v0.11.md](https://raw.githubusercontent.com/microsoft/discovery/main/quickstarts/biopharma/cdk-frozen-reference/QuickStart-BioPharma%20LeadGen%20v0.11.md) | The guide (you'll attach this in Step 1) |
+   | 2 | [cdk_non_md_deliverables.zip](https://github.com/microsoft/discovery/releases/download/cdk-frozen-reference-v0.11/cdk_non_md_deliverables.zip) | The original campaign data and reference results (168 MB) |
+   | 3 | [cdk_non_md_deliverables.sha256](https://raw.githubusercontent.com/microsoft/discovery/main/quickstarts/biopharma/cdk-frozen-reference/files/cdk_non_md_deliverables.sha256) | Checksum for file 2 |
+   | 4 | [cdk_operational_bundle_v1.zip](https://raw.githubusercontent.com/microsoft/discovery/main/quickstarts/biopharma/cdk-frozen-reference/files/cdk_operational_bundle_v1.zip) | The run kit (50 KB) |
+   | 5 | [cdk_operational_bundle_v1.sha256](https://raw.githubusercontent.com/microsoft/discovery/main/quickstarts/biopharma/cdk-frozen-reference/files/cdk_operational_bundle_v1.sha256) | Checksum for file 4 |
+   | 6 | [cdk_operational_bundle_v1_manifest.csv](https://raw.githubusercontent.com/microsoft/discovery/main/quickstarts/biopharma/cdk-frozen-reference/files/cdk_operational_bundle_v1_manifest.csv) | List of what's inside file 4 |
+   | 7 | [cdk_operational_bundle_v1_validation.json](https://raw.githubusercontent.com/microsoft/discovery/main/quickstarts/biopharma/cdk-frozen-reference/files/cdk_operational_bundle_v1_validation.json) | Verification record for file 4 |
+
+2. **Check the folder.** Open `Downloads\QuickStart-CDK-Lead-Discovery` in File
+   Explorer. You should see exactly these seven files. If Windows added
+   `(1)` or `.txt` to a name, rename it back. **Don't unzip the ZIP files**;
+   the assistant handles that.
+3. **Open the project and chat** as described in
+   [Before you start](#before-you-start-open-a-project-and-a-chat), selecting
+   this same folder.
+4. **Attach the guide.** In the chat box, click the attachment button, select
+   `QuickStart-BioPharma LeadGen v0.11.md`, and click **Attach files**. Check
+   that the filename appears above the chat box.
+5. **Send the Step 1 B prompt below**, then continue with Steps 2 and 3.
 
 ### Step 1: Set up and confirm the environment
 
@@ -118,9 +145,8 @@ Set up this QuickStart: https://github.com/microsoft/discovery/blob/main/quickst
 Read the whole guide and tell me in plain language what this experiment does. Then prepare this project for the default frozen-reference run: download the six required files into this project, check each file's size and checksum, check the model, Python 3.13.14, disk space and local access, show me the 14 required Python packages, and install what's needed. Ask me before downloading and before installing anything. Do not start the computation. Finish by telling me whether the environment is ready and what, if anything, still needs my action.
 ```
 
-**B. You downloaded the files yourself.** Attach the guide first: click the
-attachment button in the chat box, select
-`QuickStart-BioPharma LeadGen v0.11.md`, and click **Attach files**. Then send:
+**B. You downloaded the files yourself** (after [Route B](#route-b-download-the-files-yourself)
+steps 1–4, with the guide attached), send:
 
 ```text
 Set up this QuickStart from the attached guide, using the six required files already in this project. Read the whole guide and tell me in plain language what this experiment does. Then prepare this project for the default frozen-reference run: check each file's size and checksum, check the model, Python 3.13.14, disk space and local access, show me the 14 required Python packages, and install what's needed. Ask me before installing anything. Do not start the computation. Finish by telling me whether the environment is ready and what, if anything, still needs my action.
