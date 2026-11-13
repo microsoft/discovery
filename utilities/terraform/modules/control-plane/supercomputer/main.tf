@@ -1,7 +1,8 @@
 locals {
   properties = merge(
     {
-      subnetId = var.system_subnet_id
+      subnetId     = var.system_subnet_id
+      outboundType = var.outbound_type
       identities = {
         clusterIdentity = {
           id = var.cluster_identity_id
@@ -18,7 +19,6 @@ locals {
     var.disk_encryption_set_id == null ? {} : { diskEncryptionSetId = var.disk_encryption_set_id },
     var.log_analytics_cluster_id == null ? {} : { logAnalyticsClusterId = var.log_analytics_cluster_id },
     var.management_subnet_id == null ? {} : { managementSubnetId = var.management_subnet_id },
-    var.outbound_type == null ? {} : { outboundType = var.outbound_type },
     var.system_sku == null ? {} : { systemSku = var.system_sku },
   )
 }
@@ -35,6 +35,11 @@ resource "azapi_resource" "main" {
   }
 
   lifecycle {
+    precondition {
+      condition     = var.outbound_type != "UserDefinedRouting" || var.management_subnet_id != null
+      error_message = "UserDefinedRouting requires management_subnet_id for a separately delegated AKS management subnet."
+    }
+
     precondition {
       condition = var.customer_managed_keys != "Enabled" || (
         var.disk_encryption_set_id != null &&

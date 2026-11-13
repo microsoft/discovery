@@ -21,8 +21,13 @@ output "location" {
 }
 
 output "supercomputer_infrastructure_location" {
-  description = "Region for the Supercomputer managed resource group (GPU)."
-  value       = var.supercomputer_infrastructure_location
+  description = "Compatibility alias for the shared infrastructure region."
+  value       = var.infrastructure_location
+}
+
+output "infrastructure_location" {
+  description = "Shared region for the VNet and supporting infrastructure."
+  value       = var.infrastructure_location
 }
 
 output "name_suffix" {
@@ -60,6 +65,11 @@ output "agent_subnet_id" {
 output "search_subnet_id" {
   description = "Search subnet ID."
   value       = azurerm_subnet.search.id
+}
+
+output "management_subnet_id" {
+  description = "Delegated AKS API-server management subnet ID."
+  value       = azurerm_subnet.management.id
 }
 
 # ---- identities -------------------------------------------------------------
@@ -114,11 +124,11 @@ output "storage_container_id" {
 # ---- networks ---------------------------------------------------------------
 
 output "workspace_vnet_id" {
-  description = "Resource ID of the Workspace virtual network."
+  description = "Resource ID of the shared Discovery virtual network."
   value       = azurerm_virtual_network.workspace.id
 }
 
 output "supercomputer_vnet_id" {
-  description = "Resource ID of the Supercomputer virtual network."
-  value       = azurerm_virtual_network.supercomputer.id
+  description = "Compatibility alias for the shared Discovery virtual network."
+  value       = azurerm_virtual_network.workspace.id
 }

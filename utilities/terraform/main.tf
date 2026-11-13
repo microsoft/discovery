@@ -15,21 +15,23 @@
 module "platform" {
   source = "./modules/platform"
 
-  resource_group_name                   = var.resource_group_name
-  location                              = var.location
-  supercomputer_infrastructure_location = local.managed_resource_group_locations.supercomputer
-  name_suffix                           = local.suffix
-  common_tags                           = var.common_tags
-  blob_container_name                   = var.blob_container_name
+  resource_group_name     = var.resource_group_name
+  location                = var.location
+  infrastructure_location = local.managed_resource_group_location
+  name_suffix             = local.suffix
+  common_tags             = var.common_tags
+  blob_container_name     = var.blob_container_name
 
   vnet_address_prefix                  = var.vnet_address_prefix
-  supercomputer_vnet_address_prefix    = var.supercomputer_vnet_address_prefix
   workspace_subnet_prefix              = var.workspace_subnet_prefix
   private_endpoint_subnet_prefix       = var.private_endpoint_subnet_prefix
   agent_subnet_prefix                  = var.agent_subnet_prefix
   search_subnet_prefix                 = var.search_subnet_prefix
   aks_subnet_prefix                    = var.aks_subnet_prefix
   supercomputer_nodepool_subnet_prefix = var.supercomputer_nodepool_subnet_prefix
+  management_subnet_prefix             = var.management_subnet_prefix
+  supercomputer_outbound_type          = var.supercomputer_outbound_type
+  udr_next_hop_ip                      = var.supercomputer_udr_next_hop_ip
 }
 
 module "supercomputer" {
@@ -45,6 +47,8 @@ module "supercomputer" {
   cluster_identity_id   = module.platform.cluster_identity_id
   kubelet_identity_id   = module.platform.kubelet_identity_id
   workload_identity_ids = [module.platform.workload_identity_id]
+  outbound_type         = var.supercomputer_outbound_type
+  management_subnet_id  = var.supercomputer_outbound_type == "UserDefinedRouting" ? module.platform.management_subnet_id : null
 
   node_pools = {
     (var.node_pool_name) = {
@@ -60,14 +64,14 @@ module "supercomputer" {
   tags = merge(
     var.common_tags,
     var.supercomputer_tags,
-    local.managed_resource_group_tags.supercomputer,
+    local.managed_resource_group_tags,
   )
 }
 
 module "workspace" {
   source = "./modules/control-plane/workspace"
 
-  depends_on = [module.platform]
+  depends_on = [module.platform, module.supercomputer]
 
   name              = local.workspace_name
   location          = var.location
@@ -104,7 +108,7 @@ module "workspace" {
   tags = merge(
     var.common_tags,
     var.workspace_tags,
-    local.managed_resource_group_tags.workspace,
+    local.managed_resource_group_tags,
   )
 }
 
@@ -137,6 +141,6 @@ module "bookshelf" {
   tags = merge(
     var.common_tags,
     var.bookshelf_tags,
-    local.managed_resource_group_tags.bookshelf,
+    local.managed_resource_group_tags,
   )
 }

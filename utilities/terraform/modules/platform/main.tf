@@ -22,10 +22,9 @@ data "azurerm_client_config" "current" {}
 locals {
   suffix = coalesce(var.name_suffix, random_string.suffix.result)
 
-  vnet_name               = "vnet-${local.suffix}"
-  supercomputer_vnet_name = "vnet-sc-${local.suffix}"
-  storage_account_name    = "stg${local.suffix}"
-  storage_container_name  = "stc-${local.suffix}"
+  vnet_name              = "vnet-${local.suffix}"
+  storage_account_name   = "stg${local.suffix}"
+  storage_container_name = "stc-${local.suffix}"
 
   subscription_id_scope = "/subscriptions/${data.azurerm_client_config.current.subscription_id}"
 
@@ -41,48 +40,26 @@ locals {
 # -----------------------------------------------------------------------------
 resource "azurerm_virtual_network" "workspace" {
   name                = local.vnet_name
-  location            = var.location
+  location            = var.infrastructure_location
   resource_group_name = data.azurerm_resource_group.rg.name
   address_space       = [var.vnet_address_prefix]
   tags                = var.common_tags
 }
 
-resource "azurerm_virtual_network" "supercomputer" {
-  name                = local.supercomputer_vnet_name
-  location            = var.supercomputer_infrastructure_location
-  resource_group_name = data.azurerm_resource_group.rg.name
-  address_space       = [var.supercomputer_vnet_address_prefix]
-  tags                = var.common_tags
-}
-
-resource "azurerm_virtual_network_peering" "workspace_to_supercomputer" {
-  name                      = "workspace-to-supercomputer"
-  resource_group_name       = data.azurerm_resource_group.rg.name
-  virtual_network_name      = azurerm_virtual_network.workspace.name
-  remote_virtual_network_id = azurerm_virtual_network.supercomputer.id
-}
-
-resource "azurerm_virtual_network_peering" "supercomputer_to_workspace" {
-  name                      = "supercomputer-to-workspace"
-  resource_group_name       = data.azurerm_resource_group.rg.name
-  virtual_network_name      = azurerm_virtual_network.supercomputer.name
-  remote_virtual_network_id = azurerm_virtual_network.workspace.id
-}
-
 resource "azurerm_subnet" "aks" {
   name                            = "aksSubnet"
   resource_group_name             = data.azurerm_resource_group.rg.name
-  virtual_network_name            = azurerm_virtual_network.supercomputer.name
+  virtual_network_name            = azurerm_virtual_network.workspace.name
   address_prefixes                = [var.aks_subnet_prefix]
-  default_outbound_access_enabled = false
+  default_outbound_access_enabled = true
 }
 
 resource "azurerm_subnet" "supercomputer_nodepool" {
   name                            = "supercomputerNodepoolSubnet"
   resource_group_name             = data.azurerm_resource_group.rg.name
-  virtual_network_name            = azurerm_virtual_network.supercomputer.name
+  virtual_network_name            = azurerm_virtual_network.workspace.name
   address_prefixes                = [var.supercomputer_nodepool_subnet_prefix]
-  default_outbound_access_enabled = false
+  default_outbound_access_enabled = true
 }
 
 resource "azurerm_subnet" "workspace" {
@@ -90,7 +67,7 @@ resource "azurerm_subnet" "workspace" {
   resource_group_name             = data.azurerm_resource_group.rg.name
   virtual_network_name            = azurerm_virtual_network.workspace.name
   address_prefixes                = [var.workspace_subnet_prefix]
-  default_outbound_access_enabled = false
+  default_outbound_access_enabled = true
 
   delegation {
     name = "Microsoft.App.environments"
@@ -106,7 +83,7 @@ resource "azurerm_subnet" "private_endpoint" {
   resource_group_name             = data.azurerm_resource_group.rg.name
   virtual_network_name            = azurerm_virtual_network.workspace.name
   address_prefixes                = [var.private_endpoint_subnet_prefix]
-  default_outbound_access_enabled = false
+  default_outbound_access_enabled = true
 }
 
 resource "azurerm_subnet" "agent" {
@@ -114,7 +91,7 @@ resource "azurerm_subnet" "agent" {
   resource_group_name             = data.azurerm_resource_group.rg.name
   virtual_network_name            = azurerm_virtual_network.workspace.name
   address_prefixes                = [var.agent_subnet_prefix]
-  default_outbound_access_enabled = false
+  default_outbound_access_enabled = true
 
   delegation {
     name = "Microsoft.App.environments"
@@ -130,7 +107,7 @@ resource "azurerm_subnet" "search" {
   resource_group_name             = data.azurerm_resource_group.rg.name
   virtual_network_name            = azurerm_virtual_network.workspace.name
   address_prefixes                = [var.search_subnet_prefix]
-  default_outbound_access_enabled = false
+  default_outbound_access_enabled = true
 
   delegation {
     name = "Microsoft.App.environments"
@@ -141,30 +118,78 @@ resource "azurerm_subnet" "search" {
   }
 }
 
+resource "azurerm_subnet" "management" {
+  name                            = "aksManagementSubnet"
+  resource_group_name             = data.azurerm_resource_group.rg.name
+  virtual_network_name            = azurerm_virtual_network.workspace.name
+  address_prefixes                = [var.management_subnet_prefix]
+  default_outbound_access_enabled = true
+
+  delegation {
+    name = "Microsoft.ContainerService.managedClusters"
+    service_delegation {
+      name    = "Microsoft.ContainerService/managedClusters"
+      actions = ["Microsoft.Network/virtualNetworks/subnets/join/action"]
+    }
+  }
+}
+
+resource "azurerm_route_table" "supercomputer" {
+  count = var.supercomputer_outbound_type == "UserDefinedRouting" ? 1 : 0
+
+  name                = "rt-sc-${local.suffix}"
+  location            = var.infrastructure_location
+  resource_group_name = data.azurerm_resource_group.rg.name
+  tags                = var.common_tags
+}
+
+resource "azurerm_route" "supercomputer_egress" {
+  count = var.supercomputer_outbound_type == "UserDefinedRouting" ? 1 : 0
+
+  name                   = "default-to-nva"
+  resource_group_name    = data.azurerm_resource_group.rg.name
+  route_table_name       = azurerm_route_table.supercomputer[0].name
+  address_prefix         = "0.0.0.0/0"
+  next_hop_type          = "VirtualAppliance"
+  next_hop_in_ip_address = var.udr_next_hop_ip
+}
+
+resource "azurerm_subnet_route_table_association" "supercomputer" {
+  for_each = var.supercomputer_outbound_type == "UserDefinedRouting" ? {
+    aks      = azurerm_subnet.aks.id
+    nodepool = azurerm_subnet.supercomputer_nodepool.id
+  } : {}
+
+  subnet_id      = each.value
+  route_table_id = azurerm_route_table.supercomputer[0].id
+
+  depends_on = [azurerm_route.supercomputer_egress]
+}
+
 # -----------------------------------------------------------------------------
 # Identities (four-identity least-privilege split)
 # -----------------------------------------------------------------------------
 resource "azurerm_user_assigned_identity" "workspace" {
   name                = "uami-ws-${local.suffix}"
-  location            = var.location
+  location            = var.infrastructure_location
   resource_group_name = data.azurerm_resource_group.rg.name
 }
 
 resource "azurerm_user_assigned_identity" "cluster" {
   name                = "uami-cluster-${local.suffix}"
-  location            = var.location
+  location            = var.infrastructure_location
   resource_group_name = data.azurerm_resource_group.rg.name
 }
 
 resource "azurerm_user_assigned_identity" "kubelet" {
   name                = "uami-kubelet-${local.suffix}"
-  location            = var.location
+  location            = var.infrastructure_location
   resource_group_name = data.azurerm_resource_group.rg.name
 }
 
 resource "azurerm_user_assigned_identity" "workload" {
   name                = "uami-workload-${local.suffix}"
-  location            = var.location
+  location            = var.infrastructure_location
   resource_group_name = data.azurerm_resource_group.rg.name
 }
 
@@ -173,12 +198,12 @@ resource "azurerm_user_assigned_identity" "workload" {
 # -----------------------------------------------------------------------------
 resource "azurerm_storage_account" "outputs" {
   name                = local.storage_account_name
-  location            = var.location
+  location            = var.infrastructure_location
   resource_group_name = data.azurerm_resource_group.rg.name
 
   account_kind             = "StorageV2"
   account_tier             = "Standard"
-  account_replication_type = "LRS"
+  account_replication_type = "GRS"
   access_tier              = "Hot"
 
   allow_nested_items_to_be_public = false
@@ -190,6 +215,14 @@ resource "azurerm_storage_account" "outputs" {
   tags = var.common_tags
 
   blob_properties {
+    delete_retention_policy {
+      days = 7
+    }
+
+    container_delete_retention_policy {
+      days = 7
+    }
+
     cors_rule {
       allowed_origins = [
         "https://studio.discovery.microsoft.com",
@@ -214,14 +247,6 @@ resource "azurerm_private_dns_zone_virtual_network_link" "blob" {
   resource_group_name   = data.azurerm_resource_group.rg.name
   private_dns_zone_name = azurerm_private_dns_zone.blob.name
   virtual_network_id    = azurerm_virtual_network.workspace.id
-  registration_enabled  = false
-}
-
-resource "azurerm_private_dns_zone_virtual_network_link" "blob_supercomputer" {
-  name                  = "link-blob-${local.supercomputer_vnet_name}"
-  resource_group_name   = data.azurerm_resource_group.rg.name
-  private_dns_zone_name = azurerm_private_dns_zone.blob.name
-  virtual_network_id    = azurerm_virtual_network.supercomputer.id
   registration_enabled  = false
 }
 
@@ -257,7 +282,7 @@ resource "azapi_resource" "outputs_container" {
 }
 
 # -----------------------------------------------------------------------------
-# Role assignments (eight, least-privilege)
+# Role assignments (eight, plus management-subnet access for UDR)
 # -----------------------------------------------------------------------------
 resource "azurerm_role_assignment" "workspace_discovery_platform_contributor" {
   scope              = data.azurerm_resource_group.rg.id
@@ -293,6 +318,15 @@ resource "azurerm_role_assignment" "cluster_nodepool_network_contributor" {
   principal_type     = "ServicePrincipal"
 
   depends_on = [azurerm_user_assigned_identity.cluster]
+}
+
+resource "azurerm_role_assignment" "cluster_management_network_contributor" {
+  count = var.supercomputer_outbound_type == "UserDefinedRouting" ? 1 : 0
+
+  scope              = azurerm_subnet.management.id
+  role_definition_id = "${local.subscription_id_scope}/providers/Microsoft.Authorization/roleDefinitions/${local.role_id_network_contributor}"
+  principal_id       = azurerm_user_assigned_identity.cluster.principal_id
+  principal_type     = "ServicePrincipal"
 }
 
 resource "azurerm_role_assignment" "kubelet_managed_identity_operator" {

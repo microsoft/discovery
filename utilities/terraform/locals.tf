@@ -15,24 +15,10 @@ resource "random_string" "suffix" {
 locals {
   suffix = coalesce(var.name_suffix, random_string.suffix.result)
 
-  # Region for each Discovery resource's managed infrastructure (managed
-  # resource group). A resource-specific override wins; otherwise fall back to
-  # the shared (deprecated) override, then the control-plane location.
-  managed_resource_group_locations = {
-    for resource, override in {
-      supercomputer = var.supercomputer_managed_resource_group_location
-      workspace     = var.workspace_managed_resource_group_location
-      bookshelf     = var.bookshelf_managed_resource_group_location
-    } :
-    resource => coalesce(override, var.managed_resource_group_location, var.location)
-  }
+  managed_resource_group_location = coalesce(var.managed_resource_group_location, var.location)
 
-  # `discovery.overridemrgregion` tag per resource, derived from the resolved
-  # MRG location above. Merged onto each managed-resource-group-producing
-  # Discovery resource.
   managed_resource_group_tags = {
-    for resource, location in local.managed_resource_group_locations :
-    resource => { "discovery.overridemrgregion" = location }
+    "discovery.overridemrgregion" = local.managed_resource_group_location
   }
 
   supercomputer_name = coalesce(var.supercomputer_name, "sc-${local.suffix}")

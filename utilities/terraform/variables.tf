@@ -26,44 +26,13 @@ variable "location" {
 }
 
 variable "managed_resource_group_location" {
-  description = "Deprecated fallback region for Discovery-managed resource groups; use the resource-specific location variables"
-  type        = string
-  default     = null
-}
-
-variable "supercomputer_managed_resource_group_location" {
-  description = "Region for the Supercomputer managed resource group and its compute infrastructure"
-  type        = string
-  default     = null
-}
-
-variable "workspace_managed_resource_group_location" {
-  description = "Region for the Workspace managed resource group"
+  description = "Shared region for the VNet, platform resources and infrastructure inside every Discovery-managed resource group; null follows location"
   type        = string
   default     = null
 
   validation {
-    condition = !var.network_isolation || coalesce(
-      var.workspace_managed_resource_group_location,
-      var.managed_resource_group_location,
-      var.location,
-    ) == var.location
-    error_message = "With network_isolation enabled, the resolved Workspace managed-resource-group region must equal location, where its subnets are created. Set workspace_managed_resource_group_location to location or remove the conflicting shared override."
-  }
-}
-
-variable "bookshelf_managed_resource_group_location" {
-  description = "Region for the Bookshelf managed resource group"
-  type        = string
-  default     = null
-
-  validation {
-    condition = !var.enable_bookshelf || coalesce(
-      var.bookshelf_managed_resource_group_location,
-      var.managed_resource_group_location,
-      var.location,
-    ) == var.location
-    error_message = "With enable_bookshelf enabled, the resolved Bookshelf managed-resource-group region must equal location, where its private endpoint and search subnets are created. Set bookshelf_managed_resource_group_location to location or remove the conflicting shared override."
+    condition     = var.managed_resource_group_location == null ? true : can(regex("^[a-z0-9]+$", var.managed_resource_group_location))
+    error_message = "managed_resource_group_location must be null or a programmatic Azure region name such as uksouth."
   }
 }
 
@@ -146,13 +115,13 @@ variable "supercomputer_name" {
 }
 
 variable "node_pool_name" {
-  description = "Node pool name (3-12 lowercase alphanumeric, starts with a letter)."
+  description = "Discovery node pool name (3-12 lowercase alphanumeric characters, starting with a letter)."
   type        = string
   default     = "nodepool1"
 
   validation {
     condition     = can(regex("^[a-z][a-z0-9]{2,11}$", var.node_pool_name))
-    error_message = "node_pool_name must be 3-12 lowercase alphanumeric characters starting with a letter."
+    error_message = "node_pool_name must contain 3 to 12 lowercase alphanumeric characters, starting with a letter."
   }
 }
 
@@ -194,27 +163,21 @@ variable "blob_container_name" {
 # ---- networking -------------------------------------------------------------
 
 variable "vnet_address_prefix" {
-  description = "Address space for the Workspace VNet"
+  description = "Address space for the single VNet shared by Discovery resources"
   type        = string
   default     = "10.0.0.0/16"
-}
-
-variable "supercomputer_vnet_address_prefix" {
-  description = "Address space for the Supercomputer VNet"
-  type        = string
-  default     = "10.1.0.0/16"
 }
 
 variable "supercomputer_nodepool_subnet_prefix" {
   description = "Address prefix for the Supercomputer node pool subnet."
   type        = string
-  default     = "10.1.1.0/24"
+  default     = "10.0.1.0/24"
 }
 
 variable "aks_subnet_prefix" {
   description = "Address prefix for the AKS system subnet used by the Supercomputer."
   type        = string
-  default     = "10.1.2.0/24"
+  default     = "10.0.2.0/24"
 }
 
 variable "workspace_subnet_prefix" {
@@ -241,6 +204,43 @@ variable "search_subnet_prefix" {
   default     = "10.0.6.0/24"
 }
 
+variable "management_subnet_prefix" {
+  description = "Separate AKS management subnet prefix; IPv4 /28 or larger, without overlapping the other subnets"
+  type        = string
+  default     = "10.0.7.0/28"
+
+  validation {
+    condition     = can(cidrnetmask(var.management_subnet_prefix)) ? tonumber(split("/", var.management_subnet_prefix)[1]) <= 28 : false
+    error_message = "management_subnet_prefix must be an IPv4 CIDR with at least 16 addresses (/28 or larger)."
+  }
+}
+
+variable "supercomputer_outbound_type" {
+  description = "Supercomputer egress mode; UserDefinedRouting requires a reachable existing firewall/NVA"
+  type        = string
+  default     = "LoadBalancer"
+  nullable    = false
+
+  validation {
+    condition     = contains(["LoadBalancer", "UserDefinedRouting"], var.supercomputer_outbound_type)
+    error_message = "supercomputer_outbound_type must be LoadBalancer or UserDefinedRouting."
+  }
+}
+
+variable "supercomputer_udr_next_hop_ip" {
+  description = "Private IPv4 address of an existing reachable firewall/NVA for UserDefinedRouting; omit for LoadBalancer. A NAT Gateway public IP is not a valid NVA next hop."
+  type        = string
+  default     = null
+
+  validation {
+    condition = var.supercomputer_udr_next_hop_ip == null ? var.supercomputer_outbound_type == "LoadBalancer" : (
+      var.supercomputer_outbound_type == "UserDefinedRouting" &&
+      can(cidrnetmask("${var.supercomputer_udr_next_hop_ip}/32"))
+    )
+    error_message = "UserDefinedRouting requires supercomputer_udr_next_hop_ip to be an IPv4 address; LoadBalancer requires it to be null."
+  }
+}
+
 # ---- workspace features -----------------------------------------------------
 
 variable "enable_bookshelf" {
@@ -261,7 +261,7 @@ variable "bookshelf_public_network_access" {
 }
 
 variable "network_isolation" {
-  description = "Workspace network isolation mode, surfaced via the NetworkIsolation tag. True supplies all three workspace subnet IDs; false omits them. The platform VNets, subnets, and private storage endpoint are created in either mode"
+  description = "Workspace network isolation mode, surfaced via the NetworkIsolation tag. True supplies all three workspace subnet IDs; false omits them. The shared VNet, subnets and private storage endpoint are created in either mode"
   type        = bool
   default     = true
 }
@@ -281,28 +281,13 @@ variable "enable_extensions" {
 # ---- node pool sizing -------------------------------------------------------
 
 variable "node_pool_vm_size" {
-  description = "VM SKU for the node pool."
+  description = "Workload node-pool VM SKU; verify service support, regional availability and quota before deployment"
   type        = string
   default     = "Standard_NC4as_T4_v3"
 
   validation {
-    condition = contains([
-      "Standard_NC4as_T4_v3",
-      "Standard_NC8as_T4_v3",
-      "Standard_NC16as_T4_v3",
-      "Standard_NC64as_T4_v3",
-      "Standard_NC24ads_A100_v4",
-      "Standard_NC48ads_A100_v4",
-      "Standard_NC96ads_A100_v4",
-      "Standard_ND40rs_v2",
-      "Standard_NV6ads_A10_v5",
-      "Standard_NV12ads_A10_v5",
-      "Standard_NV24ads_A10_v5",
-      "Standard_NV36ads_A10_v5",
-      "Standard_NV36adms_A10_v5",
-      "Standard_NV72ads_A10_v5",
-    ], var.node_pool_vm_size)
-    error_message = "node_pool_vm_size must be a VM SKU supported by Discovery node pools."
+    condition     = var.node_pool_vm_size == null ? false : length(trimspace(var.node_pool_vm_size)) > 0
+    error_message = "node_pool_vm_size must be a non-empty VM SKU."
   }
 }
 
@@ -312,8 +297,8 @@ variable "node_pool_max_node_count" {
   default     = 3
 
   validation {
-    condition     = var.node_pool_max_node_count >= 1
-    error_message = "node_pool_max_node_count must be at least 1."
+    condition     = var.node_pool_max_node_count == null ? false : var.node_pool_max_node_count >= 1 && floor(var.node_pool_max_node_count) == var.node_pool_max_node_count
+    error_message = "node_pool_max_node_count must be an integer of at least 1."
   }
 }
 
@@ -323,8 +308,12 @@ variable "node_pool_min_node_count" {
   default     = 0
 
   validation {
-    condition     = var.node_pool_min_node_count >= 0
-    error_message = "node_pool_min_node_count must be >= 0."
+    condition = var.node_pool_min_node_count == null ? false : var.node_pool_max_node_count == null ? false : (
+      var.node_pool_min_node_count >= 0 &&
+      floor(var.node_pool_min_node_count) == var.node_pool_min_node_count &&
+      var.node_pool_min_node_count <= var.node_pool_max_node_count
+    )
+    error_message = "node_pool_min_node_count must be a non-negative integer no larger than node_pool_max_node_count."
   }
 }
 

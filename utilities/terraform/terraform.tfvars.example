@@ -4,17 +4,23 @@
 resource_group_name = "rg-discovery-terraform"
 location            = "uksouth"
 
-# Optional human-user access; prefer an Entra group object ID in this tenant.
+# Optional Terraform-managed Workspace access; prefer an Entra group object ID.
 # workspace_contributor_principal_ids = ["00000000-0000-0000-0000-000000000001"]
 
-# Managed infrastructure defaults to `location`; no overrides are needed for
-# same-region deployment. The Supercomputer VNet follows its override.
-# Workspace must resolve to `location` when network_isolation is true.
-# An enabled Bookshelf must resolve to `location` because it uses platform subnets.
-# These restrictions also apply to the deprecated shared override.
-# supercomputer_managed_resource_group_location = null
-# workspace_managed_resource_group_location     = null
-# bookshelf_managed_resource_group_location     = null
+# All platform and managed infrastructure shares one region, defaulting to
+# `location`. Discovery control-plane resources remain in `location`.
+# managed_resource_group_location = null
+
+# Default: explicit LoadBalancer mode; default outbound enabled on all subnets.
+# No additional NAT Gateway or static egress IP is created.
+# supercomputer_outbound_type = "LoadBalancer"
+# management_subnet_prefix    = "10.0.7.0/28"
+
+# UDR requires an existing reachable firewall/NVA, not a NAT Gateway public IP.
+# Configure connectivity, forwarding, SNAT, DNS and required service allowlists
+# before provisioning Discovery. No firewall or hub peering is created here.
+# supercomputer_outbound_type   = "UserDefinedRouting"
+# supercomputer_udr_next_hop_ip = "10.0.254.4"
 
 # Tags can be applied globally and overridden per Discovery resource.
 # common_tags = {
@@ -39,7 +45,7 @@ location            = "uksouth"
 
 # Workspace features (all default to true).
 # network_isolation defaults to true. False omits the three workspace subnet
-# IDs, but does not remove the platform networks or private storage endpoint.
+# IDs, but does not remove the shared VNet or private storage endpoint.
 # network_isolation       = true
 # enable_ghcp_ai_features = true
 # enable_extensions       = true
@@ -49,7 +55,8 @@ location            = "uksouth"
 # enable_bookshelf                 = false
 # bookshelf_public_network_access = "Disabled"
 
-# Node pool sizing (defaults are fine for a smoke test).
+# Select a workload SKU and counts after checking service support and quota.
+# The GPU default is not a cost recommendation; CPU SKUs can also be supplied.
 # node_pool_vm_size            = "Standard_NC4as_T4_v3"
 # node_pool_min_node_count     = 0
 # node_pool_max_node_count     = 3

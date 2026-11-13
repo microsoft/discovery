@@ -98,13 +98,14 @@ Do not delete a working assignment just to recreate it through Terraform.
 
 One resource group containing:
 
-* Two peered VNets (workspace + supercomputer) with six subnets, four user-assigned identities with eight least-privilege role assignments, and a storage account with a blob private endpoint.
+* One shared VNet with seven subnets and default outbound access enabled, four user-assigned identities with eight platform role assignments (one additional management-subnet grant for UDR), and a storage account with a Blob private endpoint.
 * A Discovery **Supercomputer** (+ node pool), **Workspace** (+ chat model + project), and a **Storage Container** binding.
 * Optionally a **Bookshelf** (`enable_bookshelf`, off by default).
 
-The Supercomputer managed resource group and VNet can use an independent region.
-Network-attached Workspace and enabled Bookshelf managed resource groups must
-remain in the region of their platform subnets.
+The VNet, platform resources and infrastructure inside all Discovery-managed
+resource groups share one region. Discovery control-plane resources remain in
+`location`; `managed_resource_group_location` optionally selects the common
+infrastructure region.
 
 ## How to deploy
 
@@ -139,17 +140,16 @@ inconclusive checks.
 Toolbox settings are separate from Terraform inputs; the workflow does not
 automatically read your Terraform configuration. Match the tenant, subscription,
 resource group, control-plane region, workload SKU, and node counts. Check system
-pool capacity as well as workload capacity. Review each resolved managed-resource
-region separately, especially when overriding a resource's region:
+pool capacity as well as workload capacity. Check the common infrastructure
+region as well as the Discovery home region:
 
 | Infrastructure | Region to check |
 | --- | --- |
-| Supercomputer compute, VM SKUs, and cores quota | `supercomputer_managed_resource_group_location` |
-| Workspace managed services, Cosmos, and model quotas | `workspace_managed_resource_group_location` |
-| Optional Bookshelf managed services and model quotas | `bookshelf_managed_resource_group_location` |
+| Discovery control-plane availability | `location` |
+| VNet, compute, VM SKUs, cores, Workspace services and model quotas | `managed_resource_group_location`, falling back to `location` |
+| Optional Bookshelf services and model quotas | The same common infrastructure region |
 
-Each unset override falls back to `managed_resource_group_location`, then
-`location`. Include Bookshelf model requirements when enabling it; checking only
+Include Bookshelf model requirements when enabling it; checking only
 the configured chat model is insufficient. Toolbox SKU recommendations do not
 change Terraform inputs: update your configuration explicitly and re-plan.
 
@@ -168,25 +168,24 @@ Terraform validates `location` against `eastus`, `uksouth`, and `swedencentral`.
 The utility excludes `eastus2` because new Discovery resource creation previously
 failed there despite advertised support.
 
-Resource-specific managed-resource-group overrides control the
-`discovery.overridemrgregion` tags. Unlike `location`, those override inputs do
-not have a Terraform region allowlist. Check service availability and network
-placement requirements before changing them. The Workspace VNet and storage
-remain in `location`; the Supercomputer VNet follows its managed-infrastructure
-region. With `network_isolation = true`, the resolved Workspace managed-resource-
-group region must equal `location`. An enabled Bookshelf always receives platform
-subnets, so its resolved region must also equal `location`, regardless of the
-Workspace isolation setting. Terraform rejects mismatches during planning,
-including those inherited from the deprecated shared override. An unused
-Bookshelf override does not block deployment when Bookshelf is disabled.
+The single `managed_resource_group_location` input controls the shared
+infrastructure region and the `discovery.overridemrgregion` tag on Supercomputer,
+Workspace and Bookshelf. It defaults to `location`. The VNet, identities and
+storage use this resolved region; the Discovery StorageContainer binding and
+other control-plane resources use `location`. Managed resource group metadata
+remains service-controlled. Check service availability in both regions before
+selecting a different infrastructure region.
 
-Workload VM sizes in both the root input and standalone Supercomputer module
-are restricted to the
-[2026-06-01 node-pool reference](https://learn.microsoft.com/azure/templates/microsoft.discovery/2026-06-01/supercomputers/nodepools).
-This conservative allowlist remains unchanged while the
-[CPU documentation discrepancy](#identity-mapping-and-workload-sku-questions)
-is reconciled. Subscription quota and regional availability alone do not expand
-the allowlist.
+Workload VM sizes in the root and standalone Supercomputer module are not
+restricted to a hard-coded list. A non-empty SKU is required; service support,
+regional availability and quota still need verification. Node-pool names accept
+3-12 lowercase alphanumeric characters, starting with a letter. This range
+satisfies both the live API's 1-12 character rule and the pinned AzAPI provider's
+generic 3-24 character schema. Provider schema validation remains enabled.
+The separate Supercomputer resource-name validation retains its 24-character limit.
+Min/max counts are integers, with
+`0 <= min <= max` and `max >= 1`. The separate system-node SKU validation remains
+unchanged.
 
 The storage account disables public access and shared keys. The root disables
 AzureRM storage data-plane readiness polling so the account can finish creating
@@ -196,14 +195,111 @@ When composing the platform module independently, set the AzureRM provider's
 storage feature `data_plane_available = false` and use AzureRM 4.81 or later
 within major version 4.
 
+Output storage uses Standard GRS replication, matching the
+[Discovery Bicep quickstart](https://learn.microsoft.com/azure/microsoft-discovery/quickstart-infrastructure#tab/bicep),
+with seven-day soft-delete retention for both blobs and containers. GRS copies
+data asynchronously to the paired region and costs more than LRS; confirm that
+the secondary region meets your data-residency requirements. Soft-deleted data
+continues to incur storage charges during retention. These retention settings
+do not protect against deletion of the storage account itself.
+
+Storage encryption uses Microsoft-managed keys. Customer-managed keys and
+Queue logging are not configured: this utility provisions Blob storage, not
+queues. Do not add `queue_properties` while using the management-plane-only
+provider configuration. Organizations requiring customer-managed keys or
+additional logging must design those controls separately.
+
 The root waits for the entire platform module before creating Discovery
-resources, including role assignments, VNet peerings, and the storage private
+resources, including role assignments, routing associations, and the storage private
 endpoint/DNS configuration. The cluster identity receives Network Contributor
 on both compute subnets and Managed Identity Operator on the kubelet identity.
+Workspace additionally waits for the complete Supercomputer module, including
+its node pool. UDR also grants the cluster identity Network Contributor on the
+delegated management subnet.
 Terraform ordering does not guarantee that Azure RBAC propagation has finished.
 Standalone control-plane module callers must arrange equivalent prerequisites.
 
+### Outbound networking
+
+The root explicitly enables default outbound access on all seven created
+subnets. It does not create an additional NAT Gateway or static egress public IP.
+The additional `aksManagementSubnet` is delegated to
+`Microsoft.ContainerService/managedClusters` and defaults to `10.0.7.0/28`.
+
+`supercomputer_outbound_type` defaults to `LoadBalancer`. In that mode the root
+omits `managementSubnetId` from the Supercomputer request and creates no UDR
+route table. The service-managed AKS cluster supplies its own load-balancer
+egress; enabling subnet default outbound access does not override that explicit
+path. No firewall is created. Default outbound access is not a stable egress-IP
+contract; review organizational egress policy before using this sample.
+
+Do not attach a separate NAT Gateway to the compute subnets without also
+designing compatible API-server connectivity. NAT can change the source IP
+used by nodes to reach the restricted AKS API server. See
+[AKS API server authorized IP ranges](https://learn.microsoft.com/azure/aks/api-server-authorized-ip-ranges).
+
+For `UserDefinedRouting`, `supercomputer_udr_next_hop_ip` must identify an
+existing, reachable firewall/NVA private IPv4 address. The root creates a route
+table with a `0.0.0.0/0` VirtualAppliance route and associates it with the system
+and workload subnets. It also supplies the delegated management subnet to
+Supercomputer. The field is rejected in LoadBalancer mode so an intended
+firewall route cannot be silently ignored.
+
+A NAT Gateway public IP is not an NVA next hop. The UDR route takes precedence
+over default outbound access for compute traffic. Appliance forwarding, SNAT, DNS,
+required service allowlists, and any hub connectivity are the caller's
+responsibility. A non-empty IP or successful plan does not establish that path.
+If the root creates the VNet, arrange an approved platform-first preparation
+stage and validate connectivity before provisioning Discovery resources; do not
+select UDR with an unreachable placeholder IP.
+
+The private-Supercomputer feature is separate from Workspace network isolation.
+Do not treat this root as a validated private-Supercomputer deployment:
+the [service networking guide](https://learn.microsoft.com/azure/microsoft-discovery/how-to-configure-supercomputer-network-security)
+documents additional requirements and does not support NAT egress for that
+feature. No private-cluster tag or NSP skip tags are added automatically.
+
+This utility does not provision subnet network security groups (NSGs), consistent
+with the linked Bicep sample. The Discovery quickstart recommends NSGs according
+to organizational policy; validate those requirements before deployment.
+Outbound connectivity is not a traffic-filtering substitute for NSGs. Do not assume service-managed NSGs
+cover every subnet or remove existing service-managed security controls.
+Static checks for missing NSG associations therefore remain an explicit
+hardening limitation, not evidence that the deployment has passed a complete
+security assessment.
+
+### Changes from the earlier two-VNet configuration
+
+The per-resource `supercomputer_managed_resource_group_location`,
+`workspace_managed_resource_group_location` and
+`bookshelf_managed_resource_group_location` inputs, and
+`supercomputer_vnet_address_prefix`, have been removed. Replace them with the
+single shared region and address space before planning. Default compute subnet
+prefixes are now `10.0.1.0/24` and `10.0.2.0/24`, inside the shared VNet.
+
+The existing Workspace/Supercomputer VNet output names now identify the same
+VNet; the Supercomputer infrastructure-region output is a compatibility alias
+for the common region. A new output exposes the management subnet.
+Standalone platform-module callers must replace the required
+`supercomputer_infrastructure_location` input with `infrastructure_location`;
+the compatibility alias applies to the output, not the removed input.
+
+This is not an automatic migration of a deployed two-VNet environment.
+Subnet/VNet changes and a different infrastructure region can require resource
+replacement and data migration; Discovery tags also have service-side
+immutability constraints. Preserve the old configuration and state, review the
+full plan, and use an explicitly approved migration or staged teardown/fresh
+deployment. Do not apply this topology change blindly to existing resources.
+
 ### Subscription network-security prerequisite
+
+For a non-private Supercomputer management plane, the service networking guide
+requires the subscription feature
+`Microsoft.ContainerService/EnableServiceTagAuthorizedIPPreview`. Verify its
+registration before deploying. Registration and the subsequent
+`Microsoft.ContainerService` provider refresh are subscription-wide operations
+and require explicit operator approval; they are not managed or undone by this
+Terraform root.
 
 Follow [Configure network security for Microsoft Discovery](https://learn.microsoft.com/azure/microsoft-discovery/how-to-configure-network-security#assign-the-nsp-perimeter-joiner-role)
 before applying. The documented Discovery control-plane service app has
@@ -322,7 +418,7 @@ and all its data, not when migrating a live deployment to another region.
 * If workspace creation reports `context deadline exceeded`, check whether Azure completed it server-side. If it is `Succeeded` but absent from Terraform state, import it and re-plan before retrying.
 * For storage 403 errors, check blob data permissions and propagation. If accessing the private blob endpoint, also verify private network connectivity and DNS; RBAC alone does not grant network access.
 * `PrincipalNotFoundError` can occur before a freshly created UAMI has replicated in Entra ID. Allow propagation and retry.
-* Changing `location` forces storage-account replacement. Existing deployments need a blob data migration, not a straight apply.
+* Changing the resolved infrastructure region can replace storage and networking. Existing deployments need a reviewed migration, including blob data, not a straight apply.
 
 ## Architecture
 
@@ -461,7 +557,7 @@ The module precondition rejects inconsistent combinations. Passing subnet IDs
 with isolation disabled previously left the managed backend unable to reach
 Cosmos, breaking project creation and deletion.
 
-The platform still creates its VNets, subnets, and private storage endpoint
+The platform still creates its shared VNet, seven subnets and private storage endpoint
 regardless of this flag. Disabling workspace isolation is not a switch to a
 fully public deployment. Standalone Workspace module callers must set isolation
 explicitly when supplying subnets; that module defaults to `false`, unlike the
@@ -527,6 +623,46 @@ do not use a live apply or destroy as part of the mocked test run.
 
 ## Deployment lifecycle evidence and open validation
 
+### November 13, 2026 candidate verification
+
+The revised single-VNet configuration was tested in UK South with Bookshelf
+disabled, default outbound access enabled, `LoadBalancer` mode, one explicit
+Workspace user grant, and a `Standard_D4s_v6` workload pool scaling from zero
+to one node. The pool used a 12-character name. Locked providers were AzureRM
+4.81.0, AzAPI 2.11.0 and random 3.9.0.
+
+| Check | Result | Boundary |
+| --- | --- | --- |
+| Formatting and configuration | `terraform fmt -check -recursive` and `terraform validate -no-tests -no-color` passed. | Infrastructure validation, not live service acceptance. |
+| Mocked tests | `terraform test -no-color` passed all 57 tests on Terraform 1.9.8 and 1.17.1. | Includes UDR payload/routing assertions, but no live firewall/NVA was tested. |
+| Live provisioning | 34 Terraform-managed instances; all six Discovery resources reported `Succeeded`. | One same-region CPU deployment; no GPU, Bookshelf or cross-region acceptance test. |
+| Ordering | Execution logs show node-pool completion before Workspace creation. | Ordering does not prove immediate RBAC propagation. |
+| Storage and access | Private GRS storage, seven-day blob/container retention, CORS/TLS settings and all nine scoped role assignments were verified. | No scientific workload, authenticated end-user workflow or blob restore operation was exercised. |
+| Drift | `terraform plan -input=false -no-color -detailed-exitcode` returned 0 before teardown. | A point-in-time comparison, not an ongoing compliance guarantee. |
+| Teardown | Workspace children/grant, Workspace, workload pool, Supercomputer and all four service-owned resource groups were removed. A separately reviewed partial plan also removed storage, its bindings/grants, private endpoint and DNS. | Final network/identity teardown was blocked by a protected Container Apps service-association link on the agent subnet; complete decommissioning is not claimed. |
+
+Two live checks clarified the final configuration. A separate customer NAT
+Gateway with the service's restricted public AKS API-server access caused node
+bootstrap connectivity failures; the default-outbound alternative deployed
+successfully. A 24-character node-pool name was rejected by the live API, which
+requires 1-12 lowercase alphanumeric characters starting with a letter. The
+pinned AzAPI schema requires at least three characters, so this utility uses
+the compatible 3-12 range without disabling schema validation.
+
+An unsuppressed Checkov 3.4.3 scan reported 14 passes and nine findings, with no
+parsing errors: seven missing explicit subnet NSG associations, customer-managed
+keys, and Queue logging. The GRS and soft-delete checks passed. The remaining
+findings correspond to the documented sample scope; this is not a clean security
+scan or production-security certification.
+
+When a deleted Container Apps environment leaves a service-association link
+with `allowDelete=false`, do not force-delete the link or remove state to hide it.
+Preserve the network and required permissions and involve the service owner or
+Azure Support. Any partial cleanup of independent resources requires its own
+reviewed plan. See the [reported Container Apps cleanup condition](https://learn.microsoft.com/en-us/answers/questions/2284805/cannot-remove-serviceassociationlink-from-subnet-d).
+
+### Historical October 15, 2026 report
+
 The imported lifecycle changes were developed from commit
 `fa9047884ddaa6bfd9dda2a49cbf39aa7bc08f5b` of the Terraform contribution in
 [microsoft/discovery#103](https://github.com/microsoft/discovery/pull/103).
@@ -537,16 +673,12 @@ for the October 15, 2026 run of
 implementation and four mocked tests. All 34 archived candidate files were
 verified byte-for-byte unchanged after teardown. Subsequent documentation
 updates are not part of that live-applied commit.
-The integrated configuration merges newer upstream changes and excludes the
-CPU SKU omitted from the versioned API reference, as described below. It is not
-the exact live-tested snapshot.
+The current configuration includes later topology and input changes. It is not
+the October live-tested snapshot; current-candidate evidence is reported above.
 
-Current-candidate formatting, validation, and mocked-test results must be
-reported separately in the PR with the candidate commit and exact commands.
-The historical results below do not establish live acceptance of the integrated
-candidate. This update does not claim a new Azure plan, apply, workload run, or
-teardown. Agree the required live acceptance checks with the engineering
-reviewer before provisioning another environment.
+The historical results below do not establish acceptance of later configurations.
+Report the final candidate commit and exact validation commands in the PR;
+agree any broader live acceptance checks before provisioning another environment.
 
 ### Live-tested configuration
 
@@ -568,9 +700,9 @@ node_pool_min_node_count                     = 0
 ```
 
 These are historical inputs, not a configuration to copy for a new deployment.
-The integrated configuration rejects `Standard_D4s_v6`; select a documented
-workload SKU and complete prerequisites before planning. This historical run is
-not a capacity or product-support guarantee.
+Use the current shared-region input and independently verify the selected
+workload SKU, quota and capacity before planning. This historical run is not
+a capacity or product-support guarantee.
 
 | Area | Observed result | Limitation |
 | --- | --- | --- |
@@ -595,8 +727,8 @@ Successful provisioning, one CPU smoke job, and mocked assertions do not establi
 permission is necessary or sufficient. The implementation does not add
 speculative reverse or additional grants.
 
-`Standard_D4s_v6` was accepted in the historical run but is excluded from both
-integrated workload-pool allowlists. Published
+`Standard_D4s_v6` was accepted in the historical run. At the time of the earlier
+integration, both workload-pool inputs retained a restrictive GPU allowlist. Published
 [Discovery Supercomputer guidance](https://learn.microsoft.com/azure/microsoft-discovery/concept-supercomputer#node-pool-configurations)
 describes CPU-optimized workload pools, and the
 [Discovery quota guidance](https://learn.microsoft.com/azure/microsoft-discovery/concept-quota-reservation#virtual-machine-sku-quotas)
@@ -604,11 +736,11 @@ lists `Standard_D4s_v6`. However, that SKU is absent from the `vmSize` enumerati
 in the versioned
 [2026-06-01 node-pool reference](https://learn.microsoft.com/azure/templates/microsoft.discovery/2026-06-01/supercomputers/nodepools).
 This is a documentation discrepancy, not an assertion that Discovery only
-supports GPUs. This utility retains the versioned API allowlist until the
-published guidance is reconciled; it does not accept arbitrary CPU SKUs based
-only on available quota. The historical CPU smoke is not a recommended
-configuration for this integrated candidate or evidence that another workload
-SKU has been live-tested.
+supports GPUs. The current implementation removes the hard-coded workload SKU
+enumerations rather than duplicating a potentially stale list; it still requires a
+non-empty SKU and independent service/quota/capacity checks. The historical
+CPU smoke is not evidence that every workload SKU or the revised topology has
+been live-tested.
 
 The job's top-level status and operation history reported Succeeded, with a
 completion timestamp and verified output, while nested `result.status` remained
@@ -665,9 +797,9 @@ Before claiming broader validation:
 
 * Confirm the exact customer-UAMI role scope with the product owners; the
   integrated mapping follows AKS pre-created kubelet identity guidance.
-* Agree the acceptance workload using a SKU in the versioned node-pool
-  reference, including its storage and data-access requirements. Reconcile
-  the published CPU guidance before expanding the allowlists.
+* Agree the acceptance workload and verify its current service support, quota,
+  storage and data-access requirements. Removing a local SKU enumeration is not
+  evidence of regional capacity or universal VM-family support.
 * Agree the intended compute-user role scope; the opt-in workspace-only grant
   must not be presented as complete Scientist-persona access.
 * Confirm whether the observed staged teardown, including a fresh-plan retry

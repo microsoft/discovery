@@ -40,7 +40,7 @@ variable "workload_identity_ids" {
 }
 
 variable "node_pools" {
-  description = "Node pools keyed by stable node pool name"
+  description = "Node pools keyed by stable name (3-12 lowercase alphanumeric characters, starting with a letter)"
   type = map(object({
     subnet_id                   = string
     vm_size                     = string
@@ -57,32 +57,17 @@ variable "node_pools" {
   validation {
     condition = alltrue([
       for name, node_pool in var.node_pools :
-      can(regex("^[a-zA-Z0-9-]{3,24}$", name)) &&
-      contains([
-        "Standard_NC4as_T4_v3",
-        "Standard_NC8as_T4_v3",
-        "Standard_NC16as_T4_v3",
-        "Standard_NC64as_T4_v3",
-        "Standard_NC24ads_A100_v4",
-        "Standard_NC48ads_A100_v4",
-        "Standard_NC96ads_A100_v4",
-        "Standard_ND40rs_v2",
-        "Standard_NV6ads_A10_v5",
-        "Standard_NV12ads_A10_v5",
-        "Standard_NV24ads_A10_v5",
-        "Standard_NV36ads_A10_v5",
-        "Standard_NV36adms_A10_v5",
-        "Standard_NV72ads_A10_v5",
-      ], node_pool.vm_size) &&
-      node_pool.max_node_count >= 1 &&
-      (node_pool.min_node_count == null ? true : node_pool.min_node_count >= 0 && node_pool.min_node_count <= node_pool.max_node_count) &&
+      can(regex("^[a-z][a-z0-9]{2,11}$", name)) &&
+      (node_pool.vm_size == null ? false : length(trimspace(node_pool.vm_size)) > 0) &&
+      (node_pool.max_node_count == null ? false : node_pool.max_node_count >= 1 && floor(node_pool.max_node_count) == node_pool.max_node_count) &&
+      (node_pool.min_node_count == null ? true : node_pool.max_node_count == null ? false : node_pool.min_node_count >= 0 && floor(node_pool.min_node_count) == node_pool.min_node_count && node_pool.min_node_count <= node_pool.max_node_count) &&
       (node_pool.scale_set_priority == null ? true : contains(["Regular", "Spot"], node_pool.scale_set_priority)) &&
-      (node_pool.os_disk_size_gb == null ? true : node_pool.os_disk_size_gb >= 30 && node_pool.os_disk_size_gb <= 2048) &&
-      (node_pool.image_cache_lower_threshold == null ? true : node_pool.image_cache_lower_threshold >= 0 && node_pool.image_cache_lower_threshold <= 100) &&
-      (node_pool.image_cache_upper_threshold == null ? true : node_pool.image_cache_upper_threshold >= 0 && node_pool.image_cache_upper_threshold <= 100) &&
+      (node_pool.os_disk_size_gb == null ? true : floor(node_pool.os_disk_size_gb) == node_pool.os_disk_size_gb && node_pool.os_disk_size_gb >= 30 && node_pool.os_disk_size_gb <= 2048) &&
+      (node_pool.image_cache_lower_threshold == null ? true : floor(node_pool.image_cache_lower_threshold) == node_pool.image_cache_lower_threshold && node_pool.image_cache_lower_threshold >= 0 && node_pool.image_cache_lower_threshold <= 100) &&
+      (node_pool.image_cache_upper_threshold == null ? true : floor(node_pool.image_cache_upper_threshold) == node_pool.image_cache_upper_threshold && node_pool.image_cache_upper_threshold >= 0 && node_pool.image_cache_upper_threshold <= 100) &&
       (node_pool.image_cache_lower_threshold == null || node_pool.image_cache_upper_threshold == null ? true : node_pool.image_cache_lower_threshold <= node_pool.image_cache_upper_threshold)
     ])
-    error_message = "Each node pool must satisfy the Discovery node pool name, count, priority, disk, and cache threshold constraints."
+    error_message = "Each node pool requires a 3-12 character lowercase alphanumeric name starting with a letter, non-empty VM SKU, integer counts/disk/cache settings, valid ranges and priority."
   }
 }
 
@@ -90,16 +75,22 @@ variable "management_subnet_id" {
   description = "Optional resource ID of the delegated AKS API server subnet"
   type        = string
   default     = null
+
+  validation {
+    condition     = var.management_subnet_id == null ? true : length(trimspace(var.management_subnet_id)) > 0
+    error_message = "management_subnet_id must be null or a non-empty delegated subnet resource ID."
+  }
 }
 
 variable "outbound_type" {
-  description = "Optional network egress type for Supercomputer workloads"
+  description = "Supercomputer egress type; UDR requires a management subnet and caller-provided working routing"
   type        = string
-  default     = null
+  default     = "LoadBalancer"
+  nullable    = false
 
   validation {
-    condition     = var.outbound_type == null ? true : contains(["LoadBalancer", "None"], var.outbound_type)
-    error_message = "outbound_type must be LoadBalancer or None."
+    condition     = contains(["LoadBalancer", "UserDefinedRouting"], var.outbound_type)
+    error_message = "outbound_type must be LoadBalancer or UserDefinedRouting."
   }
 }
 

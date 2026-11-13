@@ -12,12 +12,12 @@ variable "resource_group_name" {
 }
 
 variable "location" {
-  description = "Azure region for the control-plane resources and Workspace VNet."
+  description = "Discovery control-plane region for the StorageContainer binding."
   type        = string
 }
 
-variable "supercomputer_infrastructure_location" {
-  description = "Region for the Supercomputer VNet / AKS subnets and its managed resource group (needs GPU quota)."
+variable "infrastructure_location" {
+  description = "Shared region for the VNet, identities, storage and infrastructure inside the Discovery-managed groups."
   type        = string
 }
 
@@ -42,15 +42,9 @@ variable "blob_container_name" {
 # ---- address space ----------------------------------------------------------
 
 variable "vnet_address_prefix" {
-  description = "Workspace VNet address space."
+  description = "Address space for the shared Discovery VNet."
   type        = string
   default     = "10.0.0.0/16"
-}
-
-variable "supercomputer_vnet_address_prefix" {
-  description = "Supercomputer VNet address space."
-  type        = string
-  default     = "10.1.0.0/16"
 }
 
 variable "workspace_subnet_prefix" {
@@ -78,13 +72,50 @@ variable "search_subnet_prefix" {
 }
 
 variable "aks_subnet_prefix" {
-  description = "AKS system subnet prefix (in the Supercomputer VNet)."
+  description = "AKS system subnet prefix in the shared VNet."
   type        = string
-  default     = "10.1.2.0/24"
+  default     = "10.0.2.0/24"
 }
 
 variable "supercomputer_nodepool_subnet_prefix" {
-  description = "Supercomputer node pool subnet prefix (in the Supercomputer VNet)."
+  description = "Supercomputer node pool subnet prefix in the shared VNet."
   type        = string
-  default     = "10.1.1.0/24"
+  default     = "10.0.1.0/24"
+}
+
+variable "management_subnet_prefix" {
+  description = "Dedicated AKS management subnet; IPv4 /28 or larger."
+  type        = string
+  default     = "10.0.7.0/28"
+
+  validation {
+    condition     = can(cidrnetmask(var.management_subnet_prefix)) ? tonumber(split("/", var.management_subnet_prefix)[1]) <= 28 : false
+    error_message = "management_subnet_prefix must be an IPv4 CIDR with at least 16 addresses (/28 or larger)."
+  }
+}
+
+variable "supercomputer_outbound_type" {
+  description = "Supercomputer outbound mode; UDR creates compute-subnet routes to an existing firewall/NVA."
+  type        = string
+  default     = "LoadBalancer"
+  nullable    = false
+
+  validation {
+    condition     = contains(["LoadBalancer", "UserDefinedRouting"], var.supercomputer_outbound_type)
+    error_message = "supercomputer_outbound_type must be LoadBalancer or UserDefinedRouting."
+  }
+}
+
+variable "udr_next_hop_ip" {
+  description = "IPv4 private address of an existing reachable firewall/NVA; required for UDR and omitted for LoadBalancer."
+  type        = string
+  default     = null
+
+  validation {
+    condition = var.udr_next_hop_ip == null ? var.supercomputer_outbound_type == "LoadBalancer" : (
+      var.supercomputer_outbound_type == "UserDefinedRouting" &&
+      can(cidrnetmask("${var.udr_next_hop_ip}/32"))
+    )
+    error_message = "UserDefinedRouting requires an IPv4 udr_next_hop_ip; LoadBalancer requires it to be null."
+  }
 }

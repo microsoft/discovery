@@ -7,3 +7,13 @@ output "node_pool_ids" {
   description = "Resource IDs of node pools keyed by node pool name"
   value       = { for name, node_pool in azapi_resource.node_pool : name => node_pool.id }
 }
+
+output "outbound_type" {
+  description = "Outbound type sent to the Supercomputer API"
+  value       = azapi_resource.main.body.properties.outboundType
+}
+
+output "management_subnet_id" {
+  description = "Management subnet sent to the API, or null when omitted"
+  value       = lookup(azapi_resource.main.body.properties, "managementSubnetId", null)
+}

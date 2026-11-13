@@ -45,6 +45,8 @@ run "supercomputer_optional_nulls" {
   assert {
     condition = (
       !contains(keys(azapi_resource.main.body.properties), "customerManagedKeys") &&
+      azapi_resource.main.body.properties.outboundType == "LoadBalancer" &&
+      !contains(keys(azapi_resource.main.body.properties), "managementSubnetId") &&
       !contains(keys(azapi_resource.node_pool["minimal"].body.properties), "minNodeCount") &&
       !contains(keys(azapi_resource.node_pool["minimal"].body.properties), "osDiskSizeGb")
     )
@@ -63,7 +65,7 @@ run "supercomputer_optional_values" {
     system_subnet_id      = "/subscriptions/00000000-0000-0000-0000-000000000001/resourceGroups/rg-discovery-test/providers/Microsoft.Network/virtualNetworks/vnet/subnets/system"
     cluster_identity_id   = "/subscriptions/00000000-0000-0000-0000-000000000001/resourceGroups/rg-discovery-test/providers/Microsoft.ManagedIdentity/userAssignedIdentities/cluster"
     kubelet_identity_id   = "/subscriptions/00000000-0000-0000-0000-000000000001/resourceGroups/rg-discovery-test/providers/Microsoft.ManagedIdentity/userAssignedIdentities/kubelet"
-    outbound_type         = "None"
+    outbound_type         = "LoadBalancer"
     system_sku            = "Standard_D4s_v6"
     customer_managed_keys = "Disabled"
     node_pools = {
@@ -149,6 +151,9 @@ run "workspace_optional_nulls" {
   assert {
     condition = (
       !contains(keys(azapi_resource.main.body.properties), "publicNetworkAccess") &&
+      !contains(keys(azapi_resource.main.tags), "SkipAssociateKeyVaultToNsp") &&
+      !contains(keys(azapi_resource.main.tags), "SkipAssociateCosmosDBToNsp") &&
+      !contains(keys(azapi_resource.main.tags), "SkipAssociateStorageAccountsToNsp") &&
       !contains(keys(azapi_resource.chat_model_deployment["chat"].body.properties), "capacity") &&
       !contains(keys(azapi_resource.project["project"].body.properties), "settings")
     )

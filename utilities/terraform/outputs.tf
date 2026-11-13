@@ -71,11 +71,21 @@ output "storage_account_id" {
 }
 
 output "vnet_id" {
-  description = "Resource ID of the Workspace virtual network."
+  description = "Resource ID of the shared Discovery virtual network."
   value       = module.platform.workspace_vnet_id
 }
 
 output "supercomputer_vnet_id" {
-  description = "Resource ID of the Supercomputer virtual network."
+  description = "Compatibility alias for the shared Discovery virtual network."
   value       = module.platform.supercomputer_vnet_id
+}
+
+output "managed_resource_group_location" {
+  description = "Resolved shared region for infrastructure inside the Discovery-managed groups."
+  value       = local.managed_resource_group_location
+}
+
+output "management_subnet_id" {
+  description = "AKS management subnet; supplied to the Supercomputer when UDR is selected."
+  value       = module.platform.management_subnet_id
 }
