@@ -24,7 +24,11 @@ Download a copy and complete it for your tested scenario.
    steps and names the model. The guide starts with the template's **How this
    QuickStart runs** note (default scenario, approvals, what to compare) and
    lists a **direct download link, size and SHA-256 for every required file**.
-   Add a short fallback for when the assistant can't open links. See the
+   Start the README with a plain-English explanation of what the scenario does
+   and what the user will see at the end, and name the project folder after the
+   scenario (for example `QuickStart-CDK-Lead-Discovery`). The assistant must
+   open the link and download the files itself; don't add manual download
+   steps for the user. See the
    [BioPharma README](../biopharma/cdk-frozen-reference/README.md) for the pattern.
 
 Completed examples already available:

@@ -1,13 +1,36 @@
 # QuickStart BioPharma — CDK Target Selection and Lead Discovery
 
-Reproduce the final stages of a CDK drug-discovery experiment: Discovery
-recalculates decision scores, predicts solubility for 1,100 molecules, ranks
-100 candidate structures, and checks your results against the original run.
+## What this QuickStart does
+
+Cyclin-dependent kinases (CDKs) are enzymes that control cell division and are
+well-known cancer drug targets. In the original Discovery campaign, an AI-led
+workflow chose a CDK target, gathered published evidence, docked about 1,100
+candidate molecules against six CDKs, trained a solubility model, and ranked
+the most promising leads.
+
+This QuickStart lets you **reproduce the final, decision-making stages of that
+campaign on your own computer**, using the original data:
+
+- Recalculate the target-selection decision scores.
+- Predict water solubility for all 1,100 candidate molecules with the trained model.
+- Rank the candidates and export the top 100 as ready-to-view 3D structures.
+- Build a report and dashboard of the results.
+- **Compare your results with the original run**, so you can see for yourself
+  that they match.
+
+It does not repeat the slow parts of the campaign (literature search, docking
+and model training); it reuses their saved results. The results are
+computational predictions, not lab-tested drugs. As in the original campaign,
+no candidate is confirmed as broadly selective across the CDKs, and the docking
+check for one target (CDK7) failed; your report keeps these limitations.
+
+The first run takes about 45 minutes, most of it the assistant unpacking and
+checking the data before the analysis starts.
 
 ## How to run this QuickStart
 
 You only need the Discovery app. You don't download, attach or unzip any files:
-the assistant reads the guide from its link and gets everything it needs.
+the assistant opens the guide from its link and gets everything it needs.
 
 **Don't have the app yet?** Download it from the
 [Discovery download page](../../../README.md) and follow the
@@ -15,17 +38,17 @@ the assistant reads the guide from its link and gets everything it needs.
 **GitHub account with a GitHub Copilot subscription** to sign in, and about
 3 GB of free disk space.
 
-1. **Open Microsoft Discovery** (Stable). Sign in with your GitHub account if it asks.
+1. **Open Microsoft Discovery.** Sign in with your GitHub account if it asks.
 2. **Create a project.** The app opens on **Projects**. Click **New project**.
    In the folder window, open **Documents**, click **New folder**, name it
-   `QuickStart-BioPharma`, select it, and click **Open local project**.
+   `QuickStart-CDK-Lead-Discovery`, select it, and click **Open local project**.
    (Discovery needs a project before you can chat. If a project is already
    open, click its name at the top left to get back to **Projects**.)
 3. **Open a chat.** Click **New session** on the left.
 4. **Select the model.** In the chat box, open the model menu and choose
    **GPT-6 Astra**.
 5. **Paste the guide link.** Right-click this link and choose **Copy link**:
-   **[BioPharma QuickStart guide](QuickStart-BioPharma%20LeadGen%20v0.11.md)**.
+   **[CDK Target Selection and Lead Discovery guide](QuickStart-BioPharma%20LeadGen%20v0.11.md)**.
    In the chat box, type `Run this QuickStart: `, paste the link
    (**Ctrl+V**), and press **Enter**.
 6. **Answer the assistant's questions.** It asks before it downloads the files
@@ -41,7 +64,7 @@ gives you the download link. It does not install Python for you.
 scientific snapshot is downloaded from the
 [`cdk-frozen-reference-v0.11` release](https://github.com/microsoft/discovery/releases/tag/cdk-frozen-reference-v0.11);
 the other five files are in this scenario's [`files`](files/) folder.
-Button labels were checked against Discovery Stable 0.0.4 on Windows.
+Steps checked on Windows with Discovery app version 0.0.4.
 
 ## What happens next
 
@@ -93,32 +116,10 @@ recorded test. Keep the guide's scientific limitations visible.
 The supplied v0.11 guide is a proposed revision. Windows x64 has historical
 reference evidence; other scientific-platform routes are unvalidated.
 
-## If the assistant can't open the link
-
-Use this only if the assistant reports that it cannot open GitHub links or
-download files. Note exactly what it said, then:
-
-1. Download the [guide](QuickStart-BioPharma%20LeadGen%20v0.11.md) and the
-   six files under [Supporting files](#supporting-files) into a new empty
-   folder, for example `QuickStart-BioPharma` in Downloads. Keep the original
-   filenames and don't unzip anything. On GitHub file pages, use
-   **Download raw file**; don't save the web page.
-2. In Discovery Stable, click **New project**, select that folder, click
-   **Open local project**, then **New session**. Select **GPT-6 Astra**.
-3. Attach `QuickStart-BioPharma LeadGen v0.11.md` with the chat's attachment
-   control and send:
-
-```text
-Run the attached BioPharma QuickStart using the files in this project. Read the whole guide, then walk me through setup, the default frozen-reference run, and checking my results against the reference. Ask me before installing anything or starting the computation.
-```
-
-Everything under [What happens next](#what-happens-next) then applies.
-
 ## Supporting files
 
-The assistant downloads these six files for you. They are listed here for
-reference and for the fallback above. A different snapshot is not
-interchangeable with this reference.
+The assistant downloads these six files for you; they're listed here for
+reference. A different snapshot is not interchangeable with this reference.
 
 | Original filename | Purpose | Repository download |
 | --- | --- | --- |
