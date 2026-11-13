@@ -78,7 +78,7 @@ COPY building_blocks.smi /app/data/building_blocks.smi
 # Download and canonicalize eMolecules building blocks (overwrites the small
 # bundled fallback on success; keeps it on failure so the build doesn't break).
 # Override BUILDING_BLOCKS_URL at build time if the default URL expires.
-ARG BUILDING_BLOCKS_URL="https://downloads.emolecules.com/orderbb/2026-04-01/parent.smi.gz"
+ARG BUILDING_BLOCKS_URL="https://downloads.emolecules.com/orderbb/2026-09-01/parent.smi.gz"
 COPY prepare_building_blocks.py /tmp/prepare_building_blocks.py
 RUN python /tmp/prepare_building_blocks.py --url "$BUILDING_BLOCKS_URL" && \
     rm /tmp/prepare_building_blocks.py
