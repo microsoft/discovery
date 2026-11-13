@@ -1,0 +1,16 @@
+name: open-targets-evidence
+type: agent
+version: 0.1.0
+associated_tools: []
+publisher:
+  name: Microsoft
+  contact: discovery-catalog@microsoft.com
+  support_url: https://techcommunity.microsoft.com/category/azure/discussions/microsoft-discovery-discussions
+  party: 1p
+description: >-
+  Finds and compares disease-associated targets using Open Targets associations
+  and individual evidence, with identifiers, provenance, and uncertainty.
+tags:
+  - biomedical
+  - evidence-synthesis
+  - drug-discovery
