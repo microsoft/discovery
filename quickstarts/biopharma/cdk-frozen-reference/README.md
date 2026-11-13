@@ -246,14 +246,14 @@ The assistant downloads these six files for you in route A; in route B you
 download them yourself. A different snapshot is not interchangeable with this
 reference.
 
-| Original filename | Purpose | Repository download |
-| --- | --- | --- |
-| `cdk_operational_bundle_v1.zip` | Small launcher bundle, 50,301 bytes | [Download](files/cdk_operational_bundle_v1.zip) |
-| `cdk_operational_bundle_v1.sha256` | Exact checksum for the small ZIP | [Download](files/cdk_operational_bundle_v1.sha256) |
-| `cdk_operational_bundle_v1_manifest.csv` | Original member paths, sizes and hashes | [Download](files/cdk_operational_bundle_v1_manifest.csv) |
-| `cdk_operational_bundle_v1_validation.json` | Original handoff verification record | [Download](files/cdk_operational_bundle_v1_validation.json) |
-| `cdk_non_md_deliverables.zip` | Exact frozen scientific snapshot, 168,396,900 bytes | [Download from release](https://github.com/microsoft/discovery/releases/download/cdk-frozen-reference-v0.11/cdk_non_md_deliverables.zip) |
-| `cdk_non_md_deliverables.sha256` | Exact checksum for the large ZIP | [Download](files/cdk_non_md_deliverables.sha256) |
+| Original filename | Bytes | SHA-256 | Purpose | Repository download |
+| --- | ---: | --- | --- | --- |
+| `cdk_operational_bundle_v1.zip` | 50,301 | `874eba9d9e1ee72d38c257f7904d93953bcb8dc2ec55cf4c2732009c57e74f2f` | Small launcher bundle | [Download](files/cdk_operational_bundle_v1.zip) |
+| `cdk_operational_bundle_v1.sha256` | 97 | `a793e0bb6e34945ad04e230d1b185f66eebd1861219962f9afcff31ebeb46325` | Exact checksum for the small ZIP | [Download](files/cdk_operational_bundle_v1.sha256) |
+| `cdk_operational_bundle_v1_manifest.csv` | 2,130 | `04bfa2ab5f0b4095dcf94d3e37ba1019e5f8d4fe6dfa281835ca9a389bbac474` | Original member paths, sizes and hashes | [Download](files/cdk_operational_bundle_v1_manifest.csv) |
+| `cdk_operational_bundle_v1_validation.json` | 1,152 | `0709258b42b18800e7eb4414c965862715370ce1c28f5d9721c3bcb1eceea71f` | Original handoff verification record | [Download](files/cdk_operational_bundle_v1_validation.json) |
+| `cdk_non_md_deliverables.zip` | 168,396,900 | `bfc939735a574ccc2375ae9808e9242fb79efc545d5b3f314cc38e5d0cefa076` | Exact frozen scientific snapshot | [Download from release](https://github.com/microsoft/discovery/releases/download/cdk-frozen-reference-v0.11/cdk_non_md_deliverables.zip) |
+| `cdk_non_md_deliverables.sha256` | 95 | `702e1df41eb1b1d22106487e0c003b3b5109c06bdbb0c4e4504af110cd24c07b` | Exact checksum for the large ZIP | [Download](files/cdk_non_md_deliverables.sha256) |
 
 The large ZIP's SHA-256 is
 `bfc939735a574ccc2375ae9808e9242fb79efc545d5b3f314cc38e5d0cefa076`.

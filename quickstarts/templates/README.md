@@ -24,7 +24,7 @@ Download a copy and complete it for your tested scenario.
    steps and names the model. The guide starts with the template's **How this
    QuickStart runs** note (default scenario, approvals, what to compare) and
    lists a **direct download link, size and SHA-256 for every required file**.
-   Start the README with a plain-English explanation of what the scenario does
+   Right after the Checklist, explain in plain English what the scenario does
    and what the user will see at the end, and name the project folder after the
    scenario (for example `QuickStart-CDK-Lead-Discovery`). Every scenario
    README follows the same layout: a very short numbered **Checklist** at the
