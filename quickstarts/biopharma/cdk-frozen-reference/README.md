@@ -18,8 +18,9 @@ workflow chose a CDK target, gathered published evidence, docked about 1,100
 candidate molecules against six CDKs, trained a solubility model, and ranked
 the most promising leads.
 
-This QuickStart lets you **reproduce the final, decision-making stages of that
-campaign on your own computer**, using the original data:
+This QuickStart is a **frozen-reference run**: it repeats part of the original
+analysis to check that the results match. It uses a **snapshot**, a saved
+copy of the original study's data and results, and on your own computer it will:
 
 - Recalculate the target-selection decision scores.
 - Predict water solubility for all 1,100 candidate molecules with the trained model.
@@ -61,7 +62,8 @@ Times are from one measured run on a Windows 11 PC; yours will vary.
 There are six files. In route A below the assistant downloads them for you;
 you don't need to open them.
 
-- **`cdk_non_md_deliverables.zip` (168 MB): the original campaign, frozen.**
+- **`cdk_non_md_deliverables.zip` (168 MB): the snapshot**, a saved copy of
+  the original study's data and results.
   It holds the original campaign's inputs, intermediate results and final
   outputs: the 1,100-molecule library, the evidence it used, the prepared
   protein structures, all 6,600 docking results, the trained solubility model,
