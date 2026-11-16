@@ -17,11 +17,12 @@ Download a copy and complete it for your tested scenario.
    guide; conflicts with older skill versions must be reconciled explicitly.
 5. Provide actual reference outputs and identify public distribution rights.
    Large approved files can be repository-release assets with exact checksums.
-6. **Make it runnable from one link (standard for every QuickStart).** A user
-   with only the Discovery app must be able to: create a project, click
-   **New session**, select the model, and send `Run this QuickStart:` plus the
-   guide link — nothing else. So the scenario README starts with those exact
-   steps and names the model. The guide starts with the template's **How this
+6. **Make it runnable with three copy-paste prompts (standard for every
+   QuickStart).** A user with only the Discovery app must be able to: create a
+   project, click **New session**, select the model, and send the README's
+   three prompts in order. The Step 1 **A** prompt contains the guide link, so
+   the user never pastes the link on its own. So the scenario README starts with
+   those exact steps and names the model. The guide starts with the template's **How this
    QuickStart runs** note (default scenario, approvals, what to compare) and
    lists a **direct download link, size and SHA-256 for every required file**.
    Right after the Checklist, explain in plain English what the scenario does
