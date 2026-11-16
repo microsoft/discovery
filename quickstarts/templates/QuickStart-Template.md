@@ -34,19 +34,25 @@ Covers: [Fill in: section 5 steps up to the readiness check]. No computation.
 
 ### Step 2: Run the experiment
 
-Covers: [Fill in: the section 5/6 run and its approval]. Expected time is in section 7.
+Covers: [Fill in: the section 5 default run and its approval]. Expected time is in section 7.
 
 **A or B (same prompt either way):**
 
 ```text
-[Fill in: exact Step 2 prompt from the README, plus the approval reply if one is needed]
+[Fill in: exact Step 2 launch prompt from the README]
+```
+
+When the assistant describes the run and asks for approval, reply (send this only when asked; delete if no approval is needed):
+
+```text
+[Fill in: exact approval reply from the README]
 ```
 
 **Done when:** [Fill in: observable completion check, for example a run ID].
 
 ### Step 3: Verify your results against the validated reference
 
-Covers: [Fill in: the section 6 matching output and acceptance checks].
+Covers: [Fill in: the acceptance checks and validated reference outputs for the default run, as recorded in section 6 "Matching output"; not an optional extension].
 
 **A or B (same prompt either way):**
 
