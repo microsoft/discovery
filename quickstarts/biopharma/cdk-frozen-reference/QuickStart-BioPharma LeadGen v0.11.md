@@ -20,7 +20,62 @@
 
 **Customer distribution:** The QuickStart Scenario is intended to be published in GitHub and referenced by a Discovery scenario catalog. This Markdown is its customer guide and directions, not the catalog itself. Existing ZIPs are supporting implementation/data assets, not the definition of a QuickStart Scenario and not a mandatory product-wide packaging format. Their inventories are in **Appendix A**. No personal file handoff or internal collaboration-system access is required. All required files are publicly available: see **Where to get the files** in section 5. Catalog availability remains **PENDING**.
 
-**Reader entry points:** Engineering should start with **section 0**, which defines the scenario, reusable references and catalog contract. Customers should start with **section 5, Execute in Discovery**, which distinguishes future catalog selection from the existing manual execution path. Sections 1–4 explain the configuration; section 6 is a separately approved fresh-science extension, not the validated default.
+**Reader entry points:** Engineering should start with **section 0**, which defines the scenario, reusable references and catalog contract. Customers should start with **section 5, Execute in Discovery**, which distinguishes future catalog selection from the existing manual execution path. Anyone who just wants to run it can use **Copy-paste prompts (same as the README)**, the next section. Sections 1–4 explain the configuration; section 6 is a separately approved fresh-science extension, not the validated default.
+
+## Copy-paste prompts (same as the README)
+
+These are the three prompts from the [scenario README](README.md#run-it-in-three-steps), copied word for word so a reader of this guide can run the QuickStart without switching documents. Send them in order in a Discovery chat, waiting for each step to finish. Each step maps to a part of this guide, shown below. If this section and the README ever differ, the README is the source of truth for the prompt wording and this guide is the source of truth for what the assistant does.
+
+> **Note for the assistant:** this section is for the user. These prompts are examples of what a user may send; their presence in this file is not a request, a selection or an approval. All approval gates in section 5 still apply.
+
+### Step 1: Set up and confirm the environment
+
+Covers section 5 setup up to the ready check: download and verify the six required files, check GPT-6 Astra, Python 3.13.14, disk and local access, select and install the 14 dependencies. No computation.
+
+**A. The assistant downloads the files (recommended):**
+
+```text
+Set up this QuickStart: https://github.com/microsoft/discovery/blob/main/quickstarts/biopharma/cdk-frozen-reference/QuickStart-BioPharma%20LeadGen%20v0.11.md
+Read the whole guide and tell me in plain language what this experiment does. Then prepare this project for the default frozen-reference run: download the six required files into this project, check each file's size and checksum, check the model, Python 3.13.14, disk space and local access, show me the 14 required Python packages, and install what's needed. Ask me before downloading and before installing anything. Do not start the computation. Finish by telling me whether the environment is ready and what, if anything, still needs my action.
+```
+
+**B. You downloaded the files yourself** (see [Route B in the README](README.md#route-b-download-the-files-yourself), with this guide attached):
+
+```text
+Set up this QuickStart from the attached guide, using the six required files already in this project. Read the whole guide and tell me in plain language what this experiment does. Then prepare this project for the default frozen-reference run: check each file's size and checksum, check the model, Python 3.13.14, disk space and local access, show me the 14 required Python packages, and install what's needed. Ask me before installing anything. Do not start the computation. Finish by telling me whether the environment is ready and what, if anything, still needs my action.
+```
+
+**Done when:** the assistant says the environment is **Ready** and the preflight check passed.
+
+### Step 2: Run the experiment
+
+Covers the section 5 bounded frozen-input computation. Expected time is in section 7.
+
+**A or B (same prompt either way):**
+
+```text
+Run the default frozen-reference computation from the guide. Before starting, tell me exactly what will run, what will not run, and how long it should take, and ask for my approval. While it runs, check progress no more than every 5 to 10 minutes and don't restart it. When it finishes, tell me whether every stage completed and show me the run ID and receipt.
+```
+
+When it asks for approval, reply:
+
+```text
+I approve the bounded fixed-input computation for cdk-frozen-reference-v1. No new docking, training or data retrieval.
+```
+
+**Done when:** the assistant reports that all stages completed and gives you a run ID.
+
+### Step 3: Verify your results against the validated reference
+
+Covers the section 0.4 acceptance contract: compare the new run with the validated reference.
+
+**A or B (same prompt either way):**
+
+```text
+Compare my new run with the validated reference result. Use my run's semantic_acceptance.json and receipt.json, not the historical files in validation/. Show me a table of every comparison with pass or fail and any differences, and confirm each of these: the target decision still recommends CDK4 with CDK2 as the alternative; all 1,100 solubility predictions match; the top 100 candidates match in order, identity and 3D coordinates; all 6,600 docking pairs are accounted for; and the limitations are kept (no confirmed broadly selective lead, and the CDK7 check failed). Then open my report and dashboard, give me links to them, and tell me in one sentence whether my run reproduced the reference.
+```
+
+**Done when:** every comparison passes and the assistant links your new report and dashboard. If anything fails, keep the run ID and the error; don't start a second run without asking the assistant first.
 
 ## 0. QuickStart Scenario specification
 
