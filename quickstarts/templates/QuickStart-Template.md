@@ -1,3 +1,18 @@
+<!--
+AUTHORING INSTRUCTIONS: delete this comment when the guide is complete.
+You (a person or a model) are completing a QuickStart from this template. Produce two files in quickstarts/<vertical>/<scenario-name>/:
+  1. The guide: this file, renamed to QuickStart-<Vertical>-<Scenario>.md.
+  2. README.md: completed from README-Template.md in this folder.
+Required inputs: the scenario owner's description, the validated run's prompt, model, versions, inputs and outputs, measured timings, and the reference results.
+Rules:
+- Replace every [Fill in] placeholder. Use N/A only when an item does not apply; use Pending when it applies but is not known yet. Never invent a value, version, timing, hash or minimum requirement; take it from recorded run evidence.
+- Keep every heading and section number unchanged; links and the README depend on them.
+- Write the three step prompts in the README first, then copy them word for word into "Copy-paste prompts (same as the README)" below.
+- Step 1 sets up and confirms only (no computation). Step 2 runs the section 5 reference path and the section 6 fixed prompt, with any approval reply in its own block. Step 3 checks the section 6 acceptance table against the new run's outputs, not the stored reference copies.
+- Compute every file's size and SHA-256 from the actual file, and give a direct download link for each.
+- Finish with the section 9 publication checklist. Leave unticked anything not yet done and say what is missing.
+-->
+
 # Quick Start — [Fill in: title]
 
 **Proposed standard:** A Quick Start is a small, reproducible, versioned recipe linking a concrete outcome, selected model, bounded agents/tools/containers, sample data, fixed prompt, and verifiable output on a stated environment.
@@ -34,7 +49,7 @@ Covers: [Fill in: section 5 steps up to the readiness check]. No computation.
 
 ### Step 2: Run the experiment
 
-Covers: [Fill in: the section 5 default run and its approval]. Expected time is in section 7.
+Covers: [Fill in: the section 5 default run, the section 6 fixed prompt and its approval]. Expected time is in section 7.
 
 **A or B (same prompt either way):**
 
@@ -179,3 +194,5 @@ For prompt runs, completion means **end-to-end time to a validated response**, i
 - [ ] Applicable configuration/specs complete; unused fields N/A; compatibility checked; no unverified minima claimed.
 - [ ] Timings labeled with conditions; setup/indexing distinct from cold/warm runs.
 - [ ] No secrets; samples permitted; cleanup documented; owner, version and validation date complete.
+- [ ] README completed from `README-Template.md`; its three step prompts are identical to **Copy-paste prompts (same as the README)** in this guide.
+- [ ] Every required file downloaded from its published link and checked against its recorded size and SHA-256; all links resolve; no `[Fill in]` placeholders remain.

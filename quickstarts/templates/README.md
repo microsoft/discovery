@@ -37,8 +37,18 @@ Download a copy and complete it for your tested scenario.
    and attaches the guide. The guide repeats the same three prompts, word for
    word, in its **Copy-paste prompts (same as the README)** section, and says
    which guide section each step covers, so a reader of either document can run
-   it. See the
-   [BioPharma README](../biopharma/cdk-frozen-reference/README.md) for the pattern.
+   it. Start the README from [the README template](README-Template.md), and see
+   the [BioPharma README](../biopharma/cdk-frozen-reference/README.md) for a
+   completed example.
+
+**Using a model to draft a QuickStart:** open a Discovery chat in your
+workspace, attach [QuickStart-Template.md](QuickStart-Template.md) and
+[README-Template.md](README-Template.md) together with your scenario's run
+evidence, and ask it to complete both templates. Each template starts with
+authoring instructions the model follows: fill every placeholder from the
+evidence, write Pending instead of guessing, keep the step prompts identical in
+both files, and finish with the publication checklist. Review the draft and
+run it once before publishing.
 
 Completed examples already available:
 [BioPharma v0.11](../biopharma/cdk-frozen-reference/QuickStart-BioPharma%20LeadGen%20v0.11.md) and
