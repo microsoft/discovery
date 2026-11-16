@@ -22,6 +22,9 @@ foreach ($name in @(
         'Get-ManagedIdentityId',
         'Get-StorageAccountId',
         'New-Stage4BicepParamFile',
+        'Invoke-ArmPut',
+        'Wait-DiscoveryGate',
+        'New-StepResult',
         'Resolve-DiscoveryError',
         'Get-DiscoveryArmState',
         'Get-FoundryAccountState',
@@ -93,6 +96,26 @@ Describe 'Stage 4 workload and VNet region alignment' {
         @(Get-Stage4NetworkRegionFailures -Config $config -ResourceGroup $config.resourceGroup).Count | Should Be 0
     }
 
+    It 'passes the selected system SKU through parameters to the compiled Bicep template' {
+        $config | Add-Member -NotePropertyName systemSku -NotePropertyValue 'Standard_D16as_v5' -Force
+
+        $path = New-Stage4BicepParamFile -Config $config -ResourceGroup $config.resourceGroup -Location $config.controlPlaneRegion
+        try {
+            $parameters = Get-Content -LiteralPath $path -Raw | ConvertFrom-Json
+
+            $parameters.parameters.systemSku.value | Should Be 'Standard_D16as_v5'
+            $bicepPath = Join-Path (Split-Path -Parent $stage4Path) 'discovery-platform.bicep'
+            $compiled = & az bicep build --file $bicepPath --stdout --only-show-errors
+            $LASTEXITCODE | Should Be 0
+            $template = $compiled -join [Environment]::NewLine | ConvertFrom-Json
+            $supercomputer = $template.resources | Where-Object type -eq 'Microsoft.Discovery/supercomputers'
+            $supercomputer.properties.systemSku | Should Be "[if(empty(parameters('systemSku')), null(), parameters('systemSku'))]"
+        }
+        finally {
+            Remove-Item -LiteralPath $path -Force
+        }
+    }
+
     It 'keeps the control-plane location and MRG workload region separate in Bicep parameters' {
         $path = New-Stage4BicepParamFile -Config $config -ResourceGroup $config.resourceGroup -Location $config.controlPlaneRegion
         try {
@@ -104,6 +127,47 @@ Describe 'Stage 4 workload and VNet region alignment' {
         finally {
             Remove-Item -LiteralPath $path -Force
         }
+    }
+}
+
+Describe 'Stage 4 direct ARM system SKU forwarding' {
+    BeforeEach {
+        $configPath = Join-Path (Split-Path -Parent $stage4Path) '..\examples\sample-config.json'
+        $cfg = Get-Content -LiteralPath $configPath -Raw | ConvertFrom-Json
+        $BicepPath = $null
+        $resourceGroup = $cfg.resourceGroup
+        $supercomputerName = $cfg.names.supercomputer
+        $supercomputerId = "/subscriptions/$($cfg.subscriptionId)/resourceGroups/$resourceGroup/providers/Microsoft.Discovery/supercomputers/$supercomputerName"
+        $location = $cfg.controlPlaneRegion
+        $managedIdentityId = '/subscriptions/sub/resourceGroups/rg/providers/Microsoft.ManagedIdentity/userAssignedIdentities/uami'
+        $nodePoolName = $cfg.names.nodePool
+        $results = [System.Collections.Generic.List[object]]::new()
+        Mock Get-SubnetIdByRole { "/subnets/$Role" }
+        Mock Invoke-ArmPut { [pscustomobject]@{ ok = $true; error = '' } }
+        Mock Wait-DiscoveryGate { [pscustomobject]@{ trueState = 'Succeeded' } }
+    }
+
+    It 'submits the configured system SKU in the actual ARM request body' -TestCases @(
+        @{ Sku = 'Standard_D16as_v5' },
+        @{ Sku = 'Standard_D4s_v6' }
+    ) {
+        param($Sku)
+        $cfg | Add-Member -NotePropertyName systemSku -NotePropertyValue $Sku -Force
+        $armBranch = @($ast.FindAll({
+                    param($node)
+                    $node -is [System.Management.Automation.Language.IfStatementAst] -and
+                    $node.Clauses[0].Item1.Extent.Text -eq '-not $BicepPath' -and
+                    $node.Extent.Text -match '\$scBody\b'
+                }, $true))
+        $armBranch.Count | Should Be 1
+
+        . ([scriptblock]::Create($armBranch[0].Extent.Text))
+
+        Assert-MockCalled Invoke-ArmPut -Times 1 -Exactly -Scope It -ParameterFilter {
+            $ResourceId -eq $supercomputerId -and $Body.properties.systemSku -eq $Sku
+        }
+        $results.Count | Should Be 1
+        $results[0].status | Should Be 'Pass'
     }
 }
 

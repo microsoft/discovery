@@ -149,10 +149,16 @@ Install and sign in once:
    if any is missing, printing the exact `az` commands to fix it.
 7. **Compute and model quota** in the deployment region. By default, the supercomputer system pool
    runs 3 × `Standard_D4s_v6` (12 vCPUs), and the node pool can scale to 3 ×
-   `Standard_D4ds_v6` (12 more vCPUs). Advanced JSON configs can override `systemSku`,
-   `nodePoolVmSize`, and `nodePoolMaxNodeCount`. Stage 1 reads the selected subscription's live SKU
+   `Standard_D4ds_v6` (12 more vCPUs). Select the **SC system SKU** in the `systemSku` dropdown
+   under **SIZING & SCALE** in either planning workbook (default `Standard_D4s_v6`).
+   Stage 1 exports that selection to `config.json`, and Stage 4 uses it for the system pool.
+   JSON configs can also set `systemSku`; advanced JSON configs can override
+   `nodePoolVmSize` and `nodePoolMaxNodeCount`. Stage 1 reads the selected subscription's live SKU
    metadata to calculate the effective Total Regional and VM-family vCPU requirements; Stage 3
-   repeats the same check before deployment. Check current usage with
+   repeats the same check before deployment unless the supercomputer is already `Succeeded`.
+   Insufficient regional or VM-family quota for 3 nodes of the selected system SKU is a
+   **Fail**; insufficient additional quota for maximum node-pool autoscale is a **Warn**.
+   Check current usage with
    `az vm list-usage -l <region> --subscription <subscription-id> -o table`. Each workspace also uses 450K GPT-5.4 GlobalStandard
    TPM (250K for the built-in deployment plus 200K for the validation chat model). GlobalStandard
    quota is scoped by subscription, region, model, and deployment type. Stage 1 verifies the

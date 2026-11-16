@@ -178,6 +178,36 @@ Describe 'Get-VcpuQuotaResult' {
         $result.data.quotas.Count | Should Be 2
     }
 
+    It 'enforces the selected 16-vCPU system SKU boundary using remaining family quota' -TestCases @(
+        @{ Used = 13; Expected = 'Fail' },
+        @{ Used = 12; Expected = 'Pass' }
+    ) {
+        param($Used, $Expected)
+        $global:OnboardingSkuCatalog = @(
+            (New-VmSku -Name 'Standard_D16as_v5' -Family 'StandardDasv5Family' -Vcpus 16),
+            (New-VmSku -Name 'Standard_D4ds_v6' -Family 'StandardDdsv6Family' -Vcpus 4)
+        )
+        $familyUsage = New-VcpuUsage -Name 'StandardDasv5Family' -Available 60
+        $familyUsage.currentValue = $Used
+        $global:OnboardingVcpuUsage = @(
+            (New-VcpuUsage -Name 'cores' -Available 60),
+            $familyUsage,
+            (New-VcpuUsage -Name 'StandardDdsv6Family' -Available 12)
+        )
+        $config = New-QuotaConfig -Overrides @{ systemSku = 'Standard_D16as_v5' }
+
+        $result = Get-VcpuQuotaResult -Config $config -Fr 'FR1.5' -SkuCatalog $global:OnboardingSkuCatalog
+
+        $result.status | Should Be $Expected
+        if ($Expected -eq 'Pass') {
+            $result.data.requirements[0].vcpus | Should Be 48
+            $result.data.quotas[0].required | Should Be 60
+        }
+        else {
+            $result.detail | Should Match '3 x Standard_D16as_v5 = 48 vCPUs'
+        }
+    }
+
     It 'combines system and node requirements when both SKUs use the same family' {
         $global:OnboardingSkuCatalog = @(
             (New-VmSku -Name 'Standard_D4s_v6' -Family 'StandardDsv6Family' -Vcpus 4),
