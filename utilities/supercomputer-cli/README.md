@@ -376,12 +376,13 @@ discovery blob ls shared:
 
 ### Build Commands (`discovery build`)
 
-Build and manage container images via ACR Tasks:
+Build and publish container images to the configured ACR. Builds run via ACR Tasks
+by default; pass `--local` to use your local Docker/BuildKit engine instead:
 
 | Command | Description |
 |---------|-------------|
-| `discovery build image <context>` | Build a Docker image via ACR Task |
-| `discovery build rebuild` | Layer VS Code CLI onto an existing ACR image |
+| `discovery build image [--local] <context>` | Build a Docker image and push to ACR |
+| `discovery build rebuild [--local]` | Layer VS Code CLI onto an existing ACR image and push to ACR |
 
 **Examples:**
 
@@ -391,7 +392,39 @@ discovery build image --vscode .
 
 # Build with custom image name and tag
 discovery build image --image my-tool --tag v2 .
+
+# Build locally, then push the same fully qualified image to the configured ACR
+discovery build image --local --image my-tool --tag v2 .
+
+# Local builds also support VS Code layering and rebuilding an existing ACR image
+discovery build image --local --vscode --image my-tool --tag v2 .
+discovery build rebuild --local --image my-tool --tag v2 --target-tag v2-code
 ```
+
+**Local-mode prerequisites and publishing:** Install Docker with BuildKit/buildx
+support and use a running **Linux** Docker daemon. The CLI does not install or
+start Docker, change Docker configuration, or fall back to ACR Tasks on failure.
+Azure CLI authentication and the existing ACR configuration are still required.
+Docker must already have pull/push access to the configured registry (for example,
+run `az acr login --name <ACR_NAME>` yourself beforehand). The local machine needs
+network access to ACR, including any private endpoint, and any base-image registries.
+
+Local mode uses the selected context's `Dockerfile` and `.dockerignore`, enables
+BuildKit, and builds **linux/amd64** images to match the ACR workflow and VS Code
+CLI architecture, including on ARM hosts with emulation configured. It loads the
+result into Docker and then runs `docker push` with the same configured registry
+hostname, image name, and tag as the default workflow. This is **not** a
+local-only/offline build mode: the tool-deployment prompt appears only after
+publishing succeeds. `--local --vscode` builds and pushes both the `-temp` base
+tag and final tag, just like ACR Tasks; temporary layer contexts are cleaned up,
+while built images remain in Docker and ACR. Existing `--mpi`, `--pool-size`,
+`--infiniband`, and `--tool-api-version` options work unchanged with `--local`.
+
+Build output streams to the terminal. `--timeout` applies to each local Docker
+build/push (or each ACR task); a missing engine, inaccessible daemon, failed push,
+timeout, or canceled/failed build stops the workflow without tool deployment.
+Docker command failures retain their nonzero exit status; launch failures and
+local timeouts exit with code 4.
 
 ### Creating an MPI Tool
 
