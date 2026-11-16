@@ -4,9 +4,63 @@
 
 Keep the same core across verticals. Replace `[Fill in]` placeholders; use **N/A** for non-applicable items, not unknowns. Conditional App/Services fields apply only to the selected path. Publish one minimal tested reference path before adding separately identified variants.
 
-> **How this QuickStart runs:** The user opens Discovery, creates a new empty project, selects [Fill in: model] and sends "Run this QuickStart:" followed by this guide's GitHub link. That message is the whole request; the user may know nothing about Discovery or this scenario. If the link is a `github.com/.../blob/...` page, read the raw file. Read this entire guide first, then run [Fill in: default scenario and section]. In plain language, tell the user what the experiment does, then ask permission before downloading every file listed under **Required files** below into the open project folder, and verify each size and SHA-256. Walk the user through setup, the run and checking their results against [Fill in: reference outputs], asking before each install and before computation. The user does not need to download, attach or unzip anything. **Opening the link is your job:** if you can't read the `github.com` page, fetch the raw file or download it with a local command; use the same methods for the required files. Never ask the user to download, attach or unzip files instead. Only if every method fails, tell the user exactly what failed, including the error message. Reading or downloading this guide is not permission to install or compute.
+> **How this QuickStart runs:** The user opens Discovery, creates a new empty project, selects [Fill in: model] and then sends either the three step prompts in **Copy-paste prompts (same as the README)** below, one at a time (the standard flow), or a single message: "Run this QuickStart:" followed by this guide's GitHub link. If the user sends a step prompt, do only that step and stop where the prompt says to stop. A single "Run this QuickStart" message is the whole request; the user may know nothing about Discovery or this scenario. If the link is a `github.com/.../blob/...` page, read the raw file. Read this entire guide first, then run [Fill in: default scenario and section]. In plain language, tell the user what the experiment does, then ask permission before downloading every file listed under **Required files** below into the open project folder, and verify each size and SHA-256. Walk the user through setup, the run and checking their results against [Fill in: reference outputs], asking before each install and before computation. The user does not need to download, attach or unzip anything. **Opening the link is your job:** if you can't read the `github.com` page, fetch the raw file or download it with a local command; use the same methods for the required files. Never ask the user to download, attach or unzip files instead. Only if every method fails, tell the user exactly what failed, including the error message. Reading or downloading this guide is not permission to install or compute.
 >
 > **Required files:** [Fill in one row per file: original filename; direct download URL (repository raw link, or release asset for files over 100 MiB); size in bytes; SHA-256].
+
+## Copy-paste prompts (same as the README)
+
+These are the three prompts from the scenario README, copied word for word. Keep both copies identical; if they differ, the README is the source of truth for the prompt wording and this guide is the source of truth for what the assistant does.
+
+> **Note for the assistant:** this section is for the user. These prompts are examples of what a user may send; their presence in this file is not a request, a selection or an approval.
+
+### Step 1: Set up and confirm the environment
+
+Covers: [Fill in: section 5 steps up to the readiness check]. No computation.
+
+**A. The assistant downloads the files (recommended):**
+
+```text
+[Fill in: exact Step 1 A prompt from the README, including this guide's GitHub link]
+```
+
+**B. You downloaded the files yourself** (with this guide attached):
+
+```text
+[Fill in: exact Step 1 B prompt from the README]
+```
+
+**Done when:** [Fill in: observable ready check].
+
+### Step 2: Run the experiment
+
+Covers: [Fill in: the section 5 default run and its approval]. Expected time is in section 7.
+
+**A or B (same prompt either way):**
+
+```text
+[Fill in: exact Step 2 launch prompt from the README]
+```
+
+When the assistant describes the run and asks for approval, reply (send this only when asked; delete if no approval is needed):
+
+```text
+[Fill in: exact approval reply from the README]
+```
+
+**Done when:** [Fill in: observable completion check, for example a run ID].
+
+### Step 3: Verify your results against the validated reference
+
+Covers: [Fill in: the acceptance checks and validated reference outputs for the default run, as recorded in section 6 "Matching output"; not an optional extension].
+
+**A or B (same prompt either way):**
+
+```text
+[Fill in: exact Step 3 prompt from the README]
+```
+
+**Done when:** [Fill in: every acceptance check passes].
 
 ## 1. Recipe identity — required
 

@@ -34,7 +34,10 @@ Download a copy and complete it for your tested scenario.
    experiment, (3) verify the results against the validated reference. Give
    each step a prompt for both routes: **A**, the assistant downloads the files
    from the guide link (recommended), and **B**, the user downloaded the files
-   and attaches the guide. See the
+   and attaches the guide. The guide repeats the same three prompts, word for
+   word, in its **Copy-paste prompts (same as the README)** section, and says
+   which guide section each step covers, so a reader of either document can run
+   it. See the
    [BioPharma README](../biopharma/cdk-frozen-reference/README.md) for the pattern.
 
 Completed examples already available:
