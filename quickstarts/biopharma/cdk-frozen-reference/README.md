@@ -5,7 +5,7 @@
 1. Install the [Discovery app](../../../README.md) and sign in.
 2. Create a project in a new `Downloads\QuickStart-CDK-Lead-Discovery` folder and click **New session**.
 3. Select **GPT-6 Astra**.
-   *(Prefer to download the files yourself? Do [Route B](#route-b-download-the-files-yourself) here.)*
+   *(Prefer to download the files yourself? Do [option B](#option-b-download-the-files-yourself) here.)*
 4. Send the [Step 1 prompt](#step-1-set-up-and-confirm-the-environment): set up and confirm the environment.
 5. Send the [Step 2 prompt](#step-2-run-the-experiment): run the experiment.
 6. Send the [Step 3 prompt](#step-3-verify-your-results-against-the-validated-reference): **your results**, compared with the validated reference.
@@ -60,7 +60,7 @@ Times are from one measured run on a Windows 11 PC; yours will vary.
 
 ## What's in the files
 
-There are six files. In route A below the assistant downloads them for you;
+There are six files. With option A below the assistant downloads them for you;
 you don't need to open them.
 
 - **`cdk_non_md_deliverables.zip` (168 MB): the snapshot**, a saved copy of
@@ -97,19 +97,19 @@ you don't need to open them.
 Copy each prompt into the chat in order. Wait for each step to finish before
 sending the next one, and answer the assistant's questions along the way.
 You don't need to paste the guide link on its own: it is already inside the
-Step 1 **A** prompt, and in route **B** you attach the guide instead.
+Step 1 **A** prompt, and in option **B** you attach the guide instead.
 The same three prompts are also in the guide, in
 [Copy-paste prompts (same as the README)](QuickStart-BioPharma%20LeadGen%20v0.11.md#copy-paste-prompts-same-as-the-readme),
 which shows which part of the guide each step covers.
 
-There are two ways to get the files, and each step has a prompt for both:
+There are two ways to get the files. Pick one:
 
-- **A. The assistant downloads them (recommended):** skip straight to
-  [Step 1](#step-1-set-up-and-confirm-the-environment) and use the **A** prompts.
-- **B. You download them yourself:** follow the steps below, then use the
-  **B** prompts.
+### Option A: the assistant downloads the files (recommended)
 
-### Route B: download the files yourself
+Nothing to do yet. Go straight to
+[Step 1](#step-1-set-up-and-confirm-the-environment) and use the **A** prompt.
+
+### Option B: download the files yourself
 
 1. **Download these seven files.** Right-click each link, choose
    **Save link as**, and save it into your
@@ -153,7 +153,7 @@ Set up this QuickStart: https://github.com/microsoft/discovery/blob/main/quickst
 Read the whole guide and tell me in plain language what this experiment does. Then prepare this project for the default frozen-reference run: download the six required files into this project, check each file's size and checksum, check the model, Python 3.13.14, disk space and local access, show me the 14 required Python packages, and install what's needed. Ask me before downloading and before installing anything. Do not start the computation. Finish by telling me whether the environment is ready and what, if anything, still needs my action.
 ```
 
-**B. You downloaded the files yourself** (after [Route B](#route-b-download-the-files-yourself)
+**B. You downloaded the files yourself** (after [option B](#option-b-download-the-files-yourself)
 steps 1–4, with the guide attached), send:
 
 ```text
@@ -250,7 +250,7 @@ reference evidence; other scientific-platform routes are unvalidated.
 
 ## Supporting files
 
-The assistant downloads these six files for you in route A; in route B you
+The assistant downloads these six files for you with option A; with option B you
 download them yourself. A different snapshot is not interchangeable with this
 reference.
 

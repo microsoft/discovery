@@ -39,7 +39,7 @@ Set up this QuickStart: https://github.com/microsoft/discovery/blob/main/quickst
 Read the whole guide and tell me in plain language what this experiment does. Then prepare this project for the default frozen-reference run: download the six required files into this project, check each file's size and checksum, check the model, Python 3.13.14, disk space and local access, show me the 14 required Python packages, and install what's needed. Ask me before downloading and before installing anything. Do not start the computation. Finish by telling me whether the environment is ready and what, if anything, still needs my action.
 ```
 
-**B. You downloaded the files yourself** (see [Route B in the README](README.md#route-b-download-the-files-yourself), with this guide attached):
+**B. You downloaded the files yourself** (see [option B in the README](README.md#option-b-download-the-files-yourself), with this guide attached):
 
 ```text
 Set up this QuickStart from the attached guide, using the six required files already in this project. Read the whole guide and tell me in plain language what this experiment does. Then prepare this project for the default frozen-reference run: check each file's size and checksum, check the model, Python 3.13.14, disk space and local access, show me the 14 required Python packages, and install what's needed. Ask me before installing anything. Do not start the computation. Finish by telling me whether the environment is ready and what, if anything, still needs my action.

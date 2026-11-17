@@ -15,7 +15,7 @@ Complete it together with the guide made from QuickStart-Template.md, and save i
 1. Install the [Discovery app](https://github.com/microsoft/discovery/blob/main/README.md) and sign in.
 2. Create a project in a new `Downloads\[Fill in: QuickStart-Scenario-Name]` folder and click **New session**.
 3. Select **[Fill in: model]**.
-   *(Prefer to download the files yourself? Do [Route B](#route-b-download-the-files-yourself) here.)*
+   *(Prefer to download the files yourself? Do [option B](#option-b-download-the-files-yourself) here.)*
 4. Send the [Step 1 prompt](#step-1-set-up-and-confirm-the-environment): set up and confirm the environment.
 5. Send the [Step 2 prompt](#step-2-run-the-experiment): run the experiment.
 6. Send the [Step 3 prompt](#step-3-verify-your-results-against-the-validated-reference): **your results**, compared with the validated reference.
@@ -73,14 +73,14 @@ The same three prompts are also in the guide, in
 [Copy-paste prompts (same as the README)]([Fill in: URL-encoded guide filename]#copy-paste-prompts-same-as-the-readme),
 which shows which part of the guide each step covers.
 
-There are two ways to get the files, and each step has a prompt for both:
+There are two ways to get the files. Pick one:
 
-- **A. The assistant downloads them (recommended):** skip straight to
-  [Step 1](#step-1-set-up-and-confirm-the-environment) and use the **A** prompts.
-- **B. You download them yourself:** follow the steps below, then use the
-  **B** prompts.
+### Option A: the assistant downloads the files (recommended)
 
-### Route B: download the files yourself
+Nothing to do yet. Go straight to
+[Step 1](#step-1-set-up-and-confirm-the-environment) and use the **A** prompt.
+
+### Option B: download the files yourself
 
 1. **Download these files.** Right-click each link, choose **Save link as**,
    and save it into your `Downloads\[Fill in: QuickStart-Scenario-Name]` project
@@ -116,7 +116,7 @@ downloading, installing or running anything.
 [Fill in: Step 1 A prompt. Start with "Set up this QuickStart:" and the guide's GitHub link. Ask the assistant to explain the experiment in plain language, download and check every required file, check the environment, and ask before downloading or installing. If the QuickStart uses containers, add: "Check whether Podman or Docker is installed and running. If neither is, ask me before installing Podman. Don't install Docker Desktop." End with "Do not start the computation."]
 ```
 
-**B. You downloaded the files yourself** (after [Route B](#route-b-download-the-files-yourself)
+**B. You downloaded the files yourself** (after [option B](#option-b-download-the-files-yourself)
 steps 1–4, with the guide attached), send:
 
 ```text
