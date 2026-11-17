@@ -9,6 +9,7 @@
 1. Install the [Discovery app](../../../README.md) and sign in.
 2. Create a project in a new `Downloads\QuickStart-SCLC-Bookshelf` folder and click **New session**.
 3. Select **GPT-6 Astra**.
+   *(Prefer to download the papers yourself? Do [option B](#option-b-download-the-files-yourself) here.)*
 4. Send the [Step 1 prompt](#step-1-set-up-and-confirm-the-environment): download the papers and build the Bookshelf.
 5. Send the [Step 2 prompt](#step-2-run-the-experiment): ask the research question.
 6. Send the [Step 3 prompt](#step-3-verify-your-results-against-the-validated-reference): **your answer**, checked against the acceptance criteria.
@@ -87,13 +88,14 @@ already inside the Step 1 **A** prompt. The same three prompts are also in the
 guide, in
 [Copy-paste prompts (same as the README)](QuickStart-Bookshelf-SCLC-Literature.md#copy-paste-prompts-same-as-the-readme).
 
-There are two ways to get the papers, and Step 1 has a prompt for both:
+There are two ways to get the papers. Pick one:
 
-- **A. The assistant downloads them (recommended):** use the **A** prompt.
-- **B. You download them yourself:** follow
-  [Route B](#route-b-download-the-files-yourself), then use the **B** prompt.
+### Option A: the assistant downloads the files (recommended)
 
-### Route B: download the files yourself
+Nothing to do yet. Go straight to
+[Step 1](#step-1-set-up-and-confirm-the-environment) and use the **A** prompt.
+
+### Option B: download the files yourself
 
 1. Open the [guide](QuickStart-Bookshelf-SCLC-Literature.md) and go to the
    paper table in section 2.
