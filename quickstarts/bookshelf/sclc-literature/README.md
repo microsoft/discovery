@@ -43,8 +43,9 @@ these 15 papers.
 | Computer | Windows 11, 64-bit (expected). Not yet tested on any system. |
 | Disk space | About 1 GB free. |
 | Internet | Needed to download about 19 MB of papers. |
+| Container runtime | None needed. You don't need Docker, Docker Desktop or Podman. |
 
-No Python, containers or Azure setup needed.
+No Python or Azure setup needed.
 
 ## How long it takes
 
