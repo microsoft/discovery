@@ -69,9 +69,6 @@ Complete it together with the guide made from QuickStart-Template.md, and save i
 
 Copy each prompt into the chat in order. Wait for each step to finish before
 sending the next one, and answer the assistant's questions along the way.
-The same three prompts are also in the guide, in
-[Copy-paste prompts (same as the README)]([Fill in: URL-encoded guide filename]#copy-paste-prompts-same-as-the-readme),
-which shows which part of the guide each step covers.
 
 There are two ways to get the files. Pick one:
 

@@ -96,11 +96,6 @@ you don't need to open them.
 
 Copy each prompt into the chat in order. Wait for each step to finish before
 sending the next one, and answer the assistant's questions along the way.
-You don't need to paste the guide link on its own: it is already inside the
-Step 1 **A** prompt, and in option **B** you attach the guide instead.
-The same three prompts are also in the guide, in
-[Copy-paste prompts (same as the README)](QuickStart-BioPharma%20LeadGen%20v0.11.md#copy-paste-prompts-same-as-the-readme),
-which shows which part of the guide each step covers.
 
 There are two ways to get the files. Pick one:
 
