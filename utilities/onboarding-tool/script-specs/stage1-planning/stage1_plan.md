@@ -78,7 +78,7 @@ Confirm the workload region offers required features, and distinguish capacity f
 
 ### quota_sku — FR1.5
 Expand the sizing tier (Small|Medium|Large) into concrete resource counts and required quota, then validate:
-- Effective Stage 4 VM SKUs are offered in-region and unrestricted for the configured subscription. Defaults are a 3-node `Standard_D4s_v6` system pool and a node pool scaling from 0 to 3 `Standard_D4ds_v6` nodes; advanced JSON configs can override `systemSku`, `nodePoolVmSize`, and `nodePoolMaxNodeCount`.
+- Effective Stage 4 VM SKUs are offered in-region and unrestricted for the configured subscription. Both planning workbooks expose `systemSku` (SC system SKU) as a dropdown under **SIZING & SCALE**, defaulting to `Standard_D4s_v6`. Preserve the selection in the exported config and calculate system-pool quota for 3 nodes of that SKU. Older forms without the field retain the default. The node pool defaults to scaling from 0 to 3 `Standard_D4ds_v6` nodes; JSON configs can also set `systemSku`, `nodePoolVmSize`, and `nodePoolMaxNodeCount`.
 - Total Regional and VM-family quota are calculated from the live vCPU/family metadata of those effective SKUs. System-pool shortfalls fail the gate; node-pool scale-out shortfalls warn because initial deployment can still succeed.
 - Cosmos autoscale RU/s: workspace 2,400 (max 4,000); each project 400 (max 4,000); sized 2,400 + 400 × projects.
 - Model TPM: GPT-5.4 workspace/cognition 250K plus gpt-5-4 validation chat 200K, requiring 450K free for a fresh deployment; resumed deployments count only missing allocations. Bookshelf planning estimates per instance are GPT-5.2 200K, GPT-5 Mini 2M and Text Embedding 3 Small 2M, but the current quota check validates only GPT-5.4.

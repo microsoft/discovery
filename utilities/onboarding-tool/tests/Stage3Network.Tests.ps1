@@ -18,7 +18,8 @@ foreach ($name in @(
         'Get-ProfileSubnetRoles',
         'Invoke-CheckNsgEffective',
         'Invoke-CheckEffectiveRoutes',
-        'Invoke-CheckDnsAndPe'
+        'Invoke-CheckDnsAndPe',
+        'Invoke-CheckQuota'
     )) {
     $functionAst = $ast.Find({
             param($node)
@@ -39,6 +40,41 @@ function New-Stage3DnsConfig {
         storage       = [pscustomobject]@{
             accountId = '/subscriptions/sub/resourceGroups/storage-rg/providers/Microsoft.Storage/storageAccounts/data'
         }
+    }
+}
+
+Describe 'Stage 3 selected system SKU quota re-check' {
+    BeforeEach {
+        $config = [pscustomobject]@{
+            subscriptionId = 'sub'
+            resourceGroup = 'platform-rg'
+            workloadRegion = 'eastus'
+            systemSku = 'Standard_D16as_v5'
+            names = [pscustomobject]@{ supercomputer = 'sc' }
+            waivers = @()
+        }
+        Mock Invoke-Az { 'NotFound' }
+        Mock Get-VcpuQuotaResult {
+            New-CheckResult -Id 'vcpu-quota' -Name 'Compute vCPU quota' -Status 'Fail' -Fr 'FR3.6e' -Detail 'Selected SKU has insufficient quota.'
+        }
+    }
+
+    It 'passes the selected SKU to the shared quota check and preserves a failure' {
+        $result = Invoke-CheckQuota -Config $config -Profile 'supercomputer'
+
+        $result.status | Should Be 'Fail'
+        Assert-MockCalled Get-VcpuQuotaResult -Times 1 -Exactly -Scope It -ParameterFilter {
+            $Config.systemSku -eq 'Standard_D16as_v5' -and $Fr -eq 'FR3.6e' -and $RerunStage -eq 'Stage 3'
+        }
+    }
+
+    It 'preserves the skip for a supercomputer that already holds its quota' {
+        Mock Invoke-Az { 'Succeeded' }
+
+        $result = Invoke-CheckQuota -Config $config -Profile 'supercomputer'
+
+        $result.status | Should Be 'Skip'
+        Assert-MockCalled Get-VcpuQuotaResult -Times 0 -Exactly -Scope It
     }
 }
 
