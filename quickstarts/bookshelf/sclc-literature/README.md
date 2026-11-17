@@ -83,10 +83,7 @@ CC BY 4.0. They are not stored in this repository.
 ## Run it in three steps
 
 Copy each prompt into the chat in order. Wait for each step to finish before
-sending the next one. You don't need to paste the guide link on its own: it is
-already inside the Step 1 **A** prompt. The same three prompts are also in the
-guide, in
-[Copy-paste prompts (same as the README)](QuickStart-Bookshelf-SCLC-Literature.md#copy-paste-prompts-same-as-the-readme).
+sending the next one.
 
 There are two ways to get the papers. Pick one:
 
