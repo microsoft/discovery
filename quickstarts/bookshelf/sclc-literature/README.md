@@ -132,7 +132,7 @@ If it can't create Bookshelves from chat, it tells you and gives you these
 steps:
 
 1. Click **AI capabilities** on the left, then the **Bookshelves** tab, then **New bookshelf**.
-2. On **1. Details**, type the name `sclc-literature` and the description the assistant gives you. Leave the embedding model as it is. Under **Answer generation**, choose a model (this is required) and tell the assistant which one. Click **Next**.
+2. On **1. Details**, type the name `sclc-literature` and the description the assistant gives you. Leave the embedding model as it is. Under **Answer generation**, choose **GPT-6 Astra** (if it isn't listed, choose the first model). Click **Next**.
 3. On **2. Files**, click **Upload**, open `sclc-papers`, press **Ctrl+A** to select all 15 PDFs, and click **Open**. Click **Next**.
 4. On **3. Review + create**, click **Create**.
 5. Wait until it shows **Successfully indexed**, then tell the assistant.
