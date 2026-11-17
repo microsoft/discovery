@@ -135,15 +135,25 @@ buttons. You don't type anything.
 
 1. **May I download the 15 papers?** Click **Yes**.
 2. The assistant creates the Bookshelf for you if it can. **Only if it can't**,
-   it asks whether to create it with the app's form. Click **Yes**. It then
-   shows the form steps and values in the chat. Click **AI capabilities** on the
-   left; it opens in a new tab at the top of the app. Fill in the form there.
-   If a box asks **Use GitHub Copilot for Bookshelf answers in this
-   workspace?**, click **Use Copilot answers**. It appears once, the first time
-   you create a Bookshelf, and lets the Bookshelf write its answers.
+   it asks whether to create it with the app's form. Click **Yes**, then fill in
+   the form:
+
+   1. In the left sidebar, click **AI capabilities** (it opens in a new tab at
+      the top of the app), then **Bookshelves**, then **New bookshelf**.
+   2. On **1. Details**, enter **Name** `sclc-literature` and **Description**
+      `Fifteen open-access papers on small-cell lung cancer treatment.` Leave
+      **Embedding model** as it is. If a box asks
+      **Use GitHub Copilot for Bookshelf answers in this workspace?**, click
+      **Use Copilot answers** (it appears once). Wait for the model list to load,
+      then under **Answer generation** choose **GPT-6 Astra** (if it isn't
+      listed, choose the first model). Click **Next**.
+   3. On **2. Files**, click **Upload**, open the project's `sclc-papers`
+      folder, press **Ctrl+A** to select all 15 PDFs, and click **Open**. Check
+      that **15 files** are listed, then click **Next**.
+   4. On **3. Review + create**, check the values and click **Create**.
+   5. Wait until the Bookshelf shows **Successfully indexed**.
 3. **Only if you filled in the form:** go back to the chat by clicking its tab
-   at the top (or your session under **Sessions** on the left). When the
-   Bookshelf shows **Successfully indexed**, click
+   at the top (or your session under **Sessions** on the left), then click
    **Yes, it shows Successfully indexed**.
 
 **Done when:** all 15 papers pass their checksum, the Bookshelf shows
