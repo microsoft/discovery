@@ -117,7 +117,7 @@ There are two ways to get the papers, and Step 1 has a prompt for both:
 **A. The assistant downloads the papers:**
 
 ```text
-Set up this QuickStart: https://github.com/microsoft/discovery/blob/main/quickstarts/bookshelf/sclc-literature/QuickStart-Bookshelf-SCLC-Literature.md
+Set up this QuickStart: https://github.com/faranm-stack/discovery/blob/docs/quickstart-bookshelf-sclc/quickstarts/bookshelf/sclc-literature/QuickStart-Bookshelf-SCLC-Literature.md
 Read the whole guide and tell me in plain language what this experiment does. Then download the 15 papers into a sclc-papers folder in this project and check each file's size and checksum. Ask me before downloading. After that, create the sclc-literature Bookshelf from those 15 papers yourself with your Bookshelf tool: ask me first, then add all 15 PDFs, start indexing and wait until it is indexed, and tell me which answer model it uses. If your Bookshelf tools can't create a Bookshelf, tell me so and walk me through creating it in the app step by step with the exact values to type, then wait for me to confirm it shows Successfully indexed. Then ask it a short test question to confirm it works. Don't ask the research question yet. Finish by telling me whether everything is ready.
 ```
 
