@@ -127,9 +127,15 @@ Read the whole guide and tell me in plain language what this experiment does. Th
 Set up this QuickStart from the attached guide, using the 15 papers already in the sclc-papers folder of this project. Read the whole guide and tell me in plain language what this experiment does. Check each file's size and checksum. Then create the sclc-literature Bookshelf from those 15 papers yourself with your Bookshelf tool: ask me first, then add all 15 PDFs, start indexing and wait until it is indexed, and tell me which answer model it uses. If your Bookshelf tools can't create a Bookshelf, tell me so, show me the guide's form steps and exact values as a numbered list in your reply, then ask me with clickable choices whether it shows Successfully indexed. Then ask it a short test question to confirm it works. Don't ask the research question yet. Finish by telling me whether everything is ready.
 ```
 
-**Creating the Bookshelf:** the assistant creates it for you if it can. If it
-can't, it shows you a short form to fill in, with every value, right in the
-chat. When the Bookshelf is ready, click **Yes, it shows Successfully indexed**.
+**What you'll click in Step 1:** the assistant asks you a few questions with
+buttons. You don't type anything.
+
+1. **May I download the 15 papers?** Click **Yes**.
+2. The assistant creates the Bookshelf for you if it can. **Only if it can't**,
+   it asks whether to create it with the app's form. Click **Yes**, then fill in
+   the short form using the values it shows you in the chat.
+3. **Only if you filled in the form:** when the Bookshelf shows
+   **Successfully indexed**, click **Yes, it shows Successfully indexed**.
 
 **Done when:** all 15 papers pass their checksum, the Bookshelf shows
 **Successfully indexed**, and the test question comes back with a citation.
