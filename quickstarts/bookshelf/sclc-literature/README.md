@@ -138,6 +138,9 @@ buttons. You don't type anything.
    it asks whether to create it with the app's form. Click **Yes**. It then
    shows the form steps and values in the chat. Click **AI capabilities** on the
    left; it opens in a new tab at the top of the app. Fill in the form there.
+   If a box asks **Use GitHub Copilot for Bookshelf answers in this
+   workspace?**, click **Use Copilot answers**. It appears once, the first time
+   you create a Bookshelf, and lets the Bookshelf write its answers.
 3. **Only if you filled in the form:** go back to the chat by clicking its tab
    at the top (or your session under **Sessions** on the left). When the
    Bookshelf shows **Successfully indexed**, click
