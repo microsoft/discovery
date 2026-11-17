@@ -37,7 +37,7 @@ these 15 papers.
 
 | Requirement | Details |
 | --- | --- |
-| Discovery app | Download it from the [Discovery download page](../../../README.md) and follow the [install guide](../../../docs/discovery-app/install.md). The steps are the same in every version. In Discovery Preview the assistant creates the Bookshelf for you; in 0.0.4 you fill in one short form when it asks. |
+| Discovery app | Download it from the [Discovery download page](../../../README.md) and follow the [install guide](../../../docs/discovery-app/install.md). |
 | Sign-in | A GitHub account with a GitHub Copilot subscription. |
 | Model | **GPT-6 Astra** (`gpt-6-astra`). Choose it in the chat's model menu. |
 | Computer | Windows 11, 64-bit (expected). Not yet tested on any system. |
@@ -127,10 +127,9 @@ Read the whole guide and tell me in plain language what this experiment does. Th
 Set up this QuickStart from the attached guide, using the 15 papers already in the sclc-papers folder of this project. Read the whole guide and tell me in plain language what this experiment does. Check each file's size and checksum. Then create the sclc-literature Bookshelf from those 15 papers yourself with your Bookshelf tool: ask me first, then add all 15 PDFs, start indexing and wait until it is indexed, and tell me which answer model it uses. If your Bookshelf tools can't create a Bookshelf, tell me so and walk me through creating it in the app step by step with the exact values to type, then wait for me to confirm it shows Successfully indexed. Then ask it a short test question to confirm it works. Don't ask the research question yet. Finish by telling me whether everything is ready.
 ```
 
-**Who creates the Bookshelf:** the assistant does it for you when your app
-lets it create Bookshelves from chat (Discovery Preview has this; not yet
-tested end to end). If it can't (Discovery 0.0.4 can only search and ask
-Bookshelves from chat), it tells you and gives you these steps:
+**Who creates the Bookshelf:** the assistant creates it for you if it can.
+If it can't create Bookshelves from chat, it tells you and gives you these
+steps:
 
 1. Click **AI capabilities** on the left, then the **Bookshelves** tab, then **New bookshelf**.
 2. On **1. Details**, type the name `sclc-literature` and the description the assistant gives you. Leave the embedding model as it is. Under **Answer generation**, choose a model (this is required) and tell the assistant which one. Click **Next**.
