@@ -31,7 +31,7 @@ Set up this QuickStart from the attached guide, using the 15 papers already in t
 
 **Done when:** all 15 papers pass their checksum, the Bookshelf shows **Successfully indexed**, and the test question comes back with a citation.
 
-### Step 2: Run the research question
+### Step 2: Run the experiment
 
 Covers the section 6 fixed prompt. Expected time is in section 7.
 
@@ -43,7 +43,7 @@ Ask the research question in section 6 of the guide, using only the sclc-literat
 
 **Done when:** you have a full written answer with citations.
 
-### Step 3: Verify the answer
+### Step 3: Verify your results against the validated reference
 
 Covers the section 6 acceptance checks.
 
@@ -184,3 +184,5 @@ No measured runs yet. All values are **Pending**.
 - [ ] Applicable configuration/specs complete; unused fields N/A; compatibility checked; no unverified minima claimed.
 - [ ] Timings labeled with conditions; setup/indexing distinct from cold/warm runs.
 - [x] No secrets; samples permitted (CC BY 4.0, downloaded from source); cleanup documented. Owner, version and validation date: **Pending**.
+- [x] README completed from `README-Template.md`; its three step prompts are identical to **Copy-paste prompts (same as the README)** in this guide.
+- [x] Every required file downloaded from its published link and checked against its recorded size and SHA-256; all links resolve; no `[Fill in]` placeholders remain. (15/15 papers re-verified 2026-11-16; unknown values are marked Pending.)

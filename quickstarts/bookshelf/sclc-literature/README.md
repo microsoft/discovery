@@ -10,8 +10,8 @@
 2. Create a project in a new `Downloads\QuickStart-SCLC-Bookshelf` folder and click **New session**.
 3. Select **GPT-6 Astra**.
 4. Send the [Step 1 prompt](#step-1-set-up-and-confirm-the-environment): download the papers and build the Bookshelf.
-5. Send the [Step 2 prompt](#step-2-run-the-research-question): ask the research question.
-6. Send the [Step 3 prompt](#step-3-verify-the-answer): **your answer**, checked against the acceptance criteria.
+5. Send the [Step 2 prompt](#step-2-run-the-experiment): ask the research question.
+6. Send the [Step 3 prompt](#step-3-verify-your-results-against-the-validated-reference): **your answer**, checked against the acceptance criteria.
 
 ## What this QuickStart does
 
@@ -96,9 +96,9 @@ There are two ways to get the papers, and Step 1 has a prompt for both:
 
 - **A. The assistant downloads them (recommended):** use the **A** prompt.
 - **B. You download them yourself:** follow
-  [Route B](#route-b-download-the-papers-yourself), then use the **B** prompt.
+  [Route B](#route-b-download-the-files-yourself), then use the **B** prompt.
 
-### Route B: download the papers yourself
+### Route B: download the files yourself
 
 1. Open the [guide](QuickStart-Bookshelf-SCLC-Literature.md) and go to the
    paper table in section 2.
@@ -139,7 +139,7 @@ It will give you these steps:
 **Done when:** all 15 papers pass their checksum, the Bookshelf shows
 **Successfully indexed**, and the test question comes back with a citation.
 
-### Step 2: Run the research question
+### Step 2: Run the experiment
 
 **A or B (same prompt either way):**
 
@@ -149,7 +149,7 @@ Ask the research question in section 6 of the guide, using only the sclc-literat
 
 **Done when:** you have a full written answer with citations.
 
-### Step 3: Verify the answer
+### Step 3: Verify your results against the validated reference
 
 **A or B (same prompt either way):**
 
@@ -160,6 +160,17 @@ Check your answer against the acceptance criteria in section 6 of the guide. Sho
 **Done when:** every check passes and the five spot-checked claims match
 their papers. Save the answer: until there is an official reference answer,
 a passing run reviewed by the owner becomes it.
+
+## Supporting files
+
+The 15 papers are listed with exact sizes, SHA-256 checksums and download
+links in section 2 of the [guide](QuickStart-Bookshelf-SCLC-Literature.md).
+They are downloaded from PubMed Central, not stored in this repository.
+
+| Original filename | Bytes | SHA-256 | Purpose | Download |
+| --- | ---: | --- | --- | --- |
+| `manifest.json` | 12,791 | `1e7d9a3bd2ba69a9f87282f52c9b42a647228ce9b8ddf0c42585c430bfc1da15` | Each paper's title, journal, year, DOI, licence, download link and checksum | [Download](files/manifest.json) |
+| `selection_sclc.json` | 1,534 | `72b1fa2ad83fc4c1ac94e1d58c01427ca37134e5c9e62efbd2fcb2622d9be53e` | The 15 paper IDs and their roles (6 reviews or guidelines, 9 primary studies) | [Download](files/selection_sclc.json) |
 
 ## Status and next steps
 
