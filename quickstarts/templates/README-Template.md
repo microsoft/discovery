@@ -33,6 +33,7 @@ Complete it together with the guide made from QuickStart-Template.md, and save i
 | Model | **[Fill in: model]** (`[Fill in: model id]`). Choose it in the chat's model menu. |
 | Computer | [Fill in: tested OS and architecture]. Other systems are untested. |
 | Software | [Fill in: exact runtimes and versions, and whether the assistant installs them; or N/A] |
+| Container runtime | [Fill in one: **None needed.** *or* **Podman** (recommended, free): [install Podman](https://podman.io/docs/installation). Docker also works if you already have it running. Tested with: <runtime and version>.] |
 | Disk space | [Fill in] |
 | Internet | [Fill in: what is downloaded and its total size] |
 
@@ -112,7 +113,7 @@ There are two ways to get the files, and each step has a prompt for both:
 **A. The assistant downloads the files:**
 
 ```text
-[Fill in: Step 1 A prompt. Start with "Set up this QuickStart:" and the guide's GitHub link. Ask the assistant to explain the experiment in plain language, download and check every required file, check the environment, and ask before downloading or installing. End with "Do not start the computation."]
+[Fill in: Step 1 A prompt. Start with "Set up this QuickStart:" and the guide's GitHub link. Ask the assistant to explain the experiment in plain language, download and check every required file, check the environment, and ask before downloading or installing. If the QuickStart uses containers, add: "Check whether Podman or Docker is installed and running. If neither is, ask me before installing Podman. Don't install Docker Desktop." End with "Do not start the computation."]
 ```
 
 **B. You downloaded the files yourself** (after [Route B](#route-b-download-the-files-yourself)

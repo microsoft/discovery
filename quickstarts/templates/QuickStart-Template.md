@@ -10,6 +10,7 @@ Rules:
 - Write the three step prompts in the README first, then copy them word for word into "Copy-paste prompts (same as the README)" below.
 - Step 1 sets up and confirms only (no computation). Step 2 runs the section 5 reference path and the section 6 fixed prompt, with any approval reply in its own block. Step 3 checks the section 6 acceptance table against the new run's outputs, not the stored reference copies.
 - Compute every file's size and SHA-256 from the actual file, and give a direct download link for each.
+- Containers: state whether the scenario needs a container runtime. If it does, recommend Podman (free, no per-user licence), accept Docker if already installed, never tell the assistant to install Docker Desktop (paid per user in large organizations), and record the runtime and version actually tested. If it does not, write "None needed".
 - Finish with the section 9 publication checklist. Leave unticked anything not yet done and say what is missing.
 -->
 
@@ -130,6 +131,7 @@ Record units. Claim a minimum only after validation; otherwise keep **Not valida
 
 - **Access:** [Fill in: accounts, roles, subscriptions, licenses, region, quotas and model access].
 - **Environment:** [Fill in: required tools/runtimes and versions; network/endpoints; container registry/image access].
+- **Container runtime:** [Fill in: **None needed**, or **Podman** recommended (free; [install](https://podman.io/docs/installation)), Docker accepted if already running; Docker Desktop is not required. Readiness check: `podman info` or `docker info` responds. Tested with: runtime and version.]
 - **Authentication:** [Fill in: authentication method and credential/secret-storage references]. Never include secrets.
 - **Data:** [Fill in: permitted sample data, usage rights and handling restrictions].
 

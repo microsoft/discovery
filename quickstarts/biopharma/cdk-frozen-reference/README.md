@@ -44,6 +44,7 @@ check for one target (CDK7) failed; your report keeps these limitations.
 | Model | **GPT-6 Astra** (`gpt-6-astra`). Choose it in the chat's model menu. |
 | Computer | Windows 11, 64-bit (tested). Other systems are untested. |
 | Python | **Python 3.13.14, 64-bit**, exactly this version. If you don't have it, the assistant gives you the download link; it does not install Python for you. |
+| Container runtime | None needed. This QuickStart runs in a Python environment, so you don't need Docker, Docker Desktop or Podman. |
 | Disk space | About 3 GB free. |
 | Internet | Needed to download about 169 MB of files and the Python packages. |
 
