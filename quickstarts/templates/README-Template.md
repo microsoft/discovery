@@ -101,12 +101,6 @@ Nothing to do yet. Go straight to
 
 ### Step 1: Set up and confirm the environment
 
-After you send the Step 1 prompt, the app shows **Allow once** boxes when the
-assistant opens a link or runs a command. To stop clicking each one, click the
-arrow next to **Allow once** and choose **Allow for this session**. That
-applies only to this chat; the assistant still asks you in the chat before
-downloading, installing or running anything.
-
 **A. The assistant downloads the files:**
 
 ```text
@@ -119,6 +113,16 @@ steps 1–4, with the guide attached), send:
 ```text
 [Fill in: Step 1 B prompt. Same as A, but "from the attached guide, using the files already in this project" and without the download.]
 ```
+
+**While Step 1 runs:**
+
+- **Allow once boxes:** the app shows these when the assistant opens a link or
+  runs a command. Click the arrow next to **Allow once** and choose
+  **Allow for this session** so you don't have to click each one. That applies
+  only to this chat; the assistant still asks before downloading, installing or
+  running anything.
+- **Collapsed steps:** if a line in the chat ends with an arrow (**>**), click
+  the arrow to expand it and see the details.
 
 **Done when:** [Fill in: observable ready check, for example "the assistant says the environment is Ready".]
 

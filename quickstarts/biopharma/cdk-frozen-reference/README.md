@@ -135,12 +135,6 @@ Nothing to do yet. Go straight to
 
 ### Step 1: Set up and confirm the environment
 
-After you send the Step 1 prompt, the app shows **Allow once** boxes when the
-assistant opens a link or runs a command. To stop clicking each one, click the
-arrow next to **Allow once** and choose **Allow for this session**. That
-applies only to this chat; the assistant still asks you in the chat before
-downloading, installing or running anything.
-
 **A. The assistant downloads the files:**
 
 ```text
@@ -154,6 +148,16 @@ steps 1–4, with the guide attached), send:
 ```text
 Set up this QuickStart from the attached guide, using the six required files already in this project. Read the whole guide and tell me in plain language what this experiment does. Then prepare this project for the default frozen-reference run: check each file's size and checksum, check the model, Python 3.13.14, disk space and local access, show me the 14 required Python packages, and install what's needed. Ask me before installing anything. Do not start the computation. Finish by telling me whether the environment is ready and what, if anything, still needs my action.
 ```
+
+**While Step 1 runs:**
+
+- **Allow once boxes:** the app shows these when the assistant opens a link or
+  runs a command. Click the arrow next to **Allow once** and choose
+  **Allow for this session** so you don't have to click each one. That applies
+  only to this chat; the assistant still asks before downloading, installing or
+  running anything.
+- **Collapsed steps:** if a line in the chat ends with an arrow (**>**), click
+  the arrow to expand it and see the details.
 
 **Done when:** the assistant says the environment is **Ready** and the
 preflight check passed.
