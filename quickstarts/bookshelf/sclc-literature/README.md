@@ -128,14 +128,14 @@ Set up this QuickStart from the attached guide, using the 15 papers already in t
 ```
 
 **Who creates the Bookshelf:** the assistant creates it for you if it can.
-If it can't create Bookshelves from chat, it tells you and gives you these
-steps:
+If it can't, it shows you these steps in the chat. You only fill in one form;
+all values are below:
 
 1. Click **AI capabilities** on the left, then the **Bookshelves** tab, then **New bookshelf**.
-2. On **1. Details**, type the name `sclc-literature` and the description the assistant gives you. Leave the embedding model as it is. Under **Answer generation**, choose **GPT-6 Astra** (if it isn't listed, choose the first model). Click **Next**.
+2. On **1. Details**, enter the name `sclc-literature` and the description `Fifteen open-access papers on small-cell lung cancer treatment.` Leave the embedding model as it is. Under **Answer generation**, choose **GPT-6 Astra** (if it isn't listed, choose the first model). Click **Next**.
 3. On **2. Files**, click **Upload**, open `sclc-papers`, press **Ctrl+A** to select all 15 PDFs, and click **Open**. Click **Next**.
 4. On **3. Review + create**, click **Create**.
-5. Wait until it shows **Successfully indexed**, then tell the assistant.
+5. Wait until it shows **Successfully indexed**, then click **Yes, it shows Successfully indexed** in the chat.
 
 **Done when:** all 15 papers pass their checksum, the Bookshelf shows
 **Successfully indexed**, and the test question comes back with a citation.
