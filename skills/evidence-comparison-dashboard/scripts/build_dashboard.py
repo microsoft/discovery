@@ -3,10 +3,11 @@
 
 Standard library only; no network access. Every record must carry an http(s)
 source link, missing values are shown as "not reported" and never guessed, and
-`verify` re-reads the generated HTML to prove it still shows the input values.
+`verify` re-reads the generated HTML and compares it with a fresh build of the input, using
+settings (missing tokens, columns) given by the caller rather than read from the page.
 
-    build_dashboard.py build INPUT.json --out dashboard.html
-    build_dashboard.py verify INPUT.json dashboard.html
+    build_dashboard.py build INPUT.json --out dashboard.html [--columns a,b] [--missing-token NA]
+    build_dashboard.py verify INPUT.json dashboard.html [--columns a,b] [--missing-token NA]
 """
 
 from __future__ import annotations
@@ -139,8 +140,16 @@ def cell_text(value, missing_tokens):
 def valid_source_url(url):
     if not isinstance(url, str) or not url or any(c.isspace() or ord(c) < 32 for c in url):
         return False
-    parts = urlsplit(url)
+    try:
+        parts = urlsplit(url)
+    except ValueError:  # for example an unclosed IPv6 bracket
+        return False
     return parts.scheme in ("http", "https") and bool(parts.netloc)
+
+
+def clean_tokens(tokens):
+    """Normalize missing-value tokens the same way for build and verify."""
+    return sorted({t.strip().casefold() for t in (tokens or []) if t.strip()})
 
 
 def _text_or_empty(value):
@@ -149,7 +158,7 @@ def _text_or_empty(value):
 
 def normalize(data, missing_tokens=(), columns=None):
     """Validate input and return the display model. Raises InputError with every problem."""
-    tokens = {t.strip().casefold() for t in missing_tokens if t.strip()}
+    tokens = set(clean_tokens(missing_tokens))
     problems = []
     if isinstance(data, list):
         data = {"records": data}
@@ -382,13 +391,14 @@ class _Reader(HTMLParser):
             self._in_thead = True
         elif tag == "tr" and "data-id" in a:
             self._row = {"id": a["data-id"], "label": None, "href": None, "cells": {}}
+            self._cell = None
         elif tag == "th" and self._in_thead and "data-field" in a:
             self._cell = ("header", a["data-field"], a, [])
         elif tag == "th" and self._row is not None and a.get("data-role") == "record":
             self._cell = ("record", None, a, [])
         elif tag == "td" and self._row is not None and "data-field" in a:
             self._cell = ("cell", a["data-field"], a, [])
-        elif tag == "a" and self._cell is not None and self._cell[0] == "record":
+        elif tag == "a" and self._row is not None and self._cell is not None and self._cell[0] == "record":
             self._row["href"] = a.get("href")
 
     def handle_data(self, data):
@@ -403,33 +413,69 @@ class _Reader(HTMLParser):
             text = "".join(parts)
             if kind == "header":
                 self.headers.append(field)
-            elif kind == "record":
+            elif self._row is not None and kind == "record":
                 self._row["label"] = text
-            else:
+            elif self._row is not None:
                 self._row["cells"][field] = (text, attrs.get("data-missing"))
             self._cell = None
         elif tag == "tr" and self._row is not None:
             self.rows.append(self._row)
             self._row = None
+            self._cell = None
 
 
-def verify(input_path, html_path):
-    """Return a list of mismatches between the input file and the generated dashboard."""
-    problems = []
-    reader = _Reader()
-    reader.feed(Path(html_path).read_bytes().decode("utf-8"))
+def _first_difference(expected, actual):
+    for number, (a, b) in enumerate(zip(expected.split("\n"), actual.split("\n")), start=1):
+        if a != b:
+            return number
+    return min(expected.count("\n"), actual.count("\n")) + 2
+
+
+def check_dashboard(input_path, html_path, missing_tokens=(), columns=None):
+    """Compare a generated dashboard with its input. Returns (problems, model).
+
+    The settings (missing tokens, columns) come from the caller, never from the page,
+    so editing the page's own build metadata cannot change what is checked. Without a
+    --missing-token or --columns flag the check assumes none were used for the build.
+    """
+    try:
+        page = Path(html_path).read_bytes().decode("utf-8")
+        reader = _Reader()
+        reader.feed(page)
+        reader.close()
+    except (ValueError, RecursionError) as exc:  # includes bad UTF-8 and bad metadata JSON
+        return [f"dashboard could not be read as a build_dashboard.py page: {exc}"], None
     meta = reader.build_meta
     if not isinstance(meta, dict):
-        return ["dashboard has no build metadata; it was not produced by build_dashboard.py"]
+        return ["dashboard has no build metadata; it was not produced by build_dashboard.py"], None
+    if not all(isinstance(meta.get(key), str) for key in ("input_name", "input_sha256", "generated_at")):
+        return ["dashboard build metadata is incomplete or malformed"], None
+
     data, sha = load_json(input_path)
-    if meta.get("input_sha256") != sha:
+    tokens = clean_tokens(missing_tokens)
+    model = normalize(data, tokens, columns)
+    fields = [c["field"] for c in model["columns"]]
+    problems = []
+    if meta["input_sha256"] != sha:
         problems.append("input file changed since the dashboard was built (SHA-256 differs)")
-    model = normalize(data, meta.get("missing_tokens", []), meta.get("columns"))
-    if reader.headers != [c["field"] for c in model["columns"]]:
-        problems.append("column headers differ from the build metadata")
+    settings = []
+    if meta.get("missing_tokens") != tokens:
+        settings.append(
+            f"page was built with missing tokens {meta.get('missing_tokens')!r} but verify was given {tokens!r}; "
+            "pass the same --missing-token flags that were used for build"
+        )
+    if meta.get("columns") != fields:
+        settings.append(
+            f"page shows columns {meta.get('columns')!r} but verify expects {fields!r}; "
+            "pass the same --columns that was used for build (or none if build had none)"
+        )
+    if settings:
+        return problems + settings, model
+    if reader.headers != fields:
+        problems.append("column headers differ from the expected columns")
     if [r["id"] for r in reader.rows] != [r["id"] for r in model["records"]]:
         problems.append("record ids or order differ from the input")
-        return problems
+        return problems, model
     for expected, actual in zip(model["records"], reader.rows):
         rid = expected["id"]
         if actual["href"] != expected["source_url"]:
@@ -443,12 +489,39 @@ def verify(input_path, html_path):
             want_pair = (NOT_REPORTED, "true") if want is None else (want, "false")
             if got != want_pair:
                 problems.append(f"{rid}.{field}: shows {got!r}, input says {want_pair!r}")
-    return problems
+    if problems:
+        return problems, model
+
+    fresh = render(model, {
+        "version": VERSION,
+        "input_name": meta["input_name"],
+        "input_sha256": sha,
+        "generated_at": meta["generated_at"],
+        "missing_tokens": tokens,
+        "columns": fields,
+        "omitted_fields": model["omitted_fields"],
+    })
+    if fresh != page:
+        problems.append(
+            f"page is not identical to a fresh build of the input (first difference at line {_first_difference(fresh, page)}); "
+            "its script, styles, filters, coverage table, title, banner or build metadata were edited"
+            + (f", or it was built by version {meta.get('version')!r} and this is {VERSION!r}" if meta.get("version") != VERSION else "")
+        )
+    return problems, model
+
+
+def verify(input_path, html_path, missing_tokens=(), columns=None):
+    """Return a list of mismatches between the input file and the generated dashboard."""
+    return check_dashboard(input_path, html_path, missing_tokens, columns)[0]
+
+
+def _parse_columns(text):
+    return [c.strip() for c in text.split(",") if c.strip()] if text else None
 
 
 def _build_command(args):
     data, sha = load_json(args.input)
-    columns = [c.strip() for c in args.columns.split(",") if c.strip()] if args.columns else None
+    columns = _parse_columns(args.columns)
     model = normalize(data, args.missing_token or [], columns)
     generated = args.generated_at or dt.datetime.now(dt.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
     build_meta = {
@@ -456,7 +529,7 @@ def _build_command(args):
         "input_name": Path(args.input).name,
         "input_sha256": sha,
         "generated_at": generated,
-        "missing_tokens": sorted({t.strip().casefold() for t in (args.missing_token or []) if t.strip()}),
+        "missing_tokens": clean_tokens(args.missing_token),
         "columns": [c["field"] for c in model["columns"]],
         "omitted_fields": model["omitted_fields"],
     }
@@ -479,13 +552,17 @@ def _build_command(args):
 
 
 def _verify_command(args):
-    problems = verify(args.input, args.dashboard)
+    problems, model = check_dashboard(args.input, args.dashboard, args.missing_token or [], _parse_columns(args.columns))
     if problems:
         print("VERIFY FAILED:")
         for problem in problems:
             print(f"  - {problem}")
         return 1
-    print("VERIFY OK: every record, link, value, and missing flag matches the input.")
+    print("VERIFY OK: every record, link, value, and missing flag matches the input, and the page is identical to a fresh build.")
+    tokens = clean_tokens(args.missing_token)
+    print(f"  Settings checked: missing tokens: {', '.join(tokens) or 'none'}; columns: {', '.join(c['field'] for c in model['columns'])}")
+    if model["omitted_fields"]:
+        print(f"  Input fields not shown: {', '.join(model['omitted_fields'])}")
     return 0
 
 
@@ -503,6 +580,11 @@ def main(argv=None):
     check = sub.add_parser("verify", help="check a dashboard still matches its input")
     check.add_argument("input")
     check.add_argument("dashboard")
+    check.add_argument("--columns", help="the same --columns that was used for build (omit if build had none)")
+    check.add_argument(
+        "--missing-token", action="append",
+        help="the same --missing-token flags that were used for build (repeatable); settings are never read from the page",
+    )
     check.set_defaults(func=_verify_command)
     args = parser.parse_args(argv)
     try:

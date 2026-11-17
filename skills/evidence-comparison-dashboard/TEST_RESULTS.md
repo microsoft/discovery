@@ -125,6 +125,22 @@ Observations that came out of this run (also reflected in the docs):
 - **Provenance.** With a saved file as input the agent recorded `source_tool` as the file name and
   left `retrieved_at` empty. The skill now asks for the real tool name when it is known.
 
+## Fixes after review (Copilot review on the pull request)
+
+Three issues were reported in `build_dashboard.py` and fixed. Results are from this repository
+checkout on system Python 3.12.10 (Windows); the unit tests are 22, up from 17.
+
+| Review finding | Fix | Check |
+| --- | --- | --- |
+| `verify` trusted `columns` and `missing_tokens` from the page's own metadata, so a page edited together with its metadata could pass | The settings come from the `verify` command line (`--missing-token`, `--columns`); a mismatch with the page fails and names the flag. `verify` then re-renders and requires the whole page to equal a fresh build | A real value hidden with a token, and a dropped column, both fail without the matching flags and pass with them. Edits to the script, CSP, styles, coverage table and title fail |
+| A link such as `https://[::1` made `urlsplit` raise `ValueError` | The link is rejected as an input problem | Exit 2, message names `source_url`, no traceback, no output file |
+| `verify` raised a traceback on a malformed page | Truncated or unclosed HTML, invalid UTF-8, invalid or non-object metadata, and over-deep metadata JSON now report `VERIFY FAILED` | Exit 1, no traceback, in 7 unit-test cases and 5 manual cases (including an empty file) |
+
+Both samples build to a byte-identical page before and after the change (same `--generated-at`), so
+the dashboards from earlier runs and the Edge checks above are unaffected; only `verify` changed.
+
+## Not yet tested
+
 - Discovery Studio (cloud) runtime, and Discovery App 0.0.4 (the version the Discovery team
   described). Everything above is 0.0.2.
 - Persistence across an App restart, and a machine without Python.
@@ -139,11 +155,12 @@ Observations that came out of this run (also reflected in the docs):
 
 - `verify` proves the page matches the input file. It cannot prove the input file matches the
   original source; the skill requires building the input programmatically from saved tool output.
-- `verify` checks the table rows only (record order, links, labels, cell text, missing flags) and
-  the input hash. In the independent check it did **not** notice edits to the page script, the
-  Content-Security-Policy, the styles, the filter dropdown labels, the coverage table, the title,
-  or the dataset and synthetic-data banner. A page that passes `verify` should still come from the
-  script, not from a hand-edited file.
+- `verify` does not read its settings from the page. It needs the same `--missing-token` and
+  `--columns` as `build`; if they differ it fails and names the flag. A user who forgets the flags
+  gets a failure, not a silent pass.
+- `verify` compares the whole page with a fresh build of the input, so edits to the script, CSP,
+  styles, dropdowns, coverage table, title or banner fail it. It therefore also fails a page built
+  by a different version of the script; rebuild with the current script.
 - Filter dropdowns exist only for fields with 2 to 12 distinct values (or one value plus missing
   ones). Fields such as titles, DOIs and authors are searched with the search box.
 - The build rejects a UTF-8 byte order mark. Windows PowerShell 5.1 `Set-Content -Encoding UTF8` and

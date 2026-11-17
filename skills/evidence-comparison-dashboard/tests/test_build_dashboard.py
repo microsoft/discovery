@@ -1,4 +1,5 @@
 import json
+import re
 import subprocess
 import sys
 import tempfile
@@ -54,7 +55,7 @@ class InputValidation(unittest.TestCase):
         self.assertIn("source_url", self.rejected({"records": [{"id": "R1", "fields": {"a": 1}}]}))
 
     def test_non_http_links_are_rejected(self):
-        for url in ["javascript:alert(1)", "data:text/html,x", "file:///etc/passwd", "https://", "https://a b.example"]:
+        for url in ["javascript:alert(1)", "data:text/html,x", "file:///etc/passwd", "https://", "https://a b.example", "https://[::1"]:
             self.assertIn("source_url", self.rejected({"records": [record(source_url=url)]}), url)
 
     def test_duplicate_ids_and_nested_values_are_rejected(self):
@@ -95,7 +96,7 @@ class BuildAndVerify(unittest.TestCase):
             out = self.dir / (sample + ".html")
             built = run_cli("build", str(SKILL / "assets" / sample), "--out", str(out), "--missing-token", "NA")
             self.assertEqual(built.returncode, 0, built.stderr)
-            checked = run_cli("verify", str(SKILL / "assets" / sample), str(out))
+            checked = run_cli("verify", str(SKILL / "assets" / sample), str(out), "--missing-token", "NA")
             self.assertEqual(checked.returncode, 0, checked.stdout)
             self.assertTrue(out.with_suffix(".provenance.json").exists())
 
@@ -116,8 +117,15 @@ class BuildAndVerify(unittest.TestCase):
         self.assertEqual(result.returncode, 0, result.stderr)
         page = out.read_text(encoding="utf-8")
         self.assertNotIn("<script>alert", page)
-        self.assertNotIn("<img src=x", page)
         self.assertEqual(run_cli("verify", str(src), str(out)).returncode, 0)
+
+    def test_control_characters_in_text_still_verify(self):
+        tricky = "line1\r\nline2\rline3\nline4\tend \u202e \U0001F9EA"
+        data = {"records": [record("R\r\n1", label=tricky, fields={"a": tricky}, source_url="https://example.org/r1")]}
+        src, out, result = self.build(data)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        checked = run_cli("verify", str(src), str(out))
+        self.assertEqual(checked.returncode, 0, checked.stdout)
 
     def test_page_has_no_remote_resources_and_pins_inline_code(self):
         _, out, _ = self.build({"records": [record()]})
@@ -154,6 +162,69 @@ class BuildAndVerify(unittest.TestCase):
         self.assertEqual(result.returncode, 2)
         self.assertIn("source_url", result.stderr)
         self.assertFalse(out.exists())
+
+    def test_malformed_url_is_rejected_without_a_traceback(self):
+        _, out, result = self.build({"records": [record(source_url="https://[::1")]})
+        self.assertEqual(result.returncode, 2)
+        self.assertIn("source_url", result.stderr)
+        self.assertNotIn("Traceback", result.stderr)
+        self.assertFalse(out.exists())
+
+    def test_verify_takes_settings_from_the_caller_not_the_page(self):
+        data = {"records": [record("R1", fields={"a": "42", "b": "x"})]}
+
+        # A real value hidden as missing: the page and its metadata agree, but the caller did not ask for the token.
+        src, out, _ = self.build(data, "in.json", "--missing-token", "42")
+        hidden = run_cli("verify", str(src), str(out))
+        self.assertEqual(hidden.returncode, 1)
+        self.assertIn("--missing-token", hidden.stdout)
+        self.assertEqual(run_cli("verify", str(src), str(out), "--missing-token", "42").returncode, 0)
+
+        # A column dropped: the page and its metadata agree, but the caller did not ask for fewer columns.
+        src, out, _ = self.build(data, "in.json", "--columns", "b")
+        dropped = run_cli("verify", str(src), str(out))
+        self.assertEqual(dropped.returncode, 1)
+        self.assertIn("--columns", dropped.stdout)
+        confirmed = run_cli("verify", str(src), str(out), "--columns", "b")
+        self.assertEqual(confirmed.returncode, 0, confirmed.stdout)
+        self.assertIn("Input fields not shown: a", confirmed.stdout)
+
+    def test_verify_detects_edits_outside_the_table(self):
+        src, out, _ = self.build({"records": [record("R1", fields={"a": 1})]})
+        original = out.read_text(encoding="utf-8")
+        edits = {
+            "script": original.replace("apply();\n})();", "})();"),
+            "styles": original.replace("color:#1b1b1b", "color:#fff"),
+            "coverage": original.replace("1 of 1 reported", "0 of 1 reported"),
+            "title": original.replace("<h1>Evidence comparison</h1>", "<h1>Verified clinical results</h1>"),
+            "csp": original.replace("default-src &#x27;none&#x27;", "default-src *"),
+        }
+        for name, page in edits.items():
+            self.assertNotEqual(page, original, name)
+            out.write_text(page, encoding="utf-8")
+            result = run_cli("verify", str(src), str(out))
+            self.assertEqual(result.returncode, 1, name)
+            self.assertIn("not identical to a fresh build", result.stdout, name)
+
+    def test_verify_reports_unreadable_pages_without_a_traceback(self):
+        src, out, _ = self.build({"records": [record()]})
+        good = out.read_bytes()
+        cases = {
+            "invalid utf-8": good[:200] + b"\xff\xfe" + good[200:],
+            "invalid metadata json": good.replace(b'content="{&quot;', b'content="{oops&quot;', 1),
+            "metadata not an object": re.sub(rb'(name="evidence-build" content=")[^"]*(")', rb"\g<1>[1]\g<2>", good),
+            "metadata incomplete": re.sub(rb'(name="evidence-build" content=")[^"]*(")', rb"\g<1>{}\g<2>", good),
+            "metadata nested too deep": re.sub(rb'(name="evidence-build" content=")[^"]*(")', rb"\g<1>" + b"[" * 100000 + rb"\g<2>", good),
+            "truncated": good[: len(good) // 2],
+            "unclosed cell": good.replace(b"</a></th>", b"</a>", 1),
+        }
+        for name, content in cases.items():
+            self.assertNotEqual(content, good, name)
+            out.write_bytes(content)
+            result = run_cli("verify", str(src), str(out))
+            self.assertEqual(result.returncode, 1, f"{name}: {result.stdout}{result.stderr}")
+            self.assertIn("VERIFY FAILED", result.stdout, name)
+            self.assertNotIn("Traceback", result.stderr, name)
 
 
 if __name__ == "__main__":

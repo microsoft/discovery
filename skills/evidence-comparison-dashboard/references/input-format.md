@@ -33,5 +33,5 @@ duplicate `id`, invalid field values, invalid `columns`.
 - [`assets/sample-evidence.json`](../assets/sample-evidence.json): synthetic, includes missing
   values, a real zero, and a real `false`.
 - [`assets/sample-catalysis.json`](../assets/sample-catalysis.json): a different synthetic dataset
-  with different columns; pass `--missing-token NA` to `build` (not `verify`, which reads it from
-  the page) to treat its `"NA"` as missing.
+  with different columns; pass `--missing-token NA` to both `build` and `verify` (`verify` never
+  reads settings from the page) to treat its `"NA"` as missing.

@@ -64,13 +64,16 @@ A JSON file with a `records` list (full format in [input format](references/inpu
    "unknown" in their data. If Python cannot be run in this environment, tell the user the
    dashboard cannot be built with verification. Do not hand-write the HTML and describe it as
    verified.
-6. **Verify** and show the result to the user:
+6. **Verify** and show the result to the user. Pass the same `--missing-token` and `--columns`
+   flags you gave `build`; `verify` does not read them from the page:
 
    ```sh
    python scripts/build_dashboard.py verify evidence.json dashboard.html
    ```
 
-   If it fails, do not hand over the dashboard; fix the cause and rebuild.
+   If it fails, do not hand over the dashboard; fix the cause and rebuild. A failure that mentions
+   `--missing-token` or `--columns` means the flags differ from the build's; it is not a reason to
+   change the page.
 7. **Report:** record count, per-field coverage (reported vs not reported), omitted fields, the
    source tools and retrieval dates, and which sources failed or were skipped.
 
@@ -97,10 +100,11 @@ rows with every shown field reported" hides rows; it does not change or delete d
 - The page embeds the SHA-256 of the input file and the build settings. `verify` fails if the input
   changed, a value or link was edited, or a real value was marked missing.
 - State in your answer that the dashboard reflects the input as of `retrieved_at`.
-- `verify` proves the table rows match the input file (record order, links, labels, cell text,
-  missing flags). It does not check the page's script, styles, dropdowns, coverage table or banner,
-  and it cannot prove the input file matches the original source; that is why step 2 requires
-  copying tool output rather than retyping it.
+- `verify` takes the missing tokens and columns from its command line, not from the page, so the
+  page cannot vouch for its own settings. It then requires the whole page to match a fresh build of
+  the input (rows, links, labels, cell text, missing flags, script, styles, dropdowns, coverage
+  table, title and banner). It cannot prove the input file matches the original source; that is why
+  step 2 requires copying tool output rather than retyping it.
 
 ## Permissions
 

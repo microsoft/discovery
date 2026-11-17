@@ -25,14 +25,15 @@ python skills/evidence-comparison-dashboard/scripts/build_dashboard.py verify \
 
 Open `dashboard.html` in a browser. Expected: "Showing 6 of 6 records", a search box, filters,
 a source link on each row, and `OK` from `verify`. A second, different synthetic dataset is in
-`assets/sample-catalysis.json`. Its `"NA"` means "unknown", so pass `--missing-token NA` to `build`;
-`verify` takes no such flag and reads the setting from the page:
+`assets/sample-catalysis.json`. Its `"NA"` means "unknown", so pass `--missing-token NA` to `build`
+and to `verify`. `verify` never reads settings from the page, so it needs the same
+`--missing-token` (and `--columns`, if used) as `build`:
 
 ```sh
 python skills/evidence-comparison-dashboard/scripts/build_dashboard.py build \
   skills/evidence-comparison-dashboard/assets/sample-catalysis.json --out catalysis.html --missing-token NA
 python skills/evidence-comparison-dashboard/scripts/build_dashboard.py verify \
-  skills/evidence-comparison-dashboard/assets/sample-catalysis.json catalysis.html
+  skills/evidence-comparison-dashboard/assets/sample-catalysis.json catalysis.html --missing-token NA
 ```
 
 Do not commit generated `.html` files: the catalog file-type policy does not allow them. They are
@@ -71,12 +72,18 @@ output, run `build` and then `verify`, and report coverage and any sources that 
 - It proves the page shows the input file's record order, source links, labels and cell text, with
   missing values flagged exactly per the policy, and that the input file has not changed since the
   build (SHA-256).
+- The settings that decide what is shown or flagged missing (`--missing-token`, `--columns`) come
+  from the `verify` command line, never from the page, so editing the page's own metadata cannot
+  change what is checked. If the flags differ from the build's, `verify` fails and says which one.
+- It then rebuilds the page from the input and requires the whole page, including script,
+  Content-Security-Policy, styles, filter dropdowns, coverage table, title and banner, to be
+  identical apart from the build time. A hand-edited page fails, and so does a page built by a
+  different version of the script.
+- An unreadable page (truncated, invalid UTF-8, bad or missing build metadata) fails with a message
+  instead of a traceback.
 - It does **not** prove the input file equals the original source's output. Build the input
   programmatically from saved tool output rather than retyping it, and keep `source_tool` and
   `retrieved_at` on each record.
-- It checks only the table rows and the input hash. It does not notice edits to the page's script,
-  Content-Security-Policy, styles, filter dropdown labels, coverage table, title or banner, so a
-  page that passes `verify` should still be one the script produced, not a hand-edited file.
 
 ## Behavior when a source is unavailable
 
