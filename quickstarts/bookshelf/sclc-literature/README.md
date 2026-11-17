@@ -108,12 +108,6 @@ Nothing to do yet. Go straight to
 
 ### Step 1: Set up and confirm the environment
 
-After you send the Step 1 prompt, the app shows **Allow once** boxes when the
-assistant opens a link or runs a command. To stop clicking each one, click the
-arrow next to **Allow once** and choose **Allow for this session**. That
-applies only to this chat; the assistant still asks you in the chat before
-downloading, installing or running anything.
-
 **A. The assistant downloads the papers:**
 
 ```text
@@ -127,15 +121,27 @@ Read the whole guide and tell me in plain language what this experiment does. Th
 Set up this QuickStart from the attached guide, using the 15 papers already in the sclc-papers folder of this project. Read the whole guide and tell me in plain language what this experiment does. Check each file's size and checksum. Then create the sclc-literature Bookshelf from those 15 papers yourself with your Bookshelf tool: ask me first, then add all 15 PDFs, start indexing and wait until it is indexed, and tell me which answer model it uses. If your Bookshelf tools can't create a Bookshelf, tell me so, show me the guide's form steps and exact values as a numbered list in your reply, then ask me with clickable choices whether it shows Successfully indexed. Then ask it a short test question to confirm it works. Don't ask the research question yet. Finish by telling me whether everything is ready.
 ```
 
+**While Step 1 runs:**
+
+- **Allow once boxes:** the app shows these when the assistant opens a link or
+  runs a command. Click the arrow next to **Allow once** and choose
+  **Allow for this session** so you don't have to click each one. That applies
+  only to this chat; the assistant still asks before downloading anything.
+- **Collapsed steps:** if a line in the chat ends with an arrow (**>**), click
+  the arrow to expand it and see the details.
+
 **What you'll click in Step 1:** the assistant asks you a few questions with
 buttons. You don't type anything.
 
 1. **May I download the 15 papers?** Click **Yes**.
 2. The assistant creates the Bookshelf for you if it can. **Only if it can't**,
-   it asks whether to create it with the app's form. Click **Yes**, then fill in
-   the short form using the values it shows you in the chat.
-3. **Only if you filled in the form:** when the Bookshelf shows
-   **Successfully indexed**, click **Yes, it shows Successfully indexed**.
+   it asks whether to create it with the app's form. Click **Yes**. It then
+   shows the form steps and values in the chat. Click **AI capabilities** on the
+   left; it opens in a new tab at the top of the app. Fill in the form there.
+3. **Only if you filled in the form:** go back to the chat by clicking its tab
+   at the top (or your session under **Sessions** on the left). When the
+   Bookshelf shows **Successfully indexed**, click
+   **Yes, it shows Successfully indexed**.
 
 **Done when:** all 15 papers pass their checksum, the Bookshelf shows
 **Successfully indexed**, and the test question comes back with a citation.
