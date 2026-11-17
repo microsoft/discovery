@@ -92,12 +92,6 @@ you don't need to open them.
 4. **Select the model.** In the chat box, open the model menu and choose
    **GPT-6 Astra**.
 
-The app shows **Allow once** boxes when the assistant opens a link or runs a
-command. To stop clicking each one, click the arrow next to **Allow once** and
-choose **Allow for this session**. That applies only to this chat; the
-assistant still asks you in the chat before downloading, installing or
-starting the run.
-
 ## Run it in three steps
 
 Copy each prompt into the chat in order. Wait for each step to finish before
@@ -145,6 +139,12 @@ There are two ways to get the files, and each step has a prompt for both:
 5. **Send the Step 1 B prompt below**, then continue with Steps 2 and 3.
 
 ### Step 1: Set up and confirm the environment
+
+After you send the Step 1 prompt, the app shows **Allow once** boxes when the
+assistant opens a link or runs a command. To stop clicking each one, click the
+arrow next to **Allow once** and choose **Allow for this session**. That
+applies only to this chat; the assistant still asks you in the chat before
+downloading, installing or running anything.
 
 **A. The assistant downloads the files:**
 
