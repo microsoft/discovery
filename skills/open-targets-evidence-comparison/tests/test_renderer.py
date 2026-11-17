@@ -1,11 +1,14 @@
 import copy
+import contextlib
 import html
 import importlib.util
+import io
 import json
 import subprocess
 import sys
 import tempfile
 import unittest
+from unittest import mock
 from decimal import Decimal
 from html.parser import HTMLParser
 from pathlib import Path
@@ -107,6 +110,50 @@ class RendererTests(unittest.TestCase):
             candidate["evidence"][0]["technical_metadata"] = value
             with self.subTest(value=value), self.assertRaises(ValueError):
                 renderer.validate(candidate)
+
+    def test_metadata_nesting_limit(self):
+        value = 0
+        for _ in range(63):
+            value = [value]
+        self.data["evidence"][0]["technical_metadata"] = {"nested": value}
+        result = renderer.render(renderer.validate(self.data))
+        self.assertIn("Technical metadata", result)
+        self.data["evidence"][0]["technical_metadata"] = {"nested": [value]}
+        with self.assertRaisesRegex(ValueError, "maximum metadata nesting depth of 64"):
+            renderer.validate(self.data)
+
+    def test_cli_rejects_deep_json_without_traceback(self):
+        with tempfile.TemporaryDirectory() as folder:
+            input_path = Path(folder) / "deep.json"
+            output_path = Path(folder) / "report.html"
+            data = json.loads((HERE / "example.json").read_text(encoding="utf-8"))
+            data["evidence"][0]["technical_metadata"] = {"nested": "DEEP_VALUE"}
+            document = json.dumps(data)
+            for depth in (64, 2000):
+                input_path.write_text(document.replace('"DEEP_VALUE"', "[" * depth + "0" + "]" * depth),
+                                      encoding="utf-8")
+                result = subprocess.run([sys.executable, str(SCRIPT), "--input", str(input_path),
+                                         "--output", str(output_path)], capture_output=True, text=True)
+                self.assertNotEqual(result.returncode, 0)
+                self.assertIn("Error:", result.stderr)
+                self.assertTrue("maximum metadata nesting depth of 64" in result.stderr or
+                                "input nesting exceeds the Python recursion limit" in result.stderr)
+                self.assertNotIn("Traceback", result.stderr)
+                self.assertFalse(output_path.exists())
+
+    def test_cli_reports_decoder_recursion_error(self):
+        with tempfile.TemporaryDirectory() as folder:
+            input_path = Path(folder) / "deep.json"
+            output_path = Path(folder) / "report.html"
+            input_path.write_text("{}", encoding="utf-8")
+            stderr = io.StringIO()
+            with mock.patch.object(sys, "argv", [str(SCRIPT), "--input", str(input_path),
+                                                "--output", str(output_path)]), \
+                 mock.patch.object(renderer.json, "loads", side_effect=RecursionError), \
+                 contextlib.redirect_stderr(stderr):
+                self.assertEqual(renderer.main(), 1)
+            self.assertIn("Error: input nesting exceeds the Python recursion limit", stderr.getvalue())
+            self.assertFalse(output_path.exists())
 
     def test_query_is_collapsed_and_preserved_with_loaded_counts(self):
         query = '\n  query Example($value: String!) {\r\n    test(value: "<script>&")\n  }\n' + "page=0; " * 1000

@@ -59,7 +59,10 @@ notes; these are agent-authored notes, not a provider confidence score.
 Evidence may also contain `technical_metadata`, an optional JSON object for
 raw returned fields, preserving their names and values. It is displayed
 separately and does not imply source verification. Omit it if not supplied;
-an empty object is permitted. Legacy `uncertainty` strings are displayed
+an empty object is permitted. Objects and arrays in `technical_metadata` may
+nest up to 64 levels, counting the root object as level one. Input exceeding
+the Python JSON decoder's recursion limit is rejected with an error.
+Legacy `uncertainty` strings are displayed
 unchanged, including any embedded JSON; the renderer does not extract or
 rewrite them. Report-level `provenance.uncertainty` uses the same display label.
 

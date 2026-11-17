@@ -10,6 +10,9 @@ from pathlib import Path
 from urllib.parse import urlsplit
 
 
+MAX_METADATA_DEPTH = 64
+
+
 def fail(path, message):
     raise ValueError(f"{path}: {message}")
 
@@ -48,6 +51,8 @@ def array(value, path):
 
 
 def metadata_json(value, path, depth=0):
+    if isinstance(value, (dict, list)) and depth >= MAX_METADATA_DEPTH:
+        fail(path, f"exceeds maximum metadata nesting depth of {MAX_METADATA_DEPTH}")
     if isinstance(value, dict):
         if not all(isinstance(key, str) for key in value):
             fail(path, "expected string object keys")
@@ -281,6 +286,9 @@ def main():
         output = render(validate(data))
         with args.output.open("x", encoding="utf-8", newline="\n") as result:
             result.write(output)
+    except RecursionError:
+        print("Error: input nesting exceeds the Python recursion limit", file=sys.stderr)
+        return 1
     except (OSError, ValueError, UnicodeError) as error:
         print(f"Error: {error}", file=sys.stderr)
         return 1
