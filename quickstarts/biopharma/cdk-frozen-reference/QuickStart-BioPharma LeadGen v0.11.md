@@ -877,6 +877,8 @@ The corrected `pure_non_md_analysis_timing.md` and `.json` are separate addenda,
 - [ ] If the optional fresh extension is to be published as pre-validated, reproduce it separately on the intended recipient environment and record setup/first-response/completion timing. It is not a prerequisite for validating the narrower frozen scenario.
 - [ ] Publish the named scenario ZIP, matching checksum/validation attachments and separate timing correction in the public GitHub release; confirm anonymous download access and add the exact release link to the repository README.
 - [ ] Obtain maintainer validation/publication sign-off. Historical computational delivery is not experimental lead validation.
+- [x] README completed from `README-Template.md`; its three step prompts are identical to **Copy-paste prompts (same as the README)** in this guide.
+- [ ] Every required file downloaded from its published link and checked against its recorded size and SHA-256; all links resolve; no `[Fill in]` placeholders remain. (The six required files and all relative links are verified; external reference links in this guide have not all been rechecked.)
 
 **Evidence references:** Package `campaign.json`, `environment.json`, `README.txt`, retained scientific source, manifest and release receipts. Historical host-readiness metadata informed the tested-environment table but is not a required customer input or a claim that the original workspace is bundled.
 
