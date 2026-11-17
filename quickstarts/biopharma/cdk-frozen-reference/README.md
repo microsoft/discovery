@@ -196,7 +196,7 @@ start a second run without asking the assistant first.
 scientific snapshot is downloaded from the
 [`cdk-frozen-reference-v0.11` release](https://github.com/microsoft/discovery/releases/tag/cdk-frozen-reference-v0.11);
 the other five files are in this scenario's [`files`](files/) folder.
-Steps checked on Windows with Discovery app version 0.0.4.
+Steps checked on Windows.
 
 ## Details: what the assistant does at each stage
 
