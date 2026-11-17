@@ -37,7 +37,7 @@ these 15 papers.
 
 | Requirement | Details |
 | --- | --- |
-| Discovery app | Download it from the [Discovery download page](../../../README.md) and follow the [install guide](../../../docs/discovery-app/install.md). |
+| Discovery app | Download it from the [Discovery download page](../../../README.md) and follow the [install guide](../../../docs/discovery-app/install.md). The steps are the same in every version. In Discovery Preview the assistant creates the Bookshelf for you; in 0.0.4 you fill in one short form when it asks. |
 | Sign-in | A GitHub account with a GitHub Copilot subscription. |
 | Model | **GPT-6 Astra** (`gpt-6-astra`). Choose it in the chat's model menu. |
 | Computer | Windows 11, 64-bit (expected). Not yet tested on any system. |
@@ -118,17 +118,19 @@ There are two ways to get the papers, and Step 1 has a prompt for both:
 
 ```text
 Set up this QuickStart: https://github.com/microsoft/discovery/blob/main/quickstarts/bookshelf/sclc-literature/QuickStart-Bookshelf-SCLC-Literature.md
-Read the whole guide and tell me in plain language what this experiment does. Then download the 15 papers into a sclc-papers folder in this project and check each file's size and checksum. Ask me before downloading. After that, walk me through creating the sclc-literature Bookshelf step by step with the exact values to type, wait for me to confirm it shows Successfully indexed, then ask it a short test question to confirm it works. Don't ask the research question yet. Finish by telling me whether everything is ready.
+Read the whole guide and tell me in plain language what this experiment does. Then download the 15 papers into a sclc-papers folder in this project and check each file's size and checksum. Ask me before downloading. After that, create the sclc-literature Bookshelf from those 15 papers yourself with your Bookshelf tool: ask me first, then add all 15 PDFs, start indexing and wait until it is indexed, and tell me which answer model it uses. If your Bookshelf tools can't create a Bookshelf, tell me so and walk me through creating it in the app step by step with the exact values to type, then wait for me to confirm it shows Successfully indexed. Then ask it a short test question to confirm it works. Don't ask the research question yet. Finish by telling me whether everything is ready.
 ```
 
 **B. You downloaded the papers yourself** (guide attached):
 
 ```text
-Set up this QuickStart from the attached guide, using the 15 papers already in the sclc-papers folder of this project. Read the whole guide and tell me in plain language what this experiment does. Check each file's size and checksum. Then walk me through creating the sclc-literature Bookshelf step by step with the exact values to type, wait for me to confirm it shows Successfully indexed, then ask it a short test question to confirm it works. Don't ask the research question yet. Finish by telling me whether everything is ready.
+Set up this QuickStart from the attached guide, using the 15 papers already in the sclc-papers folder of this project. Read the whole guide and tell me in plain language what this experiment does. Check each file's size and checksum. Then create the sclc-literature Bookshelf from those 15 papers yourself with your Bookshelf tool: ask me first, then add all 15 PDFs, start indexing and wait until it is indexed, and tell me which answer model it uses. If your Bookshelf tools can't create a Bookshelf, tell me so and walk me through creating it in the app step by step with the exact values to type, then wait for me to confirm it shows Successfully indexed. Then ask it a short test question to confirm it works. Don't ask the research question yet. Finish by telling me whether everything is ready.
 ```
 
-The assistant can't click the app's buttons, so **you create the Bookshelf**.
-It will give you these steps:
+**Who creates the Bookshelf:** the assistant does it for you when your app
+lets it create Bookshelves from chat (Discovery Preview has this; not yet
+tested end to end). If it can't (Discovery 0.0.4 can only search and ask
+Bookshelves from chat), it tells you and gives you these steps:
 
 1. Click **AI capabilities** on the left, then the **Bookshelves** tab, then **New bookshelf**.
 2. On **1. Details**, type the name `sclc-literature` and the description the assistant gives you. Leave the embedding model as it is. Under **Answer generation**, choose a model (this is required) and tell the assistant which one. Click **Next**.
