@@ -1,6 +1,6 @@
 # Input format
 
-The input is UTF-8 JSON: an object with `records`, or a bare list of records.
+The input is UTF-8 JSON without a byte order mark: an object with `records`, or a bare list of records.
 
 | Key | Required | Notes |
 | --- | --- | --- |
@@ -33,4 +33,5 @@ duplicate `id`, invalid field values, invalid `columns`.
 - [`assets/sample-evidence.json`](../assets/sample-evidence.json): synthetic, includes missing
   values, a real zero, and a real `false`.
 - [`assets/sample-catalysis.json`](../assets/sample-catalysis.json): a different synthetic dataset
-  with different columns; use `--missing-token NA` to treat its `"NA"` as missing.
+  with different columns; pass `--missing-token NA` to `build` (not `verify`, which reads it from
+  the page) to treat its `"NA"` as missing.

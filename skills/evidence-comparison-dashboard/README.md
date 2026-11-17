@@ -25,7 +25,15 @@ python skills/evidence-comparison-dashboard/scripts/build_dashboard.py verify \
 
 Open `dashboard.html` in a browser. Expected: "Showing 6 of 6 records", a search box, filters,
 a source link on each row, and `OK` from `verify`. A second, different synthetic dataset is in
-`assets/sample-catalysis.json` (use `--missing-token NA` with it).
+`assets/sample-catalysis.json`. Its `"NA"` means "unknown", so pass `--missing-token NA` to `build`;
+`verify` takes no such flag and reads the setting from the page:
+
+```sh
+python skills/evidence-comparison-dashboard/scripts/build_dashboard.py build \
+  skills/evidence-comparison-dashboard/assets/sample-catalysis.json --out catalysis.html --missing-token NA
+python skills/evidence-comparison-dashboard/scripts/build_dashboard.py verify \
+  skills/evidence-comparison-dashboard/assets/sample-catalysis.json catalysis.html
+```
 
 Do not commit generated `.html` files: the catalog file-type policy does not allow them. They are
 created on demand.
@@ -34,7 +42,7 @@ created on demand.
 
 A skill that writes an HTML report from session data can make a good-looking page, but nothing
 checks it afterward. This skill adds a fixed missing-data policy, a required source link on every
-row, a build manifest with the input hash, and a `verify` step that fails if the page no longer
+row, a build manifest with the input hash, and a `verify` step that fails if the table no longer
 matches the input.
 
 ## Make it available to an agent
@@ -66,6 +74,9 @@ output, run `build` and then `verify`, and report coverage and any sources that 
 - It does **not** prove the input file equals the original source's output. Build the input
   programmatically from saved tool output rather than retyping it, and keep `source_tool` and
   `retrieved_at` on each record.
+- It checks only the table rows and the input hash. It does not notice edits to the page's script,
+  Content-Security-Policy, styles, filter dropdown labels, coverage table, title or banner, so a
+  page that passes `verify` should still be one the script produced, not a hand-edited file.
 
 ## Behavior when a source is unavailable
 

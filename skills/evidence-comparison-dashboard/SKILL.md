@@ -48,7 +48,9 @@ A JSON file with a `records` list (full format in [input format](references/inpu
    `columns` so they are not repeated. A row with no source link cannot be built: list those rows for
    the user and build the rest only if they agree.
 3. **Record provenance per record:** `source_url`, plus `source_tool` and `retrieved_at` when known.
-   Mark file-supplied records with `source_tool` set to the file name.
+   Use the real tool name (for example `openalex.search_works`) when you know which call produced
+   the data. Mark file-supplied records with `source_tool` set to the file name only when the tool
+   is unknown, and leave `retrieved_at` `null` rather than guessing a date.
 4. **Choose columns.** Default is every field seen, in first-seen order. Pass
    `--columns a,b,c` or a `columns` list to choose and order them. Fields left out are reported,
    never silently dropped.
@@ -80,6 +82,11 @@ A JSON file with a `records` list (full format in [input format](references/inpu
 | `0`, `0.0`, `false`, the string `"0"`, the string `"N/A"` | A real value, shown exactly as given |
 | Any string listed with `--missing-token` | Missing (explicit opt-in only) |
 
+Placeholder text such as `not provided`, `n/a` or `-` in a user's table is kept as given, because
+the skill cannot know it means "unknown". It then counts as reported in the coverage table, so ask
+the user whether to treat it as missing (`--missing-token`). If you cannot ask, say in your report
+that those cells were kept as given and are counted as reported.
+
 Never impute, average over, or drop missing values. Do not compute totals, means, or rankings
 across a field unless you state how many records were not reported for it. The row filter "Only
 rows with every shown field reported" hides rows; it does not change or delete data.
@@ -90,8 +97,10 @@ rows with every shown field reported" hides rows; it does not change or delete d
 - The page embeds the SHA-256 of the input file and the build settings. `verify` fails if the input
   changed, a value or link was edited, or a real value was marked missing.
 - State in your answer that the dashboard reflects the input as of `retrieved_at`.
-- `verify` proves the page matches the input file. It cannot prove the input file matches the
-  original source; that is why step 2 requires copying tool output rather than retyping it.
+- `verify` proves the table rows match the input file (record order, links, labels, cell text,
+  missing flags). It does not check the page's script, styles, dropdowns, coverage table or banner,
+  and it cannot prove the input file matches the original source; that is why step 2 requires
+  copying tool output rather than retyping it.
 
 ## Permissions
 
@@ -106,5 +115,10 @@ Content-Security-Policy pins its inline style and script; all text is HTML-escap
 - Lists must contain strings or numbers only; flatten nested objects before building.
 - `NaN` and `Infinity` are rejected. Use `null` for unknown numbers.
 - Filters need JavaScript; with it off, all rows are shown.
+- A filter dropdown exists only for fields with 2 to 12 distinct values (or one value plus missing
+  ones). Long-text fields such as titles, DOIs and authors are found with the search box instead.
+- Write the input file as UTF-8 **without** a byte order mark. The build rejects one, and Windows
+  PowerShell 5.1 `Set-Content -Encoding UTF8` and `Out-File -Encoding utf8` add it. Use Python's
+  `json.dump` to write the file.
 - Provider-specific field names differ. Use the names the tool actually returned and see the
   [OpenAlex mapping](references/openalex-mapping.md) for one worked example.
