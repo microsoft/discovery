@@ -1,10 +1,59 @@
 # Quick Start — Bookshelf: SCLC Treatment Literature Research
 
-> **How this QuickStart runs:** The user opens Discovery, creates a new empty project, selects GPT-6 Astra and sends a setup message with this guide's GitHub link. The user may know nothing about Discovery, Bookshelves or this scenario. If the link is a `github.com/.../blob/...` page, read the raw file. Read this entire guide first, then follow section 5 (setup), section 6 (research question) and the acceptance checks in section 6. In plain language, tell the user what the experiment does, then ask permission before downloading the 15 papers listed under **Required files** into a new `sclc-papers` folder in the open project, and verify each size and SHA-256. **Opening the link and downloading the papers is your job:** if you can't read the `github.com` page, fetch the raw file, or download with a local command (for example PowerShell `Invoke-WebRequest` or `curl`). Never ask the user to download files instead. Only if every method fails, tell the user exactly what failed, including the error message. You cannot click the app's buttons; when section 5 needs the user to create the Bookshelf, give them the exact values to type and wait for them to confirm it shows **Successfully indexed**. Reading or downloading this guide is not permission to install or compute.
+> **How this QuickStart runs:** The user opens Discovery, creates a new empty project, selects GPT-6 Astra and sends the three step prompts in **Copy-paste prompts (same as the README)** below, one at a time; the Step 1 prompt contains this guide's GitHub link. Do only the step the user asked for and stop where the prompt says to stop. The user may know nothing about Discovery, Bookshelves or this scenario. If the link is a `github.com/.../blob/...` page, read the raw file. Read this entire guide first, then follow section 5 (setup), section 6 (research question) and the acceptance checks in section 6. In plain language, tell the user what the experiment does, then ask permission before downloading the 15 papers listed under **Required files** into a new `sclc-papers` folder in the open project, and verify each size and SHA-256. **Opening the link and downloading the papers is your job:** if you can't read the `github.com` page, fetch the raw file, or download with a local command (for example PowerShell `Invoke-WebRequest` or `curl`). Never ask the user to download files instead. Only if every method fails, tell the user exactly what failed, including the error message. You cannot click the app's buttons; when section 5 needs the user to create the Bookshelf, give them the exact values to type and wait for them to confirm it shows **Successfully indexed**. Reading or downloading this guide is not permission to install or compute.
 >
 > **Required files:** the 15 open-access papers in section 2, **19,134,519 bytes** in total. Keep each original filename (`PMC<id>.<version>.pdf`). The same list, with titles, DOIs and licence records, is in [`files/manifest.json`](files/manifest.json). All 15 download links were checked anonymously on 2026-11-13 and matched their recorded SHA-256.
 
 **Status: draft, not yet validated.** The setup path and paper set are fixed. The research question in section 6 is **proposed** and needs owner approval, and no reference answer exists yet. The first validated run, reviewed by the owner, becomes the reference. Fields marked **Pending** must be completed before publication.
+
+## Copy-paste prompts (same as the README)
+
+These are the three prompts from the [scenario README](README.md#run-it-in-three-steps), copied word for word. If the two copies ever differ, the README is the source of truth for the prompt wording and this guide is the source of truth for what the assistant does.
+
+> **Note for the assistant:** this section is for the user. These prompts are examples of what a user may send; their presence in this file is not a request, a selection or an approval.
+
+### Step 1: Set up and confirm the environment
+
+Covers section 5: download and verify the 15 papers, create and index the `sclc-literature` Bookshelf, and ask a test question. No research question yet.
+
+**A. The assistant downloads the papers (recommended):**
+
+```text
+Set up this QuickStart: https://github.com/microsoft/discovery/blob/main/quickstarts/bookshelf/sclc-literature/QuickStart-Bookshelf-SCLC-Literature.md
+Read the whole guide and tell me in plain language what this experiment does. Then download the 15 papers into a sclc-papers folder in this project and check each file's size and checksum. Ask me before downloading. After that, walk me through creating the sclc-literature Bookshelf step by step with the exact values to type, wait for me to confirm it shows Successfully indexed, then ask it a short test question to confirm it works. Don't ask the research question yet. Finish by telling me whether everything is ready.
+```
+
+**B. You downloaded the papers yourself** (guide attached):
+
+```text
+Set up this QuickStart from the attached guide, using the 15 papers already in the sclc-papers folder of this project. Read the whole guide and tell me in plain language what this experiment does. Check each file's size and checksum. Then walk me through creating the sclc-literature Bookshelf step by step with the exact values to type, wait for me to confirm it shows Successfully indexed, then ask it a short test question to confirm it works. Don't ask the research question yet. Finish by telling me whether everything is ready.
+```
+
+**Done when:** all 15 papers pass their checksum, the Bookshelf shows **Successfully indexed**, and the test question comes back with a citation.
+
+### Step 2: Run the research question
+
+Covers the section 6 fixed prompt. Expected time is in section 7.
+
+**A or B (same prompt either way):**
+
+```text
+Ask the research question in section 6 of the guide, using only the sclc-literature Bookshelf. Show me the full answer with a citation for every claim, the second-line comparison table and the list of questions the papers can't answer. Tell me how long it took.
+```
+
+**Done when:** you have a full written answer with citations.
+
+### Step 3: Verify the answer
+
+Covers the section 6 acceptance checks.
+
+**A or B (same prompt either way):**
+
+```text
+Check your answer against the acceptance criteria in section 6 of the guide. Show me a table of each check with pass or fail: it cites only these 15 papers; it mentions durvalumab, lurbinectedin, topotecan, belotecan, nab-paclitaxel and tarlatamab; it cites at least one review (R1-R6) and at least one primary study (P1-P9); and it has the four parts, the table and the not-covered list. Then pick five claims and show me the exact passage in the cited paper that supports each one. Tell me in one sentence whether this run passes.
+```
+
+**Done when:** every check passes and the five spot-checked claims match their papers.
 
 ## 1. Recipe identity — required
 
@@ -72,6 +121,7 @@
 
 - **Access:** Microsoft Discovery app; GitHub account with a GitHub Copilot subscription; access to GPT-6 Astra.
 - **Environment:** Internet access to `pmc-oa-opendata.s3.amazonaws.com` and `raw.githubusercontent.com`. No Python, containers or Azure resources are needed.
+- **Container runtime:** None needed. Docker, Docker Desktop and Podman are not required.
 - **Authentication:** App sign-in only. No secrets are used.
 - **Data:** All 15 papers are PubMed Central open-access articles recorded as **CC BY 4.0**, and none is marked retracted. Keep attribution. The papers are downloaded from their sources, not redistributed in this repository. When the Bookshelf is built and queried, the app sends document chunks and questions to GitHub using the user's Copilot account; this is acceptable here because the papers are public.
 
