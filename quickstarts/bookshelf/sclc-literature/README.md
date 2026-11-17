@@ -118,24 +118,18 @@ downloading, installing or running anything.
 
 ```text
 Set up this QuickStart: https://github.com/faranm-stack/discovery/blob/docs/quickstart-bookshelf-sclc/quickstarts/bookshelf/sclc-literature/QuickStart-Bookshelf-SCLC-Literature.md
-Read the whole guide and tell me in plain language what this experiment does. Then download the 15 papers into a sclc-papers folder in this project and check each file's size and checksum. Ask me before downloading. After that, create the sclc-literature Bookshelf from those 15 papers yourself with your Bookshelf tool: ask me first, then add all 15 PDFs, start indexing and wait until it is indexed, and tell me which answer model it uses. If your Bookshelf tools can't create a Bookshelf, tell me so and walk me through creating it in the app step by step with the exact values to type, then wait for me to confirm it shows Successfully indexed. Then ask it a short test question to confirm it works. Don't ask the research question yet. Finish by telling me whether everything is ready.
+Read the whole guide and tell me in plain language what this experiment does. Then download the 15 papers into a sclc-papers folder in this project and check each file's size and checksum. Ask me before downloading. After that, create the sclc-literature Bookshelf from those 15 papers yourself with your Bookshelf tool: ask me first, then add all 15 PDFs, start indexing and wait until it is indexed, and tell me which answer model it uses. If your Bookshelf tools can't create a Bookshelf, tell me so, show me the guide's form steps and exact values as a numbered list in your reply, then ask me with clickable choices whether it shows Successfully indexed. Then ask it a short test question to confirm it works. Don't ask the research question yet. Finish by telling me whether everything is ready.
 ```
 
 **B. You downloaded the papers yourself** (guide attached):
 
 ```text
-Set up this QuickStart from the attached guide, using the 15 papers already in the sclc-papers folder of this project. Read the whole guide and tell me in plain language what this experiment does. Check each file's size and checksum. Then create the sclc-literature Bookshelf from those 15 papers yourself with your Bookshelf tool: ask me first, then add all 15 PDFs, start indexing and wait until it is indexed, and tell me which answer model it uses. If your Bookshelf tools can't create a Bookshelf, tell me so and walk me through creating it in the app step by step with the exact values to type, then wait for me to confirm it shows Successfully indexed. Then ask it a short test question to confirm it works. Don't ask the research question yet. Finish by telling me whether everything is ready.
+Set up this QuickStart from the attached guide, using the 15 papers already in the sclc-papers folder of this project. Read the whole guide and tell me in plain language what this experiment does. Check each file's size and checksum. Then create the sclc-literature Bookshelf from those 15 papers yourself with your Bookshelf tool: ask me first, then add all 15 PDFs, start indexing and wait until it is indexed, and tell me which answer model it uses. If your Bookshelf tools can't create a Bookshelf, tell me so, show me the guide's form steps and exact values as a numbered list in your reply, then ask me with clickable choices whether it shows Successfully indexed. Then ask it a short test question to confirm it works. Don't ask the research question yet. Finish by telling me whether everything is ready.
 ```
 
-**Who creates the Bookshelf:** the assistant creates it for you if it can.
-If it can't, it shows you these steps in the chat. You only fill in one form;
-all values are below:
-
-1. Click **AI capabilities** on the left, then the **Bookshelves** tab, then **New bookshelf**.
-2. On **1. Details**, enter the name `sclc-literature` and the description `Fifteen open-access papers on small-cell lung cancer treatment.` Leave the embedding model as it is. Under **Answer generation**, choose **GPT-6 Astra** (if it isn't listed, choose the first model). Click **Next**.
-3. On **2. Files**, click **Upload**, open `sclc-papers`, press **Ctrl+A** to select all 15 PDFs, and click **Open**. Click **Next**.
-4. On **3. Review + create**, click **Create**.
-5. Wait until it shows **Successfully indexed**, then click **Yes, it shows Successfully indexed** in the chat.
+**Creating the Bookshelf:** the assistant creates it for you if it can. If it
+can't, it shows you a short form to fill in, with every value, right in the
+chat. When the Bookshelf is ready, click **Yes, it shows Successfully indexed**.
 
 **Done when:** all 15 papers pass their checksum, the Bookshelf shows
 **Successfully indexed**, and the test question comes back with a citation.
