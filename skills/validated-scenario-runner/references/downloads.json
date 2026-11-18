@@ -1,0 +1,64 @@
+{
+  "formatVersion": 1,
+  "purpose": "Maintainer-only exact-file download inventory, not a customer execution profile",
+  "packages": {
+    "biopharma": {
+      "title": "BioPharma",
+      "guide": {"path":"validated-scenarios/biopharma/cdk-frozen-reference/Validated-Scenario-BioPharma LeadGen v0.11.md","name":"Validated-Scenario-BioPharma LeadGen v0.11.md","bytes":123475,"sha256":"81c7693325dc1238b77d32c56af7a2dba2ac328f7dc822bcb6e37b2b66e4a3c0","sourceBytes":113732,"sourceSha256":"1f1046aedcc1d7a323ebf38ab5352b152071de690b967ac95bfec450fb08ec49","publicationEdits":"Personal attribution removed and current guide filename normalized to Validated Scenario; Public file locations, direct download links and a start-from-link note added on 2026-11-12; Copy-paste prompts section matching the README added on 2026-11-16; container-runtime prerequisite (none needed) and two template publication-checklist items added on 2026-11-17. All other source bytes, including prompts and scientific content, retained. Original archive member filenames are unchanged."},
+      "files": [
+        {"path":"validated-scenarios/biopharma/cdk-frozen-reference/files/cdk_operational_bundle_v1.zip","name":"cdk_operational_bundle_v1.zip","bytes":50301,"sha256":"874eba9d9e1ee72d38c257f7904d93953bcb8dc2ec55cf4c2732009c57e74f2f"},
+        {"path":"validated-scenarios/biopharma/cdk-frozen-reference/files/cdk_operational_bundle_v1.sha256","name":"cdk_operational_bundle_v1.sha256","bytes":97,"sha256":"a793e0bb6e34945ad04e230d1b185f66eebd1861219962f9afcff31ebeb46325"},
+        {"path":"validated-scenarios/biopharma/cdk-frozen-reference/files/cdk_operational_bundle_v1_manifest.csv","name":"cdk_operational_bundle_v1_manifest.csv","bytes":2130,"sha256":"04bfa2ab5f0b4095dcf94d3e37ba1019e5f8d4fe6dfa281835ca9a389bbac474"},
+        {"path":"validated-scenarios/biopharma/cdk-frozen-reference/files/cdk_operational_bundle_v1_validation.json","name":"cdk_operational_bundle_v1_validation.json","bytes":1152,"sha256":"0709258b42b18800e7eb4414c965862715370ce1c28f5d9721c3bcb1eceea71f"},
+        {"path":"validated-scenarios/biopharma/cdk-frozen-reference/files/cdk_non_md_deliverables.zip","name":"cdk_non_md_deliverables.zip","bytes":168396900,"sha256":"bfc939735a574ccc2375ae9808e9242fb79efc545d5b3f314cc38e5d0cefa076"},
+        {"path":"validated-scenarios/biopharma/cdk-frozen-reference/files/cdk_non_md_deliverables.sha256","name":"cdk_non_md_deliverables.sha256","bytes":95,"sha256":"702e1df41eb1b1d22106487e0c003b3b5109c06bdbb0c4e4504af110cd24c07b"}
+      ],
+      "publicationApproved": true,
+      "publicationReason": "Exact snapshot published in microsoft/discovery release cdk-frozen-reference-v0.11 on 2026-11-12; anonymous download verified at 168,396,900 bytes with the recorded SHA256. Source notice records MIT campaign code and separate ChEMBL/KIBA/AqSolDB/wwPDB terms; retain all originals. Publication is not scientific validation.",
+      "releaseUrl": "https://github.com/microsoft/discovery/releases/download/cdk-frozen-reference-v0.11/cdk_non_md_deliverables.zip",
+      "referenceOnly": [],
+      "runtimeStatus": "Proposed v0.11 guide; revised shared runner not yet tested end to end"
+    },
+    "siphy": {
+      "title": "SiPhy",
+      "guide": {"path":"validated-scenarios/siphy/spec-to-rtl/Validated-Scenario-Spec-to-RTL.md","name":"Validated-Scenario-Spec-to-RTL.md","bytes":29065,"sha256":"75425e69e2de5372ebfd0e8756f0a635253c25225cdc7c1567d9b6df22ced1b1","sourceBytes":29025,"sourceSha256":"cc31845bb7220eb2c3da4243a78455b877adb6bf23030ca4defc1bcaf637a8db","publicationEdits":"Personal owner/contact identifiers replaced with role-based references; all other source bytes, including prompts and scientific content, retained."},
+      "files": [
+        {"path":"validated-scenarios/siphy/spec-to-rtl/files/ship.tar","name":"ship.tar","bytes":40992256,"sha256":"f06834009e5e28b0c2cb18f3b7ff5227d1cb8ee2ecbd84f41eda157f8907159c"},
+        {"path":"validated-scenarios/siphy/spec-to-rtl/skill 1.md","name":"skill 1.md","bytes":38469,"sha256":"4c87f20765a007658bbbb247351c9e1790e99e06dc37093cf4c6a33e758111ff"}
+      ],
+      "publicationApproved": true,
+      "publicationReason": "Contributor confirmed permission to publish the complete original archive, including all forty papers, on 2026-11-11. Archive included as a regular repository file; original notices unchanged. This is recorded contributor confirmation, not an independent rights audit or E2E validation.",
+      "releaseUrl": null,
+      "referenceOnly": ["Five owner v1.1 result links and native reference tree were not supplied; preserve guide text and record missing evidence"],
+      "runtimeStatus": "Owner warm-run v1.1 native gates reported; fresh contract/setup, portable Catalog configuration and runner reconciliation unvalidated"
+    },
+    "cms": {
+      "title": "CMS",
+      "guide": null,
+      "files": [
+        {"path":"validated-scenarios/cms/moisturizer-formulation/files/moisturizer-prompt.md","name":"moisturizer-prompt.md","bytes":2506,"sha256":"c0c44ecff300130419f6af8e48095331e060f68248c3da224853b87e78048c9d"},
+        {"path":"validated-scenarios/cms/moisturizer-formulation/files/corpus.manifest.json","name":"corpus.manifest.json","bytes":2708,"sha256":"a171da400b11d2e73d229b3a5558b38721e91304263f0424d6b76966ebaa9b75"},
+        {"path":"validated-scenarios/cms/moisturizer-formulation/files/OneDrive_1_11-3-2026.zip","name":"OneDrive_1_11-3-2026.zip","bytes":26140796,"sha256":"7dd62653464765e8bc9f0b405f43bee21ea8b7755485dfab8841e673e3dc430c"}
+      ],
+      "publicationApproved": false,
+      "publicationReason": "Completed owner guide not supplied; protected corpus readability and public redistribution unresolved",
+      "releaseUrl": null,
+      "referenceOnly": [],
+      "runtimeStatus": "No ready owner Validated Scenario; do not package as runnable"
+    },
+    "bookshelf": {
+      "title": "Bookshelf",
+      "guide": null,
+      "files": [
+        {"path":"validated-scenarios/bookshelf/sclc-literature/files/manifest.json","name":"manifest.json","bytes":12774,"sha256":"1acc677072de955f44393454cd3f66c856697e4d122b7c8208cd8842f3874711"},
+        {"path":"validated-scenarios/bookshelf/sclc-literature/files/selection_sclc.json","name":"selection_sclc.json","bytes":1541,"sha256":"c0229224c86755318948290d142729b14e78323d8b101b894e50a5c93c2b9246"}
+      ],
+      "paperManifest": "validated-scenarios/bookshelf/sclc-literature/files/manifest.json",
+      "publicationApproved": false,
+      "publicationReason": "Full owner Validated Scenario/model/index/prompt/reference answer still needed; retain article licence/attribution and review release terms",
+      "releaseUrl": null,
+      "referenceOnly": [],
+      "runtimeStatus": "Data preparation only; do not package as runnable"
+    }
+  }
+}
