@@ -320,28 +320,5 @@
   "bytes": 594589,
   "md5_matches_pmc_metadata": true,
   "sha256": "6415898f323b692949da04def2265f4aafe7c40182ddc0299325f65454faf55d"
- },
- {
-  "id": "P9",
-  "role": "primary: tarlatamab vs real-world physician's choice",
-  "pmcid": "PMC12459094",
-  "version": "1",
-  "pmid": 40839303,
-  "doi": "10.1093/oncolo/oyaf256",
-  "title": "Efficacy outcomes between tarlatamab and real-world physicians’ choice of therapies for previously treated extensive stage small cell lung cancer",
-  "journal": "The Oncologist",
-  "year": "2025",
-  "article_type_jats": "research-article",
-  "heading_subject": [
-   "Original Article"
-  ],
-  "license_code": "CC BY",
-  "license_url": "https://creativecommons.org/licenses/by/4.0/",
-  "is_pmc_openaccess": true,
-  "is_retracted": false,
-  "download_url": "https://pmc-oa-opendata.s3.amazonaws.com/PMC12459094.1/PMC12459094.1.pdf",
-  "bytes": 1392036,
-  "md5_matches_pmc_metadata": true,
-  "sha256": "a699c6c96c79249dc3b828882a34a84678460ccb04a9fa0cf7220f314e10f043"
  }
 ]
