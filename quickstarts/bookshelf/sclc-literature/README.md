@@ -141,12 +141,12 @@ buttons. You don't type anything.
    1. In the left sidebar, click **AI capabilities** (it opens in a new tab at
       the top of the app), then **Bookshelves**, then **New bookshelf**.
    2. On **1. Details**, enter **Name** `sclc-literature` and **Description**
-      `Fifteen open-access papers on small-cell lung cancer treatment.` Leave
-      **Embedding model** as it is. If a box asks
-      **Use GitHub Copilot for Bookshelf answers in this workspace?**, click
+      `Fifteen open-access papers on small-cell lung cancer treatment.` If a box
+      asks **Use GitHub Copilot for Bookshelf answers in this workspace?**, click
       **Use Copilot answers** (it appears once). Wait for the model list to load,
       then under **Answer generation** choose **GPT-6 Astra** (if it isn't
-      listed, choose the first model). Click **Next**.
+      listed, choose the first model). Leave **Embedding model** below it as it
+      is. Click **Next**.
    3. On **2. Files**, click **Upload**, open the project's `sclc-papers`
       folder, press **Ctrl+A** to select all 15 PDFs, and click **Open**. Check
       that **15 files** are listed, then click **Next**.
