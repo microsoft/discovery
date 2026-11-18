@@ -204,7 +204,8 @@ workload/control-plane split where a region is capacity-limited.
 
 FR1.5 [P0] Quota and SKU validation. Check vCPU by family, GPU SKUs, private-endpoint count, and
 Foundry/OpenAI TPM. Resolve the effective Stage 4 system/node SKUs and maximum node count (including
-advanced JSON overrides), pin SKU and usage reads to the configured subscription, and calculate
+the SC system SKU dropdown (`systemSku`) in both planning workbooks and advanced JSON overrides),
+preserve the selected system SKU in the exported config for Stage 4, pin SKU and usage reads to the configured subscription, and calculate
 Total Regional plus VM-family vCPU requirements from live SKU metadata. Flag SKUs that are absent
 or restricted in the target region. Validate the documented Discovery quota minimums so shortfalls
 surface in planning, not deployment:

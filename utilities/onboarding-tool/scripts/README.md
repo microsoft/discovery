@@ -84,3 +84,7 @@ if ($result.FailedCount -gt 0) { throw 'Dry-run tests failed.' }
 
 Run each suite in a separate PowerShell process when checking all suites, so extracted
 stage functions and mocks don't leak between suites.
+
+`Stage4State.Tests.ps1` also requires Azure CLI with the Bicep CLI installed. It compiles
+the actual deployment Bicep template locally to verify system-SKU forwarding; this
+compilation does not require Azure login. Direct ARM requests remain mocked.

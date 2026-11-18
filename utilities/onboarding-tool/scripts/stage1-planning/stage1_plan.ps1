@@ -225,6 +225,7 @@ function ConvertTo-ConfigModel {
             networkIsolation    = (Bool 'workspace.networkIsolation' $true)
         }
         sizingTier        = (Val 'sizingTier' 'Small')
+        systemSku         = (Val 'systemSku' 'Standard_D4s_v6')
         bookshelf           = [ordered]@{
             inScope   = (Bool 'bookshelf.inScope' $false)
             instances = [int](Val 'bookshelf.instances' '0')

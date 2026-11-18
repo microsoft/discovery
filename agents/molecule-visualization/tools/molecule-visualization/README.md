@@ -23,7 +23,7 @@ the catalog parameter schema does not accept a `default` keyword.
 
 The [Dockerfile](Dockerfile) uses a digest-pinned Python 3.12 Debian Bookworm
 slim image. [requirements.txt](requirements.txt) pins NumPy 1.26.4,
-RDKit 2026.9.1, Plotly 7.0.0, and Pillow 13.0.0. Dependencies are installed as
+RDKit 2026.9.2, Plotly 7.1.0, and Pillow 13.0.0. Dependencies are installed as
 binary wheels at build time and checked with `pip check`; transitive
 dependencies and OS packages are not fully locked.
 
