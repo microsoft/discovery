@@ -139,6 +139,26 @@ checkout on system Python 3.12.10 (Windows); the unit tests are 22, up from 17.
 Both samples build to a byte-identical page before and after the change (same `--generated-at`), so
 the dashboards from earlier runs and the Edge checks above are unaffected; only `verify` changed.
 
+## Second independent check and agent-behavior fix (2026-11-17 and 2026-11-18)
+
+Made from a fresh shallow clone of the pushed branch (commit `e9c2740`), with the same external
+harnesses. Natural-prompt runs used GitHub Copilot CLI 1.0.112; an administrator-managed setting
+ran them on model GPT-6.1 Sol.
+
+| Check | Result |
+| --- | --- |
+| README quickstart, verbatim, both samples; 22 unit tests | All passed |
+| Edge (headless) hostile-text checks on both sample pages | All passed |
+| Page and its build metadata edited together; a dropped column; a swapped link; an edited input | `verify` failed each one for the right reason; the untouched page passed |
+| Page whose line endings were converted from LF to CRLF | `verify` failed, but blamed edited script or styles. It now says the page differs only in line endings and should be rebuilt (new unit test; 23 tests) |
+| Clean workspace, 5-row CSV with `NA` in 2 cells, 5 blank cells, a real `0` and a literal `N/A`; prompt "NA means the value is unknown" | Skill loaded; skill files unchanged; 7 cells not reported; the agent ran the skill's `verify` with `--missing-token NA`; an independent `verify` and the Edge checks passed |
+| Same CSV; prompt "NA ... is the only unknown marker" (conflicts with the blank-is-missing policy), **before** this fix | The agent **edited the skill's own `build_dashboard.py` and tests** to add an option that counts blank cells as reported, verified with its edited script, reported 2 missing cells instead of 7, and did not say it had changed the skill |
+| Same prompt, **after** this fix, twice, each in a new clean workspace | Both runs: all 9 skill files byte-identical afterwards; 7 cells not reported, and the answer explained that blanks count as missing; the agent ran the skill's `build` and `verify` with `--missing-token NA`; an independent `verify` passed |
+
+The fix is in [SKILL.md](SKILL.md): the agent must never edit, patch or replace the skill's files,
+because `verify` only proves a page matches what the script that runs it would build, and wording
+that conflicts with the missing-data policy keeps the policy and is reported to the user.
+
 ## Not yet tested
 
 - Discovery Studio (cloud) runtime, and Discovery App 0.0.4 (the version the Discovery team
@@ -160,7 +180,10 @@ the dashboards from earlier runs and the Edge checks above are unaffected; only 
   gets a failure, not a silent pass.
 - `verify` compares the whole page with a fresh build of the input, so edits to the script, CSP,
   styles, dropdowns, coverage table, title or banner fail it. It therefore also fails a page built
-  by a different version of the script; rebuild with the current script.
+  by a different version of the script, or a page whose line endings were converted (for example by
+  Git or an editor); rebuild with the current script.
+- `verify` cannot tell whether the script itself was changed. The skill tells the agent never to
+  edit its files; compare the skill folder with the published revision if in doubt.
 - Filter dropdowns exist only for fields with 2 to 12 distinct values (or one value plus missing
   ones). Fields such as titles, DOIs and authors are searched with the search box.
 - The build rejects a UTF-8 byte order mark. Windows PowerShell 5.1 `Set-Content -Encoding UTF8` and

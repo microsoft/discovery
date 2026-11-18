@@ -501,7 +501,13 @@ def check_dashboard(input_path, html_path, missing_tokens=(), columns=None):
         "columns": fields,
         "omitted_fields": model["omitted_fields"],
     })
-    if fresh != page:
+    if fresh != page and fresh.replace("\r\n", "\n") == page.replace("\r\n", "\n"):
+        problems.append(
+            "page is not identical to a fresh build of the input: it differs only in line endings "
+            "(CRLF instead of LF), for example after an editor or Git converted it; rebuild the page "
+            "rather than copying it through a tool that changes line endings"
+        )
+    elif fresh != page:
         problems.append(
             f"page is not identical to a fresh build of the input (first difference at line {_first_difference(fresh, page)}); "
             "its script, styles, filters, coverage table, title, banner or build metadata were edited"

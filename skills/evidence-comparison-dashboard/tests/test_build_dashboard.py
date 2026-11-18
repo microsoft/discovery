@@ -206,6 +206,19 @@ class BuildAndVerify(unittest.TestCase):
             self.assertEqual(result.returncode, 1, name)
             self.assertIn("not identical to a fresh build", result.stdout, name)
 
+    def test_verify_names_a_line_ending_only_change(self):
+        src, out, _ = self.build({"records": [record("R1", fields={"a": 1})]})
+        good = out.read_bytes()
+        out.write_bytes(good.replace(b"\n", b"\r\n"))
+        converted = run_cli("verify", str(src), str(out))
+        self.assertEqual(converted.returncode, 1)
+        self.assertIn("only in line endings", converted.stdout)
+
+        out.write_bytes(good.replace(b"color:#1b1b1b", b"color:#fff").replace(b"\n", b"\r\n"))
+        edited = run_cli("verify", str(src), str(out))
+        self.assertEqual(edited.returncode, 1)
+        self.assertNotIn("only in line endings", edited.stdout)
+
     def test_verify_reports_unreadable_pages_without_a_traceback(self):
         src, out, _ = self.build({"records": [record()]})
         good = out.read_bytes()

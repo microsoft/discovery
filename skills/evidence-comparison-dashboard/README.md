@@ -84,6 +84,9 @@ output, run `build` and then `verify`, and report coverage and any sources that 
 - It does **not** prove the input file equals the original source's output. Build the input
   programmatically from saved tool output rather than retyping it, and keep `source_tool` and
   `retrieved_at` on each record.
+- It does **not** prove the script itself is unchanged: a changed script verifies its own pages.
+  SKILL.md tells the assistant never to edit the skill's files. In testing, an assistant given wording
+  that conflicted with the missing-data policy edited the script until that rule was added.
 
 ## Behavior when a source is unavailable
 

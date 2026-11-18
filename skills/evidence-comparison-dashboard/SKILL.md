@@ -90,6 +90,11 @@ the skill cannot know it means "unknown". It then counts as reported in the cove
 the user whether to treat it as missing (`--missing-token`). If you cannot ask, say in your report
 that those cells were kept as given and are counted as reported.
 
+If the user's wording conflicts with this policy, keep the policy and say so. For example, "NA is
+the only unknown marker" does not make blank cells reported: pass `--missing-token NA`, report the
+blank cells as not reported, and tell the user. If they want blanks shown as values, explain that
+this skill cannot do that; do not add options, patch the script, or write a replacement.
+
 Never impute, average over, or drop missing values. Do not compute totals, means, or rankings
 across a field unless you state how many records were not reported for it. The row filter "Only
 rows with every shown field reported" hides rows; it does not change or delete data.
@@ -111,6 +116,11 @@ rows with every shown field reported" hides rows; it does not change or delete d
 Reads the input file; writes `dashboard.html` and `dashboard.provenance.json` next to the output
 path. No network, credentials, or installs. The page has no external resources, and a
 Content-Security-Policy pins its inline style and script; all text is HTML-escaped.
+
+Never edit, patch, or copy-and-modify any file in this skill's folder (`scripts/`, `tests/`,
+`references/`, `assets/`). `verify` only proves the page matches what the script that runs it would
+build, so a dashboard built or verified with a changed script is not verified. If the script cannot
+do what the user asks, say so and stop.
 
 ## Pitfalls
 
