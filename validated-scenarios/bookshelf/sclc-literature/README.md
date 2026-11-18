@@ -162,8 +162,9 @@ buttons. You don't type anything.
 **Done when:** all 15 papers pass their checksum, the Bookshelf shows
 **Successfully indexed**, and the test question comes back with a citation.
 
-**If you see "Tool execution failed":** wait 5 minutes, click **New session**,
-and paste the same step's prompt again. Your papers and Bookshelf are kept.
+**If you see "Tool execution failed", or nothing happens for 2 minutes:** click
+stop, wait 5 minutes, click **New session**, and paste the same step's prompt
+again. Papers and your Bookshelf are kept.
 
 **What you'll see when Step 1 finishes:** the assistant stops and waits for
 you. Its last message says something like *"Everything is ready for the
