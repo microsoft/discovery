@@ -16,12 +16,35 @@ perform clinical prioritization.
    input. If data are not supplied, obtain a bounded sample using the existing
    authorized Open Targets agent and its MCP tools. Respect its approvals and
    report failures; do not install or bypass a connection.
+   When retrieving individual evidence, explicitly select `Evidence.score`
+   alongside record IDs, target and source fields, if supported by the
+   observed schema.
+   Declare only GraphQL variables used in the operation; do not invent a
+   `$key` variable to label batch results. Use the batch `key_field` with a
+   real query variable only when its values uniquely identify each result;
+   otherwise use explicit aliases in one query or separate bounded calls.
+   For an agent-authored GraphQL syntax or validation error, allow at most
+   one transparent correction and retry per task of the failed operation or
+   batch, using the observed schema, the same read-only scope, normal approvals
+   and available call budget. Count every attempt and preserve failed and
+   corrected queries and variables. For other errors or an unsuccessful retry,
+   stop and report without further retries; never describe failed evidence
+   retrieval as evidence absence or a partial result as complete.
 2. Convert only observed fields to the JSON contract in
    [input-contract](references/input-contract.md). Preserve disease and target
    identifiers, separate association scores from evidence, source IDs, query
    parameters, release, link provenance and uncertainty. Record absent fields
    as `null`; do not infer missing records, counts, links or zeros. Ask for
    clarification if identity, source or sample scope cannot be established.
+   Before rendering, check the original query and response to distinguish a
+   selected score returned as `null` from a score not requested or unknown.
+   If omitted or unknown, use authorized MCP tools and provider-supported
+   retrieval to obtain it when possible, respecting approvals and call budgets;
+   match exact evidence IDs and the same disease and target scope without
+   changing the sample. If retrieval is unavailable, forbidden or over budget,
+   keep `null` and disclose "not requested" or why it could not be established.
+   Preserve genuinely returned `null`; never infer a score or substitute an
+   association or datasource aggregate score.
    Put concise agent-authored limitations in `uncertainty`, not a provider
    confidence score; put supplied raw evidence metadata in the optional
    `technical_metadata` object, preserving names and values separately.

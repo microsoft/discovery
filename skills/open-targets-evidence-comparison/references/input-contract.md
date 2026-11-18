@@ -48,6 +48,11 @@ treated as missing. Evidence strings other than `target_id` may be `null`.
 Each evidence target must appear in `associations`, whose target IDs must be
 unique. Empty associations and evidence arrays are valid.
 
+For evidence scores, use the actual individual record value, including a
+returned `null`. When a score was not requested or could not be established,
+keep it `null` and explain the limitation in `uncertainty`; never substitute
+an aggregate score.
+
 Keep `provenance.source` and `provenance.scope` concise and factual. Put
 the supplied query, variables, pagination and reproducibility or audit details
 in `provenance.query`; the report displays this text in a collapsed section
