@@ -504,9 +504,14 @@ def build(
     ),
     timeout: int = typer.Option(
         7200,
-        help="Timeout in seconds for ACR task execution (default: 7200 / 2 hours)",
+        help="Timeout in seconds per ACR task or local Docker build/push (default: 7200)",
     ),
     *,
+    local: bool = typer.Option(
+        False,
+        "--local",
+        help="Build with local Docker/BuildKit, then push to the configured ACR (no ACR Task).",
+    ),
     mpi: bool = typer.Option(
         False,
         "--mpi",
@@ -535,14 +540,15 @@ def build(
         ),
     ),
 ) -> None:
-    """Build a Docker image via ACR Task (wrapper around internal build_acr_task).
+    """Build and push a Docker image via ACR Tasks (default) or local Docker.
 
     Args:
         context: Build context directory (positional, default='.')
         image: Image name (default: 'discovery-poller')
         tag: Image tag (default: 'latest')
         vscode: Layer VS Code CLI into the final image (default: False)
-        timeout: Timeout in seconds for ACR task execution (default: 7200 / 2 hours)
+        timeout: Timeout in seconds per ACR task or local Docker build/push.
+        local: Build locally, then push to ACR before offering tool deployment.
         mpi: Enable MPI in the tool definition deployed after the build.
         pool_size: Default pods per run (two for MPI, otherwise one).
         infiniband: Require InfiniBand-capable compute for the tool.
@@ -553,6 +559,7 @@ def build(
     except ValueError as exc:
         raise typer.BadParameter(str(exc), param_hint="--pool-size") from exc
 
+    image, tag = acr.resolve_image_tag(image, tag)
     env_cfg = _load_acr_config(get_config_file_path())
 
     code = acr.execute_build(
@@ -563,6 +570,7 @@ def build(
         vscode=vscode,
         timeout=timeout,
         login_server=env_cfg.acr_url,
+        local=local,
     )
 
     if code == 0:
@@ -622,7 +630,13 @@ def rebuild(
     ),
     timeout: int = typer.Option(
         7200,
-        help="Timeout in seconds for ACR task execution (default: 7200 / 2 hours)",
+        help="Timeout in seconds per ACR task or local Docker build/push (default: 7200)",
+    ),
+    *,
+    local: bool = typer.Option(
+        False,
+        "--local",
+        help="Build the VS Code layer with local Docker, then push to ACR (no ACR Task).",
     ),
 ) -> None:
     """Layer VS Code CLI onto an existing ACR image.
@@ -632,7 +646,8 @@ def rebuild(
         tag: Existing image tag
         target_image: Optional target repository/image name. Defaults to source image.
         target_tag: Optional new tag for the output image. If not provided, overwrites the source tag.
-        timeout: Timeout in seconds for ACR task execution (default: 7200 / 2 hours)
+        timeout: Timeout in seconds per ACR task or local Docker build/push.
+        local: Build the VS Code layer locally, then push to ACR.
     """
     env_cfg = _load_acr_config(get_config_file_path())
 
@@ -644,6 +659,7 @@ def rebuild(
         target_tag=target_tag,
         timeout=timeout,
         login_server=env_cfg.acr_url,
+        local=local,
     )
 
     if code == 0:

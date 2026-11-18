@@ -12,6 +12,11 @@ The scenario references
 and [bo-doe](https://github.com/microsoft/discovery/tree/88a2a1cd1664b7d609659dc86c65f7f632686715/agents/bo-doe).
 These links provide component documentation, not a configured scenario.
 
+**Container runtime:** the `bo-doe` tool runs as a container. Locally, use
+[Podman](https://podman.io/docs/installation) (recommended, free) or Docker if
+you already have it; Docker Desktop is not required. In Discovery Services the
+tool runs in the cloud instead. Not yet validated for this scenario.
+
 ## Supporting files
 
 | Original supplied material | Location / status |

@@ -1,7 +1,7 @@
 # QuickStart Scenarios
 
 Explore guided workflows for Microsoft Discovery. Pick a scenario, then run it
-by pasting its guide link into a Discovery chat.
+by sending its README's three prompts in a Discovery chat.
 
 ## Choose a scenario
 
@@ -17,10 +17,11 @@ vertical to browse its scenarios, or select a QuickStart directly above.
 
 ## Start a run
 
-Every QuickStart runs the same way: **select the model and paste the guide
-link into a Discovery chat.** You only need the Discovery app. The assistant
-reads the guide, downloads what it needs, and walks you through setup, the run
-and checking your results. You don't download, attach or unzip anything.
+Every QuickStart runs the same way: **select the model and send the README's
+three prompts in a Discovery chat.** The first prompt already contains the
+guide link. You only need the Discovery app. The assistant reads the guide,
+downloads what it needs, and walks you through setup, the run and checking
+your results.
 
 **Don't have the app yet?** Download it from the
 [Discovery download page](../README.md) and follow the
@@ -44,6 +45,14 @@ Each scenario README gives the exact clicks, the model and the guide link.
 Available now: **BioPharma**. **Bookshelf** is a draft in this format.
 Silicon and Physics and Chemistry and Materials Science are being moved to
 this format; until then, follow the steps in their own READMEs.
+
+**Do I need Docker?** Usually not. Each README's **What you need** table has a
+**Container runtime** row. BioPharma and Bookshelf need none. QuickStarts that
+run container tools need one container engine: we recommend free
+[Podman](https://podman.io/docs/installation), and Docker works if you already
+have it. Docker Desktop is never required; it needs a paid per-user
+subscription in larger organizations
+([Docker Desktop license](https://docs.docker.com/subscription/desktop-license/)).
 
 ## Add another scenario
 

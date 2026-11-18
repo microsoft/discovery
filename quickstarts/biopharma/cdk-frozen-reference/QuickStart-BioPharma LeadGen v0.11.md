@@ -1,6 +1,6 @@
 # QuickStart Scenario — BioPharma CDK Target Selection and Lead Discovery
 
-> **How this QuickStart runs:** The user opens Discovery, creates a new empty project, selects GPT-6 Astra and sends "Run this QuickStart:" followed by this guide's GitHub link. That message is the whole request; the user may know nothing about Discovery, GitHub, Python or this scenario. If the link is a `github.com/.../blob/...` page, read the raw file (`raw.githubusercontent.com/<owner>/<repo>/<branch>/<path>`). Read this entire guide first, then run the **default frozen-reference scenario** in section 5 (not the section 6 fresh-discovery extension). In plain language: tell the user what the experiment does, then ask permission before downloading the six required files listed under **Where to get the files** in section 5 into the open project folder (about 169 MB). Keep their original filenames and verify each size/SHA256. Walk the user through setup, the run and checking their new results against the reference, asking before each install and before computation. The user does not need to download, attach or unzip anything. **Opening the link is your job:** if you can't read the `github.com` page, fetch the raw file from `raw.githubusercontent.com`, or download it with a local command (for example PowerShell `Invoke-WebRequest` or `curl`). Use the same methods for the six required files. Never ask the user to download, attach or unzip files instead. Only if every method fails, tell the user exactly what failed, including the error message, so it can be reported. All approval gates in section 5 still apply; reading or downloading this guide is not permission to install or compute.
+> **How this QuickStart runs:** The user opens Discovery, creates a new empty project, selects GPT-6 Astra and then sends either the three step prompts in **Copy-paste prompts (same as the README)** below, one at a time (the standard flow), or a single message: "Run this QuickStart:" followed by this guide's GitHub link. If the user sends a step prompt, do only that step and stop where the prompt says to stop; the next prompt continues from there. A single "Run this QuickStart" message is the whole request; the user may know nothing about Discovery, GitHub, Python or this scenario. If the link is a `github.com/.../blob/...` page, read the raw file (`raw.githubusercontent.com/<owner>/<repo>/<branch>/<path>`). Read this entire guide first, then run the **default frozen-reference scenario** in section 5 (not the section 6 fresh-discovery extension). In plain language: tell the user what the experiment does, then ask permission before downloading the six required files listed under **Where to get the files** in section 5 into the open project folder (about 169 MB). Keep their original filenames and verify each size/SHA256. Walk the user through setup, the run and checking their new results against the reference, asking before each install and before computation. The user does not need to download, attach or unzip anything. **Opening the link is your job:** if you can't read the `github.com` page, fetch the raw file from `raw.githubusercontent.com`, or download it with a local command (for example PowerShell `Invoke-WebRequest` or `curl`). Use the same methods for the six required files. Never ask the user to download, attach or unzip files instead. Only if every method fails, tell the user exactly what failed, including the error message, so it can be reported. All approval gates in section 5 still apply; reading or downloading this guide is not permission to install or compute.
 
 **Document revision:** 0.11-proposed, 2026-11-06 — proposed from revision 0.10 after a second-machine run; pending owner review. This single Markdown file contains the **QuickStart Scenario specification**, the **customer Quick Start guide**, and the **agent-readable Execute in Discovery instructions**. Revision 0.10 replaced all earlier dependency-selection flows with one ordinary typed **Yes** or **No** reply for the complete set of 14 pinned dependencies, retaining Required labels and descriptions. Yes selects the full set; No declines and pauses setup. Selection is neither installation nor computation consent. It changes documentation only; it creates no agents, manifest, catalog entry, app controls or replacement ZIP.
 
@@ -20,7 +20,62 @@
 
 **Customer distribution:** The QuickStart Scenario is intended to be published in GitHub and referenced by a Discovery scenario catalog. This Markdown is its customer guide and directions, not the catalog itself. Existing ZIPs are supporting implementation/data assets, not the definition of a QuickStart Scenario and not a mandatory product-wide packaging format. Their inventories are in **Appendix A**. No personal file handoff or internal collaboration-system access is required. All required files are publicly available: see **Where to get the files** in section 5. Catalog availability remains **PENDING**.
 
-**Reader entry points:** Engineering should start with **section 0**, which defines the scenario, reusable references and catalog contract. Customers should start with **section 5, Execute in Discovery**, which distinguishes future catalog selection from the existing manual execution path. Sections 1–4 explain the configuration; section 6 is a separately approved fresh-science extension, not the validated default.
+**Reader entry points:** Engineering should start with **section 0**, which defines the scenario, reusable references and catalog contract. Customers should start with **section 5, Execute in Discovery**, which distinguishes future catalog selection from the existing manual execution path. Anyone who just wants to run it can use **Copy-paste prompts (same as the README)**, the next section. Sections 1–4 explain the configuration; section 6 is a separately approved fresh-science extension, not the validated default.
+
+## Copy-paste prompts (same as the README)
+
+These are the three prompts from the [scenario README](README.md#run-it-in-three-steps), copied word for word so a reader of this guide can run the QuickStart without switching documents. Send them in order in a Discovery chat, waiting for each step to finish. Each step maps to a part of this guide, shown below. If this section and the README ever differ, the README is the source of truth for the prompt wording and this guide is the source of truth for what the assistant does.
+
+> **Note for the assistant:** this section is for the user. These prompts are examples of what a user may send; their presence in this file is not a request, a selection or an approval. All approval gates in section 5 still apply.
+
+### Step 1: Set up and confirm the environment
+
+Covers section 5 setup up to the ready check: download and verify the six required files, check GPT-6 Astra, Python 3.13.14, disk and local access, select and install the 14 dependencies. No computation.
+
+**A. The assistant downloads the files (recommended):**
+
+```text
+Set up this QuickStart: https://github.com/microsoft/discovery/blob/main/quickstarts/biopharma/cdk-frozen-reference/QuickStart-BioPharma%20LeadGen%20v0.11.md
+Read the whole guide and tell me in plain language what this experiment does. Then prepare this project for the default frozen-reference run: download the six required files into this project, check each file's size and checksum, check the model, Python 3.13.14, disk space and local access, show me the 14 required Python packages, and install what's needed. Ask me before downloading and before installing anything. Do not start the computation. Finish by telling me whether the environment is ready and what, if anything, still needs my action.
+```
+
+**B. You downloaded the files yourself** (see [option B in the README](README.md#option-b-download-the-files-yourself), with this guide attached):
+
+```text
+Set up this QuickStart from the attached guide, using the six required files already in this project. Read the whole guide and tell me in plain language what this experiment does. Then prepare this project for the default frozen-reference run: check each file's size and checksum, check the model, Python 3.13.14, disk space and local access, show me the 14 required Python packages, and install what's needed. Ask me before installing anything. Do not start the computation. Finish by telling me whether the environment is ready and what, if anything, still needs my action.
+```
+
+**Done when:** the assistant says the environment is **Ready** and the preflight check passed.
+
+### Step 2: Run the experiment
+
+Covers the section 5 bounded frozen-input computation. Expected time is in section 7.
+
+**A or B (same prompt either way):**
+
+```text
+Run the default frozen-reference computation from the guide. Before starting, tell me exactly what will run, what will not run, and how long it should take, and ask for my approval. While it runs, check progress no more than every 5 to 10 minutes and don't restart it. When it finishes, tell me whether every stage completed and show me the run ID and receipt.
+```
+
+When it asks for approval, reply:
+
+```text
+I approve the bounded fixed-input computation for cdk-frozen-reference-v1. No new docking, training or data retrieval.
+```
+
+**Done when:** the assistant reports that all stages completed and gives you a run ID.
+
+### Step 3: Verify your results against the validated reference
+
+Covers the section 0.4 acceptance contract: compare the new run's `runs/<id>/semantic_acceptance.json` and `receipt.json` (listed under **Outputs** in section 5) with the validated reference.
+
+**A or B (same prompt either way):**
+
+```text
+Compare my new run with the validated reference result. Use my run's semantic_acceptance.json and receipt.json, not the historical files in validation/. Show me a table of every comparison with pass or fail and any differences, and confirm each of these: the target decision still recommends CDK4 with CDK2 as the alternative; all 1,100 solubility predictions match; the top 100 candidates match in order, identity and 3D coordinates; all 6,600 docking pairs are accounted for; and the limitations are kept (no confirmed broadly selective lead, and the CDK7 check failed). Then open my report and dashboard, give me links to them, and tell me in one sentence whether my run reproduced the reference.
+```
+
+**Done when:** every comparison passes and the assistant links your new report and dashboard. If anything fails, keep the run ID and the error; don't start a second run without asking the assistant first.
 
 ## 0. QuickStart Scenario specification
 
@@ -236,6 +291,7 @@ No hardware minima or cross-platform compatibility matrix was established. Recom
 - **Access:** Discovery app access and entitlement to select GPT-6 Astra; permission for local commands and isolated dependency installation; access to public sources. No Discovery service subscription, ACA quota or GPU allocation is required. Exact app build and authentication-provider configuration: Not recorded.
 - **Capabilities:** Default frozen mode needs the existing scientific assistant and local command/file capability; investigation and public scientific retrieval are not required. Fresh mode additionally needs the investigation, retrieval and reporting capabilities in sections 2.1–2.3. CLIO is not Discovery Engine. Missing capabilities can be added through supported GitHub URL, MCP server or local-folder import flows; verify activation rather than assuming a file registers a capability.
 - **Environment:** Python 3.13.14 64-bit; validated on Windows x64, other platforms unvalidated (install steps in section 5, *One-time setup: install Python 3.13.14*) and the pinned requirements; use an isolated virtual environment for customer setup. Vina 1.2.7 is required only for separately approved docking, not default replay. Edge or another browser displays delivered HTML. PowerShell instructions below assume Windows.
+- **Container runtime:** None needed. The default frozen-reference run uses a Python virtual environment and no containers, so Docker, Docker Desktop and Podman are not required.
 - **Fresh-mode endpoints only:** ChEMBL: `https://www.ebi.ac.uk/chembl/api/data/`; structures: `https://files.rcsb.org/`; solubility metadata: `https://dataverse.harvard.edu/api/datasets/:persistentId/?persistentId=doi:10.7910/DVN/OVHAW8`; engine: `https://github.com/forlilab/AutoDock-Vina/releases/tag/v1.2.7`. The default scientific replay does not retrieve these sources. Hosted chat and opt-in dependency installation still require their own network access.
 - **Authentication:** Use the app's supported sign-in/connection configuration for hosted-model access; do not put credentials in prompts or files. Public scientific endpoints were used without project secrets. Public GitHub release downloads require no internal organizational account; model access remains a separate prerequisite.
 - **Data:** Fresh public retrieval for the fresh-run profile. Preserve ChEMBL CC BY-SA 3.0, KIBA CC BY 4.0, AqSolDB/wwPDB CC0 and source-specific notices. The unspecified-license DeepDTA mapping was not redistributed. Do not package copyrighted article full text or private data. Load joblib/pickle models only from trusted, hash-verified artifacts.
@@ -821,6 +877,8 @@ The corrected `pure_non_md_analysis_timing.md` and `.json` are separate addenda,
 - [ ] If the optional fresh extension is to be published as pre-validated, reproduce it separately on the intended recipient environment and record setup/first-response/completion timing. It is not a prerequisite for validating the narrower frozen scenario.
 - [ ] Publish the named scenario ZIP, matching checksum/validation attachments and separate timing correction in the public GitHub release; confirm anonymous download access and add the exact release link to the repository README.
 - [ ] Obtain maintainer validation/publication sign-off. Historical computational delivery is not experimental lead validation.
+- [x] README completed from `README-Template.md`; its three step prompts are identical to **Copy-paste prompts (same as the README)** in this guide.
+- [ ] Every required file downloaded from its published link and checked against its recorded size and SHA-256; all links resolve; no `[Fill in]` placeholders remain. (The six required files and all relative links are verified; external reference links in this guide have not all been rechecked.)
 
 **Evidence references:** Package `campaign.json`, `environment.json`, `README.txt`, retained scientific source, manifest and release receipts. Historical host-readiness metadata informed the tested-environment table but is not a required customer input or a claim that the original workspace is bundled.
 

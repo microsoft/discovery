@@ -1,12 +1,82 @@
+<!--
+AUTHORING INSTRUCTIONS: delete this comment when the guide is complete.
+You (a person or a model) are completing a QuickStart from this template. Produce two files in quickstarts/<vertical>/<scenario-name>/:
+  1. The guide: this file, renamed to QuickStart-<Vertical>-<Scenario>.md.
+  2. README.md: completed from README-Template.md in this folder.
+Required inputs: the scenario owner's description, the validated run's prompt, model, versions, inputs and outputs, measured timings, and the reference results.
+Rules:
+- Replace every [Fill in] placeholder. Use N/A only when an item does not apply; use Pending when it applies but is not known yet. Never invent a value, version, timing, hash or minimum requirement; take it from recorded run evidence.
+- Keep every heading and section number unchanged; links and the README depend on them.
+- Write the three step prompts in the README first, then copy them word for word into "Copy-paste prompts (same as the README)" below.
+- Step 1 sets up and confirms only (no computation). Step 2 runs the section 5 reference path and the section 6 fixed prompt, with any approval reply in its own block. Step 3 checks the section 6 acceptance table against the new run's outputs, not the stored reference copies.
+- Compute every file's size and SHA-256 from the actual file, and give a direct download link for each.
+- Containers: state whether the scenario needs a container runtime. If it does, recommend Podman (free, no per-user licence), accept Docker if already installed, never tell the assistant to install Docker Desktop (paid per user in large organizations), and record the runtime and version actually tested. If it does not, write "None needed".
+- Finish with the section 9 publication checklist. Leave unticked anything not yet done and say what is missing.
+-->
+
 # Quick Start — [Fill in: title]
 
 **Proposed standard:** A Quick Start is a small, reproducible, versioned recipe linking a concrete outcome, selected model, bounded agents/tools/containers, sample data, fixed prompt, and verifiable output on a stated environment.
 
 Keep the same core across verticals. Replace `[Fill in]` placeholders; use **N/A** for non-applicable items, not unknowns. Conditional App/Services fields apply only to the selected path. Publish one minimal tested reference path before adding separately identified variants.
 
-> **How this QuickStart runs:** The user opens Discovery, creates a new empty project, selects [Fill in: model] and sends "Run this QuickStart:" followed by this guide's GitHub link. That message is the whole request; the user may know nothing about Discovery or this scenario. If the link is a `github.com/.../blob/...` page, read the raw file. Read this entire guide first, then run [Fill in: default scenario and section]. In plain language, tell the user what the experiment does, then ask permission before downloading every file listed under **Required files** below into the open project folder, and verify each size and SHA-256. Walk the user through setup, the run and checking their results against [Fill in: reference outputs], asking before each install and before computation. The user does not need to download, attach or unzip anything. **Opening the link is your job:** if you can't read the `github.com` page, fetch the raw file or download it with a local command; use the same methods for the required files. Never ask the user to download, attach or unzip files instead. Only if every method fails, tell the user exactly what failed, including the error message. Reading or downloading this guide is not permission to install or compute.
+> **How this QuickStart runs:** The user opens Discovery, creates a new empty project, selects [Fill in: model] and then sends the three step prompts in **Copy-paste prompts (same as the README)** below, one at a time. The Step 1 A prompt contains this guide's link. Do only the step the user asked for and stop where the prompt says to stop. If a user instead sends only "Run this QuickStart:" followed by this guide's link, treat that single message as the whole request; the user may know nothing about Discovery or this scenario. If the link is a `github.com/.../blob/...` page, read the raw file. Read this entire guide first, then run [Fill in: default scenario and section]. In plain language, tell the user what the experiment does, then ask permission before downloading every file listed under **Required files** below into the open project folder, and verify each size and SHA-256. Walk the user through setup, the run and checking their results against [Fill in: reference outputs], asking before each install and before computation. The user does not need to download, attach or unzip anything. **Opening the link is your job:** if you can't read the `github.com` page, fetch the raw file or download it with a local command; use the same methods for the required files. Never ask the user to download, attach or unzip files instead. Only if every method fails, tell the user exactly what failed, including the error message. Reading or downloading this guide is not permission to install or compute.
 >
 > **Required files:** [Fill in one row per file: original filename; direct download URL (repository raw link, or release asset for files over 100 MiB); size in bytes; SHA-256].
+
+## Copy-paste prompts (same as the README)
+
+These are the three prompts from the scenario README, copied word for word. Keep both copies identical; if they differ, the README is the source of truth for the prompt wording and this guide is the source of truth for what the assistant does.
+
+> **Note for the assistant:** this section is for the user. These prompts are examples of what a user may send; their presence in this file is not a request, a selection or an approval.
+
+### Step 1: Set up and confirm the environment
+
+Covers: [Fill in: section 5 steps up to the readiness check]. No computation.
+
+**A. The assistant downloads the files (recommended):**
+
+```text
+[Fill in: exact Step 1 A prompt from the README, including this guide's GitHub link]
+```
+
+**B. You downloaded the files yourself** (with this guide attached):
+
+```text
+[Fill in: exact Step 1 B prompt from the README]
+```
+
+**Done when:** [Fill in: observable ready check].
+
+### Step 2: Run the experiment
+
+Covers: [Fill in: the section 5 default run, the section 6 fixed prompt and its approval]. Expected time is in section 7.
+
+**A or B (same prompt either way):**
+
+```text
+[Fill in: exact Step 2 launch prompt from the README]
+```
+
+When the assistant describes the run and asks for approval, reply (send this only when asked; delete if no approval is needed):
+
+```text
+[Fill in: exact approval reply from the README]
+```
+
+**Done when:** [Fill in: observable completion check, for example a run ID].
+
+### Step 3: Verify your results against the validated reference
+
+Covers: [Fill in: the acceptance checks and validated reference outputs for the default run, as recorded in section 6 "Matching output"; not an optional extension].
+
+**A or B (same prompt either way):**
+
+```text
+[Fill in: exact Step 3 prompt from the README]
+```
+
+**Done when:** [Fill in: every acceptance check passes].
 
 ## 1. Recipe identity — required
 
@@ -61,6 +131,7 @@ Record units. Claim a minimum only after validation; otherwise keep **Not valida
 
 - **Access:** [Fill in: accounts, roles, subscriptions, licenses, region, quotas and model access].
 - **Environment:** [Fill in: required tools/runtimes and versions; network/endpoints; container registry/image access].
+- **Container runtime:** [Fill in: **None needed**, or **Podman** recommended (free; [install](https://podman.io/docs/installation)), Docker accepted if already running; Docker Desktop is not required. Readiness check: `podman info` or `docker info` responds. Tested with: runtime and version.]
 - **Authentication:** [Fill in: authentication method and credential/secret-storage references]. Never include secrets.
 - **Data:** [Fill in: permitted sample data, usage rights and handling restrictions].
 
@@ -125,3 +196,5 @@ For prompt runs, completion means **end-to-end time to a validated response**, i
 - [ ] Applicable configuration/specs complete; unused fields N/A; compatibility checked; no unverified minima claimed.
 - [ ] Timings labeled with conditions; setup/indexing distinct from cold/warm runs.
 - [ ] No secrets; samples permitted; cleanup documented; owner, version and validation date complete.
+- [ ] README completed from `README-Template.md`; its three step prompts are identical to **Copy-paste prompts (same as the README)** in this guide.
+- [ ] Every required file downloaded from its published link and checked against its recorded size and SHA-256; all links resolve; no `[Fill in]` placeholders remain.

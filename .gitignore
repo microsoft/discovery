@@ -438,3 +438,7 @@ starter-kits/tmp/
 
 # Pytest cache directory
 .pytest_cache/
+
+# macOS finder metadata
+.DS_Store
+**/.DS_Store
