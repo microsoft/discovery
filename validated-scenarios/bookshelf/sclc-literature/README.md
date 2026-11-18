@@ -139,12 +139,12 @@ buttons. You don't type anything.
    the form:
 
    1. In the left sidebar, click **AI capabilities** (it opens in a new tab at
-      the top of the app), then **Bookshelves**, then **New bookshelf**.
+      the top of the app), then **Bookshelves**, then **New bookshelf**. If a
+      box asks **Use GitHub Copilot for Bookshelf answers in this workspace?**,
+      click **Use Copilot answers** (it appears only the first time).
    2. On **1. Details**, enter **Name** `sclc-literature` and **Description**
-      `Fifteen open-access papers on small-cell lung cancer treatment.` If a box
-      asks **Use GitHub Copilot for Bookshelf answers in this workspace?**, click
-      **Use Copilot answers** (it appears once). Wait for the model list to load,
-      then under **Answer generation** choose **GPT-6 Astra** (if it isn't
+      `Fifteen open-access papers on small-cell lung cancer treatment.` Wait for
+      the model list to load, then under **Answer generation** choose **GPT-6 Astra** (if it isn't
       listed, choose the first model). Leave **Embedding model** below it as it
       is. Click **Next**.
    3. On **2. Files**, click **Upload**, choose **Folder**, select the
@@ -161,6 +161,12 @@ buttons. You don't type anything.
 
 **Done when:** all 15 papers pass their checksum, the Bookshelf shows
 **Successfully indexed**, and the test question comes back with a citation.
+
+**If you see "Tool execution failed":** the Bookshelf's answer model briefly
+rejected the request. Your papers and Bookshelf are fine. The assistant
+retries once by itself; if it still fails, wait a few minutes, click
+**New session**, and paste the same step's prompt again. Nothing needs to be
+downloaded or indexed again.
 
 **What you'll see when Step 1 finishes:** the assistant stops and waits for
 you. Its last message says something like *"Everything is ready for the
