@@ -162,6 +162,19 @@ buttons. You don't type anything.
 **Done when:** all 15 papers pass their checksum, the Bookshelf shows
 **Successfully indexed**, and the test question comes back with a citation.
 
+**What you'll see when Step 1 finishes:** the assistant stops and waits for
+you. Its last message says something like *"Everything is ready for the
+research step. All 15 PDFs passed size and SHA-256 verification ... The
+research question has not been asked."* It then shows:
+
+- the short test question and its answer, with the cited paper under
+  **Sources** (you can open the PDF there);
+- a table of all 15 papers (R1 to R6, P1 to P9) with their file names, sizes and
+  checksums, each marked **True**. It may open beside the chat.
+
+It may also say it can't confirm the answer model itself. That's expected.
+Paste the Step 2 prompt into the same chat to continue.
+
 ### Step 2: Run the experiment
 
 **A or B (same prompt either way):**
@@ -170,7 +183,8 @@ buttons. You don't type anything.
 Ask the research question in section 6 of the guide, using only the sclc-literature Bookshelf. Show me the full answer with a citation for every claim, the second-line comparison table and the list of questions the papers can't answer. Tell me how long it took.
 ```
 
-**Done when:** you have a full written answer with citations.
+**Done when:** you have a full written answer with citations. The assistant
+stops again after the answer; paste the Step 3 prompt into the same chat.
 
 ### Step 3: Verify your results against the validated reference
 
