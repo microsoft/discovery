@@ -320,5 +320,28 @@
   "bytes": 594589,
   "md5_matches_pmc_metadata": true,
   "sha256": "6415898f323b692949da04def2265f4aafe7c40182ddc0299325f65454faf55d"
+ },
+ {
+  "id": "P9",
+  "role": "primary: tarlatamab real-world outcomes after prior therapy",
+  "pmcid": "PMC13255975",
+  "version": "1",
+  "pmid": 42279394,
+  "doi": "10.3390/cancers18111806",
+  "title": "Tarlatamab in Previously Treated Small Cell Lung Cancer: A Real-World Experience in a Predominantly Hispanic Population with CNS Metastases",
+  "journal": "Cancers",
+  "year": "2026",
+  "article_type_jats": "research-article",
+  "heading_subject": [
+   "Article"
+  ],
+  "license_code": "CC BY",
+  "license_url": "https://creativecommons.org/licenses/by/4.0/",
+  "is_pmc_openaccess": true,
+  "is_retracted": false,
+  "download_url": "https://pmc-oa-opendata.s3.amazonaws.com/PMC13255975.1/PMC13255975.1.pdf",
+  "bytes": 690712,
+  "md5_matches_pmc_metadata": true,
+  "sha256": "3585f026d74138398e972f6c8dbc553f1d8d6a322a930305629c28854cd6f6b3"
  }
 ]

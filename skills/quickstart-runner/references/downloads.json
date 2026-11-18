@@ -50,8 +50,8 @@
       "title": "Bookshelf",
       "guide": null,
       "files": [
-        {"path":"quickstarts/bookshelf/sclc-literature/files/manifest.json","name":"manifest.json","bytes":11903,"sha256":"81dc1d78f0417d5ec1918d079f34bfd8c3889eb62185f163217f1c48adadb8e7"},
-        {"path":"quickstarts/bookshelf/sclc-literature/files/selection_sclc.json","name":"selection_sclc.json","bytes":1427,"sha256":"7024a8b12b27a87a7860851763eca99e1652a1282f1a29c6452392ca10e1b0ec"}
+        {"path":"quickstarts/bookshelf/sclc-literature/files/manifest.json","name":"manifest.json","bytes":12774,"sha256":"1acc677072de955f44393454cd3f66c856697e4d122b7c8208cd8842f3874711"},
+        {"path":"quickstarts/bookshelf/sclc-literature/files/selection_sclc.json","name":"selection_sclc.json","bytes":1541,"sha256":"c0229224c86755318948290d142729b14e78323d8b101b894e50a5c93c2b9246"}
       ],
       "paperManifest": "quickstarts/bookshelf/sclc-literature/files/manifest.json",
       "publicationApproved": false,
