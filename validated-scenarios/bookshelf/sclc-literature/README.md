@@ -134,9 +134,10 @@ Set up this Validated Scenario from the attached guide, using the 15 papers alre
 buttons. You don't type anything.
 
 1. **May I download the 15 papers?** Click **Yes**.
-2. The assistant creates the Bookshelf for you if it can. **Only if it can't**,
-   it asks whether to create it with the app's form. Click **Yes**, then fill in
-   the form:
+2. When the papers pass, the assistant says it can't create the Bookshelf
+   itself and asks **Does sclc-literature show Successfully indexed?** That's
+   your cue: don't click an answer yet. Fill in the form below first. (If you
+   don't see that question, expand the last **>** arrow in the chat.)
 
    1. In the left sidebar, click **AI capabilities** (it opens in a new tab at
       the top of the app), then **Bookshelves**, then **New bookshelf**. If a
