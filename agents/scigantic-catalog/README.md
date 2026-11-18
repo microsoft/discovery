@@ -56,12 +56,13 @@ The MCP server is anonymous and read-only. It exposes these catalog tools:
 | `get_data_access(id, language?)` | Storage location plus loader snippets for the user's own environment |
 | `list_archive_files(id, limit?)` | A sample of the files or objects in the archive |
 | `get_sample_notebook(id)` | Cell-by-cell source of a worked starter notebook, when one exists |
-| `lookup_paper(query)` | An arXiv paper by id or title, with linked catalog archives |
+| `lookup_paper(query)` | An arXiv paper by id or title, with `paperLinks` (datasets named in the paper, each with its matched archive, match type and a quote from the paper) kept apart from `suggestedArchives` (keyword-search suggestions the paper does not mention) |
 
 Six `surechembl_*` tools cover patent chemistry (compound lookup, patents for a compound, patent
-text and extracted structures, Solr patent search, structure search). The `search` and `fetch`
-tools are reduced aliases kept for ChatGPT connectors, and `list_compute_tiers` describes
-Scigantic's own hosted notebooks; the agent is instructed to ignore all three.
+text and extracted structures, Solr patent search, structure search). The server also exposes
+`search` and `fetch`, reduced aliases kept for ChatGPT connectors, and `list_compute_tiers`, which
+describes Scigantic's own hosted notebooks. The recommended configuration leaves those three out of
+the tool allowlist (see [Configuration](#configuration)).
 
 The agent does not read the data. It returns the storage location and a loader snippet, and the
 data is read wherever the user runs that snippet.
@@ -84,15 +85,30 @@ deployment name at deploy time.
 | --- | --- | --- |
 | `{{CHAT-MODEL}}` | Microsoft Foundry model deployment name | `gpt-5-deployment` |
 
-The agent declares no `tools:` array. The Scigantic catalog is reached through a remote MCP
-connection registered once per Foundry project and attached to the agent:
+`agent.yaml` declares one MCP tool, `scigantic`, with the endpoint, no credential, approval
+mode `never` and an explicit `allowedTools` list. Discovery Studio does not yet register MCP
+connections itself, so the same settings are entered once per Foundry project and attached to the
+agent:
 
 | Setting | Value |
 | --- | --- |
 | Name | `scigantic` |
 | Remote MCP Server endpoint | `https://api.scigantic.com/mcp` |
 | Authentication | None required. The endpoint is anonymous and read-only. |
+| Allowed tools | The 13 tools below, listed explicitly. Do not leave the allowlist empty. |
 | Approval | **Always auto-approve all tools** |
+
+Allowed tools:
+
+`search_archives`, `get_archive`, `get_schema_card`, `get_data_access`, `list_archive_files`,
+`get_sample_notebook`, `lookup_paper`, `surechembl_compound`, `surechembl_patents_for_compound`,
+`surechembl_patent`, `surechembl_patent_chemistry`, `surechembl_search_patents`,
+`surechembl_structure_search`
+
+An explicit allowlist pins the agent to the tools its instructions describe. If the server adds a
+tool later, it stays unavailable to this agent until you add it on purpose, and the three tools
+the agent does not use (`search`, `fetch`, `list_compute_tiers`) are never offered to it. Every
+allowed tool is read-only, which is why auto-approval is safe here.
 
 Approval must be set to auto-approve. The default asks for confirmation before every tool call,
 and in an autonomous task run there is nobody to confirm, so the agent stalls.
@@ -121,8 +137,12 @@ What are the caveats in the data dictionary?
 Start from a paper instead of a topic:
 
 ```text
-@SciganticCatalog Which datasets does arXiv 2410.12345 use, and which are in the catalog?
+@SciganticCatalog Which datasets does arXiv 2103.00020 use, and which are in the catalog?
 ```
+
+The answer has two labeled parts: the datasets named in the paper, each with a quote from the
+paper and its catalog archive when there is one, and, separately, related catalog archives that a
+keyword search suggests but the paper does not mention.
 
 Or ask about patent chemistry:
 
@@ -150,6 +170,15 @@ begin analysis on the dataset it recommends.
 - **Schema cards are sampled.** A card is built from a sample of files and rows, so a rare column
   or a format that appears only deep in the tree can be missing from it.
 - **Paper lookup is arXiv only.** DOIs, PubMed ids and non-arXiv papers do not resolve.
+- **Paper links are extracted automatically.** The datasets in `paperLinks` were extracted from
+  the paper's text and matched to the catalog by id or by name. The agent reports each with the
+  quote it came from and marks name matches as such. `suggestedArchives` are keyword-search
+  suggestions: the agent labels them as related archives the paper does not mention and never
+  presents them as datasets the paper used.
+- **Empty is not the same as unavailable.** When a search succeeds with no match, the agent says
+  nothing matched and rewords the query. When a tool call fails or the MCP connection cannot be
+  reached, it retries once, then reports that the catalog could not be reached for that step,
+  instead of saying no datasets exist.
 - **No per-user state.** The endpoint is anonymous, so there are no saved searches or
   preferences across sessions.
 

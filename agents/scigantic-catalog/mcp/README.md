@@ -51,7 +51,7 @@ In the agent, find `scigantic` in the **Tools** list and open its configuration:
 
 | Setting | What to enter |
 | --- | --- |
-| **Allowed scigantic tools** | Leave empty, or allow only the catalog tools listed below. |
+| **Allowed scigantic tools** | Enter the 13 tools marked **Allowed** in [the table below](#the-scigantic-tools). Do not leave this empty: an empty list allows every tool the server exposes, including ones added later. |
 | **Approval setting for tools in this MCP server for this agent** | **`Always auto-approve all tools`** |
 
 Approval must be set to auto-approve. The default asks for confirmation before every tool call,
@@ -66,18 +66,24 @@ tools, alongside the resource-handling tools Discovery injects into every agent.
 
 ## The Scigantic tools
 
-| Tool | What it does |
-| --- | --- |
-| `search_archives` | Natural-language search over the catalog; returns ranked archives with trust signals |
-| `get_archive` | Full metadata for one archive |
-| `get_schema_card` | The archive's schema card: format, columns, sample rows, sidecar docs, caveats, starter cell |
-| `get_data_access` | Storage location and loader snippets for the user's own environment |
-| `list_archive_files` | A sample of the archive's files or objects |
-| `get_sample_notebook` | Source of a worked starter notebook, when one exists |
-| `lookup_paper` | An arXiv paper and the catalog archives linked to it |
-| `surechembl_compound`, `surechembl_patents_for_compound`, `surechembl_patent`, `surechembl_patent_chemistry`, `surechembl_search_patents`, `surechembl_structure_search` | SureChEMBL patent chemistry |
-| `search`, `fetch` | Reduced aliases kept for ChatGPT connectors; the agent ignores them |
-| `list_compute_tiers` | Scigantic's own hosted notebook tiers; not applicable in Discovery, the agent ignores it |
+| Tool | Allowlist | What it does |
+| --- | --- | --- |
+| `search_archives` | Allowed | Natural-language search over the catalog; returns ranked archives with trust signals |
+| `get_archive` | Allowed | Full metadata for one archive |
+| `get_schema_card` | Allowed | The archive's schema card: format, columns, sample rows, sidecar docs, caveats, starter cell |
+| `get_data_access` | Allowed | Storage location and loader snippets for the user's own environment |
+| `list_archive_files` | Allowed | A sample of the archive's files or objects |
+| `get_sample_notebook` | Allowed | Source of a worked starter notebook, when one exists |
+| `lookup_paper` | Allowed | An arXiv paper, with the datasets named in its text (`paperLinks`) kept apart from keyword-search suggestions (`suggestedArchives`) |
+| `surechembl_compound`, `surechembl_patents_for_compound`, `surechembl_patent`, `surechembl_patent_chemistry`, `surechembl_search_patents`, `surechembl_structure_search` | Allowed | SureChEMBL patent chemistry |
+| `search`, `fetch` | Leave out | Reduced aliases kept for ChatGPT connectors |
+| `list_compute_tiers` | Leave out | Scigantic's own hosted notebook tiers; not applicable in Discovery |
+
+To paste the allowlist in one go:
+
+```text
+search_archives, get_archive, get_schema_card, get_data_access, list_archive_files, get_sample_notebook, lookup_paper, surechembl_compound, surechembl_patents_for_compound, surechembl_patent, surechembl_patent_chemistry, surechembl_search_patents, surechembl_structure_search
+```
 
 Every tool is read-only and declares `readOnlyHint`. For the server's source, a stdio variant for
 clients that cannot use HTTP, and the response shapes, see
@@ -88,5 +94,6 @@ clients that cannot use HTTP, and the response shapes, see
 - **Register once, attach many.** The tool is a project-level resource. Adding it to a second
   agent is just steps 5 and 6.
 - **Verify the connection** by asking the agent for a dataset on any topic. A working connection
-  answers with archive ids and `https://scigantic.com/archive/<id>` links; a broken one says the
-  catalog returned nothing.
+  answers with archive ids and `https://scigantic.com/archive/<id>` links. A broken one makes the
+  agent say the Scigantic catalog could not be reached and quote the error; it does not report a
+  connection failure as an empty search.
