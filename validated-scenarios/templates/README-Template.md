@@ -14,7 +14,7 @@ Complete it together with the guide made from Validated-Scenario-Template.md, an
 
 1. Install the [Discovery app](https://github.com/microsoft/discovery/blob/main/README.md) and sign in.
 2. Create a project in a new `Downloads\[Fill in: Validated-Scenario-Scenario-Name]` folder and click **New session**.
-3. Select **[Fill in: model]**, or its newer version if it's no longer listed.
+3. Select **[Fill in: model]**, or its newer version or an equivalent model if it's no longer listed.
    *(Prefer to download the files yourself? Do [option B](#option-b-download-the-files-yourself) here.)*
 4. Send the [Step 1 prompt](#step-1-set-up-and-confirm-the-environment): set up and confirm the environment.
 5. Send the [Step 2 prompt](#step-2-run-the-experiment): run the experiment.
@@ -63,7 +63,7 @@ Complete it together with the guide made from Validated-Scenario-Template.md, an
    top left to get back to **Projects**.)
 3. **Open a chat.** Click **New session** on the left.
 4. **Select the model.** In the chat box, open the model menu and choose
-   **[Fill in: model]** (or its newer version if it's no longer listed).
+   **[Fill in: model]** (or its newer version or an equivalent model if it's no longer listed).
 
 ## Run it in three steps
 

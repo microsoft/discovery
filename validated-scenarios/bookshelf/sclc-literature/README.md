@@ -4,7 +4,7 @@
 
 1. Install the [Discovery app](../../../README.md) and sign in.
 2. Create a project in a new `Downloads\Validated-Scenario-SCLC-Bookshelf` folder and click **New session**.
-3. Select **GPT-6 Astra**, or its newer version if it's no longer listed.
+3. Select **GPT-6 Astra**, or its newer version or an equivalent model if it's no longer listed.
    *(Prefer to download the papers yourself? Do [option B](#option-b-download-the-files-yourself) here.)*
 4. Send the [Step 1 prompt](#step-1-set-up-and-confirm-the-environment): download the papers and build the Bookshelf.
 5. Send the [Step 2 prompt](#step-2-run-the-experiment): ask the research question.
@@ -74,7 +74,7 @@ CC BY 4.0. They are not stored in this repository.
    OneDrive-synced folders such as Documents or Desktop.)
 3. **Open a chat.** Click **New session** on the left.
 4. **Select the model.** In the chat box, open the model menu and choose
-   **GPT-6 Astra** (or its newer version if it's no longer listed).
+   **GPT-6 Astra** (or its newer version or an equivalent model if it's no longer listed).
 
 ## Run it in three steps
 
@@ -200,8 +200,8 @@ Check your answer against the acceptance criteria in section 6 of the guide. Sho
 
 **What you'll see:** a pass/fail table of the checks, then five claims with
 the exact passage from each cited paper, then a one-sentence verdict. If the
-table or the five passages are missing, send: `Show me the pass/fail table and
-the five-claim citation audit.`
+table or the five passages are missing, send: `Show me the pass/fail table, the
+five-claim citation audit and the one-sentence verdict.`
 
 **Done when:** every check passes and the five spot-checked claims match
 their papers.
