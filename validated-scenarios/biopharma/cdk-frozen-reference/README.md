@@ -113,13 +113,13 @@ Nothing to do yet. Go straight to
 
    | # | File | What it is |
    | --- | --- | --- |
-   | 1 | [Validated-Scenario-BioPharma LeadGen v0.11.md](https://raw.githubusercontent.com/faranm-stack/discovery/docs/validated-scenarios/validated-scenarios/biopharma/cdk-frozen-reference/Validated-Scenario-BioPharma%20LeadGen%20v0.11.md) | The guide (you'll attach this in Step 1) |
+   | 1 | [Validated-Scenario-BioPharma LeadGen v0.11.md](https://raw.githubusercontent.com/microsoft/discovery/main/validated-scenarios/biopharma/cdk-frozen-reference/Validated-Scenario-BioPharma%20LeadGen%20v0.11.md) | The guide (you'll attach this in Step 1) |
    | 2 | [cdk_non_md_deliverables.zip](https://github.com/microsoft/discovery/releases/download/cdk-frozen-reference-v0.11/cdk_non_md_deliverables.zip) | The original campaign data and reference results (168 MB) |
-   | 3 | [cdk_non_md_deliverables.sha256](https://raw.githubusercontent.com/faranm-stack/discovery/docs/validated-scenarios/validated-scenarios/biopharma/cdk-frozen-reference/files/cdk_non_md_deliverables.sha256) | Checksum for file 2 |
-   | 4 | [cdk_operational_bundle_v1.zip](https://raw.githubusercontent.com/faranm-stack/discovery/docs/validated-scenarios/validated-scenarios/biopharma/cdk-frozen-reference/files/cdk_operational_bundle_v1.zip) | The run kit (50 KB) |
-   | 5 | [cdk_operational_bundle_v1.sha256](https://raw.githubusercontent.com/faranm-stack/discovery/docs/validated-scenarios/validated-scenarios/biopharma/cdk-frozen-reference/files/cdk_operational_bundle_v1.sha256) | Checksum for file 4 |
-   | 6 | [cdk_operational_bundle_v1_manifest.csv](https://raw.githubusercontent.com/faranm-stack/discovery/docs/validated-scenarios/validated-scenarios/biopharma/cdk-frozen-reference/files/cdk_operational_bundle_v1_manifest.csv) | List of what's inside file 4 |
-   | 7 | [cdk_operational_bundle_v1_validation.json](https://raw.githubusercontent.com/faranm-stack/discovery/docs/validated-scenarios/validated-scenarios/biopharma/cdk-frozen-reference/files/cdk_operational_bundle_v1_validation.json) | Verification record for file 4 |
+   | 3 | [cdk_non_md_deliverables.sha256](https://raw.githubusercontent.com/microsoft/discovery/main/validated-scenarios/biopharma/cdk-frozen-reference/files/cdk_non_md_deliverables.sha256) | Checksum for file 2 |
+   | 4 | [cdk_operational_bundle_v1.zip](https://raw.githubusercontent.com/microsoft/discovery/main/validated-scenarios/biopharma/cdk-frozen-reference/files/cdk_operational_bundle_v1.zip) | The run kit (50 KB) |
+   | 5 | [cdk_operational_bundle_v1.sha256](https://raw.githubusercontent.com/microsoft/discovery/main/validated-scenarios/biopharma/cdk-frozen-reference/files/cdk_operational_bundle_v1.sha256) | Checksum for file 4 |
+   | 6 | [cdk_operational_bundle_v1_manifest.csv](https://raw.githubusercontent.com/microsoft/discovery/main/validated-scenarios/biopharma/cdk-frozen-reference/files/cdk_operational_bundle_v1_manifest.csv) | List of what's inside file 4 |
+   | 7 | [cdk_operational_bundle_v1_validation.json](https://raw.githubusercontent.com/microsoft/discovery/main/validated-scenarios/biopharma/cdk-frozen-reference/files/cdk_operational_bundle_v1_validation.json) | Verification record for file 4 |
 
 2. **Check the folder.** Open `Downloads\Validated-Scenario-CDK-Lead-Discovery` in File
    Explorer. You should see exactly these seven files. If Windows added
@@ -138,7 +138,7 @@ Nothing to do yet. Go straight to
 **A. The assistant downloads the files:**
 
 ```text
-Set up this Validated Scenario: https://github.com/faranm-stack/discovery/blob/docs/validated-scenarios/validated-scenarios/biopharma/cdk-frozen-reference/Validated-Scenario-BioPharma%20LeadGen%20v0.11.md
+Set up this Validated Scenario: https://github.com/microsoft/discovery/blob/main/validated-scenarios/biopharma/cdk-frozen-reference/Validated-Scenario-BioPharma%20LeadGen%20v0.11.md
 Read the whole guide and tell me in plain language what this experiment does. Then prepare this project for the default frozen-reference run: download the six required files into this project, check each file's size and checksum, check the model, Python 3.13.14, disk space and local access, show me the 14 required Python packages, and install what's needed. Ask me before downloading and before installing anything. Do not start the computation. Finish by telling me whether the environment is ready and what, if anything, still needs my action.
 ```
 

@@ -111,7 +111,7 @@ Nothing to do yet. Go straight to
 **A. The assistant downloads the papers:**
 
 ```text
-Set up this Validated Scenario: https://github.com/faranm-stack/discovery/blob/docs/validated-scenarios/validated-scenarios/bookshelf/sclc-literature/Validated-Scenario-Bookshelf-SCLC-Literature.md
+Set up this Validated Scenario: https://github.com/microsoft/discovery/blob/main/validated-scenarios/bookshelf/sclc-literature/Validated-Scenario-Bookshelf-SCLC-Literature.md
 Read the whole guide and tell me in plain language what this experiment does. Then download the 15 papers into a sclc-papers folder in this project and check each file's size and checksum. Ask me before downloading. After that, create the sclc-literature Bookshelf from those 15 papers yourself with your Bookshelf tool: ask me first, then add all 15 PDFs, start indexing and wait until it is indexed, and tell me which answer model it uses. If your Bookshelf tools can't create a Bookshelf, tell me so, show me the guide's form steps and exact values as a numbered list in your reply, then ask me with clickable choices whether it shows Successful. Then ask it a short test question to confirm it works. Don't ask the research question yet. Finish by telling me whether everything is ready.
 ```
 
