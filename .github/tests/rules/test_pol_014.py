@@ -9,8 +9,10 @@ from rules.pol_014 import RULE
 
 APPROVED = [
     "python:3.12-slim",                              # Docker Official Image
+    "python:3.13-slim-bookworm",
     "ubuntu:24.04",
     "debian:12-slim",
+    "docker.io/library/debian:12-slim",
     "docker.io/library/python:3.11-slim",            # explicit official form
     "mcr.microsoft.com/azurelinux/base/python:3.12",  # trusted registry
     "mcr.microsoft.com/azurelinux/base/core:3.0",
@@ -24,11 +26,14 @@ APPROVED = [
     "docker.io/ghdl/ghdl:5.1.1-gcc-ubuntu-22.04",
     "ghdl/synth:beta",
     "docker.io/verilator/verilator:v5.036",
+    "docker.io/openroad/orfs",
+    "cgr.dev/chainguard/python:latest-dev",
 ]
 
 REJECTED = [
     "randomuser/sketchy-image:1.0",
     "quay.io/someorg/tool:2.0",
+    "cgr.dev/unapproved/python:latest-dev",
     "ghcr.io/attacker/payload:latest",
     "registry.example.com/internal/thing:1.0",
     "evilnamespace/cuda:12.0",
