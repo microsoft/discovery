@@ -4,7 +4,7 @@
 
 1. Install the [Discovery app](../../../README.md) and sign in.
 2. Create a project in a new `Downloads\Validated-Scenario-CDK-Lead-Discovery` folder and click **New session**.
-3. Select **GPT-6 Astra**.
+3. Select **GPT-6 Astra**, or its newer version if it's no longer listed.
    *(Prefer to download the files yourself? Do [option B](#option-b-download-the-files-yourself) here.)*
 4. Send the [Step 1 prompt](#step-1-set-up-and-confirm-the-environment): set up and confirm the environment.
 5. Send the [Step 2 prompt](#step-2-run-the-experiment): run the experiment.
@@ -41,7 +41,7 @@ check for one target (CDK7) failed; your report keeps these limitations.
 | --- | --- |
 | Discovery app | Download it from the [Discovery download page](../../../README.md) and follow the [install guide](../../../docs/discovery-app/install.md). |
 | Sign-in | A GitHub account with a GitHub Copilot subscription. |
-| Model | **GPT-6 Astra** (`gpt-6-astra`). Choose it in the chat's model menu. |
+| Model | Validated with **GPT-6 Astra** (`gpt-6-astra`). If it's no longer in the model menu, choose its newer version or an equivalent model. |
 | Computer | Windows 11, 64-bit (tested). Other systems are untested. |
 | Python | **Python 3.13.14, 64-bit**, exactly this version. If you don't have it, the assistant gives you the download link; it does not install Python for you. |
 | Container runtime | None needed. This Validated Scenario runs in a Python environment, so you don't need Docker, Docker Desktop or Podman. |
@@ -90,7 +90,7 @@ you don't need to open them.
    **Projects**.)
 3. **Open a chat.** Click **New session** on the left.
 4. **Select the model.** In the chat box, open the model menu and choose
-   **GPT-6 Astra**.
+   **GPT-6 Astra** (or its newer version if it's no longer listed).
 
 ## Run it in three steps
 
