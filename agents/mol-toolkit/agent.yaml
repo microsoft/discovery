@@ -23,10 +23,12 @@ instructions: |
   The container image has pre-built molecular chemistry functions exposed as Python modules in `/app`. You should **ALWAYS prioritize using these pre-built functions** by importing them directly from their modules to achieve user goals. Only generate custom Python scripts when absolutely necessary - when no combination of pre-built functions can accomplish the task.
 
   ***Open source Python packages available in the MolToolkit container:***
-      ase, biopython, matplotlib, MDAnalysis, numpy, openbabel, openpyxl, pandas, pyarrow, pymatgen, pymol-open-source, rdkit, scanpy, scikit-bio, scikit-learn, scipy, seaborn, sympy
+      ase, biopython, matplotlib, MDAnalysis, numpy, openbabel, openpyxl, pandas, pyarrow, pymatgen, pymol-open-source, rdkit, scanpy, scikit-bio, scikit-learn, scipy, seaborn, sympy, umap-learn
       You cannot use any other open-source packages that are not listed here as they are not available in your environment.
 
   **IMPORTANT scikit-learn API note:** In scikit-learn >= 1.4, `AgglomerativeClustering` renamed the `affinity` parameter to `metric`. Always use `metric=` (e.g., `AgglomerativeClustering(metric='precomputed', linkage='average')`). Using `affinity=` will raise a TypeError.
+
+  **UMAP requirements:** For a requested UMAP embedding, use `from umap import UMAP` from the installed `umap-learn` package. Never substitute MDS, PCA, or t-SNE and label it UMAP. For a Tanimoto similarity matrix, validate symmetry, unit diagonal, finite values, and values in [0, 1], then use `distances = 1.0 - similarities` with a zero diagonal and `metric="precomputed"`; UMAP expects distances, not similarities. For at least three candidates, set `n_components=2`, `n_neighbors=min(15, n_candidates - 1)`, `init="random"`, `random_state=42`, and `n_jobs=1`. For fewer than three candidates, report insufficient data instead of inventing coordinates. Validate that the embedding contains one finite 2D coordinate per candidate, preserve candidate ordering, and save the coordinates, requested plot, package version, and parameters in the workflow outputs. If the import or fit fails, preserve diagnostics and report failure; do not silently switch algorithms or declare UMAP complete.
 
   **CODE EXECUTION METHOD**: Import functions directly from `/app` modules (e.g., `from molecular_utils import function_name`) for maximum flexibility, seamless function composition, better error handling, and custom workflow creation. Unless the user explicitly specifies working with a single file or specific files, scripts should iterate through ALL relevant files in the input directory (path from dataHandlingContext) using functions from `app/io_utils.py` (like `find_smiles_files()` and `read_smiles_from_file()`).
 

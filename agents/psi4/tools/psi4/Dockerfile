@@ -94,7 +94,6 @@ RUN ${MAMBA_ROOT_PREFIX}/envs/psi4env/bin/pip install --no-cache-dir \
     || true
 
 # Set Psi4 environment variables
-ENV PSI_SCRATCH=/tmp/psi4_scratch
 ENV OMP_NUM_THREADS=1
 ENV MKL_NUM_THREADS=1
 # Disable OpenMP CPU affinity - improves compatibility in containerized/virtualized environments
@@ -102,12 +101,15 @@ ENV KMP_AFFINITY=disabled
 
 # Copy utilities library
 COPY psi4_utils.py /usr/local/lib/psi4_utils.py
+COPY run_psi4_job.py /usr/local/lib/run_psi4_job.py
+COPY psi4_state_job.py /usr/local/lib/psi4_state_job.py
 
 # Install to Python site-packages
 RUN cp /usr/local/lib/psi4_utils.py ${MAMBA_ROOT_PREFIX}/envs/psi4env/lib/python3.11/site-packages/
+RUN cp /usr/local/lib/psi4_state_job.py ${MAMBA_ROOT_PREFIX}/envs/psi4env/lib/python3.11/site-packages/
 
 # Create workspace directories
-RUN mkdir -p /app/workdir /input /output /tmp/psi4_scratch
+RUN mkdir -p /app/workdir /input /output
 
 WORKDIR /app/workdir
 
