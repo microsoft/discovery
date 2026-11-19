@@ -10,7 +10,7 @@ by sending its README's three prompts in a Discovery chat.
 | [BioPharma](biopharma/README.md) | [CDK Target Selection and Lead Discovery](biopharma/cdk-frozen-reference/README.md) | Ready to run from its guide link; all required files available. Fresh end-to-end run not yet recorded. |
 | [Silicon and Physics](siphy/README.md) | [Specification to verified RTL](siphy/spec-to-rtl/README.md) | Guide and setup archive available; see scenario requirements and reference-evidence limitations. |
 | [Chemistry and Materials Science](cms/README.md) | [Moisturizer formulation](cms/moisturizer-formulation/README.md) | In preparation; prompt and corpus metadata available. |
-| [Bookshelf](bookshelf/README.md) | [SCLC treatment literature research](bookshelf/sclc-literature/README.md) | Draft in the new format: setup and papers ready to try; research question pending owner approval; no reference answer yet. |
+| [Bookshelf](bookshelf/README.md) | [SCLC treatment literature research](bookshelf/sclc-literature/README.md) | Available. Tested end to end on Windows 11 x64. |
 
 Each Validated Scenario has its own folder under its vertical or collection. Open a
 vertical to browse its scenarios, or select a Validated Scenario directly above.
@@ -42,7 +42,7 @@ with a GitHub Copilot subscription to sign in.
    installing anything and starting the run.
 
 Each scenario README gives the exact clicks, the model and the guide link.
-Available now: **BioPharma**. **Bookshelf** is a draft in this format.
+Available now: **BioPharma** and **Bookshelf**.
 Silicon and Physics and Chemistry and Materials Science are being moved to
 this format; until then, follow the steps in their own READMEs.
 

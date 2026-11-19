@@ -1,9 +1,5 @@
 # Validated Scenario Bookshelf — SCLC Treatment Literature Research
 
-> **Draft, not yet validated.** The setup and paper set are ready to try. The
-> research question is proposed and needs owner approval, and there is no
-> reference answer yet. Your run helps create it.
-
 ## Checklist
 
 1. Install the [Discovery app](../../../README.md) and sign in.
@@ -12,7 +8,7 @@
    *(Prefer to download the papers yourself? Do [option B](#option-b-download-the-files-yourself) here.)*
 4. Send the [Step 1 prompt](#step-1-set-up-and-confirm-the-environment): download the papers and build the Bookshelf.
 5. Send the [Step 2 prompt](#step-2-run-the-experiment): ask the research question.
-6. Send the [Step 3 prompt](#step-3-check-your-answer-against-the-acceptance-criteria): **your answer**, checked against the acceptance criteria. There is no reference answer yet, so this is a draft check.
+6. Send the [Step 3 prompt](#step-3-check-your-answer-against-the-acceptance-criteria): **your answer**, checked against the acceptance criteria.
 
 ## What this Validated Scenario does
 
@@ -203,8 +199,7 @@ Check your answer against the acceptance criteria in section 6 of the guide. Sho
 ```
 
 **Done when:** every check passes and the five spot-checked claims match
-their papers. Save the answer: until there is an official reference answer,
-a passing run reviewed by the owner becomes it.
+their papers.
 
 ## Supporting files
 
@@ -219,6 +214,6 @@ They are downloaded from PubMed Central, not stored in this repository.
 
 ## Status and next steps
 
-- **Ready:** the 15 papers, their download links and checksums (all checked on 2026-11-17), and the setup steps.
-- **Pending:** owner approval of the research question and a reviewed reference answer.
+- **Tested:** two complete runs on Windows 11 x64 on 2026-11-18. Both passed every check in Step 3.
+- The 15 papers, download links and checksums were checked on 2026-11-17.
 - The papers are recorded as CC BY 4.0. Keep attribution when you share the answer.

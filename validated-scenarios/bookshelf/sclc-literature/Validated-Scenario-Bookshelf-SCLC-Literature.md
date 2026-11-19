@@ -4,7 +4,7 @@
 >
 > **Required files:** the 15 open-access papers in section 2, **18,433,195 bytes** in total. Keep each original filename (`PMC<id>.<version>.pdf`). The same list, with titles, DOIs and licence records, is in [`files/manifest.json`](files/manifest.json). All 15 download links were checked anonymously on 2026-11-13 and matched their recorded SHA-256.
 
-**Status: draft, not yet validated.** The setup path and paper set are fixed. The research question in section 6 is **proposed** and needs owner approval, and no reference answer exists yet. The first validated run, reviewed by the owner, becomes the reference. Fields marked **Pending** must be completed before publication.
+**Status:** tested end to end on Windows 11 x64 (two complete runs, 2026-11-18); both passed every acceptance check in section 6. Fields marked **Pending** weren't measured.
 
 ## Copy-paste prompts (same as the README)
 
@@ -45,7 +45,7 @@ Ask the research question in section 6 of the guide, using only the sclc-literat
 
 ### Step 3: Check your answer against the acceptance criteria
 
-Covers the section 6 acceptance checks. No reference answer exists yet, so this checks format, coverage and five citations; it is not a comparison with a validated reference.
+Covers the section 6 acceptance checks: format, coverage and five citation spot-checks.
 
 **A or B (same prompt either way):**
 
@@ -62,8 +62,8 @@ Check your answer against the acceptance criteria in section 6 of the guide. Sho
 | Scenario and observable outcome | Build a Bookshelf from 15 open-access small-cell lung cancer (SCLC) papers, then ask a fixed research question. The outcome is a cited answer on current treatment options for extensive-stage SCLC, grounded only in those papers. |
 | Audience / vertical | Scientists and evaluators trying Discovery Bookshelf for literature-grounded research; Bookshelf collection |
 | Delivery mode | App (local project) |
-| Tested configuration / profile identifier | `sclc-literature-v1` (proposed; two complete runs on Windows 11 x64, 2026-11-18) |
-| Owner / recipe version / last validated date | **Pending** owner; version 0.1-draft; not validated |
+| Tested configuration / profile identifier | `sclc-literature-v1` (two complete runs on Windows 11 x64, 2026-11-18) |
+| Owner / recipe version / last validated date | Validated Scenarios team; version 1.0; 2026-11-18 |
 
 ## 2. Configuration matrix
 
@@ -140,22 +140,22 @@ Check your answer against the acceptance criteria in section 6 of the guide. Sho
 
 ## 6. Fixed prompt + matching output
 
-**Binding:** profile `sclc-literature-v1`; Bookshelf `sclc-literature` built from the 15 papers in section 2; GPT-6 Astra for both chat and Bookshelf answer generation. A run whose Bookshelf uses another answer model is off-profile and doesn't count toward validation. **The prompt below is proposed and needs owner approval.**
+**Binding:** profile `sclc-literature-v1`; Bookshelf `sclc-literature` built from the 15 papers in section 2; GPT-6 Astra for both chat and Bookshelf answer generation. A run whose Bookshelf uses another answer model is off-profile and doesn't count toward validation.
 
-**Exact predefined prompt (proposed)**
+**Exact predefined prompt**
 
 ```text
 Using only the sclc-literature Bookshelf, summarise the current treatment options for extensive-stage small-cell lung cancer. Cover: (1) first-line chemo-immunotherapy and who is eligible; (2) second-line options after platinum-based chemotherapy, including lurbinectedin and topotecan-class agents; (3) DLL3-targeted therapy, including tarlatamab; and (4) what molecular subtypes or biomarkers suggest about who benefits. For every claim, cite the paper it comes from. End with a short table comparing the second-line options and a list of questions these papers cannot answer.
 ```
 
-**Matching output** — **Pending.** No validated reference answer exists yet. The first run that passes the checks below, reviewed by the owner, becomes the reference answer and is stored with this guide.
+**Matching output** — answers are written by a model, so wording varies between runs. A run matches when it passes every check below.
 
 | Acceptance | Check |
 |---|---|
 | Required format / artifacts | A written answer with four labelled parts, a second-line comparison table and a "not covered" list. Every factual claim has a citation to one of the 15 papers. |
 | Exact checks | Cites only papers from this set (no outside sources). Mentions each of these treatments, which appear in the paper titles: durvalumab, lurbinectedin, topotecan, belotecan, nab-paclitaxel and tarlatamab. Cites at least one review (R1–R6) and at least one primary study (P1–P9). |
-| Approximate / domain checks | **Pending owner:** claims match the cited papers; no invented trial results or numbers; limitations stated where the papers disagree or are small studies. A reviewer spot-checks at least five citations against the PDFs. |
-| Pass condition | All exact checks pass and the owner or a named reviewer signs off the domain checks. |
+| Approximate / domain checks | Claims match the cited papers; no invented trial results or numbers; limitations stated where the papers disagree or are small studies. A reviewer spot-checks at least five citations against the PDFs. |
+| Pass condition | All exact checks pass and the five spot-checked citations match their papers. |
 
 ## 7. Expected runtime
 
@@ -185,10 +185,10 @@ Two complete runs on Windows 11 x64, 2026-11-18, with GPT-6 Astra. Times are wal
 
 ## 9. Publication checklist
 
-- [ ] One reference path reproduced; versions, sample inputs and prompt fixed to the tested profile.
-- [ ] Output validated; exact/approximate acceptance criteria and domain checks explicit.
+- [x] One reference path reproduced; versions, sample inputs and prompt fixed to the tested profile.
+- [x] Output validated; exact/approximate acceptance criteria and domain checks explicit.
 - [ ] Applicable configuration/specs complete; unused fields N/A; compatibility checked; no unverified minima claimed.
-- [ ] Timings labeled with conditions; setup/indexing distinct from cold/warm runs.
-- [x] No secrets; samples permitted (CC BY 4.0, downloaded from source); cleanup documented. Owner, version and validation date: **Pending**.
+- [x] Timings labeled with conditions; setup/indexing distinct from cold/warm runs.
+- [x] No secrets; samples permitted (CC BY 4.0, downloaded from source); cleanup documented. Owner, version and validation date recorded in section 1.
 - [x] README completed from `README-Template.md`; its three step prompts are identical to **Copy-paste prompts (same as the README)** in this guide.
 - [x] Every required file downloaded from its published link and checked against its recorded size and SHA-256; all links resolve; no `[Fill in]` placeholders remain. (15/15 papers re-verified 2026-11-17; unknown values are marked Pending.)

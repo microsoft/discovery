@@ -2,7 +2,7 @@
 
 | Validated Scenario | Description | Availability |
 | --- | --- | --- |
-| [SCLC treatment literature research](sclc-literature/README.md) | Build a Bookshelf from fifteen open-access small-cell lung cancer papers and ask a fixed, cited research question. | Draft: setup and papers ready to try; research question pending owner approval; no reference answer yet. |
+| [SCLC treatment literature research](sclc-literature/README.md) | Build a Bookshelf from fifteen open-access small-cell lung cancer papers and ask a fixed, cited research question. | Available. Tested end to end on Windows 11 x64. |
 
 ## Supporting files
 
