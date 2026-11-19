@@ -198,6 +198,11 @@ stops again after the answer; paste the Step 3 prompt into the same chat.
 Check your answer against the acceptance criteria in section 6 of the guide. Show me a table of each check with pass or fail: it cites only these 15 papers; it mentions durvalumab, lurbinectedin, topotecan, belotecan, nab-paclitaxel and tarlatamab; it cites at least one review (R1-R6) and at least one primary study (P1-P9); and it has the four parts, the table and the not-covered list. Then pick five claims and show me the exact passage in the cited paper that supports each one. Tell me in one sentence whether this run passes.
 ```
 
+**What you'll see:** a pass/fail table of the checks, then five claims with
+the exact passage from each cited paper, then a one-sentence verdict. If the
+table or the five passages are missing, send: `Show me the pass/fail table and
+the five-claim citation audit.`
+
 **Done when:** every check passes and the five spot-checked claims match
 their papers.
 

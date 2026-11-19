@@ -157,6 +157,8 @@ Using only the sclc-literature Bookshelf, summarise the current treatment option
 | Approximate / domain checks | Claims match the cited papers; no invented trial results or numbers; limitations stated where the papers disagree or are small studies. A reviewer spot-checks at least five citations against the PDFs. |
 | Pass condition | All exact checks pass and the five spot-checked citations match their papers. |
 
+**Assistant reply format:** In Step 2, give the answer only; don't mention or offer the citation audit, which is Step 3. In Step 3, put everything in the chat reply itself, in this order, without asking first: (1) the pass/fail table with one row per check above; (2) the five claims, each with the exact supporting passage and its paper; (3) a one-sentence verdict. Don't put them only in a saved file or a collapsed step.
+
 ## 7. Expected runtime
 
 Two complete runs on Windows 11 x64, 2026-11-18, with GPT-6 Astra. Times are wall-clock in the chat and include the user clicking through prompts.
