@@ -12,6 +12,8 @@ This guide describes the existing provider-maintained remote MCP connection and 
 
 These are the five tools documented by the provider and observed in the earlier hosted-server tool list. The earlier two-tool allowlist was a deliberate local restriction, not a provider limitation. Category or dependency outputs may be large; the agent can use focused introspection instead. Batch query executions are counted individually, separately from MCP tool calls.
 
+GraphQL variables must be used by the operation; a batch `key_field` should select a real query variable whose values uniquely identify results, not require a fabricated `$key`. If no such variable is available, use explicit aliases or separate bounded calls. For an agent-authored GraphQL syntax or validation error, the instructions permit at most one correction and retry per task within the same scope, approvals, and budgets, with both attempts recorded. Permission, authentication, transport, MCP, service, and schema errors still stop the workflow. Failed retrieval is not evidence absence.
+
 The agent's requested sample, query and batch budgets are prompt instructions, not enforced limits on MCP inputs or remote execution. The GraphQL tools can accept larger queries and batches. If hard limits are required, use a separately verified runtime or service-side limiter; the tool allowlist and requested per-call approval do not themselves impose size ceilings.
 
 ## Prerequisites
