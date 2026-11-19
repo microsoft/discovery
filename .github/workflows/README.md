@@ -184,7 +184,7 @@ new version; exact pins can still be updated.
 Pip targets cover the repository root and recursive subdirectories, including
 `utilities/`, contributed content, hidden directories, and future top-level
 projects. New supported manifests are discovered without editing a per-project
-list. CI requirements remain explicitly targeted at `.github/`, and the utility
+list. The recursive glob also covers CI requirements in `.github/`; the utility
 CLI's separate uv block remains enabled for uv lockfile updates. This
 repository-wide dependency protection is separate from the catalog-scoped
 content scanners. Dependencies written only in Dockerfile `RUN pip install`

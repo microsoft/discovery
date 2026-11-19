@@ -69,7 +69,6 @@ updates:
   - package-ecosystem: "pip"
     directories:
       - "/"
-      - "/.github"
       - "**/*"
     schedule:
       interval: "monthly"

@@ -82,12 +82,14 @@ def directory_matches(directory: str, patterns: list[str]) -> bool:
 
 
 def expanded_pip_directories(repo: Path) -> set[Path]:
-    return {
+    directories = [
         directory
         for pattern in dependabot_update("pip")["directories"]
         for directory in ([repo] if pattern == "/" else repo.glob(pattern.lstrip("/")))
         if directory.is_dir()
-    }
+    ]
+    assert len(directories) == len(set(directories)), "Dependabot pip directory patterns overlap"
+    return set(directories)
 
 
 def test_codeql_matrix_keeps_scopes_separate_and_supported():
