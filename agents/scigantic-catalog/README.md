@@ -56,7 +56,7 @@ The MCP server is anonymous and read-only. It exposes these catalog tools:
 | `get_data_access(id, language?)` | Storage location plus loader snippets for the user's own environment |
 | `list_archive_files(id, limit?)` | A sample of the files or objects in the archive |
 | `get_sample_notebook(id)` | Cell-by-cell source of a worked starter notebook, when one exists |
-| `lookup_paper(query)` | An arXiv paper by id or title, with `paperLinks` (datasets named in the paper, each with its matched archive, match type and a quote from the paper) kept apart from `suggestedArchives` (keyword-search suggestions the paper does not mention) |
+| `lookup_paper(query)` | An arXiv paper by id or title, with `paperLinks` (datasets named in the paper, each with its matched archive, match type and a one-sentence extraction summary) kept apart from `suggestedArchives` (keyword-search suggestions the paper does not mention) |
 
 Six `surechembl_*` tools cover patent chemistry (compound lookup, patents for a compound, patent
 text and extracted structures, Solr patent search, structure search). The server also exposes
@@ -140,8 +140,8 @@ Start from a paper instead of a topic:
 @SciganticCatalog Which datasets does arXiv 2103.00020 use, and which are in the catalog?
 ```
 
-The answer has two labeled parts: the datasets named in the paper, each with a quote from the
-paper and its catalog archive when there is one, and, separately, related catalog archives that a
+The answer has two labeled parts: the datasets named in the paper, each with a short extraction
+summary of how the paper uses it and its catalog archive when there is one, and, separately, related catalog archives that a
 keyword search suggests but the paper does not mention.
 
 Or ask about patent chemistry:
@@ -170,9 +170,11 @@ begin analysis on the dataset it recommends.
 - **Schema cards are sampled.** A card is built from a sample of files and rows, so a rare column
   or a format that appears only deep in the tree can be missing from it.
 - **Paper lookup is arXiv only.** DOIs, PubMed ids and non-arXiv papers do not resolve.
-- **Paper links are extracted automatically.** The datasets in `paperLinks` were extracted from
-  the paper's text and matched to the catalog by id or by name. The agent reports each with the
-  quote it came from and marks name matches as such. `suggestedArchives` are keyword-search
+- **Paper links are extracted automatically.** A language model reads the paper's arXiv abstract
+  (or, for some papers, the full text), names the datasets it uses, and writes a one-sentence
+  summary of how each is used; the names are then matched to the catalog by id or by name. The
+  summary is a paraphrase, not the paper's wording, so the agent presents it as an extraction
+  summary, never in quotation marks, and marks name matches as such. `suggestedArchives` are keyword-search
   suggestions: the agent labels them as related archives the paper does not mention and never
   presents them as datasets the paper used.
 - **Empty is not the same as unavailable.** When a search succeeds with no match, the agent says
