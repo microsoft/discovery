@@ -46,7 +46,6 @@ from .contribution import ContributionSummary, classify_contribution
 from .documentation import check_documentation
 from .findings import Failure
 from .policy_checks import check_policy
-from .release_assets import check_release_assets
 from .schema_checks import check_schema
 from .schemas import CatalogSchemas
 from .structural import check_structural
@@ -54,7 +53,6 @@ from .structural import check_structural
 
 LEGACY_RULE_IDS = frozenset({
     "CFG-001", "CFG-002", "CFG-003", "CFG-004",
-    "REL-001", "REL-002",
     "STR-001", "STR-002", "STR-003", "STR-005", "STR-006",
     "STR-009", "STR-010", "STR-011",
     "SCH-001", "SCH-002", "SCH-004", "SCH-005", "SCH-006",
@@ -139,9 +137,8 @@ def run_validation(
         path.replace("\\", "/").startswith(("agents/", "starter-kits/", "skills/"))
         for path in changed_files
     )
-    release_failures = check_release_assets(repo, changed_files)
     if not catalog_changed:
-        failures = release_failures + check_policy(
+        failures = check_policy(
             repo,
             set(),
             changed_files,
@@ -167,7 +164,7 @@ def run_validation(
     context = build_context(repo, changed_files)
     schemas = CatalogSchemas.load(repo)
 
-    failures: list[Failure] = list(release_failures)
+    failures: list[Failure] = []
     failures.extend(check_structural(repo, context.agent_folders, changed_files))
     failures.extend(check_schema(
         repo,

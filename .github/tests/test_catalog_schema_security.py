@@ -1,4 +1,4 @@
-"""Security invariants for catalog JSON Schemas."""
+"""Security invariants for catalog content schemas, not utilities code."""
 
 from __future__ import annotations
 

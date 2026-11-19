@@ -1,4 +1,11 @@
-"""Regression tests for GitHub-native security automation."""
+"""Contracts for catalog security scans and their supporting CI configuration.
+
+Contributed-content scope means agents/tools, starter kits, skills, quickstarts,
+and reference material, not utility implementations. Individual scanner
+contracts below define the currently enabled paths; configuration checks are
+not audits of utilities code.
+Dependabot configuration contracts cover repository-wide dependency protection.
+"""
 
 from __future__ import annotations
 
@@ -72,6 +79,15 @@ def dependabot_update(ecosystem: str) -> dict[str, Any]:
 def directory_matches(directory: str, patterns: list[str]) -> bool:
     relative = PurePosixPath(directory.lstrip("/"))
     return any(relative.match(pattern.lstrip("/")) for pattern in patterns)
+
+
+def expanded_pip_directories(repo: Path) -> set[Path]:
+    return {
+        directory
+        for pattern in dependabot_update("pip")["directories"]
+        for directory in ([repo] if pattern == "/" else repo.glob(pattern.lstrip("/")))
+        if directory.is_dir()
+    }
 
 
 def test_codeql_matrix_keeps_scopes_separate_and_supported():
@@ -161,8 +177,20 @@ def test_dependabot_monitors_each_supported_ecosystem():
     assert ecosystems == {"github-actions", "nuget", "pip", "docker", "uv"}
 
     for update in config["updates"]:
-        assert update["schedule"]["interval"] == "weekly"
-        assert update["open-pull-requests-limit"] == 3
+        assert update["schedule"]["interval"] == "monthly"
+        assert "day" not in update["schedule"]
+        assert update["schedule"]["timezone"] == "Etc/UTC"
+        assert update["open-pull-requests-limit"] == 1
+        assert update["cooldown"] == {"default-days": 7}
+        assert update["allow"] == [{
+            "dependency-name": "*",
+            "update-types": [
+                "version-update:semver-minor",
+                "version-update:semver-patch",
+            ],
+        }]
+        assert "ignore" not in update
+        assert update.get("rebase-strategy", "auto") != "disabled"
         groups = update["groups"]
         assert any(
             group.get("applies-to") == "security-updates"
@@ -173,6 +201,7 @@ def test_dependabot_monitors_each_supported_ecosystem():
     assert dependabot_update("uv")["directory"] == (
         "/utilities/supercomputer-cli/discovery"
     )
+    assert dependabot_update("pip")["versioning-strategy"] == "increase-if-necessary"
 
 
 def test_dependabot_minor_patch_updates_are_grouped_by_ecosystem():
@@ -531,7 +560,7 @@ def test_unit_tests_run_for_every_validator_and_policy_input():
     ).read_text(encoding="utf-8")
 
     assert (
-        r"^\.github/workflows/(probe-aka-ms|unit-tests)\.yml$"
+        r"^\.github/workflows/(refresh-current|unit-tests)\.yml$"
         in source
     )
     assert '- ".github/policy/**"' in source
@@ -541,6 +570,20 @@ def test_unit_tests_run_for_every_validator_and_policy_input():
     assert "--check-no-growth" in source
     assert 'fetch-depth: 0' in source
     assert r"/^\.github\/workflows\/.*\.yml$/" not in source
+
+
+def test_release_refresh_keeps_dispatch_without_download_probes():
+    workflows = REPO_ROOT / ".github" / "workflows"
+    assert not (workflows / "probe-aka-ms.yml").exists()
+    workflow = load_workflow(workflows / "refresh-current.yml")
+    assert set(workflow["on"]) == {"workflow_dispatch", "repository_dispatch"}
+    assert workflow["on"]["repository_dispatch"]["types"] == ["app-released"]
+    steps = workflow["jobs"]["refresh"]["steps"]
+    assert "curl " not in "\n".join(step.get("run", "") for step in steps)
+    for name in ("Move current tag to main HEAD", "Recreate current release",
+                 "Open README bump PR"):
+        step = next(step for step in steps if step.get("name") == name)
+        assert "steps.in.outputs.dry_run != 'true'" in step["if"]
 
 
 def test_schema_bootstrap_never_executes_pr_python():
@@ -572,21 +615,24 @@ def test_schema_bootstrap_never_executes_pr_python():
     assert "embedded bootstrap checks" in starter_command
 
 
-def test_registry_refresh_tracks_computed_tag_inputs():
+def test_registry_refresh_batches_current_main_without_push_triggers():
     workflow = load_workflow(
         REPO_ROOT / ".github" / "workflows" / "update-registry.yml"
     )
-    paths = set(workflow["on"]["push"]["paths"])
-
-    assert {
-        "agents/**",
-        "starter-kits/**",
-        ".github/policy/base-images.yaml",
-        ".github/scripts/compute_tags.py",
-        ".github/scripts/dockerfile_parser.py",
-        ".github/scripts/list_base_images.py",
-        ".github/scripts/rules/base.py",
-    } <= paths
+    assert set(workflow["on"]) == {"schedule", "workflow_dispatch"}
+    assert workflow["on"]["schedule"] == [{"cron": "23 9 * * *"}]
+    job = workflow["jobs"]["update-registry"]
+    assert job["if"] == (
+        "github.repository == 'microsoft/discovery' && github.ref == 'refs/heads/main'"
+    )
+    assert job["steps"][0]["with"]["ref"] == "main"
+    assert workflow["concurrency"]["cancel-in-progress"] == "false"
+    diff = next(step for step in job["steps"] if step.get("id") == "diff")
+    assert "registry_refresh.py" in diff["run"]
+    for name in ("Check for App secrets", "Commit updated registry to a PR",
+                 "Report missing App credentials"):
+        step = next(step for step in job["steps"] if step.get("name") == name)
+        assert "steps.diff.outputs.publish == 'true'" in step["if"]
 
 
 def test_registry_refresh_cannot_rewrite_or_self_approve_generated_prs():
@@ -605,6 +651,12 @@ def test_registry_refresh_cannot_rewrite_or_self_approve_generated_prs():
     assert "gh auth setup-git" in source
     assert "chore/registry-refresh-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}" in source
     assert "git push --set-upstream" in source
+    app_token = next(
+        step for step in workflow["jobs"]["update-registry"]["steps"]
+        if step.get("name") == "Generate App installation token"
+    )
+    assert app_token["with"]["permission-contents"] == "write"
+    assert app_token["with"]["permission-pull-requests"] == "write"
     assert "A human CODEOWNER must approve this PR" in source
     assert "A maintainer must merge it or enable GitHub auto-merge" in source
     assert not (
@@ -672,17 +724,51 @@ def test_baseline_debt_is_codeowned_tracked_and_shrink_only():
         assert entry["remove_by"] == "2026-12-31"
 
 
-def test_dependabot_covers_all_requirements_files():
-    requirements = sorted(
-        [CI_REQUIREMENTS_PATH]
-        + [*REPO_ROOT.glob("agents/**/requirements.txt")]
-    )
-    expected_directories = {
-        f"/{path.parent.relative_to(REPO_ROOT).as_posix()}" for path in requirements
-    }
+def test_dependabot_discovers_repository_pip_manifests(tmp_path):
+    tracked = subprocess.run(
+        ["git", "ls-files", "-z"], cwd=REPO_ROOT, check=True,
+        capture_output=True, text=True, encoding="utf-8",
+    ).stdout.split("\0")
+    manifests = [
+        Path(relative) for relative in tracked
+        if relative and (
+            Path(relative).name in {"pyproject.toml", "setup.py", "setup.cfg", "Pipfile"}
+            or (Path(relative).name.startswith("requirements") and relative.endswith(".txt"))
+        )
+    ]
+    for relative in manifests:
+        (tmp_path / relative).parent.mkdir(parents=True, exist_ok=True)
 
-    assert requirements, "Expected at least one requirements.txt"
-    assert set(dependabot_update("pip")["directories"]) == expected_directories
+    covered = expanded_pip_directories(tmp_path)
+    uncovered = [
+        relative.as_posix()
+        for relative in manifests if (tmp_path / relative).parent not in covered
+    ]
+    assert manifests, "Expected tracked Python dependency manifests"
+    assert not uncovered, f"Pip manifests missing Dependabot coverage: {uncovered}"
+
+
+def test_dependabot_discovers_future_pip_manifests_anywhere(tmp_path):
+    included = [
+        "requirements.txt",
+        ".github/requirements-ci.txt",
+        ".build/python/requirements.txt",
+        "agents/new-agent/training/requirements.txt",
+        "agents/new-agent/tools/new-tool/nested/package/pyproject.toml",
+        "starter-kits/new-kit/scripts/requirements.txt",
+        "skills/new-skill/references/python/requirements-dev.txt",
+        "quickstarts/new-quickstart/reference/python/requirements.txt",
+        "utilities/new-utility/requirements.txt",
+        "utilities/agents/new-agent/pyproject.toml",
+        "new-root/new-project/requirements.txt",
+    ]
+    for relative in included:
+        path = tmp_path / relative
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text("", encoding="utf-8")
+
+    covered = expanded_pip_directories(tmp_path)
+    assert {(tmp_path / relative).parent for relative in included} <= covered
 
 
 def test_ci_python_dependencies_are_pinned_and_workflows_use_the_manifest():
