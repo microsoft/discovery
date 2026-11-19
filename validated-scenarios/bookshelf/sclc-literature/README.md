@@ -12,7 +12,7 @@
    *(Prefer to download the papers yourself? Do [option B](#option-b-download-the-files-yourself) here.)*
 4. Send the [Step 1 prompt](#step-1-set-up-and-confirm-the-environment): download the papers and build the Bookshelf.
 5. Send the [Step 2 prompt](#step-2-run-the-experiment): ask the research question.
-6. Send the [Step 3 prompt](#step-3-verify-your-results-against-the-validated-reference): **your answer**, checked against the acceptance criteria.
+6. Send the [Step 3 prompt](#step-3-check-your-answer-against-the-acceptance-criteria): **your answer**, checked against the acceptance criteria. There is no reference answer yet, so this is a draft check.
 
 ## What this Validated Scenario does
 
@@ -41,7 +41,7 @@ these 15 papers.
 | Discovery app | Download it from the [Discovery download page](../../../README.md) and follow the [install guide](../../../docs/discovery-app/install.md). |
 | Sign-in | A GitHub account with a GitHub Copilot subscription. |
 | Model | **GPT-6 Astra** (`gpt-6-astra`). Choose it in the chat's model menu. |
-| Computer | Windows 11, 64-bit (expected). Not yet tested on any system. |
+| Computer | Windows 11, 64-bit. Tested on Windows 11 x64 (two complete runs, 2026-11-18); other systems not tested. |
 | Disk space | About 1 GB free. |
 | Internet | Needed to download about 18 MB of papers. |
 | Container runtime | None needed. You don't need Docker, Docker Desktop or Podman. |
@@ -194,7 +194,7 @@ Ask the research question in section 6 of the guide, using only the sclc-literat
 **Done when:** you have a full written answer with citations. The assistant
 stops again after the answer; paste the Step 3 prompt into the same chat.
 
-### Step 3: Verify your results against the validated reference
+### Step 3: Check your answer against the acceptance criteria
 
 **A or B (same prompt either way):**
 
@@ -220,5 +220,5 @@ They are downloaded from PubMed Central, not stored in this repository.
 ## Status and next steps
 
 - **Ready:** the 15 papers, their download links and checksums (all checked on 2026-11-17), and the setup steps.
-- **Pending:** owner approval of the research question, a first timed run, and a reviewed reference answer.
+- **Pending:** owner approval of the research question and a reviewed reference answer.
 - The papers are recorded as CC BY 4.0. Keep attribution when you share the answer.

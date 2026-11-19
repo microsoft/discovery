@@ -43,9 +43,9 @@ Ask the research question in section 6 of the guide, using only the sclc-literat
 
 **Done when:** you have a full written answer with citations.
 
-### Step 3: Verify your results against the validated reference
+### Step 3: Check your answer against the acceptance criteria
 
-Covers the section 6 acceptance checks.
+Covers the section 6 acceptance checks. No reference answer exists yet, so this checks format, coverage and five citations; it is not a comparison with a validated reference.
 
 **A or B (same prompt either way):**
 
@@ -62,7 +62,7 @@ Check your answer against the acceptance criteria in section 6 of the guide. Sho
 | Scenario and observable outcome | Build a Bookshelf from 15 open-access small-cell lung cancer (SCLC) papers, then ask a fixed research question. The outcome is a cited answer on current treatment options for extensive-stage SCLC, grounded only in those papers. |
 | Audience / vertical | Scientists and evaluators trying Discovery Bookshelf for literature-grounded research; Bookshelf collection |
 | Delivery mode | App (local project) |
-| Tested configuration / profile identifier | `sclc-literature-v1` (proposed; not yet tested) |
+| Tested configuration / profile identifier | `sclc-literature-v1` (proposed; two complete runs on Windows 11 x64, 2026-11-18) |
 | Owner / recipe version / last validated date | **Pending** owner; version 0.1-draft; not validated |
 
 ## 2. Configuration matrix
@@ -100,7 +100,7 @@ Check your answer against the acceptance criteria in section 6 of the guide. Sho
 
 | Applies to | Requirement | Minimum | Recommended | Actually tested |
 |---|---|---|---|---|
-| App | OS and version | Not validated | Windows 11 | Windows 11 (one run, 2026-11-18) |
+| App | OS and version | Not validated | Windows 11 | Windows 11 (two runs, 2026-11-18) |
 | App | CPU architecture | Not validated | x64 | x64 |
 | App | CPU family / cores | Not validated | Not specified | **Pending** |
 | App | RAM | Not validated | Not specified | **Pending** |
@@ -130,7 +130,7 @@ Check your answer against the acceptance criteria in section 6 of the guide. Sho
 1. **Select profile:** `sclc-literature-v1`, local App project, GPT-6 Astra.
 2. **Install/provision:** App only. Services: N/A.
 3. **Download and verify the papers (assistant):** with the user's permission, create a `sclc-papers` folder in the open project and download all 15 files from section 2 into it. Download with `curl.exe --fail --location --retry 3 --connect-timeout 20 --max-time 120`, one file at a time, and skip files that already pass; don't use PowerShell `Invoke-WebRequest`, which can hang with no timeout. If a file fails or times out, retry it once more, then continue with the rest. Check each file's size and SHA-256. Report a table of all 15 with pass or fail. **Done when:** 15 of 15 pass.
-4. **Create the Bookshelf (assistant if the app allows it):** if your Bookshelf tool can create shelves (for example a `bookshelf` tool with `create`, `add_content` and `start_indexing` actions), ask the user's permission, then create a shelf named `sclc-literature` with the description `Fifteen open-access papers on small-cell lung cancer treatment.`, add the 15 PDFs from `sclc-papers`, start indexing, and check `status` until indexing has finished for all 15 files. Tell the user which answer model the shelf uses. **Not yet tested end to end; report any error exactly.** If your tools cannot create a Bookshelf, start your final chat reply (not a progress or thinking line, and not inside a collapsed tool step) with the sentence **"I can't create the Bookshelf for you, so please fill in this form in the app:"**, then write all of these steps and values in your normal chat reply, as a numbered list the user can read without expanding anything. Never put the steps only in a tool-call title, progress line or collapsed step. End the reply with the line **"Take your time. When the Bookshelf shows Successful in green, click Yes below."** Then ask exactly one question, with clickable choices so the user never has to type: "Done? Does sclc-literature show Successful?" with the choices **Yes, it shows Successful**, **It shows Failed** and **GPT-6 Astra wasn't in the Answer generation list**. Don't call any Bookshelf tool (list, search, ask or status) until the user answers: the local Bookshelf engine runs one job at a time, and a call during indexing makes indexing fail with "capacity is occupied". If the user picks **It shows Failed**, tell them to click **Retry indexing** on the Bookshelf, wait for **Successful** (in green), and ask the same question again. Assume the answer generation model is GPT-6 Astra unless the user picks the third choice; then ask them to choose the first model listed and record it. Don't ask which model they picked, don't ask them to confirm each step, and don't ask free-text questions during setup.
+4. **Create the Bookshelf (assistant if the app allows it):** if your Bookshelf tool can create shelves (for example a `bookshelf` tool with `create`, `add_content` and `start_indexing` actions), ask the user's permission, then create a shelf named `sclc-literature` with the description `Fifteen open-access papers on small-cell lung cancer treatment.`, add the 15 PDFs from `sclc-papers`, start indexing, and check `status` until indexing has finished for all 15 files. Tell the user which answer model the shelf uses. **Not yet tested end to end; report any error exactly.** If your tools cannot create a Bookshelf, start your final chat reply (not a progress or thinking line, and not inside a collapsed tool step) with the sentence **"I can't create the Bookshelf for you, so please fill in this form in the app:"**, then write all of these steps and values in your normal chat reply, as a numbered list the user can read without expanding anything. Never put the steps only in a tool-call title, progress line or collapsed step. End the reply with the line **"Take your time. When the Bookshelf shows Successful in green, click Yes below."** Then ask exactly one question, with clickable choices so the user never has to type: "Done? Does sclc-literature show Successful?" with the choices **Yes, it shows Successful**, **It shows Failed** and **GPT-6 Astra wasn't in the Answer generation list**. Don't call any Bookshelf tool (list, search, ask or status) until the user answers: the local Bookshelf engine runs one job at a time, and a call during indexing makes indexing fail with "capacity is occupied". If the user picks **It shows Failed**, tell them to click **Retry indexing** on the Bookshelf, wait for **Successful** (in green), and ask the same question again. Assume the answer generation model is GPT-6 Astra unless the user picks the third choice. In that case, tell the user to choose the first model listed so they can still try the scenario, and record the answer model as "not GPT-6 Astra (exact model not recorded)". That run is off-profile: in Steps 2 and 3, say so at the top of each answer, and in Step 3 report it as not counting toward validation, whatever the other checks show. Don't ask the user to confirm each step, and don't ask free-text questions during setup.
    1. In the left sidebar, click **AI capabilities** (it opens in a new tab at the top of the app), then the **Bookshelves** tab, then **New bookshelf**. The first time, a box asks "Use GitHub Copilot for Bookshelf answers in this workspace?": click **Use Copilot answers**.
    2. On **1. Details**: **Name** `sclc-literature` (3 to 24 letters, numbers or hyphens); **Description** `Fifteen open-access papers on small-cell lung cancer treatment.` (optional); **Answer generation** is required. Wait for the model list to load, then choose **GPT-6 Astra**; if it isn't in the list, choose the first model listed. Leave **Embedding model** (below it) as it is. Click **Next**.
    3. On **2. Files**: click **Upload**, choose **Folder** ("Add an entire folder"), select the project's `sclc-papers` folder and confirm. Click the arrow next to `sclc-papers` in the file list to expand it and check that 15 PDFs are listed. Click **Next**.
@@ -140,7 +140,7 @@ Check your answer against the acceptance criteria in section 6 of the guide. Sho
 
 ## 6. Fixed prompt + matching output
 
-**Binding:** profile `sclc-literature-v1`; Bookshelf `sclc-literature` built from the 15 papers in section 2; GPT-6 Astra. **The prompt below is proposed and needs owner approval.**
+**Binding:** profile `sclc-literature-v1`; Bookshelf `sclc-literature` built from the 15 papers in section 2; GPT-6 Astra for both chat and Bookshelf answer generation. A run whose Bookshelf uses another answer model is off-profile and doesn't count toward validation. **The prompt below is proposed and needs owner approval.**
 
 **Exact predefined prompt (proposed)**
 
@@ -159,13 +159,13 @@ Using only the sclc-literature Bookshelf, summarise the current treatment option
 
 ## 7. Expected runtime
 
-One measured run on Windows 11 x64, 2026-11-18, with GPT-6 Astra. Times are wall-clock in the chat and include the user clicking through prompts.
+Two complete runs on Windows 11 x64, 2026-11-18, with GPT-6 Astra. Times are wall-clock in the chat and include the user clicking through prompts.
 
 | Stage | Measured / Estimated | First response (optional) | Completion duration / range, with units | Conditions / observations / runs |
 |---|---|---|---|---|
-| One-time install/provision/setup | Measured | N/A | About 3 min | Download and SHA-256 check of 18 MB of papers, including the download approval click; 15/15 passed |
-| One-time data loading/indexing | Measured | N/A | About 11 min | User fills in the Bookshelf form, then local indexing of 15 PDFs to **Successful** (in green) with no retry; the shelf reported 15 documents |
-| Cold-start prompt run | Measured | About 2.5 min | About 5 min | Step 2 research question: first Bookshelf answer at 2 min 36 s; the assistant then asked one follow-up to fill retrieval gaps (5 min 4 s total). Step 3 check took about 2 min |
+| One-time install/provision/setup | Measured | N/A | 1 to 3 min | Download and SHA-256 check of 18 MB of papers, including the download approval click; 15/15 passed |
+| One-time data loading/indexing | Measured | N/A | 4 to 11 min | User fills in the Bookshelf form, then local indexing of 15 PDFs to **Successful** (in green) with no retry; the shelf reported 15 documents |
+| Cold-start prompt run | Measured | 2.5 to 3 min | 5 to 6 min | Step 2 research question; in both runs the assistant asked one follow-up to fill retrieval gaps. Step 3 check took 2 to 3 min |
 | Warm prompt run | Pending | Pending | Pending | Repeat question in the same session; not measured |
 
 ## 8. Troubleshooting, cleanup and extensions
