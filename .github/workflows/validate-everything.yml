@@ -79,7 +79,7 @@ jobs:
         continue-on-error: true
         run: |
           set -o pipefail
-          python -m pytest .github/tests/test_schema_security.py -q -ra \
+          python -m pytest .github/tests/test_catalog_schema_security.py -q -ra \
             --junitxml="$RUNNER_TEMP/schema-tests.xml" \
             2>&1 | tee "$RUNNER_TEMP/schema-tests.log"
 
@@ -92,7 +92,7 @@ jobs:
             --report "$RUNNER_TEMP/schema-tests.xml" \
             --title "Schema regression suite (AS-* / SKS-*)" \
             --outcome "$SCHEMA_OUTCOME" \
-            --rerun-command "python -m pytest .github/tests/test_schema_security.py -vv -ra"
+            --rerun-command "python -m pytest .github/tests/test_catalog_schema_security.py -vv -ra"
 
       - name: Build full file list and run validate_pr.py
         id: catalog
@@ -339,7 +339,7 @@ jobs:
           DISCOVERY_CATALOG_ROOT: ${{ github.workspace }}/evaluation
         run: |
           set -o pipefail
-          python -m pytest trusted/.github/tests/test_schema_security.py -q \
+          python -m pytest trusted/.github/tests/test_catalog_schema_security.py -q \
             | tee "$RUNNER_TEMP/shadow-validation/schema-tests.txt"
 
       - name: Run starter-kit validation against PR data

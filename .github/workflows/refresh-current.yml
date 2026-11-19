@@ -8,7 +8,7 @@ name: Refresh current release
 # recorded version matches the app shipping behind the aka.ms short links.
 #
 # Two trigger paths funnel here:
-#   * workflow_dispatch  — manual button / the hourly probe-aka-ms.yml poll.
+#   * workflow_dispatch  — manual button.
 #   * repository_dispatch (event_type: app-released) — the future ADO release
 #     pipeline POSTs the same three inputs as client_payload.
 #
@@ -163,27 +163,6 @@ jobs:
           print(f"README patch: changed={changed} (current -> {version}, previous -> {previous} / {date})")
           PY
 
-      - name: Verify aka.ms download links
-        run: |
-          set -euo pipefail
-          mapfile -t urls < <(grep -oE 'https://aka\.ms/discovery/download/[^)"]+' README.md | sort -u)
-          if [[ "${#urls[@]}" -eq 0 ]]; then
-            echo "::error::No aka.ms/discovery/download URLs found in README.md — parser drift?"
-            exit 1
-          fi
-          fail=0
-          for u in "${urls[@]}"; do
-            code="$(curl -sS -o /dev/null -m 20 -w '%{http_code}' -I "${u}" || echo "000")"
-            loc="$(curl -sS -o /dev/null -m 20 -w '%header{location}' -I "${u}" || true)"
-            if [[ "${code}" =~ ^3[0-9][0-9]$ && -n "${loc}" ]]; then
-              echo "OK   ${u} -> ${code} ${loc}"
-            else
-              echo "::error::Link check failed for ${u} (status ${code}, location '${loc}')"
-              fail=1
-            fi
-          done
-          [[ "${fail}" -eq 0 ]]
-
       - name: Move current tag to main HEAD
         if: steps.in.outputs.dry_run != 'true'
         run: |
@@ -220,7 +199,7 @@ jobs:
           set -euo pipefail
 
           # Debounce: if the branch or an open PR already exists, don't stack a
-          # duplicate. The hourly probe also guards on this branch name.
+          # duplicate.
           if git ls-remote --exit-code --heads origin "${BRANCH}" >/dev/null 2>&1; then
             echo "Branch ${BRANCH} already exists on origin — refresh already dispatched. Skipping PR."
             exit 0

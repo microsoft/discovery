@@ -42,7 +42,7 @@ PR validation and diagnostic publishing run in separate trust contexts:
 | [PR Review](pr-review.yml) | `pull_request` to `main`: opened, synchronize, reopened | Read-only classification, catalog validation, secret scanning, and required report handoff. |
 | [Check Agent Removal Impact](check-agent-removal-impact.yml) | `pull_request` to any base branch: opened, synchronize, reopened | Read-only removal gate; skips validation only after successfully classifying the PR as unrelated to agent paths. |
 | [PR Review Report](pr-review-report.yml) | Completed `workflow_run` for either source above | Verifies the source run, current PR head, jobs, and bounded artifact before publishing diagnostic feedback. Executes only trusted default-branch code. |
-| [Update Registry](update-registry.yml) | Relevant catalog pushes to `main`, or manual dispatch | Rebuilds generated registries and proposes changes in a separate PR using the registry App. Human review and maintainer-controlled merging still apply. |
+| [Update Registry](update-registry.yml) | Daily at 09:23 UTC, or manual dispatch on `main` | Batches meaningful generated-registry changes into a reviewed PR using the registry App. At most one trusted registry-refresh PR remains open; its snapshot is not rewritten. |
 
 The source workflows use contents/PR read permissions and trusted base-SHA
 validators, with the exact PR head checked out separately as data. Fork approval
@@ -114,6 +114,20 @@ trusted schema, policy, registry, and validator code. A local test command is:
 python -m pytest .github\tests\ -v
 ```
 
+The contribution-security suites have an explicit `catalog` prefix:
+
+- [`test_catalog_security_automation.py`](../tests/test_catalog_security_automation.py)
+  checks content-scanner and supporting CI configuration contracts.
+- [`test_catalog_schema_security.py`](../tests/test_catalog_schema_security.py)
+  checks catalog schema invariants and governed documents.
+
+Here, contributed content means agents and their tools, starter kits, skills,
+quickstarts, and reference material, not utilities implementations. The suites
+are not audits of `utilities/` code. Their concrete scanner paths and document
+groups define current coverage; renaming a suite does not expand that coverage.
+Infrastructure trust-boundary tests remain separately named
+[`test_pr_review_workflow_security.py`](../tests/test_pr_review_workflow_security.py).
+
 Agent tool authors may place focused `test_*.py` or `*_test.py` files beside a
 tool. The registry records their presence as `auto:has-tests`, but catalog PR
 validation does not execute submitted tool tests. Those tests may invoke
@@ -139,12 +153,66 @@ representative runs are validated. See the
 [security process](../../SECURITY.md#repository-security-process) for ownership
 and promotion criteria.
 
-Catalog changes can also trigger **Update Registry**. Generated updates reach
-`main` through a separate reviewed registry PR, not automatic merging.
+**Update Registry** rebuilds from current `main` daily at 09:23 UTC, or when
+manually dispatched on `main`. Generated updates reach `main` through a separate
+reviewed registry PR, not automatic merging. Maintainers can dispatch it after
+an urgent catalog change instead of waiting for the daily batch.
+
+The publication check ignores only generation timestamps and the starter-kit
+snapshot's source commit when comparing payloads. Metadata-only regeneration
+preserves the published snapshot. Real changes to entries, availability, tags,
+versions, or schemas still produce a refresh. If a trusted same-repository
+registry-bot refresh PR targeting `main` is open, new changes remain queued
+until that PR is resolved and a later batch runs; automation does not rewrite
+reviewed content or create another PR. API, generation, and schema errors fail
+explicitly rather than being treated as an empty batch.
+
+The registry App installation must grant Contents-write and
+Pull-requests-write; the token step explicitly requests both. A 403 still needs
+an owner to verify the App installation's approved grants, not a bypass of
+human review.
+
+## Routine dependency maintenance
+
+Dependabot checks the five configured ecosystems monthly, on the first day of
+the month at their configured UTC times. Minor/patch updates remain grouped,
+with a seven-day cooldown and one open routine PR per ecosystem. Non-security
+major upgrades require deliberate maintenance review. For pip requirements,
+`increase-if-necessary` avoids raising a lower bound that already permits the
+new version; exact pins can still be updated.
+
+Pip targets cover the repository root and recursive subdirectories, including
+`utilities/`, contributed content, hidden directories, and future top-level
+projects. New supported manifests are discovered without editing a per-project
+list. The recursive glob also covers CI requirements in `.github/`; the utility
+CLI's separate uv block remains enabled for uv lockfile updates. This
+repository-wide dependency protection is separate from the catalog-scoped
+content scanners. Dependencies written only in Dockerfile `RUN pip install`
+commands are not pip manifests and are not discovered by these globs.
+
+Security-update PRs retain their separate groups and GitHub's separate limit.
+Monthly schedules, cooldowns, version-only `allow.update-types`, and routine
+PR limits do not delay security updates. Automatic rebasing remains enabled
+because disabling it would also affect security PRs. Existing PRs are not
+automatically closed. Five routine open slots are not a monthly creation quota.
+
+See the [Dependabot options reference](https://docs.github.com/en/code-security/reference/supply-chain-security/dependabot-options-reference)
+for the distinction between version and security updates.
+
+## CodeQL ownership
+
+GitHub default setup publishes Python, JavaScript/TypeScript, and Actions
+analyses. The custom catalog Python job currently provides additional security
+queries as an artifact, so a successful default scan is not sufficient evidence
+to remove it. An owner must configure equivalent default security-query
+coverage and verify the published SARIF before that redundant job can be
+retired. Do not disable either configuration or remove a required check as an
+incidental schedule cleanup. DevSkim, capability reports, and the weekly
+catalog/MSDO audit remain unchanged.
 
 ## Release refresh automation
 
-Three workflows work together to keep the mutable `current` tag, the
+The release worker keeps the mutable `current` tag, the
 `Discovery-app-preview-release` GitHub Release, and the download table in
 [`README.md`](../../README.md) in sync with the app that ships behind the
 `aka.ms/discovery/download/*` short links. The homepage "Releases" sidebar
@@ -157,12 +225,10 @@ even after the tag had been moved forward.
 | Workflow | Purpose | Triggers |
 | --- | --- | --- |
 | [`refresh-current.yml`](refresh-current.yml) | Moves the `current` git tag to `main` HEAD, delete-and-recreates the `current` GitHub Release (fresh `published_at`, auto-generated notes), and opens a PR that bumps the README download table. | `workflow_dispatch` (manual button) + `repository_dispatch` (`event_type: app-released`) |
-| [`probe-aka-ms.yml`](probe-aka-ms.yml) | Every hour, follows the aka.ms redirects, compares the resolved version to the version recorded in README, and calls `refresh-current.yml` when they drift. Runs only for `microsoft/discovery` on `main`; scheduled runs in forks exit as successful skips. | `schedule` (`0 * * * *`) + `workflow_dispatch` |
-| ADO release pipeline task (future) | Same effect as the probe but event-driven — internal build POSTs `repository_dispatch` to GitHub the moment a new app ships. Draft PowerShell snippet lives in the chat history for this branch; ADO owners can adopt it when they're ready. Requires a GitHub App (recommended) or workload identity federation, per the [1ES PAT removal case study](https://eng.ms/docs/coreai/devdiv/one-engineering-system-1es/1es-docs/1es-security-configuration/configuration-guides/case-studies/azureauth-removing-pats). | `repository_dispatch` |
+| ADO release pipeline task (future) | Calls the worker when a new app ships, supplying the three release inputs through `repository_dispatch`. Requires a GitHub App (recommended) or workload identity federation, per the [1ES PAT removal case study](https://eng.ms/docs/coreai/devdiv/one-engineering-system-1es/1es-docs/1es-security-configuration/configuration-guides/case-studies/azureauth-removing-pats). | `repository_dispatch` |
 
-Both trigger paths funnel into the same worker (`refresh-current.yml`), so
-adding the ADO event trigger later is additive — no changes to the poll
-workflow are required.
+The worker accepts explicit release inputs from manual or event dispatch.
+Scheduled download polling and live aka.ms link checks have been removed.
 
 ### Release asset policy
 
@@ -176,85 +242,40 @@ for every release backed by a git tag. Those two generated links cannot be
 removed independently while `current` remains a tag-backed release. They are
 not uploaded assets and do not contain the Windows installer binaries.
 
-### How the probe knows a new version shipped
-
-`aka.ms/discovery/download/current` 301-redirects to a versioned filename on
-Azure Front Door:
-
-```text
-$ curl -sI https://aka.ms/discovery/download/current
-HTTP/1.1 301 Moved Permanently
-Location: https://.../discoveryexpress/Discovery-app-0.15.12-preview-win-x64.exe
-```
-
-The probe:
-
-1. Reads `Current release: <strong>vX.Y.Z</strong>` from `README.md`.
-2. Extracts `X.Y.Z` from the `Location` header on both the `current` and
-   `previous` aka.ms redirects.
-3. HEADs the `previous` target blob and reads its `Last-Modified` header to
-   derive the `previous_date` column.
-4. If the aka.ms `current` version differs from the README `current`
-   version — **and** no `release/refresh-current-vX.Y.Z` branch already
-   exists on the remote (debounce) — it calls `gh workflow run
-   refresh-current.yml` with the three parsed inputs.
-
 ### Repository and branch guard
 
-GitHub evaluates `schedule` workflows from each repository's default branch,
-including forks where Actions and scheduled workflows are enabled. The probe
-therefore guards both jobs with `github.repository == 'microsoft/discovery'`
-and `github.ref == 'refs/heads/main'`. A scheduled run may still appear in a
-fork's Actions history, but it performs no steps and completes successfully.
-Manual dispatches from non-`main` refs are skipped in the same way.
+The worker is restricted to `github.repository == 'microsoft/discovery'` and
+`github.ref == 'refs/heads/main'`. Dispatches in forks or from non-`main` refs
+are skipped.
 
 ### Manual trigger
 
-You can always run either workflow by hand from the
+Run **Refresh current release** by hand from the
 [Actions tab](https://github.com/microsoft/discovery/actions):
 
-- **Refresh current release** — fill in `version`, `previous_version`,
-  `previous_date` when you want to force the retag + rerelease + README PR
-  regardless of what aka.ms says.
-- **Probe aka.ms Discovery download** — runs the poll immediately without
-   waiting for the next hourly schedule tick.
+Fill in `version`, `previous_version`, and `previous_date` to retag, recreate
+the release, and propose the README update.
 
 ### Local test helpers
 
-Two PowerShell scripts mirror the workflow's runtime logic so you can validate
-regex/parsing changes from your workstation before pushing:
+The offline README patcher lets you validate regex/parsing changes from your
+workstation before pushing:
 
-- [`scripts/test-probe-aka-ms.ps1`](../../scripts/test-probe-aka-ms.ps1) — hits
-  the live `aka.ms/discovery/download/{current,previous}` endpoints and
-  replays the probe's decision matrix against your local `README.md`.
 - [`scripts/test-refresh-current-readme.ps1`](../../scripts/test-refresh-current-readme.ps1) —
   runs the exact regex substitutions from the worker's "Patch README.md"
   step against a copy of `README.md` and prints the resulting `git diff` so
   you can preview the PR contents.
 
 ```powershell
-pwsh -NoProfile -ExecutionPolicy Bypass -File scripts/test-probe-aka-ms.ps1
 pwsh -NoProfile -ExecutionPolicy Bypass -File scripts/test-refresh-current-readme.ps1 `
     -NewVersion v0.15.13 -PreviousVersion v0.15.12 -PreviousDate 2026-08-28
 ```
 
-Sample probe output:
-
-```text
-aka.ms current  -> v0.15.12
-aka.ms previous -> v0.15.11
-README current  -> v0.15.12
-previous Last-Modified header -> Tue, 18 Aug 2026 13:24:38 GMT
-previous_date -> 2026-08-18
-
-DECISION: no-op (README already at v0.15.12)
-```
-
 ### Dry-run mode for CI smoke tests
 
-Both workflows accept a `dry_run` boolean input on `workflow_dispatch`. When
-`true`, they perform every read-only step (probe, notes generation, README
-patch in the workspace) but skip everything that mutates external state:
+The worker accepts a `dry_run` boolean input on `workflow_dispatch`. When
+`true`, it validates inputs and patches README in the workspace, but skips
+everything that mutates external state:
 
 | Step (worker) | dry-run behaviour |
 | --- | --- |
@@ -263,35 +284,24 @@ patch in the workspace) but skip everything that mutates external state:
 | Patch `README.md` in workspace | Runs (nothing pushed). |
 | Push branch + open PR | Skipped; prints the branch name and PR title. |
 
-The probe skips the final `gh workflow run refresh-current.yml` call and
-prints the exact command it would have issued.
-
 Recommended first-run smoke test after this branch merges to `main`:
 
 1. Actions → **Refresh current release** → *Run workflow*.
 2. Fill in the same `version` / `previous_version` / `previous_date` the
    README already has, tick `dry_run: true`, and run. Verify the logs show
    the retag + rerelease + PR-open steps as `[dry-run] would run: ...`.
-3. Actions → **Probe aka.ms Discovery download** → *Run workflow* with
-   `dry_run: true`. Verify the decision line matches
-   `DECISION: no-op` (or `[dry-run] would run: gh workflow run …` if a new
-   release has just shipped).
-4. Once both dry-runs look clean, the scheduled probe will start firing on
-   its hourly cron and the worker will act on real inputs.
+3. After verifying the dry run, dispatch without `dry_run` when ready to
+   publish the release update.
 
 ### Permissions
 
 - `refresh-current.yml` needs `contents: write` (retag, edit release, push
   branch), `pull-requests: write` (open the README PR), and `issues: write`
   (for the failure tracking issue). Uses `secrets.GITHUB_TOKEN`.
-- `probe-aka-ms.yml` needs `actions: write` (call `gh workflow run`),
-  `contents: read` (read `README.md`), and `issues: write` (for the failure
-  tracking issue). No cross-boundary credentials.
 
 ### Failure reporting
 
-Both workflows have a `report-failure` job that runs only `if: failure()`.
-When any earlier job fails it records the failure — a link to the failing run,
+The worker's `report-failure` job records a failed refresh with a link to the run,
 the triggering event, and a triage checklist.
 
 **Issues are intentionally disabled on this public repo**, so the primary
@@ -312,15 +322,5 @@ labelled [`release-automation`](https://github.com/microsoft/discovery/labels/re
   one. Close the issue once you've reconciled state to reset the cycle.
 - Any `gh issue` failure also falls back to the job-summary path.
 
-Fires for **any** failure — parser drift (aka.ms URL format changed),
-README regex miss, broken aka.ms link (the worker HEADs every download
-URL after patching), retag/rerelease failure, PR-open failure, or the
-`gh workflow run` dispatch call failing.
-
-### Link verification
-
-Before the worker opens the README PR, it enumerates every
-`https://aka.ms/discovery/download/...` URL in `README.md` and HEADs each
-one. The job fails (which triggers `report-failure`) if any URL returns
-anything other than a 3xx with a non-empty `Location` header. This catches
-upstream aka.ms breakage before a stale/broken README lands on `main`.
+Fires for invalid release inputs, README regex misses, retag/rerelease
+failures, or PR-open failures.

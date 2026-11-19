@@ -1,11 +1,21 @@
 version: 2
 updates:
-  # GitHub Actions — track action versions and surface security advisories.
+  # Monthly routine maintenance; security updates are not delayed by these
+  # schedules, cooldowns, version-only allow rules, or routine PR limits.
+  # Review non-security major upgrades deliberately rather than opening them
+  # as standalone PRs. Keep automatic rebasing available for security fixes.
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
-      interval: "weekly"
-    open-pull-requests-limit: 3
+      interval: "monthly"
+      time: "07:00"
+      timezone: "Etc/UTC"
+    open-pull-requests-limit: 1
+    allow:
+      - dependency-name: "*"
+        update-types:
+          - "version-update:semver-minor"
+          - "version-update:semver-patch"
     groups:
       actions-minor-patch:
         patterns:
@@ -28,11 +38,17 @@ updates:
   - package-ecosystem: "nuget"
     directory: "/"
     schedule:
-      interval: "weekly"
-      day: "tuesday"
-      time: "07:00"
+      interval: "monthly"
+      time: "07:15"
       timezone: "Etc/UTC"
-    open-pull-requests-limit: 3
+    open-pull-requests-limit: 1
+    allow:
+      - dependency-name: "*"
+        update-types:
+          - "version-update:semver-minor"
+          - "version-update:semver-patch"
+    cooldown:
+      default-days: 7
     groups:
       nuget-minor-patch:
         patterns:
@@ -49,19 +65,24 @@ updates:
     commit-message:
       prefix: "chore(dotnet)"
 
-  # Python dependencies used by catalog validation and contributed agents.
+  # Discover pip manifests repository-wide, including utilities and new roots.
   - package-ecosystem: "pip"
     directories:
-      - "/.github"
-      - "/agents/gwp-predictor/training"
-      - "/agents/molecule-visualization/tools/molecule-visualization"
-      - "/agents/zinc/tools/zinc"
+      - "/"
+      - "**/*"
     schedule:
-      interval: "weekly"
-      day: "tuesday"
+      interval: "monthly"
       time: "08:00"
       timezone: "Etc/UTC"
-    open-pull-requests-limit: 3
+    open-pull-requests-limit: 1
+    versioning-strategy: "increase-if-necessary"
+    allow:
+      - dependency-name: "*"
+        update-types:
+          - "version-update:semver-minor"
+          - "version-update:semver-patch"
+    cooldown:
+      default-days: 7
     groups:
       pip-minor-patch:
         patterns:
@@ -83,11 +104,17 @@ updates:
     directories:
       - "/agents/*/tools/*"
     schedule:
-      interval: "weekly"
-      day: "wednesday"
-      time: "07:00"
+      interval: "monthly"
+      time: "08:15"
       timezone: "Etc/UTC"
-    open-pull-requests-limit: 3
+    open-pull-requests-limit: 1
+    allow:
+      - dependency-name: "*"
+        update-types:
+          - "version-update:semver-minor"
+          - "version-update:semver-patch"
+    cooldown:
+      default-days: 7
     groups:
       docker-minor-patch:
         patterns:
@@ -108,11 +135,17 @@ updates:
   - package-ecosystem: "uv"
     directory: "/utilities/supercomputer-cli/discovery"
     schedule:
-      interval: "weekly"
-      day: "wednesday"
-      time: "08:00"
+      interval: "monthly"
+      time: "08:30"
       timezone: "Etc/UTC"
-    open-pull-requests-limit: 3
+    open-pull-requests-limit: 1
+    allow:
+      - dependency-name: "*"
+        update-types:
+          - "version-update:semver-minor"
+          - "version-update:semver-patch"
+    cooldown:
+      default-days: 7
     groups:
       uv-minor-patch:
         patterns:

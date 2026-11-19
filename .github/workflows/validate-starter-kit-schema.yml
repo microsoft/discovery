@@ -99,7 +99,11 @@ jobs:
           # cannot weaken the assertions that guard its own schema changes.
           # During bootstrap, use an embedded data-only validator rather than
           # executing any Python from the PR checkout.
-          test="trusted/.github/tests/test_schema_security.py"
+          test="trusted/.github/tests/test_catalog_schema_security.py"
+          # Support trusted bases from before the suite was renamed.
+          if [ ! -f "$test" ]; then
+            test="trusted/.github/tests/test_schema_security.py"
+          fi
           scripts="${{ github.workspace }}/trusted/.github/scripts"
           if [ -f "$test" ]; then
             PYTHONPATH="$scripts" python -m pytest "$test" -q

@@ -11,6 +11,29 @@ and retirement of any previously deployed event exception, see the
 [workflow trust boundary and rollout guide](actions-execution-policy.md). Passing local
 tests does not prove GitHub event delivery or change live settings.
 
+## Test low-noise maintenance automation
+
+Run the workflow contracts and registry publication fixtures:
+
+```powershell
+python -m pytest .github\tests\test_catalog_security_automation.py `
+  .github\tests\test_generators.py -q
+git --no-pager diff --check
+```
+
+The registry fixtures verify metadata-only no-ops, material payload changes,
+trusted open-PR detection across pages, queued changes without review rewrites,
+and explicit API/invalid-snapshot failures. They create no GitHub PRs. Release
+workflow contracts preserve manual/event dispatch and dry-run protection
+without scheduled download polling or live aka.ms checks.
+
+Local YAML and contract checks do not prove hosted Dependabot acceptance,
+scheduled event delivery, or the registry App installation's effective grants.
+After deployment, inspect the update job and the first authorized registry
+publication. Do not run the publishing workflow on a candidate branch as a
+test: it is restricted to current `main`. Use the existing branch-mode unit
+test dispatch for Linux fixture verification instead.
+
 ## Test the PR Review reporting split
 
 PR Review runs read-only on `pull_request`; PR Review Report publishes feedback
@@ -24,7 +47,7 @@ Run the workflow contracts and the reporter's behavioral tests:
 python -m pytest .github\tests\test_pr_review_workflow_security.py `
   .github\tests\test_report_pr_review.py `
   .github\tests\test_actions_execution_policy.py `
-  .github\tests\test_security_automation.py -q
+  .github\tests\test_catalog_security_automation.py -q
 ```
 
 These cover fork runs with empty PR associations, source identity, current-head
@@ -75,7 +98,7 @@ python -m pytest .github\tests\test_check_agent_removal_impact.py `
   .github\tests\test_report_pr_review.py `
   .github\tests\test_pr_review_workflow_security.py `
   .github\tests\test_actions_execution_policy.py `
-  .github\tests\test_security_automation.py -q
+  .github\tests\test_catalog_security_automation.py -q
 python -m pytest .github\tests\ -q -ra -n 2 --dist worksteal
 git --no-pager diff --check
 ```
