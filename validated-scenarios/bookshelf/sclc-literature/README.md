@@ -50,13 +50,13 @@ No Python or Azure setup needed.
 
 ## How long it takes
 
-From one run on Windows 11 (2026-11-18). Your times will vary.
+From two runs on Windows 11 (2026-11-18). Your times will vary.
 
 | Stage | Time |
 | --- | --- |
-| 1. Set up and confirm (download papers, build and index the Bookshelf) | About 15 minutes: about 3 minutes to download and check the papers, then about 11 minutes to fill in the Bookshelf form and wait for indexing. |
-| 2. Ask the research question | About 5 minutes (the first answer arrives after about 2.5 minutes; the assistant then asks a follow-up to fill gaps). |
-| 3. Check the answer | About 2 minutes. |
+| 1. Set up and confirm (download papers, build and index the Bookshelf) | 5 to 15 minutes: about 1 to 3 minutes to download and check the papers, the rest to fill in the Bookshelf form and wait for indexing. |
+| 2. Ask the research question | About 5 to 6 minutes. |
+| 3. Check the answer | About 2 to 3 minutes. |
 
 ## What's in the files
 
@@ -112,13 +112,13 @@ Nothing to do yet. Go straight to
 
 ```text
 Set up this Validated Scenario: https://github.com/faranm-stack/discovery/blob/docs/validated-scenarios/validated-scenarios/bookshelf/sclc-literature/Validated-Scenario-Bookshelf-SCLC-Literature.md
-Read the whole guide and tell me in plain language what this experiment does. Then download the 15 papers into a sclc-papers folder in this project and check each file's size and checksum. Ask me before downloading. After that, create the sclc-literature Bookshelf from those 15 papers yourself with your Bookshelf tool: ask me first, then add all 15 PDFs, start indexing and wait until it is indexed, and tell me which answer model it uses. If your Bookshelf tools can't create a Bookshelf, tell me so, show me the guide's form steps and exact values as a numbered list in your reply, then ask me with clickable choices whether it shows Successfully indexed. Then ask it a short test question to confirm it works. Don't ask the research question yet. Finish by telling me whether everything is ready.
+Read the whole guide and tell me in plain language what this experiment does. Then download the 15 papers into a sclc-papers folder in this project and check each file's size and checksum. Ask me before downloading. After that, create the sclc-literature Bookshelf from those 15 papers yourself with your Bookshelf tool: ask me first, then add all 15 PDFs, start indexing and wait until it is indexed, and tell me which answer model it uses. If your Bookshelf tools can't create a Bookshelf, tell me so, show me the guide's form steps and exact values as a numbered list in your reply, then ask me with clickable choices whether it shows Successful. Then ask it a short test question to confirm it works. Don't ask the research question yet. Finish by telling me whether everything is ready.
 ```
 
 **B. You downloaded the papers yourself** (guide attached):
 
 ```text
-Set up this Validated Scenario from the attached guide, using the 15 papers already in the sclc-papers folder of this project. Read the whole guide and tell me in plain language what this experiment does. Check each file's size and checksum. Then create the sclc-literature Bookshelf from those 15 papers yourself with your Bookshelf tool: ask me first, then add all 15 PDFs, start indexing and wait until it is indexed, and tell me which answer model it uses. If your Bookshelf tools can't create a Bookshelf, tell me so, show me the guide's form steps and exact values as a numbered list in your reply, then ask me with clickable choices whether it shows Successfully indexed. Then ask it a short test question to confirm it works. Don't ask the research question yet. Finish by telling me whether everything is ready.
+Set up this Validated Scenario from the attached guide, using the 15 papers already in the sclc-papers folder of this project. Read the whole guide and tell me in plain language what this experiment does. Check each file's size and checksum. Then create the sclc-literature Bookshelf from those 15 papers yourself with your Bookshelf tool: ask me first, then add all 15 PDFs, start indexing and wait until it is indexed, and tell me which answer model it uses. If your Bookshelf tools can't create a Bookshelf, tell me so, show me the guide's form steps and exact values as a numbered list in your reply, then ask me with clickable choices whether it shows Successful. Then ask it a short test question to confirm it works. Don't ask the research question yet. Finish by telling me whether everything is ready.
 ```
 
 **While Step 1 runs:**
@@ -135,9 +135,9 @@ buttons. You don't type anything.
 
 1. **May I download the 15 papers?** Click **Yes**.
 2. When the papers pass, the assistant says it can't create the Bookshelf
-   itself and asks **Does sclc-literature show Successfully indexed?** That's
-   your cue: don't click an answer yet. Fill in the form below first. (If you
-   don't see that question, expand the last **>** arrow in the chat.)
+   automatically and lists the form steps below. Take your time: do the steps
+   first, and answer its question only when you're done. (If you don't see
+   the steps, expand the last **>** arrow in the chat.)
 
    1. In the left sidebar, click **AI capabilities** (it opens in a new tab at
       the top of the app), then **Bookshelves**, then **New bookshelf**. If a
@@ -153,19 +153,18 @@ buttons. You don't type anything.
       `sclc-papers` in the file list to expand it and check that 15 PDFs are
       listed. Click **Next**.
    4. On **3. Review + create**, check the values and click **Create**.
-   5. Wait while the status shows **Indexing**. Don't type in the chat until it
-      changes to **Successfully indexed**. If it shows **Indexing failed**,
-      click **Retry indexing** and wait again.
-3. **Only if you filled in the form:** go back to the chat by clicking its tab
-   at the top (or your session under **Sessions** on the left), then click
-   **Yes, it shows Successfully indexed**.
+   5. Wait while the status shows **Indexing**. Don't type in the chat. When
+      it's done, the status shows **Successful** in green and a pop-up
+      appears. If it shows **Failed**, click **Retry indexing** and wait again.
+3. Go back to the chat by clicking its tab at the top (or your session under
+   **Sessions** on the left), then click **Yes, it shows Successful**.
 
 **Done when:** all 15 papers pass their checksum, the Bookshelf shows
-**Successfully indexed**, and the test question comes back with a citation.
+**Successful** (in green), and the test question comes back with a citation.
 
-**If you see "Tool execution failed", or nothing happens for 2 minutes:** click
-stop, wait 5 minutes, click **New session**, and paste the same step's prompt
-again. Papers and your Bookshelf are kept.
+**If you see "Tool execution failed", or a step shows no new messages for
+10 minutes:** click **New session** and paste the same step's prompt again.
+Papers and your Bookshelf are kept.
 
 **What you'll see when Step 1 finishes:** the assistant stops and waits for
 you. Its last message says something like *"Everything is ready for the
@@ -181,6 +180,10 @@ It may also say it can't confirm the answer model itself. That's expected.
 Paste the Step 2 prompt into the same chat to continue.
 
 ### Step 2: Run the experiment
+
+The assistant asks the Bookshelf this question (from section 6 of the guide):
+
+> Using only the sclc-literature Bookshelf, summarise the current treatment options for extensive-stage small-cell lung cancer. Cover: (1) first-line chemo-immunotherapy and who is eligible; (2) second-line options after platinum-based chemotherapy, including lurbinectedin and topotecan-class agents; (3) DLL3-targeted therapy, including tarlatamab; and (4) what molecular subtypes or biomarkers suggest about who benefits. For every claim, cite the paper it comes from. End with a short table comparing the second-line options and a list of questions these papers cannot answer.
 
 **A or B (same prompt either way):**
 
