@@ -75,6 +75,9 @@ perform clinical prioritization.
    the dashboard cannot be generated in this runtime.
 4. Inspect the output and compare the rows, numeric values, filters, source
    links and provenance against the input. Return the HTML and scope limits.
+   In chat responses, present provenance, queries and variables with ordinary
+   Markdown headings and fenced code blocks, not raw HTML `details` or
+   `summary` tags. This does not change standalone HTML reports.
    The report is a bounded sample, not a ranking, proof of causation or
    treatment recommendation. Association scores and individual evidence are
    different measures. Missing or empty results do not prove absence.
