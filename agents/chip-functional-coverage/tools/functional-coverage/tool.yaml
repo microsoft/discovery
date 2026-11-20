@@ -29,31 +29,8 @@ actions:
     from structured JSON. Emits per-group/cross coverage, cover properties, holes, native coverage.dat
     merge, and a reachability proof to /output/final_results.json (Common Design Envelope).
   infra_node: worker
-  command: python3 -u /app/run.py '{{params_json}}'
+  command: python3 -B -u /app/run.py --params-file /input/params.json
   input_schema:
     type: object
-    required:
-    - params_json
-    properties:
-      params_json:
-        type: string
-        description: |
-          CONTRACT: one single-line JSON object (double quotes) with a top-level "scenario" (one of: model_coverage, measure_coverage, merge_coverage, measure_rtl_coverage). Object params such as pdk_binding / deck_vars are inline JSON objects, e.g. "pdk_binding":{"pdk":"nangate45","liberty":["/input/cells.lib"]}. Params named rtl/upf/sdc/text carry inline text; file paths go in *_file(s)/sources/netlist/def/gds keys as absolute /input/... paths. On failure read the envelope `error` field. JSON with scenario measure_rtl_coverage | model_coverage | measure_coverage | merge_coverage.
-          measure_rtl_coverage (THE SIGNOFF SCENARIO -- compiles and runs the DUT):
-            required: coverage_model, rtl_files (dependency-ordered array), top (MODULE name, not a
-            filename), cocotb_module (python test module name, no .py).
-            optional: cocotb_files (test sources to mount/resolve), cocotb_test_dir, seeds (array) or
-            seed_count + base_seed, cover_properties (names the TB reports via chip_fcov_sampler.cover),
-            goal_percent, reachability_overrides (path to a human-authorized A-policy override file).
-            The testbench MUST `import chip_fcov_sampler` (emitted into the work dir by the tool) and
-            call `sample(**values)` per transaction, and `cover(name)` for each cover property.
-            Samples are read back from the file the SIMULATION wrote -- caller-supplied `samples` are
-            NOT accepted by this scenario. Emits coverage_merged.dat and
-            code_coverage_reachability.json. Fails closed (verdict=fail) if verilator/cocotb are
-            unavailable, no testcase executed, zero samples were produced, or no native coverage.dat
-            was written -- it NEVER silently downgrades to caller-asserted scoring.
-
-          measure_coverage (NOT SIGNOFF EVIDENCE): scores caller-supplied `samples` against the model
-            without running anything; stamps basis=caller_asserted_samples, signoff_eligible=false.
-
-          model_coverage: validate/register a model. merge_coverage: union coverage_dbs. Double-quoted JSON only.
+    required: []
+    properties: {}

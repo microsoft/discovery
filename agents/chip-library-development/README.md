@@ -1,6 +1,6 @@
 ## Overview
 
-Node-aware library development agent. Characterizes standard cells, macros, and hard IP for the target node and generates their physical/timing views: Liberty (CCS and NLDM) timing/power models, LEF abstracts, and DEF views. It infers the intent from natural language, consumes the PDK Binding (SPICE models, corners, layers), drives ngspice + Magic/KLayout, and reports library QA directly in chat. Validated on SkyWater sky130.
+Node-aware library development agent. Characterizes standard cells, macros, and hard IP for the target node and generates structured text views: Liberty (CCS and NLDM) timing/power models, LEF abstracts, and DEF placement views. It consumes the PDK Binding and ngspice collateral. This package does not bundle Magic/KLayout or implement native cross-view LEF/DEF consistency signoff; independently supplied layouts, abstracts, and native engine evidence are required for that claim.
 
 ## Architecture
 

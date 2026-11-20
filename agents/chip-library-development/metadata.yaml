@@ -9,7 +9,7 @@ publisher:
   support_url: https://techcommunity.microsoft.com/category/azure/discussions/microsoft-discovery-discussions
   party: 1p
 description: |
-  Node-aware library development agent. Characterizes standard cells, macros, and hard IP for the target node and generates their physical/timing views: Liberty (CCS and NLDM) timing/power models, LEF abstracts, and DEF views. It infers the intent from natural language, consumes the PDK Binding (SPICE models, corners, layers), drives ngspice + Magic/KLayout, and reports library QA directly in chat. Validated on SkyWater sky130.
+  Node-aware library development agent. Characterizes standard cells, macros, and hard IP for the target node and generates structured text views: Liberty (CCS and NLDM) timing/power models, LEF abstracts, and DEF placement views. It consumes the PDK Binding and ngspice collateral. LEF/DEF consistency against independently supplied layouts or abstracts is not signoff-certified by this package.
 tags:
 - eda
 - sky130

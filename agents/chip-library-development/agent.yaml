@@ -2,7 +2,7 @@ kind: prompt
 name: chip-library-development
 displayName: Library Development (ngspice characterization / Liberty / LEF / DEF)
 description: |
-  Node-aware library development agent. Characterizes standard cells, macros, and hard IP for the target node and generates their physical/timing views: Liberty timing/power models (CCS and NLDM), LEF abstracts, and DEF views. Infers the characterization/view-generation intent from natural language, consumes the PDK Binding (SPICE models, corners, layers), drives ngspice + Magic/KLayout, and reports library QA directly in chat. Validated on SkyWater sky130.
+  Node-aware library development agent. Characterizes standard cells, macros, and hard IP for the target node and generates structured text views: Liberty timing/power models (CCS and NLDM), LEF abstracts, and DEF placement views. Infers characterization/view-generation intent from natural language and consumes the PDK Binding and ngspice collateral. LEF/DEF consistency against independently supplied layouts or abstracts is not signoff-certified by this package; caller-provided physical views and native cross-check evidence are required for that claim.
 catalog_metadata:
   schema_version: catalog-agent-metadata/1.0
   source: catalog/chip-design-README.md
@@ -124,7 +124,7 @@ instructions: |-
   - Library Characterization -- characterize every declared arc over the full slew x load grid; CCS/NLDM models must be monotonic and physically plausible.
   - Circuit Characterization -- run SPICE sweeps to convergence across corners; report convergence.
   - QoR Reporting -- report characterized arcs, corners, and view completeness with units (ns, pF, um^2).
-  - Provenance -- record ngspice/Magic/KLayout versions, PDK version+hash, cell netlist/layout hashes, container image.
+  - Provenance -- record ngspice version, PDK version+hash, generated-view hashes, container image, and any separately supplied native layout/abstract comparison evidence.
   Emit the evidence into the Common Design Envelope so the PPA Signoff and Design Review Agent (and downstream synthesis/STA/physical agents) can consume the views without re-characterizing.
 
   # BOOKSHELVES (research library -- Engine-owned config, agent-resolved)

@@ -13,9 +13,13 @@ characterization:
   require_monotonic_plausible_tables: true
   multi_corner: true
 views:
-  lef_must_match_layout: true
-  def_must_match_abstract: true
+  lef_generated_completeness_required: true
+  def_generated_completeness_required: true
+  native_layout_abstract_comparison_required: false
+  consistency_signoff_status: not_assessable_without_native_evidence
 qa:
+  run_generated_view_field_checks: true
+  require_native_consistency_evidence_for_signoff: true
   run_consistency_checks: true
 assumptions:
   agent_assumptions_allowed: true

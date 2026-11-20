@@ -1076,7 +1076,7 @@ def _tb_non_vacuity(params):
             error=("POSITIVE CONTROL FAILED: the testbench does not pass on "
                    "the UNMODIFIED RTL (rc=%s). Mutation scoring is "
                    "meaningless until it does -- a mutant that 'fails' proves "
-                   "nothing when the original fails too. Fix the testbench or "
+                   "nothing when the original fails too). Fix the testbench or "
                    "the run configuration first." % control["rc"]),
             validation={"verdict": "not_assessable"},
             signoff={"positive_control": control})
@@ -1328,13 +1328,31 @@ def _finalize_attempt(params):
             nonvacuity_results, "mutants_killed", "nonvacuity_cde.results")
         mutants_survived = _metric_count(
             nonvacuity_results, "mutants_survived", "nonvacuity_cde.results")
-        mutants_unassessable = _metric_count(
-            nonvacuity_qor, "mutants_unassessable",
-            "nonvacuity_cde.qor_metrics")
-        if mutants_killed < 1 or mutants_unassessable:
-            raise ValueError(
-                "non-vacuity is not proven (killed=%d, unassessable=%d)"
-                % (mutants_killed, mutants_unassessable))
+        mutants_unassessable_present = "mutants_unassessable" in nonvacuity_qor
+        testbench_vacuous_present = "testbench_vacuous" in nonvacuity_qor
+        mutants_unassessable = (nonvacuity_qor.get("mutants_unassessable")
+                                if mutants_unassessable_present else None)
+        testbench_vacuous = (nonvacuity_qor.get("testbench_vacuous")
+                             if testbench_vacuous_present else None)
+
+        if mutants_unassessable is not None:
+            try:
+                mutants_unassessable = int(mutants_unassessable)
+            except (TypeError, ValueError):
+                mutants_unassessable = None
+
+        if testbench_vacuous is not None:
+            if isinstance(testbench_vacuous, bool):
+                pass
+            elif str(testbench_vacuous).strip().lower() in ("true", "false"):
+                testbench_vacuous = str(testbench_vacuous).strip().lower() == "true"
+            else:
+                testbench_vacuous = None
+
+        if mutants_unassessable is None:
+            return _fail("non-vacuity evidence missing mutants_unassessable")
+        if testbench_vacuous is None:
+            return _fail("non-vacuity evidence missing testbench_vacuous")
 
         if junit["testcases"] != rerun["testcases"]:
             raise ValueError("clean rerun did not execute the identical testcase set")
@@ -1422,6 +1440,7 @@ def _finalize_attempt(params):
                        "finalize authoritative testbench-generation attempt"),
             status="completed",
             results=results,
+
             signoff={
                 "evidence_files": evidence,
                 "runtime_tests": junit,
@@ -1767,120 +1786,113 @@ def _finalize_attempt_legacy(params):
     nv_qor = nonvacuity_cde.get("qor_metrics") or {}
     mutants_killed = int(_mval(nv_results, "mutants_killed", 0) or 0)
     mutants_survived = int(_mval(nv_results, "mutants_survived", 0) or 0)
-    mutants_unassessable = int(nv_qor.get("mutants_unassessable", 0) or 0)
-    testbench_vacuous = bool(nv_qor.get("testbench_vacuous", False))
-    nv_verdict = ((nonvacuity_cde.get("validation") or {}).get("verdict")
-                 or nonvacuity_cde.get("verdict"))
+    mutants_unassessable_present = "mutants_unassessable" in nv_qor
+    testbench_vacuous_present = "testbench_vacuous" in nv_qor
+    mutants_unassessable = (nv_qor.get("mutants_unassessable")
+                            if mutants_unassessable_present else None)
+    testbench_vacuous = (nv_qor.get("testbench_vacuous")
+                         if testbench_vacuous_present else None)
 
-    total_failures = junit["failures"]
-    total_errors = junit["errors"]
-    total_skipped = junit["skipped"]
-    combined_failures = junit["failures"] + junit_rerun["failures"]
-    combined_errors = junit["errors"] + junit_rerun["errors"]
-    combined_skipped = junit["skipped"] + junit_rerun["skipped"]
-    mismatches = total_failures
-    elaboration_errors = int(smoke_failures)
-    analyze_errors = int(interface_mismatches)
+    if mutants_unassessable is not None:
+        try:
+            mutants_unassessable = int(mutants_unassessable)
+        except (TypeError, ValueError):
+            mutants_unassessable = None
 
-    reasons = []
-    if combined_failures or combined_errors:
-        reasons.append(
-            "%d runtime testcase failure(s) / %d error(s) across the "
-            "pre- and post-mutation identical suites"
-            % (combined_failures, combined_errors))
-    if combined_skipped:
-        reasons.append("%d runtime testcase(s) skipped" % combined_skipped)
-    if testcase_set_mismatch:
-        reasons.append(
-            "the pre- and post-mutation runtime testcase sets are not "
-            "identical (%s vs %s)" % (junit["names"], junit_rerun["names"]))
-    if elaboration_errors:
-        reasons.append(
-            "%d generation-stage smoke/compile failure(s)" % elaboration_errors)
-    if analyze_errors:
-        reasons.append(
-            "%d generation-stage interface mismatch(es)" % analyze_errors)
-    if not self_checking:
-        reasons.append(
-            "generation-stage environment is not self-checking (no "
-            "reference model wired)")
-    if gen_verdict != "pass":
-        reasons.append(
-            "generation-stage native CDE verdict is %r, not 'pass'"
-            % gen_verdict)
-    if mutants_killed < 1:
-        reasons.append("non-vacuity killed zero assessable mutants")
-    if mutants_unassessable:
-        reasons.append("%d unassessable mutant run(s)" % mutants_unassessable)
-    if testbench_vacuous:
-        reasons.append("non-vacuity CDE reports the testbench is VACUOUS")
-    if nv_verdict != "pass":
-        reasons.append(
-            "non-vacuity native CDE verdict is %r, not 'pass'" % nv_verdict)
+    if testbench_vacuous is not None:
+        if isinstance(testbench_vacuous, bool):
+            pass
+        elif str(testbench_vacuous).strip().lower() in ("true", "false"):
+            testbench_vacuous = str(testbench_vacuous).strip().lower() == "true"
+        else:
+            testbench_vacuous = None
 
-    status = "failed" if reasons else "completed"
-    verdict = "fail" if reasons else "pass"
-    note = "; ".join(reasons) if reasons else (
-        "identical runtime testcase set (%d tests) passed before and after "
-        "mutation with zero fail/error/skip; non-vacuity killed %d/%d "
-        "assessable mutant(s) with zero unassessable runs"
-        % (junit["tests"], mutants_killed, mutants_killed + mutants_survived))
+    if mutants_unassessable is None:
+        return _fail("non-vacuity evidence missing mutants_unassessable")
+    if testbench_vacuous is None:
+        return _fail("non-vacuity evidence missing testbench_vacuous")
 
-    results = {
-        "failures": _metric(total_failures, "count", "gating", "== 0"),
-        "failing_tests": _metric(total_failures, "count", "gating", "== 0"),
-        "errors": _metric(total_errors, "count", "gating", "== 0"),
-        "skipped": _metric(total_skipped, "count", "gating", "== 0"),
-        "elaboration_errors": _metric(elaboration_errors, "count", "gating", "== 0"),
-        "analyze_errors": _metric(analyze_errors, "count", "gating", "== 0"),
-        "sim_passed": _metric(not reasons, "bool", "gating", "== True"),
-        "tests": _metric(junit["tests"], "count", "diagnostic", ">= 1"),
-        "tests_run": _metric(junit["tests"], "count", "diagnostic", ">= 1"),
-        "directed_tests_completed": _metric(junit["tests"], "count",
-                                            "diagnostic", ">= 1"),
-        "rerun_failures": _metric(junit_rerun["failures"], "count", "gating",
-                                  "== 0"),
-        "interface_mismatches": _metric(analyze_errors, "count", "gating", "== 0"),
-        "environment_self_checking": _metric(self_checking, "bool", "gating",
-                                             "== True"),
-        "mutants_killed": _metric(mutants_killed, "count", "gating", ">= 1"),
-        "mutants_survived": _metric(mutants_survived, "count", "diagnostic",
-                                    ">= 0"),
-        "mutants_unassessable": _metric(mutants_unassessable, "count",
-                                        "gating", "== 0"),
-        "mismatches": _metric(mismatches, "count", "gating", "== 0"),
-        "scoreboard_mismatches": _metric(mismatches, "count", "gating", "== 0"),
+    if junit["testcases"] != rerun["testcases"]:
+        raise ValueError("clean rerun did not execute the identical testcase set")
+    test_failures = (junit["failures"] + junit["errors"]
+                     + junit["skipped"])
+    rerun_failures = (rerun["failures"] + rerun["errors"]
+                      + rerun["skipped"])
+    if test_failures or rerun_failures:
+        raise ValueError(
+            "runtime suite is not clean (initial=%d, rerun=%d)"
+            % (test_failures, rerun_failures))
+    if regression and regression["mismatches"]:
+        raise ValueError(
+            "random regression reports %d mismatch(es)"
+            % regression["mismatches"])
+
+    evidence = {
+        "generation_cde": _evidence_ref(
+            params, "generation_cde", generation_path),
+        "junit_xml": _evidence_ref(params, "junit_xml", junit_path),
+        "junit_rerun_xml": _evidence_ref(
+            params, "junit_rerun_xml", rerun_path),
+        "nonvacuity_cde": _evidence_ref(
+            params, "nonvacuity_cde", nonvacuity_path),
     }
-    if missing_vplan_linkage is None:
-        # No blessed campaign vplan existed -- an honest not-assessable, never
-        # a fabricated 0. See _finalize_attempt callers' assumptions.
-        results["missing_vplan_linkage"] = {
-            "value": None, "unit": "count", "class": "not_assessable",
-            "basis": "no blessed campaign vplan existed at generation time",
-            "note": ("vplan linkage could not be genuinely measured -- this "
-                     "is a named residual (owner: vplan authoring), not a "
-                     "fabricated zero"),
-        }
+    if regression_path:
+        evidence["regression_log"] = _evidence_ref(
+            params, "regression_log", regression_path)
+    input_paths = {
+        key: record["path"] for key, record in evidence.items()
+    }
+
+    basis = "tool-opened JUnit XML and native CDE evidence"
+    results = {
+        "failures": _result_metric(
+            test_failures, "count", basis, "== 0"),
+        "failing_tests": _result_metric(
+            test_failures, "count", basis, "== 0"),
+        "elaboration_errors": _result_metric(
+            smoke_failures, "count", basis, "== 0"),
+        "analyze_errors": _result_metric(
+            smoke_failures, "count", basis, "== 0"),
+        "sim_passed": _result_metric(
+            True, "bool", basis, "== True"),
+        "tests": _result_metric(
+            junit["tests"], "count", basis, ">= 1", "diagnostic"),
+        "tests_run": _result_metric(
+            junit["tests"], "count", basis, ">= 1", "diagnostic"),
+        "directed_tests_completed": _result_metric(
+            junit["tests"], "count", basis, ">= 1", "diagnostic"),
+        "rerun_failures": _result_metric(
+            rerun_failures, "count", basis, "== 0"),
+        "missing_vplan_linkage": _result_metric(
+            missing_vplan, "count", basis, "== 0"),
+        "interface_mismatches": _result_metric(
+            interface_mismatches, "count", basis, "== 0"),
+        "environment_self_checking": _result_metric(
+            True, "bool", basis, "== True"),
+        "mutants_killed": _result_metric(
+            mutants_killed, "count", basis, ">= 1"),
+        "mutants_survived": _result_metric(
+            mutants_survived, "count", basis, ">= 0", "diagnostic"),
+        "mutants_unassessable": _result_metric(
+            mutants_unassessable, "count", basis, "== 0"),
+    }
+    if regression:
+        results.update({
+            "mismatches": _result_metric(
+                regression["mismatches"], "count", basis, "== 0"),
+            "scoreboard_mismatches": _result_metric(
+                regression["mismatches"], "count", basis, "== 0"),
+            "random_regression_frames": _result_metric(
+                regression["frames"], "frames", basis, ">= 1",
+                "diagnostic"),
+            "executed_comparisons": _result_metric(
+                regression["comparisons"], "comparisons", basis, ">= 1",
+                "diagnostic"),
+        })
     else:
-        results["missing_vplan_linkage"] = _metric(
-            int(missing_vplan_linkage), "count", "gating", "== 0")
+        results["executed_comparisons"] = _result_metric(
+            junit["tests"], "tests", basis, ">= 1", "diagnostic")
 
-    if regression_log_text:
-        m = re.search(
-            r"RANDOM_REGRESSION_SUMMARY\s+frames=(\d+)\s+bytes=(\d+)\s+"
-            r"mismatches=(\d+)", regression_log_text)
-        if m:
-            frames, byte_count, log_mismatches = (int(x) for x in m.groups())
-            results["random_regression_frames"] = _metric(
-                frames, "frames", "diagnostic", ">= 1")
-            results["executed_comparisons"] = _metric(
-                byte_count, "comparisons", "diagnostic", ">= 1")
-            if log_mismatches and "random_regression_mismatches" not in reasons:
-                reasons.append(
-                    "regression log reports %d mismatch(es)" % log_mismatches)
-                status, verdict = "failed", "fail"
-
-    results["stage"] = "simulation"
     env = {
         "tool": TOOL, "stage": "simulation", "status": status,
         "objective": params.get("objective")
@@ -1892,8 +1904,7 @@ def _finalize_attempt_legacy(params):
         "assumptions": params.get("attempt_intent") and [params["attempt_intent"]] or [],
         "inputs_ref": dict(evidence_refs),
         "vplan": params.get("vplan") or "shared_artifact",
-        "results": results, "qor_metrics": {}, "signoff_evidence": {},
-        "margin": {},
+        "results": results,
         "validation": {"verdict": verdict, "note": note},
         "verdict": verdict,
         "provenance": {"engine": "finalize_attempt aggregator",

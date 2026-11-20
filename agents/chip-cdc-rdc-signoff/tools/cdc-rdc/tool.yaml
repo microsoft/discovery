@@ -30,13 +30,8 @@ actions:
     synchronizer inventory, bus inventory, and a signoff verdict to /output/final_results.json (Common
     Design Envelope).
   infra_node: worker
-  command: python3 -u /app/run.py '{{params_json}}'
+  command: python3 -B -u /app/run.py --params-file /input/params.json
   input_schema:
     type: object
-    required:
-    - params_json
-    properties:
-      params_json:
-        type: string
-        description: Single-line JSON object with an explicit supported scenario. Read the complete parameter
-          contract in catalog-details.json and the agent instructions. Do not invent timing or PPA intent.
+    required: []
+    properties: {}

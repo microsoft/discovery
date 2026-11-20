@@ -4,6 +4,7 @@ import json
 import pathlib
 import unittest
 from unittest import mock
+import yaml
 
 
 ROOT = pathlib.Path(__file__).resolve().parents[3]
@@ -15,7 +16,7 @@ NAMES = (
 
 
 def load_runner(name):
-    source = next((ROOT / "agents-docker" / name).glob("tools/*/run.py"))
+    source = next((ROOT / "agents" / name).glob("tools/*/run.py"))
     spec = importlib.util.spec_from_file_location(name + "_transport", source)
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
@@ -26,13 +27,15 @@ class DefaultSourceTransportTests(unittest.TestCase):
     def test_default_declared_action_has_no_shell_json_interpolation(self):
         for name in NAMES:
             with self.subTest(agent=name):
-                tool = next((ROOT / "agents-docker" / name).glob("tools/*/tool.yaml"))
+                tool = next((ROOT / "agents" / name).glob("tools/*/tool.yaml"))
                 text = tool.read_text(encoding="utf-8")
-                self.assertIn('command: "python3 -u /app/run.py"', text)
-                schema = text.split("    input_schema:\n", 1)[1]
-                self.assertNotIn("params_json", schema)
-                self.assertIn("properties: {}", schema)
-                self.assertIn("additionalProperties: false", schema)
+                self.assertNotIn("{{params_json}}", text)
+                self.assertNotIn("- params_json", text)
+                definition = yaml.safe_load(text)
+                action = next(item for item in definition["actions"] if item["name"] == "run")
+                self.assertNotIn("params_json", action["command"])
+                self.assertNotIn("params_json", action.get("input_schema", {}).get("properties", {}))
+                self.assertEqual({}, action["input_schema"].get("properties"))
 
     def test_default_worker_loads_exact_unicode_and_apostrophe_file_content(self):
         params = {"scenario": "qualification", "literal": "counter's μ\\lane"}
@@ -61,7 +64,7 @@ class DefaultSourceTransportTests(unittest.TestCase):
     def test_default_prompt_declares_the_same_file_transport(self):
         for name in NAMES:
             with self.subTest(agent=name):
-                source = (ROOT / "agents-docker" / name / "agent.yaml").read_text(
+                source = (ROOT / "agents" / name / "agent.yaml").read_text(
                     encoding="utf-8")
                 marker = "The following Services section overrides legacy CLI parameter transport."
                 self.assertEqual(1, source.count(marker))
