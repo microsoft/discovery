@@ -1,6 +1,6 @@
 name: Validated Scenario feedback
 description: Tell us a Validated Scenario failed, was unclear, or worked for you.
-title: "[Validated Scenario] <scenario>: <short summary>"
+title: "[Validated Scenario] "
 body:
   - type: markdown
     attributes:
