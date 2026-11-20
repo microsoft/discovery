@@ -1,0 +1,69 @@
+name: Validated Scenario feedback
+description: Tell us a Validated Scenario failed, was unclear, or worked for you.
+title: "[Validated Scenario] <scenario>: <short summary>"
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for trying a Validated Scenario. Please don't include secrets, tokens or customer data.
+  - type: dropdown
+    id: scenario
+    attributes:
+      label: Scenario
+      options:
+        - BioPharma - CDK Target Selection and Lead Discovery
+        - Bookshelf - SCLC treatment literature research
+        - Silicon and Physics - Specification to verified RTL
+        - Chemistry and Materials Science - Moisturizer formulation
+        - Other (say which below)
+    validations:
+      required: true
+  - type: dropdown
+    id: outcome
+    attributes:
+      label: What happened?
+      options:
+        - It failed
+        - It worked, but something was unclear
+        - It worked
+    validations:
+      required: true
+  - type: dropdown
+    id: step
+    attributes:
+      label: Which step?
+      options:
+        - Before Step 1 (install, project or model)
+        - Step 1 - Set up and confirm
+        - Step 2 - Run the experiment
+        - Step 3 - Verify against the reference
+        - Not sure
+    validations:
+      required: true
+  - type: dropdown
+    id: route
+    attributes:
+      label: How did you get the files?
+      options:
+        - The assistant downloaded them (A prompts)
+        - I downloaded them myself (B prompts)
+        - Not sure
+  - type: input
+    id: model
+    attributes:
+      label: Model you selected
+      placeholder: e.g. GPT-6 Astra
+    validations:
+      required: true
+  - type: input
+    id: environment
+    attributes:
+      label: Operating system and Discovery app version
+      placeholder: e.g. Windows 11 x64
+  - type: textarea
+    id: details
+    attributes:
+      label: What did you see?
+      description: The exact error or reply, what you expected, and any screenshots.
+    validations:
+      required: true

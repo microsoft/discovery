@@ -206,6 +206,10 @@ five-claim citation audit and the one-sentence verdict.`
 **Done when:** every check passes and the five spot-checked claims match
 their papers.
 
+**Something went wrong or was unclear?** In the same chat, send:
+`Write a short problem report for this Validated Scenario: the scenario, the step, the model I used, my operating system, the exact error or reply, and what you tried. Leave out secrets, tokens and personal file paths.`
+Then paste the report into a [Validated Scenario feedback issue](https://github.com/microsoft/discovery/issues/new?template=validated-scenario-feedback.yml).
+
 ## Supporting files
 
 The 15 papers are listed with exact sizes, SHA-256 checksums and download

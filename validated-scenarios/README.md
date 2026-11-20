@@ -13,6 +13,7 @@ by sending its README's three prompts in a Discovery chat.
 | [Chemistry and Materials Science](cms/README.md) | [Moisturizer formulation](cms/moisturizer-formulation/README.md) | Moisturizer formulation research. | Pending | Pending | In preparation; prompt and corpus metadata available. |
 
 Run times come from each scenario's measured run and vary with your machine and network.
+Found a problem? [Report it](https://github.com/microsoft/discovery/issues/new?template=validated-scenario-feedback.yml) with the scenario, the step and what you saw.
 
 Each Validated Scenario has its own folder under its vertical or collection. Open a
 vertical to browse its scenarios, or select a Validated Scenario directly above.
