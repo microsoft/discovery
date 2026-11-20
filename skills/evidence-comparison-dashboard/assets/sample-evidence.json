@@ -1,0 +1,93 @@
+{
+  "title": "Synthetic electrolyte candidates (demo)",
+  "dataset": {
+    "name": "synthetic-electrolyte-demo",
+    "license": "CC0-1.0",
+    "synthetic": true
+  },
+  "records": [
+    {
+      "id": "SYN-001",
+      "label": "Candidate A study",
+      "source_url": "https://example.org/synthetic-evidence/SYN-001",
+      "source_tool": "synthetic-fixture",
+      "retrieved_at": "2026-01-01",
+      "fields": {
+        "year": 2021,
+        "material_class": "sulfide",
+        "ionic_conductivity_mS_cm": 12.5,
+        "replicated": true,
+        "authors": ["Example, A.", "Sample, B."]
+      }
+    },
+    {
+      "id": "SYN-002",
+      "label": "Candidate B study",
+      "source_url": "https://example.org/synthetic-evidence/SYN-002",
+      "source_tool": "synthetic-fixture",
+      "retrieved_at": "2026-01-01",
+      "fields": {
+        "year": 2022,
+        "material_class": "oxide",
+        "ionic_conductivity_mS_cm": 0,
+        "replicated": false,
+        "authors": ["Placeholder, C."]
+      }
+    },
+    {
+      "id": "SYN-003",
+      "label": "Candidate C study",
+      "source_url": "https://example.org/synthetic-evidence/SYN-003",
+      "source_tool": "synthetic-fixture",
+      "retrieved_at": "2026-01-01",
+      "fields": {
+        "year": 2023,
+        "material_class": "polymer",
+        "ionic_conductivity_mS_cm": null,
+        "replicated": true,
+        "authors": []
+      }
+    },
+    {
+      "id": "SYN-004",
+      "label": "Candidate D study",
+      "source_url": "https://example.org/synthetic-evidence/SYN-004",
+      "source_tool": "synthetic-fixture",
+      "retrieved_at": "2026-01-01",
+      "fields": {
+        "year": 2023,
+        "material_class": "sulfide",
+        "ionic_conductivity_mS_cm": 3.14159,
+        "replicated": null,
+        "authors": ["Example, A."]
+      }
+    },
+    {
+      "id": "SYN-005",
+      "label": "Candidate E study",
+      "source_url": "https://example.org/synthetic-evidence/SYN-005",
+      "source_tool": "synthetic-fixture",
+      "retrieved_at": "2026-01-01",
+      "fields": {
+        "material_class": "oxide",
+        "ionic_conductivity_mS_cm": 0.001,
+        "replicated": true,
+        "authors": ["Sample, B.", "Demo, D."]
+      }
+    },
+    {
+      "id": "SYN-006",
+      "label": "Candidate F study",
+      "source_url": "https://example.org/synthetic-evidence/SYN-006",
+      "source_tool": "synthetic-fixture",
+      "retrieved_at": "2026-01-01",
+      "fields": {
+        "year": 2024,
+        "material_class": "",
+        "ionic_conductivity_mS_cm": 7.2,
+        "replicated": false,
+        "authors": ["Demo, D."]
+      }
+    }
+  ]
+}

@@ -1,0 +1,47 @@
+{
+  "title": "Synthetic catalyst screening (demo, different dataset)",
+  "dataset": {
+    "name": "synthetic-catalyst-demo",
+    "license": "CC0-1.0",
+    "synthetic": true
+  },
+  "columns": [
+    {"field": "temperature_c", "label": "Temperature (C)"},
+    {"field": "yield_percent", "label": "Yield (%)"},
+    {"field": "solvent", "label": "Solvent"}
+  ],
+  "records": [
+    {
+      "id": "CAT-01",
+      "label": "Run 1",
+      "source_url": "https://example.org/synthetic-evidence/CAT-01",
+      "source_tool": "synthetic-fixture",
+      "retrieved_at": "2026-01-02",
+      "fields": {"temperature_c": 80, "yield_percent": 91.2, "solvent": "ethanol", "operator_notes": "kept out of the view"}
+    },
+    {
+      "id": "CAT-02",
+      "label": "Run 2",
+      "source_url": "https://example.org/synthetic-evidence/CAT-02",
+      "source_tool": "synthetic-fixture",
+      "retrieved_at": "2026-01-02",
+      "fields": {"temperature_c": 100, "yield_percent": 0, "solvent": "toluene"}
+    },
+    {
+      "id": "CAT-03",
+      "label": "Run 3",
+      "source_url": "https://example.org/synthetic-evidence/CAT-03",
+      "source_tool": "synthetic-fixture",
+      "retrieved_at": "2026-01-02",
+      "fields": {"temperature_c": 60, "yield_percent": "NA", "solvent": "ethanol"}
+    },
+    {
+      "id": "CAT-04",
+      "label": "Run 4",
+      "source_url": "https://example.org/synthetic-evidence/CAT-04",
+      "source_tool": "synthetic-fixture",
+      "retrieved_at": "2026-01-02",
+      "fields": {"yield_percent": 55.5, "solvent": null}
+    }
+  ]
+}
