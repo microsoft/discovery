@@ -5,12 +5,15 @@ by sending its README's three prompts in a Discovery chat.
 
 ## Choose a scenario
 
-| Vertical / collection | Validated Scenario | Availability |
-| --- | --- | --- |
-| [BioPharma](biopharma/README.md) | [CDK Target Selection and Lead Discovery](biopharma/cdk-frozen-reference/README.md) | Ready to run from its guide link; all required files available. Fresh end-to-end run not yet recorded. |
-| [Silicon and Physics](siphy/README.md) | [Specification to verified RTL](siphy/spec-to-rtl/README.md) | Guide and setup archive available; see scenario requirements and reference-evidence limitations. |
-| [Chemistry and Materials Science](cms/README.md) | [Moisturizer formulation](cms/moisturizer-formulation/README.md) | In preparation; prompt and corpus metadata available. |
-| [Bookshelf](bookshelf/README.md) | [SCLC treatment literature research](bookshelf/sclc-literature/README.md) | Available. Tested end to end on Windows 11 x64. |
+| Vertical / collection | Validated Scenario | What it does | Model | Run time | Availability |
+| --- | --- | --- | --- | --- | --- |
+| [BioPharma](biopharma/README.md) | [CDK Target Selection and Lead Discovery](biopharma/cdk-frozen-reference/README.md) | Reruns the analysis of a CDK lead-discovery campaign from its saved results and checks it against the validated reference. | GPT-6 Astra | About 1.5 hours the first time (45 min setup, 45 min run) | Ready to run from its guide link; all required files available. Fresh end-to-end run not yet recorded. |
+| [Bookshelf](bookshelf/README.md) | [SCLC treatment literature research](bookshelf/sclc-literature/README.md) | Builds a Bookshelf from 15 open-access papers and answers a cited research question. | GPT-6 Astra | About 15 to 25 minutes | Available. Tested end to end on Windows 11 x64. |
+| [Silicon and Physics](siphy/README.md) | [Specification to verified RTL](siphy/spec-to-rtl/README.md) | Turns a chip specification into verified RTL with four chip agents. | gpt-6.1-sol | See README | Guide and setup archive available; see scenario requirements and reference-evidence limitations. |
+| [Chemistry and Materials Science](cms/README.md) | [Moisturizer formulation](cms/moisturizer-formulation/README.md) | Moisturizer formulation research. | Pending | Pending | In preparation; prompt and corpus metadata available. |
+
+Run times come from each scenario's measured run and vary with your machine and network.
+Found a problem? [Report it](https://github.com/microsoft/discovery/issues/new?template=validated-scenario-feedback.yml) with the scenario, the step and what you saw.
 
 Each Validated Scenario has its own folder under its vertical or collection. Open a
 vertical to browse its scenarios, or select a Validated Scenario directly above.

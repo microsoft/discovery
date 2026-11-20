@@ -154,6 +154,10 @@ When it asks for approval, reply:
 the run ID and the error; don't start a second run without asking the assistant
 first.
 
+**Something went wrong or was unclear?** In the same chat, send:
+`Write a short problem report for this Validated Scenario: the scenario, the step, the model I used, my operating system, the exact error or reply, and what you tried. Leave out secrets, tokens and personal file paths.`
+Then paste the report into a [Validated Scenario feedback issue](https://github.com/microsoft/discovery/issues/new?template=validated-scenario-feedback.yml).
+
 ## Supporting files
 
 | Original filename | Bytes | SHA-256 | Purpose | Download |

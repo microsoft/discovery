@@ -191,6 +191,10 @@ Compare my new run with the validated reference result. Use my run's semantic_ac
 report and dashboard. If anything fails, keep the run ID and the error; don't
 start a second run without asking the assistant first.
 
+**Something went wrong or was unclear?** In the same chat, send:
+`Write a short problem report for this Validated Scenario: the scenario, the step, the model I used, my operating system, the exact error or reply, and what you tried. Leave out secrets, tokens and personal file paths.`
+Then paste the report into a [Validated Scenario feedback issue](https://github.com/microsoft/discovery/issues/new?template=validated-scenario-feedback.yml).
+
 **Availability:** All required files are publicly available. The 168 MB
 scientific snapshot is downloaded from the
 [`cdk-frozen-reference-v0.11` release](https://github.com/microsoft/discovery/releases/tag/cdk-frozen-reference-v0.11);
