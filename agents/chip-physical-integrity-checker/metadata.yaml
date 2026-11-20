@@ -1,0 +1,14 @@
+name: chip-physical-integrity-checker
+type: agent
+version: 1.0.0
+associated_tools:
+- agents/chip-physical-integrity-checker/tools/physical-integrity-checker
+publisher:
+  name: Microsoft
+  contact: discovery-catalog@microsoft.com
+  support_url: https://techcommunity.microsoft.com/category/azure/discussions/microsoft-discovery-discussions
+  party: 1p
+description: |
+  Node-aware physical-integrity aggregation and deterministic OpenROAD checking agent. It never passes a required check without evidence and emits a Common Design Envelope with per-check verdicts and critical-violation totals.
+tags:
+- eda

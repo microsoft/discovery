@@ -1,0 +1,35 @@
+name: design-intent
+description: |
+  Chip design-intent / requirements tool. Normalizes raw requirement statements into a machine-checkable specification (stable, non-positional requirement identifiers -- caller-supplied ids honoured verbatim, otherwise derived from content -- plus categories, measurable acceptance criteria, and duplicate/non-measurable flagging), and allocates a top-level PPA budget across blocks with closure checking, parsing every target DIMENSIONALLY (a field named area_um2 records an intention, not a fact) and refusing a unit of the wrong dimension rather than coercing it. Node-agnostic, deterministic (no external engine). Emits a Common Design Envelope.
+version: 1.2.0
+category: Chip Design
+infra:
+- name: worker
+  infra_type: container
+  image:
+    acr: '{name}.azurecr.io/chip-design-intent:1.2.0'
+  compute:
+    min_resources:
+      cpu: 1
+      ram: 2Gi
+      storage: 5Gi
+      gpu: 0
+    max_resources:
+      cpu: 4
+      ram: 8Gi
+      storage: 10Gi
+      gpu: 0
+    recommended_sku:
+    - Standard_D2as_v6
+    pool_type: static
+    pool_size: 1
+actions:
+- name: run
+  description: |
+    One operation from caller-created /input/params.json, following bundled params.schema.json; scenario normalize or ppa_budget. Requires caller-configured read-only /input and fresh writable /output, /workdir, /tmp, /var/tmp, /home/worker, /run and /dev/shm mounts. CDE is /output/common_design_envelope.json; artifact references are relative to /output. Exit 0 accepts completed/pass, pass_with_caveats or review, without promoting review to engineering signoff. This local declaration alone does not register an action in the app. Services actions auto-add inputMounts, nodePool and outputMounts; callers must create and mount params. For a registered Services action, create a uniquely named JSON resource with WriteResource and mount its returned file URI at /input/params.json. Failed Services jobs may omit outputData; read retained native logs for CDE_JSON=<json> when present to recover the actual persisted failure envelope. Never infer a native pass from framework success or error text.
+  infra_node: worker
+  command: python3 -B -u /app/run.py --params-file /input/params.json
+  input_schema:
+    type: object
+    required: []
+    properties: {}

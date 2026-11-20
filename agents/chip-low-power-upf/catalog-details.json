@@ -1,0 +1,20 @@
+{
+  "node_awareness": "node-aware",
+  "original_tags": [
+    "chip-design",
+    "low-power",
+    "upf",
+    "power-intent",
+    "node-portable",
+    "sky130"
+  ],
+  "previous_tool_version": "1.1.41-readerrepair-20261116",
+  "action_examples": {
+    "run": [
+      {
+        "name": "author_upf",
+        "params_json": "{\"scenario\":\"author_upf\",\"domains\":[{\"name\":\"PD_TOP\",\"supply\":\"VDD\"},{\"name\":\"PD_CORE\",\"supply\":\"VDD_CORE\"}],\"supplies\":{\"VDD\":1.8,\"VDD_CORE\":1.2},\"crossings\":[{\"from_domain\":\"PD_CORE\",\"to_domain\":\"PD_TOP\",\"strategy\":\"both\"}],\"states\":[{\"name\":\"ACTIVE\",\"domain_states\":{\"PD_TOP\":\"on\",\"PD_CORE\":\"on\"}},{\"name\":\"SLEEP\",\"domain_states\":{\"PD_TOP\":\"on\",\"PD_CORE\":\"off\"}}],\"pdk_binding\":{\"pdk\":\"sky130A\",\"power_mgmt_cells\":{\"isolation\":\"sky130_fd_sc_hd__conb_1\",\"level_shifter\":\"lvl\",\"retention\":\"ret\"}}}"
+      }
+    ]
+  }
+}

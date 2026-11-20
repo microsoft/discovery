@@ -1,0 +1,39 @@
+schema_version: design-policy/1.0
+owner: library-development
+node_awareness: node-aware
+pdk_binding:
+  required: true
+  resolved_by: PDK Binding and Node Management Agent
+  consumed_fields: [pdk, corners, spice_models, layers, extraction_rules, units]
+  missing_binding_behavior: block
+characterization:
+  liberty_models: [ccs, nldm]
+  characterize_all_declared_arcs: true
+  require_full_slew_load_grid: true
+  require_monotonic_plausible_tables: true
+  multi_corner: true
+views:
+  lef_must_match_layout: true
+  def_must_match_abstract: true
+qa:
+  run_consistency_checks: true
+assumptions:
+  agent_assumptions_allowed: true
+  disclosure_required: true
+  domain_classes: [grid_selection, arc_scope, corner_selection, extraction_model]
+  unresolved_sensitivity_behavior: pass_with_caveats
+execution:
+  missing_models_or_corners: block
+  incomplete_or_nonmonotonic_liberty: block
+  view_layout_mismatch: block
+  spice_nonconvergence: block
+
+# --- BEGIN generated effort block (catalog/gen_effort_policy.py) ---
+effort:
+  iterating: false
+  metric_kind: unavailable
+  rationale: >-
+    stage not in the residual registry -- this agent does not own an iterable closure gate.
+    Effort is bounded by max_attempts from the campaign effort-budget
+    ledger plus human judgement; no metric-driven stall rule applies.
+# --- END generated effort block ---

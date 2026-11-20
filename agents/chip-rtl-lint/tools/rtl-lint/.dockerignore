@@ -2,3 +2,5 @@ __pycache__
 *.pyc
 .pytest_cache
 tests/__pycache__
+**/__pycache__
+**/*.pyc

@@ -1,0 +1,42 @@
+name: chip-dfm
+description: 'Chip DFM / lithography / yield tool. Opens the actual GDS/OASIS with the KLayout geometry
+  engine and MEASURES windowed pattern density, geometric litho-risk patterns (features below the printability
+  limit, gaps below the resolution limit, notches, isolated features) and critical area. Estimates critical-area
+  yield with a Poisson model in which a defect size lacking a density is reported as UNPRICED and gates
+  the run, because dropping the term would raise the reported yield. Windows and printability limits come
+  from the binding and are never defaulted; a missing deck blocks. Emits NO OPC-readiness field: aerial-image,
+  resist, process-window and OPC/RET analysis are declared out of scope rather than reported clean. Node-aware.
+  Emits a Common Design Envelope. Distinct from mandatory DRC.'
+version: 1.1.2
+category: Chip Design
+license: MIT
+infra:
+- name: worker
+  infra_type: container
+  image:
+    acr: '{name}.azurecr.io/chip-dfm:1.1.2'
+  compute:
+    min_resources:
+      cpu: 1
+      ram: 2Gi
+      storage: 5Gi
+      gpu: 0
+    max_resources:
+      cpu: 1
+      ram: 2Gi
+      storage: 20Gi
+      gpu: 0
+    recommended_sku:
+    - Standard_D2as_v6
+    pool_type: static
+    pool_size: 1
+actions:
+- name: run
+  description: Screen DFM/litho and estimate yield. Emits DFM findings, litho hotspots, OPC-readiness,
+    and a critical-area yield estimate to /output/final_results.json (Common Design Envelope).
+  infra_node: worker
+  command: python3 -u /app/action_launcher.py
+  input_schema:
+    type: object
+    properties: {}
+    required: []

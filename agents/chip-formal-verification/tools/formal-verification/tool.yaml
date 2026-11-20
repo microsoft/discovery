@@ -1,0 +1,40 @@
+name: formal-verification
+description: |
+  Chip formal-verification tool. Runs bounded model checking of SystemVerilog assert properties via SymbiYosys (sby) driving Yosys + yosys-smtbmc (z3 SMT, 4-state), with an optional k-induction unbounded prove. A counterexample is a fail. Also runs an SBY `mode cover` reachability search (scenario `cover`) so vacuity/unreached-antecedent-cover obligations bind to EXECUTED cover-mode evidence instead of normalizing to not_assessable (<TaskID>). Node-agnostic. Emits a Common Design Envelope.
+version: 1.2.0
+category: Chip Design
+infra:
+- name: worker
+  infra_type: container
+  image:
+    acr: '{name}.azurecr.io/chip-formal-verification:1.2.0'
+  compute:
+    min_resources:
+      cpu: 1
+      ram: 2Gi
+      storage: 10Gi
+      gpu: 0
+    max_resources:
+      cpu: 8
+      ram: 32Gi
+      storage: 40Gi
+      gpu: 0
+    recommended_sku:
+    - Standard_D2as_v6
+    pool_type: static
+    pool_size: 1
+actions:
+- name: run
+  description: Bounded model check of SV assertions via SymbiYosys (sby) + yosys-smtbmc (z3). Emits proved/counterexample
+    verdict to /output/final_results.json (Common Design Envelope).
+  infra_node: worker
+  command: python3 -u /app/run.py '{{params_json}}'
+  input_schema:
+    type: object
+    required:
+    - params_json
+    properties:
+      params_json:
+        type: string
+        description: |
+          CONTRACT: one single-line JSON object (double quotes) with a top-level "scenario" (one of: prove, cover). Object params such as pdk_binding / deck_vars are inline JSON objects, e.g. "pdk_binding":{"pdk":"nangate45","liberty":["/input/cells.lib"]}. Params named rtl/upf/sdc/text carry inline text; file paths go in *_file(s)/sources/netlist/def/gds keys as absolute /input/... paths. On failure read the envelope `error` field. JSON with scenario prove or cover. Provide `top`, `rtl`/`rtl_files` (SV with assert/cover properties), optional `depth` (BMC/cover cycles), `mode` (bmc | prove for k-induction, prove scenario only). Double-quoted JSON only. Scenario `cover` runs an SBY `mode cover` reachability search over the SAME RTL's `cover(...)` statements and reports `cover_targets_reached`/ `cover_targets_unreached`/`unreached_antecedent_covers` -- an unreached cover point is a vacuity/unreached-antecedent-cover witness (a guarded assert's antecedent that sby's own search could never satisfy). OPTIONAL `interpretation`: an object carrying YOUR reading of the run. It is ADVISORY ONLY and is recorded in signoff evidence as class=model_authored -- it can never close, block, or move a gate. If it carries `failing_properties`, that number is CROSS-CHECKED against the deterministically parsed count and any disagreement is recorded verbatim for a human, never auto-resolved. Supplying a count you cannot support does not help you: the parse governs, and the mismatch is preserved as evidence. Use it for the assessment and the suggested next lever, which the parser cannot produce.

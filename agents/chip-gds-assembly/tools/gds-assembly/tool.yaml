@@ -1,0 +1,35 @@
+name: gds-assembly
+description: |
+  Chip GDS assembly / tapeout packaging tool. Streams a routed/filled DEF (+ tech LEF + cell GDS) into a final GDSII via KLayout, or merges multiple GDS files (macro/IP + top) into one. Reports top-cell name, cell/layer counts, and file size. Emits a Common Design Envelope.
+version: 1.1.0
+category: Chip Design
+infra:
+- name: worker
+  infra_type: container
+  image:
+    acr: '{name}.azurecr.io/chip-gds-assembly:1.1.0'
+  compute:
+    min_resources:
+      cpu: 1
+      ram: 2Gi
+      storage: 10Gi
+      gpu: 0
+    max_resources:
+      cpu: 2
+      ram: 4Gi
+      storage: 60Gi
+      gpu: 0
+    recommended_sku:
+    - Standard_D2as_v6
+    pool_type: static
+    pool_size: 1
+actions:
+- name: run
+  description: Stream a DEF to final GDSII or merge GDS files. Emits the GDS ref + top-cell/layer stats
+    to /output/final_results.json (Common Design Envelope).
+  infra_node: worker
+  command: python3 -u /app/run.py
+  input_schema:
+    type: object
+    required: []
+    properties: {}

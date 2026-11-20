@@ -1,0 +1,17 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "required": ["scenario", "envelopes"],
+  "properties": {
+    "scenario": {"enum": ["aggregate", "trajectory", "anomaly_detect", "baseline_update"]},
+    "envelopes": {"type": "array", "items": {"oneOf": [{"type": "string"}, {"type": "object"}]}},
+    "metrics": {"type": "array", "minItems": 1, "items": {"type": "string", "minLength": 1}},
+    "baseline": {"type": "object", "additionalProperties": {"type": "number"}},
+    "metric_polarity": {"type": "object", "additionalProperties": {"enum": ["min", "max"]}},
+    "order_key": {"type": "string", "minLength": 1},
+    "threshold_percent": {"type": "number"},
+    "sigma": {"type": "number"},
+    "pdk_binding": {"type": "object"},
+    "deck_vars": {"type": "object"}
+  }
+}

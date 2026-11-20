@@ -1,0 +1,57 @@
+name: testbench-generation
+description: |
+  Chip testbench/UVM generation tool. Scaffolds reusable cocotb/UVM-style environments (driver, monitor, scoreboard, agent, BFM) from DUT interfaces, traces components to the vplan, and runs a Verilator smoke check. INTROSPECTS THE DUT: port names and directions are read from the elaborated RTL via Verilator, so a signal the DUT does not declare -- or a DUT output the testbench would drive -- fails at generation instead of at simulation. The generated scoreboard is a real checker: it compares against a reference model and RAISES rather than returning a verdict when none is installed, so an unfinished environment is loud instead of silently passing. An environment with no reference model is reported as not self-checking. Node-agnostic. Emits a Common Design Envelope.
+version: 1.2.0
+category: Chip Design
+infra:
+- name: worker
+  infra_type: container
+  image:
+    acr: '{name}.azurecr.io/chip-testbench-generation:1.2.0'
+  compute:
+    min_resources:
+      cpu: 1
+      ram: 2Gi
+      storage: 10Gi
+      gpu: 0
+    max_resources:
+      cpu: 8
+      ram: 16Gi
+      storage: 20Gi
+      gpu: 0
+    recommended_sku:
+    - Standard_D2as_v6
+    pool_type: static
+    pool_size: 1
+actions:
+- name: run
+  description: Scaffold a verification environment and smoke-check it. Emits generated components, vplan
+    linkage, and smoke-test status to /output/final_results.json (Common Design Envelope).
+  infra_node: worker
+  command: python3 -u /app/run.py '{{params_json}}'
+  input_schema:
+    type: object
+    required:
+    - params_json
+    properties:
+      params_json:
+        type: string
+        description: 'CONTRACT: one single-line JSON object (double quotes) with a top-level "scenario"
+          (one of: generate_env, add_component, smoke_test). Object params such as pdk_binding / deck_vars
+          are inline JSON objects, e.g. "pdk_binding":{"pdk":"nangate45","liberty":["/input/cells.lib"]}.
+          Params named rtl/upf/sdc/text carry inline text; file paths go in *_file(s)/sources/netlist/def/gds
+          keys as absolute /input/... paths. On failure read the envelope `error` field. JSON with scenario
+          generate_env | add_component | smoke_test | tb_non_vacuity. generate_env: {dut_top, interfaces:[{name,
+          signals, vplan_item}], style (cocotb|pyuvm), rtl or rtl_files}. Emits generated component list,
+          vplan linkage, connectivity, smoke status. tb_non_vacuity (aliases mutation_check, negative_control):
+          PROVES THE TESTBENCH CAN FAIL by injecting single-site defects into the RTL and re-running the
+          unmodified testbench on each. Params {rtl_file, tb_dir, mutants (default 6), sim_command (default
+          `make SIM=icarus`), rtl_arg (default `RTL={rtl}`), sim_timeout_s, mutation_seed}. A POSITIVE
+          CONTROL on the unmodified RTL must pass first, otherwise the run is not_assessable -- a mutant
+          that fails proves nothing when the original fails too. Every run gets a PRISTINE work tree and
+          must show compiler evidence; a run that produced none is recorded unassessable, NEVER survived,
+          because make can silently replay a stale sim_build binary and make a killed mutant look like
+          a survivor. Reports mutation_score_pct, mutants_killed/survived/unassessable and testbench_vacuous;
+          a testbench that kills NOTHING fails the gate because it reports success regardless of design
+          correctness. A surviving mutant may be semantically equivalent to the original, so survival
+          is a triage item and not a proven detection gap. Double-quoted JSON only.'

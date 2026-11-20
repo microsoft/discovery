@@ -1,0 +1,18 @@
+{
+  "node_awareness": "node-agnostic",
+  "original_tags": [
+    "requirements",
+    "specification",
+    "ppa-budget",
+    "node-agnostic"
+  ],
+  "previous_build": {
+    "containerfile": "Dockerfile",
+    "engine": "docker"
+  },
+  "input_schema_keywords": {
+    "run": {
+      "additionalProperties": false
+    }
+  }
+}

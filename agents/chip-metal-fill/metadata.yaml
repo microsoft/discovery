@@ -1,0 +1,15 @@
+name: chip-metal-fill
+type: agent
+version: 1.2.0
+associated_tools:
+- agents/chip-metal-fill/tools/metal-fill
+publisher:
+  name: Microsoft
+  contact: discovery-catalog@microsoft.com
+  support_url: https://techcommunity.microsoft.com/category/azure/discussions/microsoft-discovery-discussions
+  party: 1p
+description: |
+  Node-aware Metal Fill and Density agent driven by OpenROAD density_fill, consuming the PDK Binding (fill config, density windows) and emitting a Common Design Envelope. Validated on SkyWater sky130.
+tags:
+- eda
+- sky130

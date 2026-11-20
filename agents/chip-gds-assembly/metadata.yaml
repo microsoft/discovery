@@ -1,0 +1,15 @@
+name: chip-gds-assembly
+type: agent
+version: 1.1.0
+associated_tools:
+- agents/chip-gds-assembly/tools/gds-assembly
+publisher:
+  name: Microsoft
+  contact: discovery-catalog@microsoft.com
+  support_url: https://techcommunity.microsoft.com/category/azure/discussions/microsoft-discovery-discussions
+  party: 1p
+description: |
+  Node-aware GDS Assembly and Tapeout Packaging agent driven by KLayout, consuming the PDK Binding (cell GDS, layer map) and emitting a Common Design Envelope with the final GDSII. Validated on SkyWater sky130.
+tags:
+- eda
+- sky130

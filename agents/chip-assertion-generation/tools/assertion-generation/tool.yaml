@@ -1,0 +1,47 @@
+name: assertion-generation
+description: |
+  Chip assertion (SVA) generation tool. Authors SystemVerilog assertions and cover properties from structured intent, screens for vacuity, and reports formal checkability. Node-agnostic. Shares the vplan. Emits a Common Design Envelope.
+version: 1.1.0
+category: Chip Design
+infra:
+- name: worker
+  infra_type: container
+  image:
+    acr: '{name}.azurecr.io/chip-assertion-generation:1.1.0'
+  compute:
+    min_resources:
+      cpu: 1
+      ram: 2Gi
+      storage: 5Gi
+      gpu: 0
+    max_resources:
+      cpu: 4
+      ram: 8Gi
+      storage: 10Gi
+      gpu: 0
+    recommended_sku:
+    - Standard_D2as_v6
+    pool_type: static
+    pool_size: 1
+actions:
+- name: run
+  description: Author SVA / cover properties from intent and screen vacuity. Emits generated assertions,
+    vplan linkage, and formal-checkability status to /output/final_results.json (Common Design Envelope).
+  infra_node: worker
+  command: python3 -u /app/run.py '{{params_json}}'
+  input_schema:
+    type: object
+    required:
+    - params_json
+    properties:
+      params_json:
+        type: string
+        description: 'CONTRACT: one single-line JSON object (double quotes) with a top-level "scenario"
+          (one of: author_assertions, cover_properties, vacuity_screen). Object params such as pdk_binding
+          / deck_vars are inline JSON objects, e.g. "pdk_binding":{"pdk":"nangate45","liberty":["/input/cells.lib"]}.
+          Params named rtl/upf/sdc/text carry inline text; file paths go in *_file(s)/sources/netlist/def/gds
+          keys as absolute /input/... paths. On failure read the envelope `error` field. JSON with scenario
+          author_assertions | cover_properties | vacuity_screen. Provide `dut_top` and an `intent` list
+          of {name, kind (implication|sequence|onehot|stable|range), signals, clk, disable, vplan_item}.
+          Emits generated SVA text, per-assertion intent + vplan linkage, vacuity screen, formal-checkability.
+          Double-quoted JSON only.'

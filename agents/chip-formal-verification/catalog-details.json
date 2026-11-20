@@ -1,0 +1,31 @@
+{
+  "node_awareness": "node-agnostic",
+  "original_tags": [
+    "formal-verification",
+    "bmc",
+    "k-induction",
+    "yosys",
+    "symbiyosys",
+    "node-agnostic"
+  ],
+  "previous_build": {
+    "containerfile": "Containerfile",
+    "engine": "docker"
+  },
+  "action_examples": {
+    "run": [
+      {
+        "name": "prove",
+        "params_json": "{\"scenario\":\"prove\",\"top\":\"fsm\",\"rtl_files\":[\"/input/fsm.sv\"],\"depth\":20,\"mode\":\"bmc\"}"
+      },
+      {
+        "name": "cover",
+        "params_json": "{\"scenario\":\"cover\",\"top\":\"fsm\",\"rtl_files\":[\"/input/fsm.sv\"],\"depth\":20}"
+      },
+      {
+        "name": "prove_with_interpretation",
+        "params_json": "{\"scenario\":\"prove\",\"top\":\"fsm\",\"rtl_files\":[\"/input/fsm.sv\"],\"depth\":20,\"mode\":\"bmc\",\"interpretation\":{\"failing_properties\":2,\"assessment\":\"both failures are genuine property defects, not unconstrained-input artifacts\",\"suggested_next_lever\":\"none - route to the property author; more depth cannot make a false assertion true\"}}"
+      }
+    ]
+  }
+}

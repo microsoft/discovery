@@ -1,0 +1,11 @@
+{
+  "version": "1.2.0",
+  "actions": [{
+    "name": "run",
+    "description": "Author assertions/cover properties or screen vacuity from /input/params.json. Scenarios: author_assertions, cover_properties, vacuity_screen. Read common_design_envelope.json; structural authoring is not solver proof.",
+    "infra_node": "worker",
+    "command": "python3 -B -u /app/run.py --params-file /input/params.json",
+    "input_schema": {"type": "object", "required": [], "properties": {}, "additionalProperties": false}
+  }],
+  "compute_limits": {"cpu": 2, "ram": "4Gi"}
+}

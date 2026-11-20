@@ -1,0 +1,35 @@
+name: power-analysis
+description: |
+  Chip power and IR-drop tool. Uses OpenROAD power analysis + PSM (PDNSim) static IR-drop on a routed DEF with optional SPEF/activity. Reports the per-group power breakdown (internal/switching/leakage/total), worst IR drop vs the node budget, total power vs an optional power budget, and an ADJUDICATED EM screen: em.rpt is parsed and each layer's worst current is compared against the tech-LEF DCCURRENTDENSITY AVERAGE limit (mA per via on cut layers; mA/um converted with the DEF SPECIALNETS conductor width on routing layers). Node-aware. Emits a Common Design Envelope.
+version: 1.1.0
+category: Chip Design
+infra:
+- name: worker
+  infra_type: container
+  image:
+    acr: '{name}.azurecr.io/chip-power-analysis:1.1.0'
+  compute:
+    min_resources:
+      cpu: 1
+      ram: 2Gi
+      storage: 10Gi
+      gpu: 0
+    max_resources:
+      cpu: 2
+      ram: 4Gi
+      storage: 60Gi
+      gpu: 0
+    recommended_sku:
+    - Standard_D2as_v6
+    pool_type: static
+    pool_size: 1
+actions:
+- name: run
+  description: Run OpenROAD power + PSM IR-drop analysis. Emits power breakdown and worst IR drop vs node
+    budget to /output/final_results.json (Common Design Envelope).
+  infra_node: worker
+  command: python3 -u /app/run.py
+  input_schema:
+    type: object
+    required: []
+    properties: {}

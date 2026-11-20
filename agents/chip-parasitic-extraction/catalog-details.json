@@ -1,0 +1,20 @@
+{
+  "node_awareness": "node-aware",
+  "original_tags": [
+    "extraction",
+    "parasitics",
+    "spef",
+    "openrcx",
+    "node-portable",
+    "sky130"
+  ],
+  "previous_build": {
+    "containerfile": "Containerfile",
+    "engine": "docker"
+  },
+  "input_schema_keywords": {
+    "run": {
+      "additionalProperties": false
+    }
+  }
+}

@@ -1,0 +1,39 @@
+name: chip-uarch-ppa
+description: Chip microarchitecture / PPA exploration tool. Sweeps architectural knobs (pipeline depth,
+  issue width, cache size) over a caller-supplied grid and estimates PPA per point with a transparent
+  first-order analytic model plus node scaling factors (FO4 delay, cell density, energy/op) from the PDK
+  binding; returns the Pareto-optimal set. Also estimates PPA for a single configuration. Node-aware.
+  Emits a Common Design Envelope.
+version: 1.1.40
+category: Chip Design
+license: MIT
+infra:
+- name: worker
+  infra_type: container
+  image:
+    acr: '{name}.azurecr.io/chip-uarch-ppa:1.1.40'
+  compute:
+    min_resources:
+      cpu: 1
+      ram: 2Gi
+      storage: 5Gi
+      gpu: 0
+    max_resources:
+      cpu: 2
+      ram: 4Gi
+      storage: 10Gi
+      gpu: 0
+    recommended_sku:
+    - Standard_D2as_v6
+    pool_type: static
+    pool_size: 1
+actions:
+- name: run
+  description: Sweep architectural knobs and estimate PPA (Pareto set), or estimate PPA for one configuration.
+    Emits the sweep / estimate to /output/final_results.json (Common Design Envelope).
+  infra_node: worker
+  command: python3 -u /app/action_launcher.py
+  input_schema:
+    type: object
+    properties: {}
+    required: []

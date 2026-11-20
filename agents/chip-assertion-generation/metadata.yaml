@@ -1,0 +1,14 @@
+name: chip-assertion-generation
+type: agent
+version: 1.1.0
+associated_tools:
+- agents/chip-assertion-generation/tools/assertion-generation
+publisher:
+  name: Microsoft
+  contact: discovery-catalog@microsoft.com
+  support_url: https://techcommunity.microsoft.com/category/azure/discussions/microsoft-discovery-discussions
+  party: 1p
+description: |
+  Node-agnostic assertion generator that authors non-vacuous SystemVerilog assertions (SVA) and cover properties capturing design and protocol intent from the shared verification plan (vplan). Drives SVA authoring + SymbiYosys/Yosys formal checkability screening and reports assertions with formal-checkability status directly in chat.
+tags:
+- eda

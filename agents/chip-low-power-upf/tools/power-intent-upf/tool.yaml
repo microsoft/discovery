@@ -1,0 +1,43 @@
+name: chip-power-intent-upf
+description: 'Chip low-power / power-intent (UPF) tool. Authors power domains, state tables, and isolation/level-shift/retention
+  strategy, emits UPF, and runs low-power static checks against the domain crossings. Power-management
+  cells are required only for the classes the intent uses: isolation when a crossing''s source domain
+  can shut off (or isolation is requested), level shifters when crossing domains differ in voltage (or
+  shifting is requested), retention when retention is requested (domain state `retention` or domains[].retention)
+  -- a single always-on domain needs none. A REQUIRED class missing from the binding fails closed (GATING).
+  Crossings and states are caller-supplied, so a run given neither is reported not_assessable rather than
+  clean -- what was never supplied is not what was checked and found good. Node-aware (power-mgmt cells
+  from the binding). Emits a Common Design Envelope.'
+version: 1.1.42
+category: Chip Design
+license: MIT
+infra:
+- name: worker
+  infra_type: container
+  image:
+    acr: '{name}.azurecr.io/chip-power-intent-upf:1.1.42'
+  compute:
+    min_resources:
+      cpu: 1
+      ram: 2Gi
+      storage: 5Gi
+      gpu: 0
+    max_resources:
+      cpu: 2
+      ram: 4Gi
+      storage: 10Gi
+      gpu: 0
+    recommended_sku:
+    - Standard_D2as_v6
+    pool_type: static
+    pool_size: 1
+actions:
+- name: run
+  description: Author UPF and run low-power static checks. Emits the UPF, power-state table, isolation/level-shift/retention
+    plan, and check report to /output/final_results.json (Common Design Envelope).
+  infra_node: worker
+  command: python3 -u /app/action_launcher.py
+  input_schema:
+    type: object
+    properties: {}
+    required: []

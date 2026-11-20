@@ -1,0 +1,14 @@
+name: chip-stimulus-generation
+type: agent
+version: 1.2.0
+associated_tools:
+- agents/chip-stimulus-generation/tools/stimulus-generation
+publisher:
+  name: Microsoft
+  contact: discovery-catalog@microsoft.com
+  support_url: https://techcommunity.microsoft.com/category/azure/discussions/microsoft-discovery-discussions
+  party: 1p
+description: |
+  Node-agnostic stimulus generator that produces directed and constrained-random stimulus targeted at coverage goals and corner cases from the shared verification plan (vplan). Generation is seeded pseudo-random sampling with bounded rejection sampling for relational blocks -- there is no SMT/CSP solver. Non-conforming samples are dropped rather than emitted, and the shortfall gates the run.
+tags:
+- eda

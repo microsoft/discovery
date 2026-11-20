@@ -1,0 +1,37 @@
+{
+  "node_awareness": "node-agnostic",
+  "original_tags": [
+    "chip-design",
+    "verification",
+    "code-coverage",
+    "verilator",
+    "node-agnostic"
+  ],
+  "previous_build": {
+    "containerfile": "Containerfile",
+    "engine": "docker"
+  },
+  "action_examples": {
+    "run": [
+      {
+        "name": "measure_coverage_with_verilog_tb",
+        "params_json": "{\"scenario\":\"measure_coverage\",\"top\":\"counter\",\"tb_top\":\"tb_counter\",\"types\":[\"line\",\"toggle\"],\"goal_percent\":90,\"rtl_files\":[\"/workdir/rtl/counter.v\",\"/workdir/rtl/tb_counter.v\"]}"
+      },
+      {
+        "name": "measure_coverage_with_interpretation",
+        "params_json": "{\"scenario\":\"measure_coverage\",\"top\":\"counter\",\"tb_top\":\"tb_counter\",\"types\":[\"line\",\"toggle\"],\"goal_percent\":90,\"rtl_files\":[\"/workdir/rtl/counter.v\",\"/workdir/rtl/tb_counter.v\"],\"interpretation\":{\"reachable_unhit\":3,\"assessment\":\"the 3 unhit points are all on the error-injection path, which the current stimulus never drives\",\"suggested_next_lever\":\"add a directed error-injection test rather than raising random seed count\"}}"
+      },
+      {
+        "name": "measure_coverage_mission_mode_scan_excluded",
+        "params_json": "{\"scenario\":\"measure_coverage\",\"top\":\"<myDesign>\",\"cocotb_module\":\"test_<myDesign>\",\"cocotb_toplevel\":\"<myDesign>\",\"types\":[\"line\",\"branch\",\"toggle\"],\"goal_percent\":80,\"coverage_mode\":\"mission\",\"test_mode_signals\":[\"scan_en\",\"scan_in\",\"scan_out\"],\"rtl_files\":[\"/workdir/rtl/<myDesign>.v\"]}"
+      },
+      {
+        "name": "measure_coverage_instrumentation_only",
+        "params_json": "{\"scenario\":\"measure_coverage\",\"top\":\"alu\",\"rtl\":\"module alu(input [3:0] a,b, input [1:0] op, output reg [3:0] y); always @* case(op) 0:y=a+b;1:y=a-b;2:y=a&b;default:y=a|b; endcase endmodule\",\"types\":[\"line\",\"toggle\"],\"goal_percent\":90}"
+      }
+    ]
+  },
+  "parameter_descriptions": {
+    "params_json": "CONTRACT: one single-line JSON object (double quotes) with a top-level \"scenario\" (one of: measure_coverage, merge_coverage, exclude). Object params such as pdk_binding / deck_vars are inline JSON objects, e.g. \"pdk_binding\":{\"pdk\":\"nangate45\",\"liberty\":[\"/input/cells.lib\"]}. Params named rtl/upf/sdc/text carry inline text; file paths go in *_file(s)/sources/netlist/def/gds keys as absolute /input/... paths. On failure read the envelope `error` field. JSON with scenario measure_coverage | merge_coverage | exclude. measure_coverage: {top, rtl or rtl_files, types:[line,toggle,...], goal_percent, and a DRIVER for real hit rates: EITHER tb_top (a self-contained Verilog/SV testbench that drives the DUT and $finishes -- built+run via a generated harness) OR cocotb_module+cocotb_toplevel (cocotb testbench; needs Verilator>=5.036). With NO driver the tool verilates instrumentation-only and reports verdict=review (never a fabricated hit rate). VHDL uses ghdl-gcc/gcov with tb_top or cocotb. For Verilator 5.036, supported metrics are line, toggle, expression, and user. Branch, condition/MC-DC, and FSM are unsupported: they are reported null/not_assessable and never generate an invalid flag. Every Verilator measurement CDE records requested_metrics, supported_metrics, and unsupported_metrics. MODE AWARENESS (optional): coverage_mode ('mission' default | 'test') + test_mode_signals:[scan_en,scan_in,scan_out,...] (bare signal names or file:line locators). In mission mode any UNHIT point on a test_mode_signals entry is reclassified mission-UNREACHABLE and removed from the gate denominator (scan_en is held inactive in mission mode per DR-094; those points are exercised by scan-chain-integrity + GLS mode=test, not mission code coverage) -- HIT test-mode points always still count, and a point is never dropped to inflate a percentage. In test mode nothing is excluded. The tool EMITS code_coverage_reachability.json (reachable_unhit = real gaps; structurally_unreachable = the excluded test-mode points, each citing test_mode_ruling_id, default APOLICY-COVERAGE-SCANMODE-001). merge_coverage: {coverage_dbs:[...]}. exclude: {coverage_db, exclusions:[{item,justification,owner}]}. Reports per-type coverage_percent, uncovered_items, exclusion_ledger, goal_compliance. OPTIONAL `interpretation` (measure_coverage): an object carrying YOUR reading of the run. It is ADVISORY ONLY, recorded in signoff evidence as class=model_authored, and can never close, block, or move a gate -- the gate is `reachable_unhit == 0`, counted from the machine-checked reachability proof. If it carries `reachable_unhit`, that number is CROSS-CHECKED against the measured count and any disagreement is recorded verbatim for a human, never auto-resolved. Supplying a count you cannot support does not help you: the measurement governs and the mismatch is preserved as evidence. Use it for the assessment and the suggested next lever, which the measurement cannot produce. Double-quoted JSON only."
+  }
+}

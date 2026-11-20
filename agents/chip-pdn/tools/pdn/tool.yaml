@@ -1,0 +1,50 @@
+name: pdn
+description: |
+  Chip power-delivery-network tool. Uses OpenROAD pdngen to build the power grid (rings/straps/rails) on a floorplan DEF from a pdn config, check connectivity, and write a PDN DEF. Node-aware. Emits a Common Design Envelope.
+version: 1.0.0
+category: Chip Design
+infra:
+- name: worker
+  infra_type: container
+  image:
+    acr: '{name}.azurecr.io/chip-pdn:1.0.0'
+  compute:
+    min_resources:
+      cpu: 1
+      ram: 2Gi
+      storage: 10Gi
+      gpu: 0
+    max_resources:
+      cpu: 1
+      ram: 2Gi
+      storage: 40Gi
+      gpu: 0
+    recommended_sku:
+    - Standard_D2as_v6
+    pool_type: static
+    pool_size: 1
+actions:
+- name: run
+  description: Run OpenROAD pdngen and write a PDN DEF. Emits grid connectivity and DEF ref to /output/final_results.json
+    (Common Design Envelope).
+  infra_node: worker
+  command: python3 -u /app/run.py '{{params_json}}'
+  input_schema:
+    type: object
+    required:
+    - params_json
+    properties:
+      params_json:
+        type: string
+        description: 'CONTRACT: one single-line JSON object (double quotes) with a top-level "scenario"
+          (one of: build_pdn). Object params such as pdk_binding / deck_vars are inline JSON objects,
+          e.g. "pdk_binding":{"pdk":"nangate45","liberty":["/input/cells.lib"]}. Params named rtl/upf/sdc/text
+          carry inline text; file paths go in *_file(s)/sources/netlist/def/gds keys as absolute /input/...
+          paths. On failure read the envelope `error` field. JSON with scenario build_pdn | repair_pdn_vias.
+          build_pdn: `top`, `def_file` (floorplan DEF), `tech_lef`, `cell_lef`, `liberty`, `pdn_config`
+          (Tcl pdngen config path), `pdk_binding`; writes pdn.def, reports connectivity and floating nets.
+          repair_pdn_vias: `def_file` (a ROUTED, post-detailed-route DEF), `tech_lef`, `cell_lef`, optional
+          `nets` (defaults to power_net+ground_net) or `all_nets: true`, `power_net`, `ground_net`; removes
+          power-grid vias that conflict with detailed routing (the DRC class no signal-routing rerun can
+          fix, since the shape belongs to a SPECIALNET), re-verifies grid connectivity with check_power_grid,
+          and writes pdn_via_repaired.def. Double-quoted JSON only.'

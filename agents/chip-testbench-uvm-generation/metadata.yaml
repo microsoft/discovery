@@ -1,0 +1,14 @@
+name: chip-testbench-uvm-generation
+type: agent
+version: 1.2.0
+associated_tools:
+- agents/chip-testbench-uvm-generation/tools/testbench-generation
+publisher:
+  name: Microsoft
+  contact: discovery-catalog@microsoft.com
+  support_url: https://techcommunity.microsoft.com/category/azure/discussions/microsoft-discovery-discussions
+  party: 1p
+description: |
+  Node-agnostic verification-environment generator that builds reusable UVM-style / cocotb testbenches (drivers, monitors, scoreboards, agents, BFMs, reference-model stubs) from the specification and shared verification plan (vplan). Drives cocotb/pyuvm + Verilator/Icarus and reports the generated environment and smoke-test result directly in chat.
+tags:
+- eda

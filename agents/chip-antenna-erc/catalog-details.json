@@ -1,0 +1,30 @@
+{
+  "node_awareness": "node-aware",
+  "original_tags": [
+    "antenna",
+    "erc",
+    "klayout",
+    "physical-signoff",
+    "tapeout",
+    "node-portable",
+    "sky130"
+  ],
+  "previous_tool_version": "1.0.0-magic8.3.693-20261116",
+  "action_examples": {
+    "run": [
+      {
+        "name": "antenna_check_magic_sky130",
+        "params_json": "{\"scenario\":\"antenna_check\",\"top\":\"myTop\",\"layout\":\"/input/myTop.filled.def\",\"antenna_rules\":{\"engine\":\"magic\",\"rule_source\":{\"path\":\"/pdk/sky130A/libs.tech/magic/sky130A.tech\"}},\"tech_lef\":\"/pdk/sky130A/libs.ref/sky130_fd_sc_hd/techlef/sky130_fd_sc_hd__nom.tlef\",\"cell_lef\":\"/pdk/sky130A/libs.ref/sky130_fd_sc_hd/lef/sky130_fd_sc_hd.lef\",\"pdk_binding\":{\"pdk\":\"sky130A\"}}"
+      },
+      {
+        "name": "antenna_check_klayout_deck",
+        "params_json": "{\"scenario\":\"antenna_check\",\"top\":\"<myDesign>\",\"layout\":\"/input/<myDesign>.gds\",\"antenna_rules\":{\"engine\":\"klayout\"},\"deck\":\"/pdk/antenna.lydrc\",\"pdk_binding\":{\"pdk\":\"gf180mcuC\"}}"
+      }
+    ]
+  },
+  "input_schema_keywords": {
+    "run": {
+      "additionalProperties": false
+    }
+  }
+}

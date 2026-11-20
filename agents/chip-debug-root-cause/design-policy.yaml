@@ -1,0 +1,25 @@
+schema_version: design-policy/1.0
+owner: debug-root-cause
+node_awareness: node-agnostic
+pdk_binding:
+  required: false
+debug:
+  bucket_every_failure: true
+  require_deterministic_reproducer: true
+  rank_hypotheses_with_evidence: true
+  separate_observation_from_hypothesis: true
+vplan:
+  shared_artifact: true
+  associate_buckets_with_features: true
+execution:
+  malformed_output: block
+
+# --- BEGIN generated effort block (catalog/gen_effort_policy.py) ---
+effort:
+  iterating: false
+  metric_kind: unavailable
+  rationale: >-
+    stage not in the residual registry -- this agent does not own an iterable closure gate.
+    Effort is bounded by max_attempts from the campaign effort-budget
+    ledger plus human judgement; no metric-driven stall rule applies.
+# --- END generated effort block ---

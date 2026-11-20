@@ -1,0 +1,59 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Design-intent parameters mounted at /input/params.json",
+  "type": "object",
+  "required": ["scenario"],
+  "properties": {
+    "scenario": {"enum": ["normalize", "ppa_budget"]},
+    "requirements": {"$ref": "#/$defs/requirements"},
+    "reqs": {"$ref": "#/$defs/requirements"},
+    "id_prefix": {"type": "string", "minLength": 1, "default": "REQ"},
+    "targets": {
+      "type": "object",
+      "additionalProperties": {"type": ["number", "string"]}
+    },
+    "blocks": {
+      "oneOf": [
+        {"type": "string", "minLength": 1},
+        {"type": "array", "minItems": 1, "items": {
+          "oneOf": [
+            {"type": "string"},
+            {"type": "object", "required": ["name"], "properties": {
+              "name": {"type": "string"},
+              "weight": {"type": ["number", "string"]}
+            }}
+          ]
+        }}
+      ]
+    },
+    "integration_reserve_pct": {"type": ["number", "string"], "description": "Caller-declared finite percentage in [0, 100); absent means review, never an invented reserve."},
+    "interpretation": {"type": "object"},
+    "pdk_binding": {"type": "object"},
+    "deck_vars": {"type": "object"}
+  },
+  "$defs": {
+    "requirements": {
+      "oneOf": [
+        {"type": "string", "minLength": 1},
+        {"type": "array", "minItems": 1, "items": {
+          "oneOf": [
+            {"type": "string"},
+            {"type": "object", "properties": {
+              "id": {"description": "Preserved for the existing identity-defect check; no automatic renaming."},
+              "text": {"type": "string"},
+              "statement": {"type": "string"},
+              "category": {"type": "string"}
+            }}
+          ]
+        }}
+      ]
+    }
+  },
+  "allOf": [
+    {"if": {"properties": {"scenario": {"const": "normalize"}}},
+     "then": {"anyOf": [{"required": ["requirements"]}, {"required": ["reqs"]}]}},
+    {"if": {"properties": {"scenario": {"const": "ppa_budget"}}},
+     "then": {"required": ["targets", "blocks"]}}
+  ],
+  "additionalProperties": true
+}

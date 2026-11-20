@@ -1,6 +1,6 @@
 name: chip-functional-verification
 type: agent
-version: 1.2.0
+version: 1.2.1
 associated_tools:
 - agents/chip-functional-verification/tools/functional-verification
 publisher:
@@ -11,8 +11,6 @@ publisher:
 description: |
   Node-agnostic functional-verification agent driven by Icarus Verilog, compiling and simulating RTL + testbench and emitting a Common Design Envelope with a pass/fail verdict.
 tags:
+- eda
 - simulation
 - iverilog
-- rtl
-- verilog
-- eda

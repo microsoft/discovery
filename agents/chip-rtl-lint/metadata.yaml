@@ -1,6 +1,6 @@
 name: chip-rtl-lint
 type: agent
-version: 1.2.0
+version: 1.2.1
 associated_tools:
 - agents/chip-rtl-lint/tools/rtl-lint
 publisher:
@@ -11,8 +11,5 @@ publisher:
 description: |
   Node-agnostic RTL lint / style agent driven by Verible (verible-verilog-lint + verible-verilog-format), emitting a Common Design Envelope.
 tags:
-- rtl
-- linting
-- verilog
-- systemverilog
 - eda
+- rtl

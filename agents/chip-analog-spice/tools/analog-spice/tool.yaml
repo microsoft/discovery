@@ -1,0 +1,43 @@
+name: chip-analog-spice
+description: 'Chip analog SPICE tool. Runs ngspice in batch on a SPICE netlist/deck (DC/AC/transient/noise),
+  parses .measure results, and reports the measured quantities. A run that did not converge, ABORTED (ngspice
+  still exits 0), or failed to produce a requested .measure is a FAILURE, not a completed run. Also runs
+  MONTE CARLO / mismatch analysis: repeated seeded runs with caller-declared Gaussian parameter spread,
+  reporting mean/sigma/min/max and yield against caller-supplied spec limits -- no sigma and no limit
+  is ever defaulted, non-convergent samples are excluded rather than counted as passing, and a perturbation
+  that never reached the simulation is detected instead of being reported as a perfect 100% yield. Also
+  netlists an Xschem schematic to SPICE. Node-aware -- device models / corner come from the PDK binding.
+  Emits a Common Design Envelope.'
+version: 1.1.1
+category: Chip Design
+license: MIT
+infra:
+- name: worker
+  infra_type: container
+  image:
+    acr: '{name}.azurecr.io/chip-analog-spice:1.1.1'
+  compute:
+    min_resources:
+      cpu: 1
+      ram: 2Gi
+      storage: 10Gi
+      gpu: 0
+    max_resources:
+      cpu: 2
+      ram: 4Gi
+      storage: 40Gi
+      gpu: 0
+    recommended_sku:
+    - Standard_D2as_v6
+    pool_type: static
+    pool_size: 1
+actions:
+- name: run
+  description: Run ngspice on a SPICE deck (or netlist an Xschem schematic). Emits analysis type + .measure
+    results to /output/final_results.json (Common Design Envelope).
+  infra_node: worker
+  command: python3 -u /app/action_launcher.py
+  input_schema:
+    type: object
+    properties: {}
+    required: []

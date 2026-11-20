@@ -1,0 +1,16 @@
+name: chip-cdc-rdc-signoff
+type: agent
+version: 1.4.0
+associated_tools:
+- agents/chip-cdc-rdc-signoff/tools/cdc-rdc
+publisher:
+  name: Microsoft
+  contact: discovery-catalog@microsoft.com
+  support_url: https://techcommunity.microsoft.com/category/azure/discussions/microsoft-discovery-discussions
+  party: 1p
+description: Node-agnostic CDC/RDC signoff using Yosys and optional bounded formal checks. Enumerates
+  crossings, checks synchronizers, and treats each multi-bit bus as one coherency obligation. Missing
+  gray/handshake/qualifier/FIFO schemes fail closed. Formal evidence covers source-domain obligations
+  only, to the recorded depth; metastability settling and reconvergence remain structural.
+tags:
+- eda

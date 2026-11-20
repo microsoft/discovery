@@ -1,0 +1,26 @@
+{
+  "node_awareness": "node-agnostic",
+  "original_tags": [
+    "chip-design",
+    "verification",
+    "functional-coverage",
+    "cocotb",
+    "node-agnostic"
+  ],
+  "previous_build": {
+    "containerfile": "Containerfile",
+    "engine": "docker"
+  },
+  "action_examples": {
+    "run": [
+      {
+        "name": "measure_rtl_coverage",
+        "params_json": "{\"scenario\":\"measure_rtl_coverage\",\"rtl_files\":[\"/input/rtl/<myDesign>.v\"],\"top\":\"<myDesign>\",\"cocotb_module\":\"test_<myDesign>\",\"cocotb_files\":[\"/input/tb/test_<myDesign>.py\"],\"seed_count\":2,\"coverage_model\":{\"data_class\":{\"bins\":[\"zero\",\"max\",\"mid\"]},\"phase\":{\"bins\":[\"idle\",\"load\",\"done\"]},\"crosses\":[[\"data_class\",\"phase\"]]},\"cover_properties\":[\"reset_during_frame\",\"clr_over_en\"],\"goal_percent\":100}"
+      },
+      {
+        "name": "measure_coverage",
+        "params_json": "{\"scenario\":\"measure_coverage\",\"coverage_model\":{\"opcode\":{\"bins\":[\"add\",\"sub\",\"and\",\"or\"]},\"mode\":{\"bins\":[\"reg\",\"imm\"]},\"crosses\":[[\"opcode\",\"mode\"]]},\"samples\":[{\"opcode\":\"add\",\"mode\":\"reg\"},{\"opcode\":\"sub\",\"mode\":\"imm\"},{\"opcode\":\"and\",\"mode\":\"reg\"}],\"goal_percent\":95}"
+      }
+    ]
+  }
+}

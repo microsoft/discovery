@@ -1,0 +1,23 @@
+{
+  "node_awareness": "node-aware",
+  "original_tags": [
+    "chip-design",
+    "logic-synthesis",
+    "yosys",
+    "abc",
+    "node-portable",
+    "sky130"
+  ],
+  "action_examples": {
+    "run": [
+      {
+        "name": "technology_map",
+        "params_json": "{\"scenario\":\"technology_map\",\"top\":\"counter\",\"rtl\":\"module counter(input clk, rst, output reg [3:0] q); always @(posedge clk) if (rst) q<=0; else q<=q+1; endmodule\",\"liberty\":\"/input/sky130_fd_sc_hd__tt_025C_1v80.lib\",\"corner\":\"tt_025C_1v80\",\"target_freq_mhz\":100,\"optimize\":\"balanced\",\"pdk_binding\":{\"pdk\":\"sky130A\",\"stdcell_library\":\"sky130_fd_sc_hd\"}}"
+      },
+      {
+        "name": "generic_synth",
+        "params_json": "{\"scenario\":\"generic_synth\",\"top\":\"counter\",\"rtl\":\"module counter(input clk, rst, output reg [3:0] q); always @(posedge clk) if (rst) q<=0; else q<=q+1; endmodule\"}"
+      }
+    ]
+  }
+}

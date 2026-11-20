@@ -1,0 +1,54 @@
+name: floorplanning
+description: |
+  Chip floorplanning tool. Uses OpenROAD to read the netlist + node LEF/Liberty, initialize the floorplan (core/die, rows/sites) at a target utilization, place I/O pins, and write a floorplan DEF. Utilization is always measured; a routability VERDICT is issued only against a `max_routable_utilization` supplied by the caller or the PDK binding tool_policy -- no routability threshold is invented, so an unsupplied limit yields "not assessed" rather than a pass. Node-aware. Emits a Common Design Envelope.
+version: 1.1.0
+category: Chip Design
+infra:
+- name: worker
+  infra_type: container
+  image:
+    acr: '{name}.azurecr.io/chip-floorplanning:1.1.0'
+  compute:
+    min_resources:
+      cpu: 1
+      ram: 2Gi
+      storage: 10Gi
+      gpu: 0
+    max_resources:
+      cpu: 1
+      ram: 2Gi
+      storage: 40Gi
+      gpu: 0
+    recommended_sku:
+    - Standard_D2as_v6
+    pool_type: static
+    pool_size: 1
+actions:
+- name: run
+  description: Initialize a floorplan with OpenROAD and write a DEF. Emits die/core area, utilization,
+    and the DEF ref to /output/final_results.json (Common Design Envelope).
+  infra_node: worker
+  command: python3 -u /app/run.py '{{params_json}}'
+  input_schema:
+    type: object
+    required:
+    - params_json
+    properties:
+      params_json:
+        type: string
+        description: 'CONTRACT: one single-line JSON object (double quotes) with a top-level "scenario"
+          (one of: initialize_floorplan, place_macros, cut_rows). Object params such as pdk_binding /
+          deck_vars are inline JSON objects, e.g. "pdk_binding":{"pdk":"nangate45","liberty":["/input/cells.lib"]}.
+          Params named rtl/upf/sdc/text carry inline text; file paths go in *_file(s)/sources/netlist/def/gds
+          keys as absolute /input/... paths. On failure read the envelope `error` field. JSON with scenario
+          initialize_floorplan | place_macros | cut_rows. initialize_floorplan: `top`, `netlist` (path),
+          `tech_lef`, `cell_lef` (path/list), `liberty` (path/list), `utilization`, `core_margin_um`,
+          `site`, `pdk_binding`; writes floorplan.def. place_macros: `def_file`/`odb_file` + `engine`
+          (''auto'' = OpenROAD rtl_macro_placer hierarchical MPL, the default; ''manual'' = one place_macro
+          per `macro_placements` entry {instance,x,y,orientation}); auto accepts `halo_um` [x,y], `target_util`,
+          `min_ar`, `max_num_level`, `max_num_macro`, `min_num_macro`, `max_num_inst`, `min_num_inst`,
+          `area_weight`, `wirelength_weight`, `outline_weight`, `boundary_weight`, `notch_weight`, `fence`
+          [lx,ly,ux,uy], `keep_clustering_data`; writes macros_placed.def. cut_rows: `def_file`/`odb_file`
+          + `macro_halo_um` [x,y], `row_min_width_um`, `row_min_height_um`, `endcap_master`; cuts placement
+          rows around placed macros (MANDATORY before tapcell/placement on any macro-bearing design) and
+          writes rows_cut.def; a macro-free design reports not_applicable. Double-quoted JSON only.'

@@ -1,0 +1,35 @@
+name: metal-fill
+description: |
+  Chip metal-fill / density tool. Runs OpenROAD density_fill on a routed DEF with a node fill config to insert metal fill and meet the PDK density windows, writes a filled DEF, and reports fill-shape counts. Node-aware -- fill rules / density windows come from the PDK binding. Also dispositions a per-layer density measurement against its min/max windows (scenario density_check): on sky130A the metal MINIMUM-density rules are RECOMMENDED (CMP) guidance, not hard tapeout gates (mX.pd.1 = RR/A/AL; met5 has no min-density rule), so a minimum-density shortfall is reported ADVISORY, never a gate failure -- MAXIMUM-density overages and fill-induced shorts stay hard on every PDK. The advisory reclassification is scoped to sky130A only; other PDKs keep min-density as a hard rule. Emits a Common Design Envelope.
+version: 1.2.0
+category: Chip Design
+infra:
+- name: worker
+  infra_type: container
+  image:
+    acr: '{name}.azurecr.io/chip-metal-fill:1.2.0'
+  compute:
+    min_resources:
+      cpu: 1
+      ram: 2Gi
+      storage: 10Gi
+      gpu: 0
+    max_resources:
+      cpu: 2
+      ram: 4Gi
+      storage: 60Gi
+      gpu: 0
+    recommended_sku:
+    - Standard_D2as_v6
+    pool_type: static
+    pool_size: 1
+actions:
+- name: run
+  description: Run OpenROAD density_fill and write a filled DEF. Emits fill-shape counts + filled DEF
+    ref to /output/final_results.json (Common Design Envelope).
+  infra_node: worker
+  command: python3 -u /app/run.py
+  input_schema:
+    type: object
+    required: []
+    properties: {}

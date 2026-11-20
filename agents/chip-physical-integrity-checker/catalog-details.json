@@ -1,0 +1,24 @@
+{
+  "node_awareness": "node-aware",
+  "original_tags": [
+    "physical-integrity",
+    "openroad",
+    "opendb",
+    "signoff",
+    "pdk-binding",
+    "node-portable"
+  ],
+  "orchestration": {
+    "resource_class": "heavy",
+    "peak_ram_hint": "8Gi"
+  },
+  "previous_build": {
+    "containerfile": "Containerfile",
+    "engine": "docker"
+  },
+  "input_schema_keywords": {
+    "run": {
+      "additionalProperties": false
+    }
+  }
+}

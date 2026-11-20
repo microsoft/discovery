@@ -1,0 +1,42 @@
+name: cdc-rdc
+description: |
+  Chip CDC/RDC signoff tool. Structurally analyzes clock- and reset-domain crossings from a Yosys netlist and a supplied domain map, recognizes 2-flop synchronizers, and reassembles per-bit crossings into BUSES so a multi-bit crossing is judged as one coherency problem rather than N independent bits. Optionally runs bounded, inductive, reachability, fairness-backed liveness, explicit multi-clock protocol, and multi-reset release proofs with SymbiYosys. Inferred memories are lowered to flops (memory_collect + memory_map) before the state census, so each storage bit counts in its write-port clock domain; any memory cell that cannot be lowered still fails the census closed. Manages waivers. Node-agnostic. Emits a Common Design Envelope.
+version: 1.5.0
+category: Chip Design
+infra:
+- name: worker
+  infra_type: container
+  image:
+    acr: '{name}.azurecr.io/chip-cdc-rdc:1.5.0'
+  compute:
+    min_resources:
+      cpu: 1
+      ram: 2Gi
+      storage: 10Gi
+      gpu: 0
+    max_resources:
+      cpu: 8
+      ram: 16Gi
+      storage: 20Gi
+      gpu: 0
+    recommended_sku:
+    - Standard_D2as_v6
+    pool_type: static
+    pool_size: 1
+actions:
+- name: run
+  description: Structural CDC/RDC signoff from RTL + a domain map, with bus-level multi-bit coherency
+    screening and an optional formal proof of declared coherency schemes. Emits per-class crossing counts,
+    synchronizer inventory, bus inventory, and a signoff verdict to /output/final_results.json (Common
+    Design Envelope).
+  infra_node: worker
+  command: python3 -u /app/run.py '{{params_json}}'
+  input_schema:
+    type: object
+    required:
+    - params_json
+    properties:
+      params_json:
+        type: string
+        description: Single-line JSON object with an explicit supported scenario. Read the complete parameter
+          contract in catalog-details.json and the agent instructions. Do not invent timing or PPA intent.

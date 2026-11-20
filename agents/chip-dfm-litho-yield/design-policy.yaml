@@ -1,0 +1,26 @@
+schema_version: design-policy/1.0
+owner: dfm-litho-yield
+node_awareness: node-aware
+pdk_binding:
+  required: true
+  resolved_by: PDK Binding and Node Management Agent
+  consumed_fields: [pdk, dfm_rules, recommended_rules, litho_decks, defect_density, layers]
+  missing_binding_behavior: block
+dfm:
+  distinct_from_mandatory_drc: true
+  disposition_every_finding: true
+  screen_litho_hotspots: true
+  yield_estimate_reports_method: true
+execution:
+  missing_decks: block
+  malformed_output: block
+
+# --- BEGIN generated effort block (catalog/gen_effort_policy.py) ---
+effort:
+  iterating: false
+  metric_kind: unavailable
+  rationale: >-
+    stage not in the residual registry -- this agent does not own an iterable closure gate.
+    Effort is bounded by max_attempts from the campaign effort-budget
+    ledger plus human judgement; no metric-driven stall rule applies.
+# --- END generated effort block ---
