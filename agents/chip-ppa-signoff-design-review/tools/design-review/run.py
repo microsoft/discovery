@@ -128,7 +128,7 @@ def persist(results, output, files):
     actual = load_json(output / "common_design_envelope.json")
     verdict = actual.get("validation", {}).get("verdict")
     code = 0 if actual.get("status") == "completed" and verdict in (
-        "pass", "pass_with_caveats", "review", "not_assessable") else 1
+        "pass", "pass_with_caveats", "review") else 1
     if code:
         print("CDE_JSON=" + json.dumps(actual, ensure_ascii=True, separators=(",", ":")), flush=True)
     return code

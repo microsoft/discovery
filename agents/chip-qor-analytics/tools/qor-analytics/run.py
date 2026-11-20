@@ -100,7 +100,7 @@ def _authoritative_exit_code(path=None):
             envelope = json.load(stream)
         return 0 if (envelope.get("status") == "completed"
                      and envelope.get("validation", {}).get("verdict")
-                     in ("pass", "completed", "review", "pass_with_caveats")) else 1
+                     in ("pass", "review", "pass_with_caveats")) else 1
     except (OSError, ValueError, TypeError, AttributeError):
         return 1
 

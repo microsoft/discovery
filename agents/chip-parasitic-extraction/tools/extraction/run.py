@@ -117,8 +117,8 @@ def _authoritative_exit_code(path=None):
                 envelope = rebased
             print("CDE_JSON=" + json.dumps(envelope, ensure_ascii=False), flush=True)
             verdict = (envelope.get("validation") or {}).get("verdict")
-            return 0 if envelope.get("status") == "completed" and verdict not in (
-                "fail", "not_assessable", "blocked") else 1
+            return 0 if envelope.get("status") == "completed" and verdict in (
+                "pass", "pass_with_caveats", "review") else 1
         except Exception:
             continue
     return 1

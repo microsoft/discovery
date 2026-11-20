@@ -144,8 +144,8 @@ def execute(params):
         return 1
     _flush_log_file()
     verdict = (envelope.get("validation") or {}).get("verdict")
-    return 0 if envelope.get("status") == "completed" and verdict not in (
-        "fail", "not_assessable", "blocked") else 1
+    return 0 if envelope.get("status") == "completed" and verdict in (
+        "pass", "pass_with_caveats", "review") else 1
 
 
 def main():

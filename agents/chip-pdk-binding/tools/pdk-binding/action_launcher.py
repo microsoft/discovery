@@ -60,8 +60,9 @@ finally:
         if os.path.isfile(path):
             with open(path, encoding="utf-8") as stream:
                 envelope = json.load(stream)
+                verdict = envelope.get("validation", {}).get("verdict")
                 domain_failed = (envelope.get("status") != "completed" or
-                                 envelope.get("validation", {}).get("verdict") in ("fail", "not_assessable"))
+                                 verdict not in ("pass", "pass_with_caveats", "review"))
                 print("CDE_JSON=" + json.dumps(envelope, separators=(",", ":")), flush=True)
             break
 effective_exit = native_exit or int(domain_failed)

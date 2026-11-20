@@ -22,7 +22,7 @@ PACKAGES = (
 class FabricationExecutionPolicyTests(unittest.TestCase):
     def test_default_declared_action_is_the_source_launcher(self):
         for package in PACKAGES:
-            path = next((ROOT / "agents-docker" / package / "tools").glob("*/tool.yaml"))
+            path = next((ROOT / "agents" / package / "tools").glob("*/tool.yaml"))
             definition = yaml.safe_load(path.read_text(encoding="utf-8"))
             action = next(a for a in definition["actions"] if a["name"] == "run")
             source = (path.parent / "services_launcher.py").read_text(encoding="utf-8")
@@ -36,14 +36,19 @@ class FabricationExecutionPolicyTests(unittest.TestCase):
         cases = (
             ("completed", "pass", 0, 0),
             ("completed", "pass_with_caveats", 0, 0),
+            ("completed", "review", 0, 0),
             ("completed", "fail", 0, 1),
             ("completed", "not_assessable", 0, 1),
+            ("completed", "completed", 0, 1),
+            ("completed", "partial_pass", 0, 1),
+            ("completed", None, 0, 1),
+            ("completed", "unknown", 0, 1),
             ("failed", "fail", 1, 1),
             ("blocked", "not_assessable", 0, 1),
             ("completed", "pass", 2, 2),
         )
         for package in PACKAGES:
-            path = next((ROOT / "agents-docker" / package / "tools").glob("*/tool.yaml"))
+            path = next((ROOT / "agents" / package / "tools").glob("*/tool.yaml"))
             worker = runpy.run_path(str(path.parent / "run.py"), run_name="policy_test")
             action = next(a for a in yaml.safe_load(path.read_text(encoding="utf-8"))["actions"]
                           if a["name"] == "run")
@@ -55,7 +60,8 @@ class FabricationExecutionPolicyTests(unittest.TestCase):
                     with patch("builtins.open", mock_open(read_data=json.dumps(envelope))), \
                             contextlib.redirect_stdout(output):
                         source_exit = worker["_authoritative_exit_code"]("persisted.json")
-                    self.assertEqual(source_exit, int(status != "completed" or verdict in ("fail", "not_assessable")))
+                    self.assertEqual(source_exit, int(status != "completed" or verdict not in (
+                        "pass", "pass_with_caveats", "review")))
                     self.assertEqual(json.loads(output.getvalue().split("CDE_JSON=")[1]), envelope)
                     output = io.StringIO()
                     before = sys.path[:]
@@ -86,7 +92,7 @@ class FabricationExecutionPolicyTests(unittest.TestCase):
 
     def test_direct_worker_missing_or_malformed_envelope_fails_closed(self):
         for package in PACKAGES:
-            path = next((ROOT / "agents-docker" / package / "tools").glob("*/run.py"))
+            path = next((ROOT / "agents" / package / "tools").glob("*/run.py"))
             worker = runpy.run_path(str(path), run_name="policy_test")
             with self.subTest(package=package, error="missing"):
                 with patch("builtins.open", side_effect=FileNotFoundError):

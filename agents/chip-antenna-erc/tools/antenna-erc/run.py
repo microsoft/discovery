@@ -90,8 +90,9 @@ def _authoritative_exit_code(path=None):
             with open(_p, encoding="utf-8") as stream:
                 envelope = json.load(stream)
             print("CDE_JSON=" + json.dumps(envelope, separators=(",", ":")), flush=True)
+            verdict = envelope.get("validation", {}).get("verdict")
             return int(envelope.get("status") != "completed" or
-                       envelope.get("validation", {}).get("verdict") in ("fail", "not_assessable"))
+                       verdict not in ("pass", "pass_with_caveats", "review"))
         except Exception:
             continue
     return 1
