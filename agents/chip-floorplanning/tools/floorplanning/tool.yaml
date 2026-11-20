@@ -26,29 +26,10 @@ infra:
 actions:
 - name: run
   description: Initialize a floorplan with OpenROAD and write a DEF. Emits die/core area, utilization,
-    and the DEF ref to /output/final_results.json (Common Design Envelope).
+    and the DEF ref to /output/common_design_envelope.json (Common Design Envelope).
   infra_node: worker
-  command: python3 -u /app/run.py '{{params_json}}'
+  command: python3 -B -u /app/run.py --params-file /input/params.json
   input_schema:
     type: object
-    required:
-    - params_json
-    properties:
-      params_json:
-        type: string
-        description: 'CONTRACT: one single-line JSON object (double quotes) with a top-level "scenario"
-          (one of: initialize_floorplan, place_macros, cut_rows). Object params such as pdk_binding /
-          deck_vars are inline JSON objects, e.g. "pdk_binding":{"pdk":"nangate45","liberty":["/input/cells.lib"]}.
-          Params named rtl/upf/sdc/text carry inline text; file paths go in *_file(s)/sources/netlist/def/gds
-          keys as absolute /input/... paths. On failure read the envelope `error` field. JSON with scenario
-          initialize_floorplan | place_macros | cut_rows. initialize_floorplan: `top`, `netlist` (path),
-          `tech_lef`, `cell_lef` (path/list), `liberty` (path/list), `utilization`, `core_margin_um`,
-          `site`, `pdk_binding`; writes floorplan.def. place_macros: `def_file`/`odb_file` + `engine`
-          (''auto'' = OpenROAD rtl_macro_placer hierarchical MPL, the default; ''manual'' = one place_macro
-          per `macro_placements` entry {instance,x,y,orientation}); auto accepts `halo_um` [x,y], `target_util`,
-          `min_ar`, `max_num_level`, `max_num_macro`, `min_num_macro`, `max_num_inst`, `min_num_inst`,
-          `area_weight`, `wirelength_weight`, `outline_weight`, `boundary_weight`, `notch_weight`, `fence`
-          [lx,ly,ux,uy], `keep_clustering_data`; writes macros_placed.def. cut_rows: `def_file`/`odb_file`
-          + `macro_halo_um` [x,y], `row_min_width_um`, `row_min_height_um`, `endcap_master`; cuts placement
-          rows around placed macros (MANDATORY before tapcell/placement on any macro-bearing design) and
-          writes rows_cut.def; a macro-free design reports not_applicable. Double-quoted JSON only.'
+    required: []
+    properties: {}

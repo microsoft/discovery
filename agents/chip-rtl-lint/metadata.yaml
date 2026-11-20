@@ -13,3 +13,6 @@ description: |
 tags:
 - eda
 - rtl
+- linting
+- verilog
+- systemverilog

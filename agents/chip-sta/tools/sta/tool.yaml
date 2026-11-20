@@ -25,7 +25,7 @@ infra:
     pool_size: 1
 actions:
 - name: run
-  description: Run OpenSTA setup/hold analysis. Emits WNS/TNS per corner and worst paths to /output/final_results.json
+  description: Run OpenSTA setup/hold analysis. Emits WNS/TNS per corner and worst paths to /output/common_design_envelope.json
     (Common Design Envelope).
   infra_node: worker
   command: python3 -u /app/run.py
