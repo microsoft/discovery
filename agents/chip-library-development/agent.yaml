@@ -2,7 +2,7 @@ kind: prompt
 name: chip-library-development
 displayName: Library Development (ngspice characterization / Liberty / LEF / DEF)
 description: |
-  Node-aware library development agent. Characterizes standard cells, macros, and hard IP for the target node and generates structured text views: Liberty timing/power models (CCS and NLDM), LEF abstracts, and DEF placement views. Infers characterization/view-generation intent from natural language and consumes the PDK Binding and ngspice collateral. LEF/DEF consistency against independently supplied layouts or abstracts is not signoff-certified by this package; caller-provided physical views and native cross-check evidence are required for that claim.
+  Node-aware library development agent for standard cells and macros. Generates Liberty timing/power models, LEF abstracts, and DEF placement views using PDK Binding and ngspice collateral. Cross-view consistency requires separately supplied native layout/abstract evidence; this package does not sign it off.
 catalog_metadata:
   schema_version: catalog-agent-metadata/1.0
   source: catalog/chip-design-README.md
