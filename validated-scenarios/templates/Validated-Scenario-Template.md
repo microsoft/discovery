@@ -94,7 +94,7 @@ All values describe the tested profile; repeat component rows as needed.
 
 | Component | Applicability | Configuration to record |
 |---|---|---|
-| Model | Core | [Fill in: provider; model; pinned version/revision; local or hosted; relevant context/output limits, temperature/top-p, seed if supported] |
+| Model | Core | [Fill in: the model the scenario was validated with, plus "use this or its newer version or an equivalent model"; provider; pinned version/revision; local or hosted; relevant context/output limits, temperature/top-p, seed if supported] |
 | Agents | Core | [Fill in: names, roles, versions, instruction/prompt versions; configured count; participating count] |
 | Orchestration | Core | [Fill in: order/dependencies; sequential/parallel stages; concurrency, steps, retry and timeout limits] |
 | Tools / APIs | Core; N/A if none | [Fill in: dependencies; versions; endpoint/configuration references; permissions and relevant limits] |

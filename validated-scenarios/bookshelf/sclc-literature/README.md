@@ -4,7 +4,7 @@
 
 1. Install the [Discovery app](../../../README.md) and sign in.
 2. Create a project in a new `Downloads\Validated-Scenario-SCLC-Bookshelf` folder and click **New session**.
-3. Select **GPT-6 Astra**.
+3. Select **GPT-6 Astra**, or its newer version or an equivalent model if it's no longer listed.
    *(Prefer to download the papers yourself? Do [option B](#option-b-download-the-files-yourself) here.)*
 4. Send the [Step 1 prompt](#step-1-set-up-and-confirm-the-environment): download the papers and build the Bookshelf.
 5. Send the [Step 2 prompt](#step-2-run-the-experiment): ask the research question.
@@ -36,7 +36,7 @@ these 15 papers.
 | --- | --- |
 | Discovery app | Download it from the [Discovery download page](../../../README.md) and follow the [install guide](../../../docs/discovery-app/install.md). |
 | Sign-in | A GitHub account with a GitHub Copilot subscription. |
-| Model | **GPT-6 Astra** (`gpt-6-astra`). Choose it in the chat's model menu. |
+| Model | Validated with **GPT-6 Astra** (`gpt-6-astra`). If it's no longer in the model menu, choose its newer version or an equivalent model. |
 | Computer | Windows 11, 64-bit. Tested on Windows 11 x64 (two complete runs, 2026-11-18); other systems not tested. |
 | Disk space | About 1 GB free. |
 | Internet | Needed to download about 18 MB of papers. |
@@ -74,7 +74,7 @@ CC BY 4.0. They are not stored in this repository.
    OneDrive-synced folders such as Documents or Desktop.)
 3. **Open a chat.** Click **New session** on the left.
 4. **Select the model.** In the chat box, open the model menu and choose
-   **GPT-6 Astra**.
+   **GPT-6 Astra** (or its newer version or an equivalent model if it's no longer listed).
 
 ## Run it in three steps
 
@@ -130,10 +130,10 @@ Set up this Validated Scenario from the attached guide, using the 15 papers alre
 buttons. You don't type anything.
 
 1. **May I download the 15 papers?** Click **Yes**.
-2. When the papers pass, the assistant says it can't create the Bookshelf
-   automatically and lists the form steps below. Take your time: do the steps
-   first, and answer its question only when you're done. (If you don't see
-   the steps, expand the last **>** arrow in the chat.)
+2. When the papers pass, **you create the Bookshelf yourself** with the
+   steps below. The assistant can't do it, and its chat may hide the steps,
+   so follow them from here. Don't answer its question until you've finished
+   them. If you answer too early, click **Not yet: show me the steps**.
 
    1. In the left sidebar, click **AI capabilities** (it opens in a new tab at
       the top of the app), then **Bookshelves**, then **New bookshelf**. If a
@@ -142,7 +142,7 @@ buttons. You don't type anything.
    2. On **1. Details**, enter **Name** `sclc-literature` and **Description**
       `Fifteen open-access papers on small-cell lung cancer treatment.` Wait for
       the model list to load, then under **Answer generation** choose **GPT-6 Astra** (if it isn't
-      listed, choose the first model). Leave **Embedding model** below it as it
+      listed, choose its newer version or an equivalent model). Leave **Embedding model** below it as it
       is. Click **Next**.
    3. On **2. Files**, click **Upload**, choose **Folder**, select the
       project's `sclc-papers` folder and confirm. Click the arrow next to
@@ -197,6 +197,11 @@ stops again after the answer; paste the Step 3 prompt into the same chat.
 ```text
 Check your answer against the acceptance criteria in section 6 of the guide. Show me a table of each check with pass or fail: it cites only these 15 papers; it mentions durvalumab, lurbinectedin, topotecan, belotecan, nab-paclitaxel and tarlatamab; it cites at least one review (R1-R6) and at least one primary study (P1-P9); and it has the four parts, the table and the not-covered list. Then pick five claims and show me the exact passage in the cited paper that supports each one. Tell me in one sentence whether this run passes.
 ```
+
+**What you'll see:** a pass/fail table of the checks, then five claims with
+the exact passage from each cited paper, then a one-sentence verdict. If the
+table or the five passages are missing, send: `Show me the pass/fail table, the
+five-claim citation audit and the one-sentence verdict.`
 
 **Done when:** every check passes and the five spot-checked claims match
 their papers.
