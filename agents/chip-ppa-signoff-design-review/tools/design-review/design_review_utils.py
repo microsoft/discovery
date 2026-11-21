@@ -9,7 +9,10 @@ an un-waived violation or an unjustified waiver into a `pass`. Node-agnostic.
 Results conform to the Common Design Envelope.
 """
 import json
+import math
 import os
+from evidence_contract import (ARTIFACT_FIELDS, CitationUnavailable, artifact_citations,
+                               envelope_gate, normalize_gate, resolve_artifact)
 
 TOOL = "design-review"
 _OUTPUT_DIR = "/output"
@@ -448,7 +451,8 @@ def _load_envelopes(params):
     envs = []
     for e in params.get("envelopes", []):
         if isinstance(e, str) and os.path.exists(e):
-            d = json.load(open(e))
+            with open(e, encoding="utf-8") as source:
+                d = json.load(source)
             d.setdefault("id", os.path.basename(e))
             d["_source_path"] = e
             d["_sha256"] = _hash_input_file(e)
@@ -474,12 +478,10 @@ def _load_envelopes(params):
 #: Envelope fields whose values name an artifact FILE the producing stage wrote.
 #: A review that never opens these is checking that a claim is internally
 #: coherent, not that it is true.
-_ARTIFACT_FIELDS = ("report", "log", "drc_report", "ir_report", "em_report",
-                    "lvs_report", "antenna_report", "spef", "gds", "routed_def",
-                    "floorplan_def", "netlist", "guide_file")
+_ARTIFACT_FIELDS = ARTIFACT_FIELDS
 
 
-def _verify_evidence(envs, evidence_root=None, require_artifacts=False):
+def _verify_evidence(envs, evidence_root=None, require_artifacts=False, input_root=None):
     """Open and hash the artifacts each envelope cites.
 
     The review previously checked only that an envelope's own fields were
@@ -506,32 +508,29 @@ def _verify_evidence(envs, evidence_root=None, require_artifacts=False):
         if base is None and e.get("_source_path"):
             base = os.path.dirname(e["_source_path"])
         seen = set()
-        for section in ("signoff_evidence", "provenance"):
-            for k, v in (e.get(section) or {}).items():
-                if k not in _ARTIFACT_FIELDS or not isinstance(v, str) or not v:
-                    continue
-                if (eid, k, v) in seen:
-                    continue
-                seen.add((eid, k, v))
-                path = v if os.path.isabs(v) else (os.path.join(base, v) if base else None)
-                if path is None:
-                    out["unresolvable_artifacts"].append(
-                        {"envelope": eid, "field": k, "cited": v,
-                         "reason": "relative path and no evidence_root supplied"})
-                elif os.path.exists(path):
-                    out["artifacts"].append(
-                        {"envelope": eid, "field": k, "cited": v, "path": path,
-                         "sha256": _hash_input_file(path),
-                         "bytes": os.path.getsize(path)})
-                else:
-                    out["missing_artifacts"].append(
-                        {"envelope": eid, "field": k, "cited": v,
-                         "resolved_to": path,
-                         "reason": "cited artifact does not exist"})
+        for field, cited in artifact_citations(e):
+            if (eid, cited) in seen:
+                continue
+            seen.add((eid, cited))
+            try:
+                path = resolve_artifact(cited, base, input_root)
+            except CitationUnavailable as error:
+                group = "unresolvable_artifacts" if base is None else "missing_artifacts"
+                out[group].append({"envelope": eid, "field": field, "cited": cited,
+                                   "reason": str(error), "candidates": error.candidates})
+                continue
+            digest = _hash_input_file(path)
+            if digest is None:
+                out["missing_artifacts"].append({"envelope": eid, "field": field,
+                    "cited": cited, "reason": "cited artifact could not be opened and hashed"})
+                continue
+            out["artifacts"].append({"envelope": eid, "field": field, "cited": cited,
+                "path": str(path), "sha256": digest, "bytes": path.stat().st_size})
     out["artifacts_verified"] = len(out["artifacts"])
     # The review is only artifact-backed when it actually opened something and
     # nothing it cited was missing.
-    out["evidence_verified"] = bool(out["artifacts"]) and not out["missing_artifacts"]
+    out["evidence_verified"] = bool(out["artifacts"]) and not (
+        out["missing_artifacts"] or out["unresolvable_artifacts"])
     out["require_artifacts"] = bool(require_artifacts)
     return out
 
@@ -560,10 +559,9 @@ def _metric_value(container, key):
     v = container[key]
     if isinstance(v, dict):
         v = v.get("value")
-    try:
-        return max(0, int(v))
-    except (TypeError, ValueError):
+    if type(v) not in (int, float) or not math.isfinite(v) or v < 0 or int(v) != v:
         return None
+    return int(v)
 
 
 def _env_violations(e):
@@ -589,9 +587,8 @@ def _env_violations(e):
     for container in (e.get("results"), e.get("qor_metrics"),
                       e.get("signoff_evidence"), e):
         for key in _VIOLATION_KEYS:
-            v = _metric_value(container, key)
-            if v is not None:
-                return v
+            if isinstance(container, dict) and key in container:
+                return _metric_value(container, key)  # Never hide an unreadable primary count.
     return None
 
 
@@ -610,7 +607,7 @@ def _policy_overrides(envs):
             sel = sig.get("engine_selection") or {}
             overrides.append({
                 "envelope": e.get("id"),
-                "gate": e.get("gate"),
+                "gate": envelope_gate(e),
                 "used": sel.get("engines"),
                 "pdk_recommended": sel.get("pdk_recommended"),
                 "source": sel.get("source")})
@@ -632,9 +629,11 @@ def _split_waivers(waivers):
 
 
 def _waived_count(valid_waivers, env):
-    gate = env.get("gate")
+    gate = envelope_gate(env)
     return sum(1 for w in valid_waivers
-               if w.get("gate") == gate or w.get("envelope") == env.get("id"))
+               if (gate is not None and w.get("gate") is not None
+                   and normalize_gate(w["gate"]) == normalize_gate(gate))
+               or w.get("envelope") == env.get("id"))
 
 
 def _check_budget(envs, budget):
@@ -649,7 +648,7 @@ def _check_budget(envs, budget):
             for k, v in (e.get(src) or {}).items():
                 if isinstance(v, dict) and "value" in v:
                     v = v["value"]
-                if isinstance(v, (int, float)):
+                if type(v) in (int, float) and math.isfinite(v):
                     values[k] = v
     for metric, spec in budget.items():
         val = values.get(metric)
@@ -765,12 +764,14 @@ def _review(params, focus="signoff"):
     unwaived_violations = 0
     violation_detail = []
     failed_envs = []
+    unaccepted_envs = []
+    upstream_caveats = []
     unreadable_counts = []
     for e in envs:
-        gate = e.get("gate")
+        gate = envelope_gate(e)
         if gate:
             covered[gate] = e["id"]
-        st = e.get("status", "completed")
+        st = e.get("status")
         verdict = _env_verdict(e)
         raw_v = _env_violations(e)
         if raw_v is None:
@@ -792,6 +793,10 @@ def _review(params, focus="signoff"):
                                          "open_violations": open_v})
         if st == "failed" or verdict == "fail":
             failed_envs.append(e["id"])
+        elif st != "completed" or verdict not in ("pass", "pass_with_caveats"):
+            unaccepted_envs.append({"envelope": e["id"], "status": st, "verdict": verdict})
+        elif verdict == "pass_with_caveats":
+            upstream_caveats.append(e["id"])
 
     # Gate names are matched case- and separator-insensitively on BOTH paths.
     # The documented example passes `required_gates: ["DRC","LVS","STA"]` while
@@ -841,8 +846,8 @@ def _review(params, focus="signoff"):
 
     # Open and hash what the envelopes cite, rather than trusting that it exists.
     evidence = _verify_evidence(envs, params.get("evidence_root"),
-                                bool(params.get("require_artifacts")))
-    evidence_gaps = list(evidence["missing_artifacts"])
+                                bool(params.get("require_artifacts")), params.get("_input_root"))
+    evidence_gaps = list(evidence["missing_artifacts"]) + list(evidence["unresolvable_artifacts"])
     if evidence["require_artifacts"] and not evidence["artifacts"]:
         evidence_gaps.append({"reason": "require_artifacts was set but no cited "
                                         "artifact could be opened"})
@@ -850,6 +855,10 @@ def _review(params, focus="signoff"):
     verdict = _decide(unwaived_violations, missing_gates, failed_envs,
                       invalid_waivers, ppa_violations, policy_overrides,
                       ppa_unmeasured, evidence_gaps)
+    if upstream_caveats and verdict == "pass":
+        verdict = "pass_with_caveats"
+    if unaccepted_envs and verdict in ("pass", "pass_with_caveats"):
+        verdict = "not_assessable"
     # Even with the mandatory floor met, an unsupplied gate list means the
     # completeness question was never answered. That is not a pass.
     if not gate_list_supplied and verdict in ("pass", "pass_with_caveats"):
@@ -860,7 +869,7 @@ def _review(params, focus="signoff"):
     confidence = _confidence(envs, missing_gates, invalid_waivers,
                              gate_list_supplied, evidence, unreadable_counts,
                              ppa_unmeasured)
-    if unreadable_counts:
+    if unreadable_counts or unaccepted_envs:
         confidence = "low"
 
     notes = []
@@ -885,6 +894,10 @@ def _review(params, focus="signoff"):
                      "rule-deck version -- not laundered into a pass")
     if unwaived_violations:
         notes.append("un-waived violation(s) present -> fail")
+    if unaccepted_envs:
+        notes.append("upstream evidence lacks completed/pass acceptance: %s" % unaccepted_envs)
+    if upstream_caveats:
+        notes.append("upstream pass_with_caveats retained: %s" % upstream_caveats)
     if unreadable_counts:
         notes.append(
             "violation count UNREADABLE for %d violation-counting gate(s): %s. "
@@ -948,6 +961,8 @@ def _review(params, focus="signoff"):
             "invalid_waivers": invalid_waivers,
             "valid_waivers": [w.get("id", w.get("gate")) for w in valid_waivers],
             "failed_envelopes": failed_envs,
+            "unaccepted_envelopes": unaccepted_envs,
+            "upstream_caveats": upstream_caveats,
             "ppa_vs_budget": ppa,
             "ppa_budgeted_but_unmeasured": ppa_unmeasured or None,
             "evidence_audit": evidence,
@@ -987,7 +1002,7 @@ def _adjudicate_waivers(params):
         open_v = max(0, raw_v - _waived_count(valid_waivers, e))
         if open_v:
             open_violations += open_v
-            detail.append({"envelope": e["id"], "gate": e.get("gate"),
+            detail.append({"envelope": e["id"], "gate": envelope_gate(e),
                            "open_violations": open_v})
 
     # An unjustified waiver can never clear a real violation.
@@ -1030,12 +1045,14 @@ def _check_evidence(params):
     covered = {}
     for e in envs:
         missing = [f for f in required_fields if f not in e]
-        if e.get("gate"):
-            covered[e["gate"]] = e["id"]
+        gate = envelope_gate(e)
+        if gate:
+            covered[gate] = e["id"]
         ok = not missing
         all_ok = all_ok and ok
         per_env.append({"id": e["id"], "missing_fields": missing, "ok": ok})
-    missing_gates = [g for g in required_gates if g not in covered]
+    missing_gates = [g for g in required_gates
+                     if normalize_gate(g) not in {normalize_gate(c) for c in covered}]
     verdict = "pass" if (all_ok and not missing_gates) else "fail"
     return _cde(
         objective="evidence-sufficiency check",

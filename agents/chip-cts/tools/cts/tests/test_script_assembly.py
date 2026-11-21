@@ -29,7 +29,7 @@ def _script_template(text):
 
 class TestScriptTemplateUsesWhatItComputes(unittest.TestCase):
     SPLICED = ("_dont_use_tcl", "_census_pre", "_census_post", "_pdn_in",
-               "_pdn_out", "_reconnect", "_cts_opts", "clkbuf_tcl")
+               "_pdn_out", "_reconnect", "_cts_opts", "clkbuf_tcl", "wire_rc")
 
     def setUp(self):
         self.text = _source()
@@ -49,6 +49,10 @@ class TestScriptTemplateUsesWhatItComputes(unittest.TestCase):
 
     def test_dont_use_is_applied_before_clock_tree_synthesis(self):
         self.assertLess(self.template.index("{_dont_use_tcl}"),
+                        self.template.index("clock_tree_synthesis"))
+
+    def test_declared_wire_rc_precedes_clock_characterization(self):
+        self.assertLess(self.template.index("{wire_rc}"),
                         self.template.index("clock_tree_synthesis"))
 
     def test_buf_list_is_braced_exactly_once(self):

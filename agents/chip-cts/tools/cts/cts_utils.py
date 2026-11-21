@@ -796,6 +796,26 @@ def _check_lef_collisions(lef_paths):
     return None
 
 
+def _clock_wire_rc(params, binding, policy):
+    """Use declared clock RC layers before CTS, never the engine's zero default."""
+    routing = binding.get("routing_layers") or {}
+    settings = {}
+    script = ""
+    for kind in ("signal", "clock"):
+        key = "wire_rc_%s_layer" % kind
+        layer, source = _resolve(params, policy, key, routing.get(key))
+        if not layer:
+            if kind == "clock":
+                raise ValueError("missing wire_rc_clock_layer for clock-tree characterization; "
+                                 "supply caller, tool_policy.cts, or binding routing-layer intent")
+            continue
+        if not isinstance(layer, str) or not re.fullmatch(r"[A-Za-z_][A-Za-z0-9_.]*", layer):
+            raise ValueError(key + " must be one routing-layer name")
+        settings[key] = {"layer": layer, "source": source}
+        script += "set_wire_rc -%s -layer {%s}\n" % (kind, layer)
+    return script, settings
+
+
 def _cts(params):
     if not shutil.which("openroad"):
         return _cde(objective="CTS", status="failed",
@@ -806,6 +826,11 @@ def _cts(params):
     if failure:
         return failure
     policy = _stage_policy(binding)
+    try:
+        wire_rc, wire_rc_settings = _clock_wire_rc(params, binding, policy)
+    except ValueError as error:
+        return _cde(objective="CTS", status="failed", pdk_binding=binding or "none",
+                    error=str(error), validation={"verdict": "fail"})
     clkbuf, clkbuf_source = _resolve_binding_fallback(
         params, policy, binding, "clock_buffer",
         binding.get("clock_buffer") or binding.get("clock_buffers"))
@@ -978,7 +1003,7 @@ def _cts(params):
             "puts \"__CTS_DONTUSE__ [llength $_blocked]\"\n" % _approved_tcl)
     script = f"""{loader}
 read_sdc {sdc}
-{_dont_use_tcl}{_census_pre}{_pdn_in}clock_tree_synthesis -buf_list {clkbuf_tcl}{_cts_opts}
+{wire_rc}{_dont_use_tcl}{_census_pre}{_pdn_in}clock_tree_synthesis -buf_list {clkbuf_tcl}{_cts_opts}
 set_propagated_clock [all_clocks]
 detailed_placement
 {_reconnect}report_clock_skew
@@ -1227,6 +1252,7 @@ exit
              "supply_pins_reconnected": (_pgrc or {}).get("pins_reconnected")},
         signoff={"cts_def": "cts.def", "cts_odb": "cts.odb",
              "clock_buffer": clkbuf, "report": "cts.log",
+                  "wire_rc_layers": wire_rc_settings,
                  "approved_clock_cells": sorted(approved_set),
                  "inserted_cells": [{"instance": n, "master": m}
                                     for n, m in inserted],
@@ -1254,9 +1280,9 @@ exit
                      "checked against the approved clock-cell set; an unapproved "
                      "master (TritonCTS dummy-load balancing draws from the whole "
                      "library, not from -buf_list) FAILS this gate"],
-        validation={"verdict": "pass" if (gate_ok
-                                          and insertion_gate["status"] != "fail"
-                                          and unapproved_count == 0)
+        validation={"verdict": "pass" if (gate_ok and cells_measured
+                          and insertion_gate["status"] not in ("fail", "not_assessable")
+                          and unapproved_count == 0)
                                else "fail",
                     "insertion_delay": insertion_gate,
                     "approved_clock_buffer_only": (

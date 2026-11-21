@@ -52,6 +52,31 @@ class TestBufferNameList(unittest.TestCase):
             self.assertNotIn("{{", tcl)
 
 
+class TestClockWireRC(unittest.TestCase):
+    def test_caller_layers_are_used_before_cts(self):
+        script, settings = cts_utils._clock_wire_rc(
+            {"wire_rc_clock_layer": "metal5", "wire_rc_signal_layer": "metal3"}, {}, {})
+        self.assertIn("set_wire_rc -clock -layer {metal5}", script)
+        self.assertIn("set_wire_rc -signal -layer {metal3}", script)
+        self.assertEqual(settings["wire_rc_clock_layer"]["source"], "caller")
+
+    def test_binding_and_policy_fallback(self):
+        binding = {"routing_layers": {"wire_rc_clock_layer": "metal5"}}
+        script, _ = cts_utils._clock_wire_rc({}, binding, {})
+        self.assertIn("{metal5}", script)
+        script, _ = cts_utils._clock_wire_rc({}, binding, {"wire_rc_clock_layer": "metal4"})
+        self.assertIn("{metal4}", script)
+        self.assertNotIn("{metal5}", script)
+
+    def test_clock_rc_absence_never_becomes_zero_model(self):
+        with self.assertRaisesRegex(ValueError, "missing wire_rc_clock_layer"):
+            cts_utils._clock_wire_rc({"wire_rc_signal_layer": "metal3"}, {}, {})
+
+    def test_layer_is_not_interpolated_tcl(self):
+        with self.assertRaisesRegex(ValueError, "one routing-layer name"):
+            cts_utils._clock_wire_rc({"wire_rc_clock_layer": "metal5; exit"}, {}, {})
+
+
 class TestMasterCounting(unittest.TestCase):
     """The old diagnostic matched the joined parameter string; a DEF never has it."""
 

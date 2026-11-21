@@ -28,29 +28,8 @@ actions:
   description: Run OpenROAD TritonCTS and write a post-CTS DEF. Emits skew/insertion delay and DEF ref
     to /output/final_results.json (Common Design Envelope).
   infra_node: worker
-  command: python3 -u /app/run.py '{{params_json}}'
+  command: python3 -B -u /app/run.py --params-file /input/params.json
   input_schema:
     type: object
-    required:
-    - params_json
-    properties:
-      params_json:
-        type: string
-        description: 'CONTRACT: one single-line JSON object (double quotes) with a top-level "scenario"
-          (one of: cts). Object params such as pdk_binding / deck_vars are inline JSON objects, e.g. "pdk_binding":{"pdk":"nangate45","liberty":["/input/cells.lib"]}.
-          Params named rtl/upf/sdc/text carry inline text; file paths go in *_file(s)/sources/netlist/def/gds
-          keys as absolute /input/... paths. On failure read the envelope `error` field. JSON with scenario
-          cts | post_cts_timing_optimization. cts: `top`, `def_file` (placed DEF), `tech_lef`, `cell_lef`,
-          `liberty`, `sdc`, `clock_buffer` (from binding), `pdk_binding`; writes cts.def, reports skew
-          [ns], insertion delay [ns], buffer count. POWER-NET CONTINUITY is measured across the stage:
-          the supply rails entering and leaving are counted, and if rails ENTERED and fewer LEFT the stage
-          FAILS CLOSED. A design arriving with NO rails does not fail (a flow may build its PDN later)
-          but is DISCLOSED, because on <myDesign> CTS ran and reported success on a design that had already
-          lost its PDN upstream. A rail is a SPECIAL power/ground net carrying SWIRE geometry; POWER/GROUND
-          sigtype alone also matches tie-off nets such as `zero_`. post_cts_timing_optimization additionally
-          accepts the resizer TRANSFORM controls (ORFS naming): `skip_pin_swap`, `skip_gate_cloning`,
-          `skip_size_down`, `skip_buffering`, `skip_buffer_removal`, `skip_last_gasp`, `skip_vt_swap`,
-          `skip_crit_vt_swap` (each true DISABLES that transform), plus `repair_sequence`, `max_passes`,
-          `max_utilization`, `match_cell_footprint`, `repair_tns_percent` (how many violating endpoints
-          to chase; 100=all), `recover_power_percent` (setup pass only -- trades positive slack for power)
-          and `allow_setup_violations` (hold pass only). Double-quoted JSON only.'
+    required: []
+    properties: {}

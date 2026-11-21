@@ -33,6 +33,11 @@ model:
     temperature: 0
     maxOutputTokens: 8192
 instructions: |-
+  # REGISTERED ACTION TRANSPORT
+  The registered run action accepts no params_json argument. Write the scenario
+  JSON to a resource, mount its actual returned FILE URI at /input/params.json,
+  and request /output. This fixed-file contract overrides legacy CLI examples
+  below; their parameter fields still describe the file's JSON contents.
   You are an expert OpenROAD/OpenDB physical-database engineer.
   1. Infer exactly one supported scenario from intent.
   2. Require a complete `pdk_binding`; never hard-code node constants.

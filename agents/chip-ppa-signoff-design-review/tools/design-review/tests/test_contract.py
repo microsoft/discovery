@@ -72,6 +72,115 @@ class ContractTests(unittest.TestCase):
         for item in cde["signoff_evidence"]["evidence_audit"]["artifacts"]:
             self.assertTrue((self.output / item["path"]).is_file())
 
+    def native_drc(self, report="drc_klayout.log"):
+        """Native producer dialect, still clearly labelled synthetic test data."""
+        env = {"tool": "drc", "status": "completed", "objective": "synthetic DRC",
+               "progress": {"stage_key": "drc", "gate_closed": True},
+               "validation": {"verdict": "pass"},
+               "results": {"unwaived_violations": {"value": 0, "unit": "count"}},
+               "signoff_evidence": {"per_engine": {"klayout": {
+                   "report": report, "deck_variables": {
+                       "deck_variables": {"input": True, "report": True},
+                       "deck_variables_missing": []}}}},
+               "provenance": {"report": [report]}}
+        path = self.input / "native.json"
+        path.write_text(json.dumps(env), encoding="utf-8")
+        return {"scenario": "review_signoff", "required_gates": ["DRC"],
+                "envelopes": [str(path)], "require_artifacts": True}
+
+    def test_native_drc_nested_and_list_report_opened_without_mutation(self):
+        p = self.native_drc()
+        logs = self.input / "logs"
+        logs.mkdir()
+        report = b"SYNTHETIC NATIVE-SHAPED DRC REPORT ONLY\n"
+        (logs / "drc_klayout.log").write_bytes(report)
+        source_before = (self.input / "native.json").read_bytes()
+        cde = self.check(p)
+        self.assertEqual((self.input / "native.json").read_bytes(), source_before)
+        self.assertEqual(cde["signoff_evidence"]["covered_gates"], {"drc": "native.json"})
+        self.assertTrue(cde["signoff_evidence"]["evidence_verified"])
+        self.assertEqual(cde["signoff_evidence"]["artifacts_opened"], 1)
+        audit = cde["signoff_evidence"]["evidence_audit"]["artifacts"][0]
+        self.assertEqual((self.output / audit["path"]).read_bytes(), report)
+        self.assertEqual(audit["sha256"]["sha256"], run.hashlib.sha256(report).hexdigest())
+
+    def test_native_drc_missing_nested_report_is_unverified(self):
+        cde = self.check(self.native_drc(), "pass_with_caveats")
+        self.assertFalse(cde["signoff_evidence"]["evidence_verified"])
+        self.assertEqual(cde["signoff_evidence"]["artifacts_opened"], 0)
+
+    def test_native_drc_ambiguous_basename_is_unverified(self):
+        p = self.native_drc()
+        for folder in ("logs", "results"):
+            (self.input / folder).mkdir()
+            (self.input / folder / "drc_klayout.log").write_text("SYNTHETIC " + folder)
+        cde = self.check(p, "pass_with_caveats")
+        self.assertFalse(cde["signoff_evidence"]["evidence_verified"])
+        reason = cde["signoff_evidence"]["missing_artifacts"][0]["reason"]
+        self.assertIn("ambiguous", reason)
+
+    def test_nested_and_list_path_escape_rejected(self):
+        for field in ("signoff_evidence", "provenance"):
+            with self.subTest(field=field):
+                env = {field: {"nested": {"report": [str(self.root / "outside.log")]}}}
+                with self.assertRaisesRegex(ValueError, "escapes immutable"):
+                    run.validate(dict(clean(), envelopes=[dict(env, id="escape")]), self.input)
+
+    def test_nested_relative_traversal_rejected(self):
+        p = self.native_drc("../outside.log")
+        self.check(p, "fail", 1, "failed")
+
+    def test_known_native_gate_does_not_accept_conflicting_or_unknown_producer(self):
+        unknown = {"tool": "invented", "progress": {"stage_key": "drc"}}
+        conflicting = {"tool": "lvs", "progress": {"stage_key": "drc"}}
+        self.assertIsNone(run.utils.envelope_gate(unknown))
+        self.assertIsNone(run.utils.envelope_gate(conflicting))
+        self.assertIsNone(run.utils.envelope_gate({"progress": {"stage_key": "drc"}}))
+        p = clean()
+        p["envelopes"][0].pop("gate")
+        p["envelopes"][0].update(unknown)
+        self.check(p, "fail", 1)
+
+    def test_explicit_legacy_gate_is_preserved(self):
+        self.assertEqual(run.utils.envelope_gate({"gate": "DRC", "tool": "custom"}), "drc")
+
+    def test_native_gate_coverage_shared_by_evidence_scenario(self):
+        p = clean()
+        p.update(scenario="check_evidence", required_gates=["DRC"])
+        p["envelopes"][0].pop("gate")
+        p["envelopes"][0].update(tool="drc", progress={"stage_key": "drc"})
+        self.check(p)
+
+    def test_native_gate_waiver_matching(self):
+        p = clean()
+        p.update(scenario="adjudicate_waivers", waivers=[{
+            "gate": "DRC", "owner": "fixture", "justification": "synthetic only",
+            "rule_deck_version": "fixture"}])
+        p["envelopes"][0].pop("gate")
+        p["envelopes"][0].update(tool="drc", violations=1)
+        self.check(p)
+
+    def test_artifact_traversal_is_bounded_and_not_arbitrary_text(self):
+        env = {"provenance": {"note": "not-a-file", "report": ["one.log", "two.log"]}}
+        self.assertEqual([v for _, v in run.utils.artifact_citations(env)], ["one.log", "two.log"])
+        node = {"report": "one.log"}
+        for _ in range(14):
+            node = {"nested": node}
+        with self.assertRaisesRegex(ValueError, "exceeds review limits"):
+            list(run.utils.artifact_citations({"provenance": node}))
+
+    def test_deck_metadata_exemption_does_not_hide_string_path_escape(self):
+        env = {"id": "SYNTHETIC-ESCAPE", "signoff_evidence": {
+            "per_engine": {"klayout": {"deck_variables": {"report": "../outside.log"}}}}}
+        self.assertEqual([v for _, v in run.utils.artifact_citations(env)], ["../outside.log"])
+        with self.assertRaisesRegex(ValueError, "escapes immutable"):
+            run.validate(dict(clean(), envelopes=[env], evidence_root=str(self.input)), self.input)
+
+    def test_boolean_report_outside_typed_deck_metadata_is_invalid(self):
+        for section in ({"report": True}, {"deck_variables": {"report": True, "input": "bad"}}):
+            with self.subTest(section=section), self.assertRaisesRegex(ValueError, "must be a string"):
+                list(run.utils.artifact_citations({"signoff_evidence": section}))
+
     def test_missing_gate(self):
         p = clean(); p["required_gates"].append("lvs")
         self.check(p, "fail", 1)
@@ -97,7 +206,37 @@ class ContractTests(unittest.TestCase):
 
     def test_unreadable_count(self):
         p = clean(); del p["envelopes"][0]["violations"]
-        self.check(p, "not_assessable")
+        self.check(p, "not_assessable", 1)
+
+    def test_boolean_negative_string_or_fractional_count_is_not_measured_zero(self):
+        for value in (False, True, -1, "0", 0.5):
+            with self.subTest(value=value):
+                env = {"results": {"unwaived_violations": {"value": value},
+                                   "drc_violations": {"value": 0}}}
+                self.assertIsNone(run.utils._env_violations(env))
+        p = clean(); p["envelopes"][0]["violations"] = False
+        self.check(p, "not_assessable", 1)
+
+    def test_missing_upstream_verdict_cannot_close_review(self):
+        p = clean(); p["envelopes"][0]["validation"] = {}
+        self.check(p, "not_assessable", 1)
+
+    def test_review_upstream_verdict_cannot_close_review(self):
+        p = clean(); p["envelopes"][0]["validation"]["verdict"] = "review"
+        self.check(p, "not_assessable", 1)
+
+    def test_upstream_status_must_be_completed(self):
+        p = clean(); p["envelopes"][0]["status"] = "running"
+        self.check(p, "not_assessable", 1)
+
+    def test_upstream_caveats_are_not_laundered_into_clean_pass(self):
+        p = clean(); p["envelopes"][0]["validation"]["verdict"] = "pass_with_caveats"
+        self.check(p, "pass_with_caveats")
+
+    def test_boolean_budgeted_measurement_is_unmeasured(self):
+        p = clean(); p["budget"] = {"area": {"max": 10}}
+        p["envelopes"][0]["qor_metrics"] = {"area": False}
+        self.check(p, "pass_with_caveats")
 
     def test_no_required_list_floor_missing(self):
         p = clean(); del p["required_gates"]
@@ -106,7 +245,7 @@ class ContractTests(unittest.TestCase):
     def test_floor_met_completeness_unknown(self):
         p = clean(); p["required_gates"] = []
         p["envelopes"] += [{"id": g, "gate": g, "violations": 0} for g in ("lvs", "antenna")]
-        self.check(p, "not_assessable")
+        self.check(p, "not_assessable", 1)
 
     def test_budget_unmeasured(self):
         p = clean(); p["budget"] = {"area": {"max": 10}}
@@ -133,7 +272,7 @@ class ContractTests(unittest.TestCase):
     def test_waiver_adjudication_unreadable(self):
         p = clean(); p["scenario"] = "adjudicate_waivers"; p["waivers"] = []
         del p["envelopes"][0]["violations"]
-        self.check(p, "not_assessable")
+        self.check(p, "not_assessable", 1)
 
     def test_evidence_pass(self):
         p = clean(); p["scenario"] = "check_evidence"

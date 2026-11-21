@@ -1,6 +1,8 @@
 # Services execution qualification
 
-Keep the existing single-line `params_json` contract. Mount each supplied file
+The registered `run` action has no `params_json` argument. Write UTF-8 scenario
+JSON with WriteResource and mount its returned FILE URI at `/input/params.json`.
+Request `/output` as the output mount. Mount each referenced design file
 using its actual returned WriteResource FILE URI, never an inferred physical
 storage path. Preserve the PDK binding and use the actual GetNodePoolContext ID.
 An OpenDB operation must execute the real native engine.

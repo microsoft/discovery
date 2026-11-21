@@ -1,7 +1,9 @@
 # Services execution qualification
 
-Keep the existing single-line `params_json` contract. Mount each supplied file
-using its actual returned WriteResource FILE URI. Require a valid post-CTS input
+The registered `run` action accepts no `params_json` or `params_file` argument.
+Write the scenario JSON as UTF-8 with WriteResource and mount its actual returned
+FILE URI read-only at `/input/params.json`; request `/output` as an output mount.
+Mount each referenced design file using its actual returned WriteResource FILE URI. Require a valid post-CTS input
 and real PDK views. Preserve timing intent and use the actual GetNodePoolContext
 ID; do not manufacture a physical pass from missing connectivity or DRC data.
 

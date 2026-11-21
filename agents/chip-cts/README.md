@@ -18,6 +18,8 @@ Docker with Linux containers, network access to the named public base registries
 
 ## Configuration
 
+Clock-tree characterization requires `wire_rc_clock_layer`; `wire_rc_signal_layer` is optional. Both resolve from caller parameters, then `pdk_binding.tool_policy.cts`, then `pdk_binding.routing_layers`, and are applied before native CTS. No missing clock model is replaced with a zero-RC assumption. Use at least two genuinely clocked sinks for a positive smoke test: TritonCTS may skip a single-sink clock, and a skipped clock must not be reported as buffered. A passing worker result requires actual buffered-clock, insertion-delay and inserted-cell evidence.
+
 Use the action input schema and the scenario contract in `agent.yaml`. Mount design inputs and parameter files read-only at `/input`, with fresh writable `/output` and `/workdir` directories. File-based actions consume `/input/params.json`; actions declaring `params_json` retain their existing JSON argument contract. Read-only-root deployments additionally need the writable mounts described in the existing worker notes. Tool resource settings are inherited from the package, not newly measured budgets. The registry placeholder and tool ID are resolved by the catalog integration; no resource has been deployed by this migration.
 
 ## Usage

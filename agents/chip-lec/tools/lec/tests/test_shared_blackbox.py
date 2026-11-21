@@ -73,12 +73,32 @@ class TestSharedBlackboxMiter(unittest.TestCase):
             lec_utils._share_blackbox_outputs_in_miter(
                 self.prepared, bad, self.interfaces, "equiv", ["io_pad"])
 
-    def test_same_width_input_rewire_is_rejected(self):
+    def test_same_width_input_rewire_requires_an_independent_proof(self):
         bad = copy.deepcopy(self.miter)
         bad["modules"]["equiv"]["cells"]["u_pad_gate"]["connections"]["A"] = [11]
-        with self.assertRaisesRegex(ValueError, "input source mismatch"):
-            lec_utils._share_blackbox_outputs_in_miter(
-                self.prepared, bad, self.interfaces, "equiv", ["io_pad"])
+        report = lec_utils._share_blackbox_outputs_in_miter(
+            self.prepared, bad, self.interfaces, "equiv", ["io_pad"])
+        cells = bad["modules"]["equiv"]["cells"]
+        obligations = [cell for cell in cells.values()
+                       if cell.get("attributes", {}).get("blackbox_input_obligation") == "1"]
+        self.assertEqual(len(obligations), 1)
+        self.assertEqual(obligations[0]["type"], "$equiv")
+        self.assertEqual(obligations[0]["connections"]["A"], [10])
+        self.assertEqual(obligations[0]["connections"]["B"], [11])
+        self.assertEqual(report["input_equivalence_obligations"], 1)
+        # Gold and gate net IDs may differ for equivalent internal cones.
+        # They must be proved equivalent, never assumed equal or discarded.
+
+    def test_constant_input_mismatch_remains_a_proof_obligation(self):
+        bad = copy.deepcopy(self.miter)
+        pair = bad["modules"]["equiv"]["cells"]
+        pair["u_pad_gold"]["connections"]["A"] = ["0"]
+        pair["u_pad_gate"]["connections"]["A"] = ["1"]
+        lec_utils._share_blackbox_outputs_in_miter(
+            self.prepared, bad, self.interfaces, "equiv", ["io_pad"])
+        obligation = bad["modules"]["equiv"]["cells"]["$blackbox_input_equiv$u_pad$A$0"]
+        self.assertEqual(obligation["connections"]["A"], ["0"])
+        self.assertEqual(obligation["connections"]["B"], ["1"])
 
     def test_unintended_residual_cell_is_rejected(self):
         bad = copy.deepcopy(self.prepared)

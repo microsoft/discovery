@@ -18,6 +18,8 @@ Docker with Linux containers, network access to the named public base registries
 
 ## Configuration
 
+The reviewer accepts legacy explicit gate labels and recognizes allowlisted native producer identities without rewriting source envelopes. Nested and array-valued report citations are opened and hashed through the [shared evidence contract](tools/design-review/evidence_contract.py). A basename must resolve uniquely within the attempt root or its canonical logs, reports or results folder; missing, ambiguous and escaping citations cannot become verified evidence. Supply an explicit scoped required-gate list; opening one report is not complete tapeout signoff.
+
 Use the action input schema and the scenario contract in `agent.yaml`. Mount design inputs and parameter files read-only at `/input`, with fresh writable `/output` and `/workdir` directories. File-based actions consume `/input/params.json`; actions declaring `params_json` retain their existing JSON argument contract. Read-only-root deployments additionally need the writable mounts described in the existing worker notes. Tool resource settings are inherited from the package, not newly measured budgets. The registry placeholder and tool ID are resolved by the catalog integration; no resource has been deployed by this migration.
 
 ## Usage

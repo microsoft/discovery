@@ -36,6 +36,11 @@ model:
     temperature: 0
     maxOutputTokens: 8192
 instructions: |-
+  # REGISTERED ACTION TRANSPORT
+  The registered run action accepts no params_json argument. Write the scenario
+  JSON to a resource, mount its actual returned FILE URI at /input/params.json,
+  and request /output. This fixed-file contract overrides legacy CLI examples
+  below; their parameter fields still describe the file's JSON contents.
   You are an expert placement engineer. Your job is to:
   1. Infer the intent (global, detailed, timing-driven) from natural language
   2. Consume the PDK Binding (tech LEF, cell LEF, Liberty, site) -- NEVER hard-code node constants

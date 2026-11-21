@@ -83,9 +83,7 @@ def _finalize_envelope(results):
         if _defaulted:
             warns.append("CDE auto-defaulted empty required field(s): "
                          + ", ".join(sorted(_defaulted)))
-        if smoke["status"] == "skipped":
-            verdict = "not_assessable"; status = "failed"
-        elif missing:
+        if missing:
             warns.append("CDE missing required field(s): " + ", ".join(missing))
         if warns:
             results["envelope_warnings"] = warns
@@ -846,6 +844,8 @@ def _generate(params):
     status = "completed"
     if missing:
         verdict = "fail"; status = "failed"
+    elif smoke["status"] == "skipped":
+        verdict = "not_assessable"; status = "failed"
     elif smoke["status"] == "fail":
         verdict = "fail"; status = "failed"
     elif iface_check["unknown_signals"] or iface_check["driving_outputs"]:
@@ -1184,15 +1184,32 @@ def _metric_value(block, key):
 
 def _metric_count(block, key, name):
     value = _metric_value(block, key)
-    if isinstance(value, bool):
-        raise ValueError("%s.%s is boolean, not a count" % (name, key))
-    try:
-        value = int(value)
-    except (TypeError, ValueError):
+    if isinstance(value, bool) or not isinstance(value, int):
         raise ValueError("%s.%s is missing or not an integer" % (name, key))
     if value < 0:
         raise ValueError("%s.%s must be non-negative" % (name, key))
     return value
+
+
+def _nonvacuity_evidence(envelope):
+    """Require explicit native counts and a real boolean; never invent clean evidence."""
+    if not isinstance(envelope, dict) or envelope.get("status") != "completed" or \
+            not isinstance(envelope.get("validation"), dict) or \
+            envelope["validation"].get("verdict") != "pass":
+        raise ValueError("nonvacuity_cde is not a completed pass")
+    results = envelope.get("results")
+    qor = envelope.get("qor_metrics")
+    killed = _metric_count(results, "mutants_killed", "nonvacuity_cde.results")
+    survived = _metric_count(results, "mutants_survived", "nonvacuity_cde.results")
+    unassessable = _metric_count(qor, "mutants_unassessable", "nonvacuity_cde.qor_metrics")
+    vacuous = _metric_value(qor, "testbench_vacuous")
+    if not isinstance(vacuous, bool):
+        raise ValueError("nonvacuity_cde.qor_metrics.testbench_vacuous is missing or not a boolean")
+    if killed < 1 or unassessable != 0 or vacuous:
+        raise ValueError(
+            "non-vacuity is not proven (killed=%d, unassessable=%d, vacuous=%s)"
+            % (killed, unassessable, vacuous))
+    return killed, survived, unassessable
 
 
 def _junit_summary(path, name):
@@ -1210,7 +1227,8 @@ def _junit_summary(path, name):
         "failures": sum(1 for case in cases if case.find("failure") is not None),
         "errors": sum(1 for case in cases if case.find("error") is not None),
         "skipped": sum(1 for case in cases if case.find("skipped") is not None),
-        "testcases": sorted(str(case.get("name") or "") for case in cases),
+        "testcases": sorted((str(case.get("classname") or ""),
+                     str(case.get("name") or "")) for case in cases),
     }
 
 
@@ -1238,7 +1256,7 @@ def _evidence_ref(params, key, path):
     if not isinstance(ref, str) or not ref.strip():
         raise ValueError("evidence_refs.%s is required" % key)
     ref = ref.strip().replace("\\", "/")
-    if ref.startswith("/") or ".." in ref.split("/"):
+    if _looks_workspace_absolute(ref) or ".." in ref.split("/"):
         raise ValueError(
             "evidence_refs.%s must be a workspace-relative path" % key)
     identity = _hash_input_file(path)
@@ -1319,40 +1337,7 @@ def _finalize_attempt(params):
                 "generation gate is open (smoke=%d, vplan=%d, interface=%d)"
                 % (smoke_failures, missing_vplan, interface_mismatches))
 
-        if nonvacuity.get("status") != "completed" or \
-                (nonvacuity.get("validation") or {}).get("verdict") != "pass":
-            raise ValueError("nonvacuity_cde is not a completed pass")
-        nonvacuity_results = nonvacuity.get("results") or {}
-        nonvacuity_qor = nonvacuity.get("qor_metrics") or {}
-        mutants_killed = _metric_count(
-            nonvacuity_results, "mutants_killed", "nonvacuity_cde.results")
-        mutants_survived = _metric_count(
-            nonvacuity_results, "mutants_survived", "nonvacuity_cde.results")
-        mutants_unassessable_present = "mutants_unassessable" in nonvacuity_qor
-        testbench_vacuous_present = "testbench_vacuous" in nonvacuity_qor
-        mutants_unassessable = (nonvacuity_qor.get("mutants_unassessable")
-                                if mutants_unassessable_present else None)
-        testbench_vacuous = (nonvacuity_qor.get("testbench_vacuous")
-                             if testbench_vacuous_present else None)
-
-        if mutants_unassessable is not None:
-            try:
-                mutants_unassessable = int(mutants_unassessable)
-            except (TypeError, ValueError):
-                mutants_unassessable = None
-
-        if testbench_vacuous is not None:
-            if isinstance(testbench_vacuous, bool):
-                pass
-            elif str(testbench_vacuous).strip().lower() in ("true", "false"):
-                testbench_vacuous = str(testbench_vacuous).strip().lower() == "true"
-            else:
-                testbench_vacuous = None
-
-        if mutants_unassessable is None:
-            return _fail("non-vacuity evidence missing mutants_unassessable")
-        if testbench_vacuous is None:
-            return _fail("non-vacuity evidence missing testbench_vacuous")
+        mutants_killed, mutants_survived, mutants_unassessable = _nonvacuity_evidence(nonvacuity)
 
         if junit["testcases"] != rerun["testcases"]:
             raise ValueError("clean rerun did not execute the identical testcase set")
@@ -1440,7 +1425,6 @@ def _finalize_attempt(params):
                        "finalize authoritative testbench-generation attempt"),
             status="completed",
             results=results,
-
             signoff={
                 "evidence_files": evidence,
                 "runtime_tests": junit,
@@ -1693,223 +1677,5 @@ def _read_json_and_hash(path):
     return doc, digest
 
 def _finalize_attempt_legacy(params):
-    """Author the attempt-root `stage: simulation` CDE from OPENED evidence.
-
-    This is the ONLY supported attempt-root CDE writer for this tool: it never
-    trusts a native sub-CDE's self-reported verdict at face value -- it opens
-    and hashes the generation CDE, both JUnit XML runs, the non-vacuity CDE,
-    and the regression log, and derives every gating number itself.
-    """
-    def _fail(error, extra_provenance=None):
-        env = {
-            "tool": TOOL, "stage": "simulation", "status": "failed",
-            "objective": params.get("objective")
-                or ("Finalize the attempt-root testbench-generation "
-                    "simulation CDE from independently opened native evidence"),
-            "tools_used": [{"name": "testbench-generation-finalizer",
-                            "version": "1.0.0"}],
-            "pdk_binding": "none", "assumptions": [],
-            "inputs_ref": dict(params.get("evidence_refs") or {}),
-            "vplan": params.get("vplan") or "shared_artifact",
-            "results": {}, "qor_metrics": {}, "signoff_evidence": {},
-            "margin": {}, "error": error,
-            "validation": {"verdict": "fail", "note": error},
-            "verdict": "fail",
-            "provenance": {"engine": "finalize_attempt aggregator"},
-        }
-        if extra_provenance:
-            env["provenance"].update(extra_provenance)
-        return _finalize_envelope(env)
-
-    evidence_refs = params.get("evidence_refs")
-    if not isinstance(evidence_refs, dict) or not evidence_refs:
-        return _fail("finalize_attempt requires a non-empty 'evidence_refs' "
-                     "map of workspace-relative paths for every opened "
-                     "evidence file")
-
-    bad_refs = sorted(k for k, v in evidence_refs.items()
-                       if _looks_workspace_absolute(v))
-    if bad_refs:
-        return _fail(
-            "evidence_refs must be workspace-relative (repo-relative) paths, "
-            "never container-mount-absolute paths -- offending key(s): %s"
-            % ", ".join(bad_refs))
-
-    required = ("generation_cde", "junit_xml", "junit_rerun_xml",
-                "nonvacuity_cde")
-    missing = [k for k in required if not params.get(k)]
-    if missing:
-        return _fail("finalize_attempt missing required evidence path(s): %s"
-                     % ", ".join(missing))
-
-    evidence_hashes = {}
-    try:
-        generation_cde, gen_hash = _read_json_and_hash(params["generation_cde"])
-        evidence_hashes["generation_cde"] = gen_hash
-        nonvacuity_cde, nv_hash = _read_json_and_hash(params["nonvacuity_cde"])
-        evidence_hashes["nonvacuity_cde"] = nv_hash
-        junit, junit_hash = _parse_junit(params["junit_xml"])
-        evidence_hashes["junit_xml"] = junit_hash
-        junit_rerun, junit_rerun_hash = _parse_junit(params["junit_rerun_xml"])
-        evidence_hashes["junit_rerun_xml"] = junit_rerun_hash
-    except Exception as exc:
-        return _fail(str(exc), extra_provenance={"evidence_hashes": evidence_hashes})
-
-    regression_log_text = None
-    if params.get("regression_log") and os.path.isfile(params["regression_log"]):
-        evidence_hashes["regression_log"] = _hash_input_file(params["regression_log"])
-        try:
-            with open(params["regression_log"], "r", encoding="utf-8",
-                      errors="replace") as fh:
-                regression_log_text = fh.read()
-        except Exception:
-            regression_log_text = None
-
-    if junit["tests"] == 0 or junit_rerun["tests"] == 0:
-        return _fail(
-            "runtime evidence carries zero executed testcases -- a "
-            "self-checking suite must actually EXECUTE at least one real "
-            "test before and after mutation, not merely compile",
-            extra_provenance={"evidence_hashes": evidence_hashes})
-
-    testcase_set_mismatch = junit["names"] != junit_rerun["names"]
-
-    gen_results = generation_cde.get("results") or {}
-    smoke_failures = _mval(gen_results, "smoke_failures", 0) or 0
-    missing_vplan_linkage = _mval(gen_results, "missing_vplan_linkage", None)
-    interface_mismatches = _mval(gen_results, "interface_mismatches", 0) or 0
-    self_checking = bool(_mval(gen_results, "self_checking", False))
-    gen_verdict = ((generation_cde.get("validation") or {}).get("verdict")
-                  or generation_cde.get("verdict"))
-
-    nv_results = nonvacuity_cde.get("results") or {}
-    nv_qor = nonvacuity_cde.get("qor_metrics") or {}
-    mutants_killed = int(_mval(nv_results, "mutants_killed", 0) or 0)
-    mutants_survived = int(_mval(nv_results, "mutants_survived", 0) or 0)
-    mutants_unassessable_present = "mutants_unassessable" in nv_qor
-    testbench_vacuous_present = "testbench_vacuous" in nv_qor
-    mutants_unassessable = (nv_qor.get("mutants_unassessable")
-                            if mutants_unassessable_present else None)
-    testbench_vacuous = (nv_qor.get("testbench_vacuous")
-                         if testbench_vacuous_present else None)
-
-    if mutants_unassessable is not None:
-        try:
-            mutants_unassessable = int(mutants_unassessable)
-        except (TypeError, ValueError):
-            mutants_unassessable = None
-
-    if testbench_vacuous is not None:
-        if isinstance(testbench_vacuous, bool):
-            pass
-        elif str(testbench_vacuous).strip().lower() in ("true", "false"):
-            testbench_vacuous = str(testbench_vacuous).strip().lower() == "true"
-        else:
-            testbench_vacuous = None
-
-    if mutants_unassessable is None:
-        return _fail("non-vacuity evidence missing mutants_unassessable")
-    if testbench_vacuous is None:
-        return _fail("non-vacuity evidence missing testbench_vacuous")
-
-    if junit["testcases"] != rerun["testcases"]:
-        raise ValueError("clean rerun did not execute the identical testcase set")
-    test_failures = (junit["failures"] + junit["errors"]
-                     + junit["skipped"])
-    rerun_failures = (rerun["failures"] + rerun["errors"]
-                      + rerun["skipped"])
-    if test_failures or rerun_failures:
-        raise ValueError(
-            "runtime suite is not clean (initial=%d, rerun=%d)"
-            % (test_failures, rerun_failures))
-    if regression and regression["mismatches"]:
-        raise ValueError(
-            "random regression reports %d mismatch(es)"
-            % regression["mismatches"])
-
-    evidence = {
-        "generation_cde": _evidence_ref(
-            params, "generation_cde", generation_path),
-        "junit_xml": _evidence_ref(params, "junit_xml", junit_path),
-        "junit_rerun_xml": _evidence_ref(
-            params, "junit_rerun_xml", rerun_path),
-        "nonvacuity_cde": _evidence_ref(
-            params, "nonvacuity_cde", nonvacuity_path),
-    }
-    if regression_path:
-        evidence["regression_log"] = _evidence_ref(
-            params, "regression_log", regression_path)
-    input_paths = {
-        key: record["path"] for key, record in evidence.items()
-    }
-
-    basis = "tool-opened JUnit XML and native CDE evidence"
-    results = {
-        "failures": _result_metric(
-            test_failures, "count", basis, "== 0"),
-        "failing_tests": _result_metric(
-            test_failures, "count", basis, "== 0"),
-        "elaboration_errors": _result_metric(
-            smoke_failures, "count", basis, "== 0"),
-        "analyze_errors": _result_metric(
-            smoke_failures, "count", basis, "== 0"),
-        "sim_passed": _result_metric(
-            True, "bool", basis, "== True"),
-        "tests": _result_metric(
-            junit["tests"], "count", basis, ">= 1", "diagnostic"),
-        "tests_run": _result_metric(
-            junit["tests"], "count", basis, ">= 1", "diagnostic"),
-        "directed_tests_completed": _result_metric(
-            junit["tests"], "count", basis, ">= 1", "diagnostic"),
-        "rerun_failures": _result_metric(
-            rerun_failures, "count", basis, "== 0"),
-        "missing_vplan_linkage": _result_metric(
-            missing_vplan, "count", basis, "== 0"),
-        "interface_mismatches": _result_metric(
-            interface_mismatches, "count", basis, "== 0"),
-        "environment_self_checking": _result_metric(
-            True, "bool", basis, "== True"),
-        "mutants_killed": _result_metric(
-            mutants_killed, "count", basis, ">= 1"),
-        "mutants_survived": _result_metric(
-            mutants_survived, "count", basis, ">= 0", "diagnostic"),
-        "mutants_unassessable": _result_metric(
-            mutants_unassessable, "count", basis, "== 0"),
-    }
-    if regression:
-        results.update({
-            "mismatches": _result_metric(
-                regression["mismatches"], "count", basis, "== 0"),
-            "scoreboard_mismatches": _result_metric(
-                regression["mismatches"], "count", basis, "== 0"),
-            "random_regression_frames": _result_metric(
-                regression["frames"], "frames", basis, ">= 1",
-                "diagnostic"),
-            "executed_comparisons": _result_metric(
-                regression["comparisons"], "comparisons", basis, ">= 1",
-                "diagnostic"),
-        })
-    else:
-        results["executed_comparisons"] = _result_metric(
-            junit["tests"], "tests", basis, ">= 1", "diagnostic")
-
-    env = {
-        "tool": TOOL, "stage": "simulation", "status": status,
-        "objective": params.get("objective")
-            or ("Finalize the attempt-root testbench-generation simulation "
-                "CDE from independently opened native evidence"),
-        "tools_used": [{"name": "testbench-generation-finalizer",
-                        "version": "1.0.0"}],
-        "pdk_binding": "none",
-        "assumptions": params.get("attempt_intent") and [params["attempt_intent"]] or [],
-        "inputs_ref": dict(evidence_refs),
-        "vplan": params.get("vplan") or "shared_artifact",
-        "results": results,
-        "validation": {"verdict": verdict, "note": note},
-        "verdict": verdict,
-        "provenance": {"engine": "finalize_attempt aggregator",
-                       "evidence_hashes": evidence_hashes},
-    }
-    if reasons:
-        env["error"] = note
-    return _finalize_envelope(env)
+    """Compatibility entry point; all callers now use the same fail-closed gates."""
+    return _finalize_attempt(params)

@@ -6,9 +6,11 @@ Node-aware KLayout geometry screening for windowed density, lithography-risk pat
 
 The prompt agent delegates to the bundled native worker. The canonical `tools/dfm/Dockerfile` builds this package independently; it does not require another chip-agent image, a shared-family build, or a private registry image. Existing worker source and native verdict gates are preserved. Legacy campaign and Services notes below describe historical runs, not validation of this migrated recipe.
 
-Public build bases: `docker.io/library/debian:12-slim`. Base images must satisfy the target repository's current allowlist; a pinned digest does not itself establish policy approval.
+Public build base: the digest-pinned Debian 12 slim image named in the Dockerfile. Base images must satisfy the target repository's current allowlist; a pinned digest does not itself establish policy approval.
 
 ## Prerequisites
+
+Host Python is not required for the container runtime. Distribution packages supply Python and build tools. KLayout 0.30.10 is built from its official GitHub source pinned by full commit and SHA256 in [the source lock](tools/dfm/python_sources.lock.json), using two compiler jobs and a separate build stage. Its geometry engine is not replaced by a parser or stub. Installation disables package indexes and build isolation and preserves TLS verification. An optional [approved source cache](tools/dfm/dependency-sources/README.md) supports Python-source installation without GitHub access. OS package and base-image access are still required.
 
 Docker with Linux containers, network access to the named public base registries and dependency sources, and the inputs required by the scenario. Supply PDK models, rule decks, libraries and user-design files separately with appropriate licenses; these are not embedded in this package. Keep builds and native probes sequential. Retain at least 15 GB free on the host before starting any build.
 
@@ -17,6 +19,8 @@ Docker with Linux containers, network access to the named public base registries
 `chip-dfm` is defined in [tool.yaml](tools/dfm/tool.yaml). Its Docker build context is `tools/dfm/`; required runtime executable probes are included in the Dockerfile and fail the build when a dependency is missing.
 
 ## Configuration
+
+The exact KLayout source build uses four compiler workers within a single image build and disables debug-symbol generation with `-g0`; upstream already strips these symbols at link time. Normal optimization and the real geometry engine remain enabled. This is not four parallel image builds. Source compilation needs a generous build-time bound; an interrupted build is not an available image or a passing DFM result.
 
 Use the action input schema and the scenario contract in `agent.yaml`. Mount design inputs and parameter files read-only at `/input`, with fresh writable `/output` and `/workdir` directories. File-based actions consume `/input/params.json`; actions declaring `params_json` retain their existing JSON argument contract. Read-only-root deployments additionally need the writable mounts described in the existing worker notes. Tool resource settings are inherited from the package, not newly measured budgets. The registry placeholder and tool ID are resolved by the catalog integration; no resource has been deployed by this migration.
 

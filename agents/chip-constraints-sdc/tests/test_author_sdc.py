@@ -34,11 +34,15 @@ class AuthorSdcRegressionTest(unittest.TestCase):
     def test_exit_code_uses_configured_output_directory(self):
         with tempfile.TemporaryDirectory() as output_dir:
             path = pathlib.Path(output_dir) / "common_design_envelope.json"
-            path.write_text(json.dumps({"status": "completed"}), encoding="utf-8")
+            path.write_text(json.dumps({
+                "status": "completed", "validation": {"verdict": "pass"},
+            }), encoding="utf-8")
             old = os.environ.get("CHIP_OUTPUT_DIR")
             os.environ["CHIP_OUTPUT_DIR"] = output_dir
             try:
                 self.assertEqual(0, run._authoritative_exit_code())
+                path.write_text(json.dumps({"status": "completed"}), encoding="utf-8")
+                self.assertEqual(1, run._authoritative_exit_code())
             finally:
                 if old is None:
                     os.environ.pop("CHIP_OUTPUT_DIR", None)

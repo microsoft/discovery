@@ -25,12 +25,15 @@ class FabricationExecutionPolicyTests(unittest.TestCase):
             path = next((ROOT / "agents" / package / "tools").glob("*/tool.yaml"))
             definition = yaml.safe_load(path.read_text(encoding="utf-8"))
             action = next(a for a in definition["actions"] if a["name"] == "run")
-            source = (path.parent / "services_launcher.py").read_text(encoding="utf-8")
             with self.subTest(package=package):
-                self.assertEqual(shlex.split(action["command"]), ["python3", "-u", "-c", source])
-                self.assertEqual(action["input_schema"], {
-                    "type": "object", "properties": {}, "additionalProperties": False, "required": [],
-                })
+                self.assertEqual(shlex.split(action["command"]),
+                                 ["python3", "-u", "/app/action_launcher.py"])
+                self.assertTrue((path.parent / "action_launcher.py").is_file())
+                dockerfile = (path.parent / "Dockerfile").read_text(encoding="utf-8")
+                self.assertIn("COPY action_launcher.py /app/action_launcher.py", dockerfile)
+                self.assertEqual(action["input_schema"]["type"], "object")
+                self.assertEqual(action["input_schema"]["properties"], {})
+                self.assertEqual(action["input_schema"].get("required", []), [])
 
     def test_direct_worker_and_declared_action_preserve_cde_and_gate_domain_failure(self):
         cases = (
@@ -52,7 +55,9 @@ class FabricationExecutionPolicyTests(unittest.TestCase):
             worker = runpy.run_path(str(path.parent / "run.py"), run_name="policy_test")
             action = next(a for a in yaml.safe_load(path.read_text(encoding="utf-8"))["actions"]
                           if a["name"] == "run")
-            code = compile(shlex.split(action["command"])[3], str(path), "exec")
+            argv = shlex.split(action["command"])
+            launcher = path.parent / Path(argv[-1]).name
+            code = compile(launcher.read_text(encoding="utf-8"), str(launcher), "exec")
             for status, verdict, native_exit, expected in cases:
                 envelope = {"status": status, "validation": {"verdict": verdict}, "sentinel": ["unchanged", 7]}
                 with self.subTest(package=package, status=status, verdict=verdict, native_exit=native_exit):
@@ -89,6 +94,34 @@ class FabricationExecutionPolicyTests(unittest.TestCase):
                         )
                     finally:
                         sys.path[:] = before
+
+    def test_missing_verdict_fails_closed_in_both_launchers(self):
+        envelope = {"status": "completed", "validation": {}, "sentinel": ["unchanged"]}
+        for package in PACKAGES:
+            directory = next((ROOT / "agents" / package / "tools").iterdir())
+            for name in ("action_launcher.py", "services_launcher.py"):
+                path = directory / name
+                code = compile(path.read_text(encoding="utf-8"), str(path), "exec")
+                before = sys.path[:]
+                try:
+                    with self.subTest(package=package, launcher=name), \
+                            patch("runpy.run_path", side_effect=SystemExit(0)), \
+                            patch.dict(sys.modules, {
+                                "pdk_binding_utils": SimpleNamespace(
+                                    _parse_magic_density_rules=lambda path: None,
+                                    __file__="/app/pdk_binding_utils.py"),
+                                "drc_utils": SimpleNamespace(
+                                    _run_klayout_drc=lambda *args, **kwargs: {},
+                                    _run_magic_drc=lambda *args, **kwargs: {},
+                                    _OUTPUT_DIR="/output")}), \
+                            patch("os.path.isfile", return_value=True), \
+                            patch("builtins.open", mock_open(read_data=json.dumps(envelope))), \
+                            contextlib.redirect_stdout(io.StringIO()):
+                        with self.assertRaises(SystemExit) as exc:
+                            exec(code, {"__name__": "__main__"})
+                        self.assertEqual(exc.exception.code, 1)
+                finally:
+                    sys.path[:] = before
 
     def test_direct_worker_missing_or_malformed_envelope_fails_closed(self):
         for package in PACKAGES:

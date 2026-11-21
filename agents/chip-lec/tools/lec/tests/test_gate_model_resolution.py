@@ -60,7 +60,9 @@ class TestDictShapedLibertyBinding(unittest.TestCase):
         block = lec_utils._liberty_read_block(self.lib)
         self.assertIn("read_liberty -ignore_miss_func", block)
         self.assertNotIn("-lib", block)
-        self.assertIn('"' + self.lib + '"', block)
+        # Yosys script arguments must escape Windows backslashes as well.
+        expected = '"' + self.lib.replace("\\", "\\\\").replace('"', '\\"') + '"'
+        self.assertIn(expected, block)
 
 
 class TestSharedModelsReachTheGateBlock(unittest.TestCase):

@@ -152,6 +152,18 @@ def _fail_closed(error, params=None):
 
 
 def main():
+    if len(sys.argv) > 1 and sys.argv[1] == "--params-file":
+        try:
+            if len(sys.argv) != 3:
+                raise ValueError("--params-file requires exactly one file path")
+            with open(sys.argv[2], encoding="utf-8-sig") as stream:
+                params = json.load(stream)
+            if not isinstance(params, dict) or not params.get("scenario"):
+                raise ValueError("parameter file must contain a scenario JSON object")
+        except (OSError, ValueError) as exc:
+            _fail_closed(str(exc))
+            return
+        sys.exit(run_from_params(_normalize_params(params)))
     log("=== CHIP ROUTING RUN.PY STARTING ===")
     if len(sys.argv) > 1:
         arg = _clean_arg(sys.argv[1].strip())

@@ -1,7 +1,9 @@
 # Services execution qualification
 
-The existing single-line `params_json` function contract is unchanged. Create input
-files with WriteResource and mount their actual returned FILE URIs individually;
+The registered `run` action accepts no `params_json` or `params_file` argument.
+Write the scenario JSON as UTF-8 with WriteResource and mount its actual returned
+FILE URI read-only at `/input/params.json`; request `/output` as an output mount.
+Create referenced design files with WriteResource and mount their actual returned FILE URIs individually;
 do not infer resource URIs from physical storage paths. Preserve the supplied PDK
 binding and timing intent. Use the actual GetNodePoolContext ID.
 

@@ -89,14 +89,12 @@ def validate(params, root):
                         "provenance", "validation"):
             if section in env and not isinstance(env[section], dict):
                 raise ValueError("envelope " + section + " must be an object")
-        for section in ("signoff_evidence", "provenance"):
-            for key, value in env.get(section, {}).items():
-                if key in utils._ARTIFACT_FIELDS and isinstance(value, str) and value:
-                    if not Path(value).is_absolute() and base is None:
-                        continue  # Preserve native unresolvable-citation reporting.
-                    path = input_path(value, root, base)
-                    if path.is_file():
-                        files.append(path)
+        for field, value in utils.artifact_citations(env):
+            try:
+                path = utils.resolve_artifact(value, base, root)
+            except utils.CitationUnavailable:
+                continue  # Safe missing/ambiguous citations remain unverified in the native audit.
+            files.append(path)
     return files
 
 
@@ -148,6 +146,7 @@ def execute(params_file, input_root=Path("/input"), output=Path("/output"),
         params_path = input_path(str(params_file), input_root)
         params = load_json(params_path)
         files = [params_path] + validate(params, input_root)
+        params["_input_root"] = str(input_root.resolve())
         results = utils.dispatch(params)
     except Exception as error:
         utils.quick_setup(str(output), str(workdir))

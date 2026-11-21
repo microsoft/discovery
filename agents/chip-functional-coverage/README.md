@@ -6,9 +6,11 @@ Node-agnostic functional coverage agent. Defines, measures, and closes functiona
 
 The prompt agent delegates to the bundled native worker. The canonical `tools/functional-coverage/Dockerfile` builds this package independently; it does not require another chip-agent image, a shared-family build, or a private registry image. Existing worker source and native verdict gates are preserved. Legacy campaign and Services notes below describe historical runs, not validation of this migrated recipe.
 
-Public build bases: `docker.io/verilator/verilator:v5.036@sha256:7e3809f5def31acb9746be550714bc991bae87dd687ac2939de183a541ed84c7`. Base images must satisfy the target repository's current allowlist; a pinned digest does not itself establish policy approval.
+Public build bases: the digest-pinned GHDL 5.1.1 GCC Ubuntu 24.04 and Verilator 5.036 images named in the Dockerfile. Base images must satisfy the target repository's current allowlist; a pinned digest does not itself establish policy approval.
 
 ## Prerequisites
+
+Host Python is not required for the container runtime. Python and its build tools come from the base distribution; remaining Python dependencies are built from official GitHub archives pinned by full commit and SHA256 in [the source lock](tools/functional-coverage/python_sources.lock.json). Installation disables package indexes and build isolation, then runs `pip check`; it does not contact the PyPI files host or disable TLS verification. Python 3.12 and cocotb-coverage 2.0 replace the prior forced cocotb 2.x/coverage-extension 1.x mismatch. An optional [approved source cache](tools/functional-coverage/dependency-sources/README.md) supports Python-source installation without GitHub access. OS package and base-image access are still required.
 
 Docker with Linux containers, network access to the named public base registries and dependency sources, and the inputs required by the scenario. Supply PDK models, rule decks, libraries and user-design files separately with appropriate licenses; these are not embedded in this package. Keep builds and native probes sequential. Retain at least 15 GB free on the host before starting any build.
 
@@ -17,6 +19,8 @@ Docker with Linux containers, network access to the named public base registries
 `functional-coverage` is defined in [tool.yaml](tools/functional-coverage/tool.yaml). Its Docker build context is `tools/functional-coverage/`; required runtime executable probes are included in the Dockerfile and fail the build when a dependency is missing.
 
 ## Configuration
+
+The distribution supplies `ccache`, required by the copied official Verilator make configuration. The [toolchain probe](tools/functional-coverage/verify_simulator_toolchain.py) compiles real timed RTL and executes four self-checking AND-gate vectors during the image build; version and import probes alone do not establish simulator build capability.
 
 Use the action input schema and the scenario contract in `agent.yaml`. Mount design inputs and parameter files read-only at `/input`, with fresh writable `/output` and `/workdir` directories. File-based actions consume `/input/params.json`; actions declaring `params_json` retain their existing JSON argument contract. Read-only-root deployments additionally need the writable mounts described in the existing worker notes. Tool resource settings are inherited from the package, not newly measured budgets. The registry placeholder and tool ID are resolved by the catalog integration; no resource has been deployed by this migration.
 
