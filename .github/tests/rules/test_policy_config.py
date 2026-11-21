@@ -12,6 +12,8 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import pytest
+import yaml
 from conftest import write, write_policy
 
 from catalog_validation.runner import run_validation
@@ -91,6 +93,46 @@ def test_wrong_typed_extensions_is_a_config_error(repo):
     write_policy(repo, "source-allowlist.yaml", "extensions: .py\n")
     policy = PolicyConfig.load(repo)
     assert ".github/policy/source-allowlist.yaml" in _errored_files(policy)
+
+
+def test_scoped_extensions_are_optional_and_not_hardcoded(repo):
+    path = repo / ".github/policy/source-allowlist.yaml"
+    allowlist = yaml.safe_load(path.read_text(encoding="utf-8"))
+    allowlist.pop("scoped_extensions")
+    write_policy(repo, path.name, yaml.safe_dump(allowlist))
+
+    policy = PolicyConfig.load(repo)
+
+    assert policy.config_errors == ()
+    assert policy.allowed_scoped_extensions == ()
+    assert policy.is_allowed_source_file("skills/demo/SKILL.md")
+    assert not policy.is_allowed_source_file("skills/demo/template.html")
+
+
+@pytest.mark.parametrize("scoped", [
+    "scoped_extensions: null\n",
+    "scoped_extensions: [.html]\n",
+    "scoped_extensions:\n  skills/: .html\n",
+    "scoped_extensions:\n  skills: [.html]\n",
+    "scoped_extensions:\n  skills-other/: [.html]\n",
+    "scoped_extensions:\n  skills/../agents/: [.html]\n",
+    "scoped_extensions:\n  skills/: [.html, 17]\n",
+    "scoped_extensions:\n  skills/: [html]\n",
+    "scoped_extensions:\n  skills/: ['*.html']\n",
+    "scoped_extensions:\n  skills/: [.html.backup]\n",
+    "scoped_extensions:\n  skills/: [.html]\n  unrecognized/: [.txt]\n",
+])
+def test_malformed_scoped_extensions_fail_closed_without_partial_grants(repo, scoped):
+    write_policy(repo, "source-allowlist.yaml", "extensions: [.md]\n" + scoped)
+    relative = write(repo, "skills/demo/template.html", "<html>Template</html>\n")
+
+    policy = PolicyConfig.load(repo)
+    result = run_validation(repo, [relative])
+
+    assert ".github/policy/source-allowlist.yaml" in _errored_files(policy)
+    assert policy.allowed_scoped_extensions == ()
+    assert not policy.is_allowed_source_file(relative)
+    assert any(failure.rule_id == "CFG-002" for failure in result.blocking)
 
 
 def test_wrong_typed_bool_is_a_config_error(repo):
