@@ -53,6 +53,13 @@ skills/
 - The folder name must match the `name` field in `SKILL.md`.
 - Only `SKILL.md` is required. Add other folders only when they earn their place.
 - Reference bundled files with relative paths from the skill root (for example, `[patterns](references/patterns.md)`) and keep references one level deep.
+- HTML (`.html`) source templates are permitted under `skills/`, including
+  inline CSS and JavaScript used by generative-AI reporting workflows.
+  The allowance is scoped to this tree; it does not extend to agents or
+  starter kits. Contribute templates, not generated reports or other outputs.
+  Binary/content classification, safe UTF-8, secret scanning and CODEOWNER review
+  still apply. HTML is classified as code for review, not trusted or sanitized
+  by the extension check, and validation never executes submitted templates.
 
 ---
 
