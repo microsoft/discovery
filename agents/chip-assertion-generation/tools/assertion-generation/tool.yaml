@@ -26,7 +26,7 @@ infra:
 actions:
 - name: run
   description: Author SVA / cover properties from intent and screen vacuity. Emits generated assertions,
-    vplan linkage, and formal-checkability status to /output/final_results.json (Common Design Envelope).
+    vplan linkage, and formal-checkability status to /output/common_design_envelope.json (Common Design Envelope).
   infra_node: worker
   command: python3 -B -u /app/run.py --params-file /input/params.json
   input_schema:

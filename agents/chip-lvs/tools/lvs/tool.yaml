@@ -30,7 +30,7 @@ infra:
 actions:
 - name: run
   description: Run Netgen or KLayout LVS (or Magic layout extraction). Emits match verdict + mismatch
-    counts to /output/final_results.json (Common Design Envelope).
+    counts to /output/common_design_envelope.json (Common Design Envelope).
   infra_node: worker
   command: python3 -u /app/action_launcher.py
   input_schema:

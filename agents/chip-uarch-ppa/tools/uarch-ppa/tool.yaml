@@ -30,7 +30,7 @@ infra:
 actions:
 - name: run
   description: Sweep architectural knobs and estimate PPA (Pareto set), or estimate PPA for one configuration.
-    Emits the sweep / estimate to /output/final_results.json (Common Design Envelope).
+    Emits the sweep / estimate to /output/common_design_envelope.json (Common Design Envelope).
   infra_node: worker
   command: python3 -u /app/action_launcher.py
   input_schema:

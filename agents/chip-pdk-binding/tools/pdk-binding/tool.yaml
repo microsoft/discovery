@@ -28,7 +28,7 @@ infra:
 actions:
 - name: run
   description: Resolve/validate/switch a PDK binding. Emits the complete hash-pinned binding, completeness
-    report, and node-switch diff to /output/final_results.json (Common Design Envelope).
+    report, and node-switch diff to /output/common_design_envelope.json (Common Design Envelope).
   infra_node: worker
   command: python3 -u /app/action_launcher.py
   input_schema:

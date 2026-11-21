@@ -30,7 +30,7 @@ infra:
 actions:
 - name: run
   description: Run KLayout antenna / ERC deck and report violations. Emits violation count + per-check
-    breakdown + verdict to /output/final_results.json (Common Design Envelope).
+    breakdown + verdict to /output/common_design_envelope.json (Common Design Envelope).
   infra_node: worker
   command: python3 -u /app/action_launcher.py
   input_schema:

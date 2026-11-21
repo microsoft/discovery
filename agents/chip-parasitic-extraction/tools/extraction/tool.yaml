@@ -25,7 +25,7 @@ infra:
     pool_size: 1
 actions:
 - name: run
-  description: Run OpenRCX extraction and write SPEF. Emits SPEF ref, corner, and net counts to /output/final_results.json
+  description: Run OpenRCX extraction and write SPEF. Emits SPEF ref, corner, and net counts to /output/common_design_envelope.json
     (Common Design Envelope).
   infra_node: worker
   command: python3 -u /app/run.py

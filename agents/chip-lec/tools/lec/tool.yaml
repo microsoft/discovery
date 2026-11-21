@@ -31,7 +31,7 @@ infra:
 actions:
 - name: run
   description: Prove equivalence between a reference and revised design with Yosys equiv. Emits verdict,
-    key-point mapping, and non-equivalence diagnosis to /output/final_results.json (Common Design Envelope).
+    key-point mapping, and non-equivalence diagnosis to /output/common_design_envelope.json (Common Design Envelope).
   infra_node: worker
   command: python3 -u /app/action_launcher.py
   input_schema:

@@ -32,7 +32,7 @@ infra:
 actions:
 - name: run
   description: Triage failures, reduce to a measured-minimal reproducer, observe determinism by re-execution,
-    and rank root causes from waveform + log evidence. Emits to /output/final_results.json (Common Design
+    and rank root causes from waveform + log evidence. Emits to /output/common_design_envelope.json (Common Design
     Envelope).
   infra_node: worker
   command: python3 -u /app/action_launcher.py

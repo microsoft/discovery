@@ -29,7 +29,7 @@ infra:
 actions:
 - name: run
   description: Deterministic PPA search + Pareto bookkeeping over run points. Emits explored points, Pareto
-    front, sensitivity, and recommended recipe to /output/final_results.json (Common Design Envelope).
+    front, sensitivity, and recommended recipe to /output/common_design_envelope.json (Common Design Envelope).
   infra_node: worker
   command: python3 -u /app/action_launcher.py
   input_schema:

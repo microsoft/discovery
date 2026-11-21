@@ -33,7 +33,7 @@ infra:
 actions:
 - name: run
   description: Screen DFM/litho and estimate yield. Emits DFM findings, litho hotspots, OPC-readiness,
-    and a critical-area yield estimate to /output/final_results.json (Common Design Envelope).
+    and a critical-area yield estimate to /output/common_design_envelope.json (Common Design Envelope).
   infra_node: worker
   command: python3 -u /app/action_launcher.py
   input_schema:

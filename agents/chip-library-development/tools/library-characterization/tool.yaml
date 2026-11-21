@@ -28,7 +28,7 @@ infra:
 actions:
 - name: run
   description: Characterize a cell (ngspice slew x load sweeps) into an NLDM Liberty, and generate LEF/DEF
-    views. Emits characterized arcs, models, and view refs to /output/final_results.json (Common Design
+    views. Emits characterized arcs, models, and view refs to /output/common_design_envelope.json (Common Design
     Envelope).
   infra_node: worker
   command: python3 -u /app/action_launcher.py

@@ -29,7 +29,7 @@ infra:
 actions:
 - name: run
   description: Run KLayout and/or Magic batch DRC and report violations. Emits per-engine + total violation
-    counts, per-rule breakdown, and a waiver-adjudicated verdict to /output/final_results.json (Common
+    counts, per-rule breakdown, and a waiver-adjudicated verdict to /output/common_design_envelope.json (Common
     Design Envelope).
   infra_node: worker
   command: python3 -u /app/action_launcher.py

@@ -26,7 +26,7 @@ infra:
 actions:
 - name: run
   description: Run OpenROAD power + PSM IR-drop analysis. Emits power breakdown and worst IR drop vs node
-    budget to /output/final_results.json (Common Design Envelope).
+    budget to /output/common_design_envelope.json (Common Design Envelope).
   infra_node: worker
   command: python3 -u /app/run.py
   input_schema:

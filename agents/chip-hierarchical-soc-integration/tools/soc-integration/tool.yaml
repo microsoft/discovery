@@ -28,7 +28,7 @@ infra:
 actions:
 - name: run
   description: Assemble hierarchy, partition budgets, define interconnect. Emits per-block budgets, interconnect
-    topology, and interface consistency to /output/final_results.json (Common Design Envelope).
+    topology, and interface consistency to /output/common_design_envelope.json (Common Design Envelope).
   infra_node: worker
   command: python3 -u /app/action_launcher.py
   input_schema:

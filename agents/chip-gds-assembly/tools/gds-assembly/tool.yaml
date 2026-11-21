@@ -26,7 +26,7 @@ infra:
 actions:
 - name: run
   description: Stream a DEF to final GDSII or merge GDS files. Emits the GDS ref + top-cell/layer stats
-    to /output/final_results.json (Common Design Envelope).
+    to /output/common_design_envelope.json (Common Design Envelope).
   infra_node: worker
   command: python3 -u /app/run.py
   input_schema:

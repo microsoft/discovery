@@ -27,7 +27,7 @@ actions:
 - name: run
   description: Structural CDC/RDC signoff from RTL + a domain map, with bus-level multi-bit coherency
     screening and an optional formal proof of declared coherency schemes. Emits per-class crossing counts,
-    synchronizer inventory, bus inventory, and a signoff verdict to /output/final_results.json (Common
+    synchronizer inventory, bus inventory, and a signoff verdict to /output/common_design_envelope.json (Common
     Design Envelope).
   infra_node: worker
   command: python3 -B -u /app/run.py --params-file /input/params.json

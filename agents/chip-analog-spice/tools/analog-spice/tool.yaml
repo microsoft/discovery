@@ -34,7 +34,7 @@ infra:
 actions:
 - name: run
   description: Run ngspice on a SPICE deck (or netlist an Xschem schematic). Emits analysis type + .measure
-    results to /output/final_results.json (Common Design Envelope).
+    results to /output/common_design_envelope.json (Common Design Envelope).
   infra_node: worker
   command: python3 -u /app/action_launcher.py
   input_schema:

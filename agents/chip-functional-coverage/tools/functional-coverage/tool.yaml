@@ -27,7 +27,7 @@ actions:
 - name: run
   description: Measure functional coverage by RUNNING real RTL (measure_rtl_coverage), or model/score/merge
     from structured JSON. Emits per-group/cross coverage, cover properties, holes, native coverage.dat
-    merge, and a reachability proof to /output/final_results.json (Common Design Envelope).
+    merge, and a reachability proof to /output/common_design_envelope.json (Common Design Envelope).
   infra_node: worker
   command: python3 -B -u /app/run.py --params-file /input/params.json
   input_schema:

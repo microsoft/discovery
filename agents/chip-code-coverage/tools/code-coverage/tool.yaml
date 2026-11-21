@@ -26,7 +26,7 @@ infra:
 actions:
 - name: run
   description: Run code-coverage measurement/merge/exclusion from structured JSON. Emits per-type coverage,
-    uncovered items, and exclusion ledger to /output/final_results.json (Common Design Envelope).
+    uncovered items, and exclusion ledger to /output/common_design_envelope.json (Common Design Envelope).
   infra_node: worker
   command: python3 -B -u /app/run.py --params-file /input/params.json
   input_schema:
