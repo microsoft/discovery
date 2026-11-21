@@ -1,0 +1,19 @@
+{
+  "node_awareness": "node-aware",
+  "original_tags": [
+    "chip-design",
+    "ppa",
+    "design-space-exploration",
+    "optimization",
+    "node-portable",
+    "sky130"
+  ],
+  "action_examples": {
+    "run": [
+      {
+        "name": "pareto_search",
+        "params_json": "{\"scenario\":\"pareto_search\",\"objectives\":[{\"metric\":\"fmax_mhz\",\"goal\":\"max\"},{\"metric\":\"area_um2\",\"goal\":\"min\"}],\"budget\":{\"fmax_mhz\":100},\"points\":[{\"config\":{\"effort\":\"high\"},\"source_cde\":\"r1\",\"metrics\":{\"fmax_mhz\":110,\"area_um2\":13000}},{\"config\":{\"effort\":\"low\"},\"source_cde\":\"r2\",\"metrics\":{\"fmax_mhz\":95,\"area_um2\":11000}},{\"config\":{\"effort\":\"med\"},\"source_cde\":\"r3\",\"metrics\":{\"fmax_mhz\":105,\"area_um2\":12000}}]}"
+      }
+    ]
+  }
+}

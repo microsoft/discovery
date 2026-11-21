@@ -1,0 +1,31 @@
+schema_version: design-policy/1.0
+owner: hierarchical-soc-integration
+node_awareness: node-aware
+pdk_binding:
+  required: true
+  resolved_by: PDK Binding and Node Management Agent
+  consumed_fields: [pdk, stdcell_library, corners, metal_stack]
+  missing_binding_behavior: block
+integration:
+  block_budgets_sum_within_top: true
+  every_interface_specified_and_consistent: true
+  hand_boundary_constraints_to_blocks: true
+assumptions:
+  agent_assumptions_allowed: true
+  disclosure_required: true
+  domain_classes: [budget_partition, interconnect_topology, boundary_idealization]
+  unresolved_sensitivity_behavior: pass_with_caveats
+execution:
+  budget_overflow: block
+  interface_inconsistency: block
+  malformed_output: block
+
+# --- BEGIN generated effort block (catalog/gen_effort_policy.py) ---
+effort:
+  iterating: false
+  metric_kind: unavailable
+  rationale: >-
+    stage not in the residual registry -- this agent does not own an iterable closure gate.
+    Effort is bounded by max_attempts from the campaign effort-budget
+    ledger plus human judgement; no metric-driven stall rule applies.
+# --- END generated effort block ---

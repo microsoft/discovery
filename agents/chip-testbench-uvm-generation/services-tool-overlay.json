@@ -1,0 +1,11 @@
+{
+  "version": "1.2.2",
+  "actions": [{
+    "name": "run",
+    "description": "Generate/introspect verification scaffolds or execute tb_non_vacuity from /input/params.json. Scenarios generate_env, add_component, smoke_test, tb_non_vacuity, finalize_attempt. Review is not self-checking simulation evidence. Read common_design_envelope.json.",
+    "infra_node": "worker",
+    "command": "python3 -B -u /app/run.py --params-file /input/params.json",
+    "input_schema": {"type": "object", "required": [], "properties": {}, "additionalProperties": false}
+  }],
+  "compute_limits": {"cpu": 2, "ram": "4Gi"}
+}

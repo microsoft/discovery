@@ -1,0 +1,14 @@
+name: chip-formal-verification
+type: agent
+version: 1.1.0
+associated_tools:
+- agents/chip-formal-verification/tools/formal-verification
+publisher:
+  name: Microsoft
+  contact: discovery-catalog@microsoft.com
+  support_url: https://techcommunity.microsoft.com/category/azure/discussions/microsoft-discovery-discussions
+  party: 1p
+description: |
+  Node-agnostic formal-verification agent driven by the Yosys sat engine (the back-end SymbiYosys wraps), running bounded model checking / k-induction of SV assertions and emitting a Common Design Envelope.
+tags:
+- eda

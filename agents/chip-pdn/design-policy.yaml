@@ -1,0 +1,81 @@
+schema_version: design-policy/1.0
+owner: chip-pdn
+node_awareness: node-aware
+pdk_binding:
+  required: true
+  resolved_by: PDK Binding and Node Management Agent
+  consumed_fields: [pdk, metal_stack, layers, via_rules]
+  missing_binding_behavior: block
+execution:
+  missing_binding_reference: block
+  engine_failure: block
+  malformed_output: block
+
+# Boundary assertions this stage must satisfy before it may report a passing attempt.
+# These are NOT tuning knobs: each one closes a defect class that previously escaped the
+# PDN gate and only surfaced at signoff DRC, with the full physical flow closed behind it.
+gate_checks:
+  - id: met1_power_over_macro_count
+    description: >-
+      Count of rail-layer (and li1) POWER shapes in SPECIALNETS whose geometry intersects
+      a hard-macro footprint. A macro's abstract LEF OBS stops the SIGNAL router but NOT
+      pdngen, which emits a follow-pin rail per std-cell row -- including rows the
+      floorplan left running under a FIXED macro.
+    closes_at: 0
+    severity: block
+    owner_when_nonzero: floorplan
+    rationale_when_nonzero: >-
+      pdngen parameters are not the cause. The row was handed to it. Cut std-cell rows
+      under every hard macro and add a li1/met1 power+routing blockage over
+      macro-footprint+halo BEFORE pdngen runs.
+    evidence: >-
+      python catalog/validate_pad_macro_boundary.py --campaign <slug>   (check PB1)
+    incident: >-
+      2026-10-08 pdn.7: 55 met1 FOLLOWPIN segments across 2 macros -> 1573 m1.2
+      violations at signoff DRC (713/715 inside the macro bboxes). pdn.8 = 0.
+  - id: specialnets_preserved
+    description: >-
+      SPECIALNETS count must not DECREASE across a PDN re-run on the same die. A
+      re-cascade that silently drops pre-declared special nets (pad-ring abutment buses,
+      PORT<->pad bond nets) hands them back to the signal router.
+    severity: block
+
+# --- BEGIN generated effort block (catalog/gen_effort_policy.py) ---
+effort:
+  iterating: true
+  stage_key: pdn
+  metric_kind: discrete
+  progress_metric:
+    id: pdn_connectivity_violations
+    direction: minimize
+    closes_at: 0
+    # STABLE pointer: every stage reports its residual here. The
+    # per-stage extraction lives in catalog/tools/cde_progress.py, so a
+    # consumer never has to know this stage's freeform result keys.
+    source: common_design_envelope.json#/progress/residual
+    denominator: common_design_envelope.json#/progress/denominator
+    # Compare WITHIN a unit family, never across families: counts and
+    # nanoseconds are not commensurable, and a scalar comparison lets
+    # the residual silently switch basis while a regression hides.
+    families: common_design_envelope.json#/progress/families
+    primary_family: count
+    unit: violations
+  # Stall rule (PRIMARY stop): if the best-so-far residual has not
+  # improved by >= min_delta across the last k attempts, the stage has
+  # converged and further attempts are not expected to close it.
+  min_delta: 1.0
+  k: 2
+  provisional: true   # not yet calibrated against normalized history
+  # Progress requires that NO unit family regressed -- a stage whose
+  # gate has several families (e.g. latch counts AND timing slack) must
+  # not report progress when one improves while another backslides.
+  no_family_regression: true
+  # Cost is charged in resource units, not attempts: judge marginal
+  # gain PER UNIT COST (see EFFORT-COST-WEIGHTS-001).
+  cost_weighted_roi: true
+  # Can THIS stage close its own gate by re-running? An analysis
+  # stage cannot (it observes, it does not modify design data), so
+  # rung-1 is a provable no-op and the ladder must route straight to
+  # rung 2 -- see EFFORT-AUTO-RUNG2-001 `not-self-remediable`.
+  self_remediating: true
+# --- END generated effort block ---

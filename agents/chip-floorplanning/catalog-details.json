@@ -1,0 +1,30 @@
+{
+  "node_awareness": "node-aware",
+  "original_tags": [
+    "floorplanning",
+    "openroad",
+    "tech-lef",
+    "node-portable",
+    "sky130"
+  ],
+  "previous_build": {
+    "containerfile": "Containerfile",
+    "engine": "docker"
+  },
+  "action_examples": {
+    "run": [
+      {
+        "name": "initialize_floorplan",
+        "params_json": "{\"scenario\":\"initialize_floorplan\",\"top\":\"counter\",\"netlist\":\"/input/counter.v\",\"tech_lef\":\"/input/sky130_fd_sc_hd.tlef\",\"cell_lef\":\"/input/sky130_fd_sc_hd.lef\",\"liberty\":\"/input/sky130_fd_sc_hd__tt_025C_1v80.lib\",\"utilization\":0.45,\"core_margin_um\":5,\"site\":\"unithd\",\"pdk_binding\":{\"pdk\":\"sky130A\",\"site\":\"unithd\"}}"
+      },
+      {
+        "name": "place_macros_hierarchical",
+        "params_json": "{\"scenario\":\"place_macros\",\"def_file\":\"/input/floorplan.def\",\"engine\":\"auto\",\"halo_um\":[10,10],\"target_util\":0.4,\"tech_lef\":\"/input/sky130_fd_sc_hd.tlef\",\"cell_lef\":\"/input/sky130_fd_sc_hd.lef\"}"
+      },
+      {
+        "name": "cut_rows_around_macros",
+        "params_json": "{\"scenario\":\"cut_rows\",\"def_file\":\"/input/macros_placed.def\",\"macro_halo_um\":[10,10],\"tech_lef\":\"/input/sky130_fd_sc_hd.tlef\",\"cell_lef\":\"/input/sky130_fd_sc_hd.lef\"}"
+      }
+    ]
+  }
+}

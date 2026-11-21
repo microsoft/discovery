@@ -1,0 +1,24 @@
+schema_version: design-policy/1.0
+owner: chip-gds-assembly
+node_awareness: node-aware
+pdk_binding:
+  required: true
+  resolved_by: PDK Binding and Node Management Agent
+  consumed_fields: [pdk, cell_gds, tech_lef, klayout_tech]
+  missing_binding_behavior: block
+execution:
+  missing_binding_reference: block
+  engine_failure: block
+  malformed_output: block
+
+# --- BEGIN generated effort block (catalog/gen_effort_policy.py) ---
+effort:
+  iterating: false
+  metric_kind: unavailable
+  rationale: >-
+    declarative/one-shot stage: re-running does not move a residual.
+    Effort is bounded by max_attempts from the campaign effort-budget
+    ledger plus human judgement; no metric-driven stall rule applies.
+  stage_key: gds
+  self_remediating: true
+# --- END generated effort block ---

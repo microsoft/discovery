@@ -1,0 +1,19 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "required": ["scenario", "envelopes"],
+  "properties": {
+    "scenario": {"enum": ["review_signoff", "adjudicate_waivers", "check_evidence"]},
+    "envelopes": {"type": "array", "minItems": 1, "items": {"oneOf": [{"type": "object"}, {"type": "string", "pattern": "^/input/"}]}},
+    "required_gates": {"type": "array", "items": {"type": "string", "minLength": 1}},
+    "required_fields": {"type": "array", "items": {"type": "string", "minLength": 1}},
+    "require_artifacts": {"type": "boolean"},
+    "evidence_root": {"type": "string", "pattern": "^/input(?:/|$)"},
+    "waivers": {"type": "array"},
+    "budget": {"type": "object"},
+    "pdk_binding": {"type": "object"},
+    "deck_vars": {"type": "object"},
+    "constraints": {"type": "object"},
+    "metrics": {"type": "object"}
+  }
+}

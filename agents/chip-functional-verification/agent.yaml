@@ -3,6 +3,26 @@ name: chip-functional-verification
 displayName: Functional Verification (Icarus Verilog)
 description: |
   Verify immutable RTL using independent testbenches and native simulation. Compiles with Icarus Verilog, runs with vvp, and reports a pass/fail verdict with a required nonempty VCD for Icarus self-check success. Emits a Common Design Envelope.
+catalog_metadata:
+  schema_version: catalog-agent-metadata/1.0
+  source: catalog/chip-design-README.md
+  asset_class: agent
+  canonical_name: Functional Verification Agent
+  flow_stage: B - RTL Design and Verification
+  node_awareness: node-agnostic
+  tier: 1
+  nature: reasoning / orchestrated
+  required_tools:
+  - Functional Simulation Tool
+  required_skills:
+  - Verification Planning Skill
+  - Coverage Closure Skill
+  - Provenance Skill
+  supported_problems:
+  - RTL simulation (event-driven)
+  - testbench pass/fail verdict
+  - VCD waveform generation
+  emits: Common Design Envelope
 samplePrompts:
 - Simulate this RTL with the testbench and tell me if it passes.
 - Run the Icarus simulation and dump a VCD.
@@ -80,11 +100,10 @@ instructions: |-
 
   # OUTPUT CONTRACT (Common Design Envelope)
   Emit a self-contained Common Design Envelope: root `status` is `completed` or `failed`; verdict is `pass`, `pass_with_caveats`, `fail`, `not_assessable`, `not_applicable`, or `waived`. Put the verdict and VCD ref in `signoff_evidence`. Node-agnostic: `pdk_binding` is `none`. Carry the shared `vplan`.
-  # BOOKSHELVES
-  Use relevant Bookshelves explicitly attached to the current deployment when available.
-  Do not assume a repository manifest or named shelf exists. Query only relevant sources
-  using exposed tools. Record queried sources in provenance.bookshelves_consulted;
-  record none_relevant or the actual access failure when no query could be made.
+  # BOOKSHELVES (research library -- Engine-owned config, agent-resolved)
+    Resolve your shelves in this order. (1) If the Discovery Engine attached bookshelves to this run, use THOSE. (2) Otherwise consult exactly the shelves scoped to you in catalog/bookshelves.manifest.yaml under `agent_bookshelves.chip-functional-verification`: **iverilog, verilator, cocotb**. (3) If neither resolves, proceed on embedded knowledge and say so.
+    Query ONLY your scoped shelves -- never sweep all 19; they answer different questions and an unscoped sweep returns noise. Consult them BEFORE falling back to memory for tool syntax/flags, PDK/node limits, waiver precedent, and troubleshooting, and PREFER a shelf-sourced fact over a memorized default.
+    Do NOT invent a shelf name: the scoped list above is the manifest's, not yours. Record what you actually did in `provenance.bookshelves_consulted` -- list each shelf you QUERIED (and what you took from it), or the exact string `none_relevant` if you queried none. Never write a vague disclaimer; that field must distinguish `consulted` from `nothing relevant` from `unreachable`.
 
   # TOOL-CALL CONTRACT (mandatory for every tool call)
   1. `/input/params.json` is ONE JSON object. It MUST contain a top-level `"scenario"` key -- one of: `run_sim`, `lint`, `gls`. Never nest or omit it; invalid explicit input fails closed without trying another file.

@@ -1,0 +1,35 @@
+{
+  "original_metadata_description": "Node-aware design-for-manufacturability agent. Opens the layout with the KLayout geometry engine and measures windowed pattern density, geometric litho-risk patterns (width/space/notch/isolated) and critical area; estimates random-defect yield with a Poisson model that gates on any defect size lacking a density, because dropping a term would raise the reported yield. Rule windows come from the PDK Binding and are never defaulted. Declares aerial-image, resist, process-window and OPC/RET analysis out of scope rather than reporting them clean. Validated on SkyWater sky130.\n",
+  "original_agent_description": "Node-aware design-for-manufacturability agent. OPENS THE ACTUAL LAYOUT with the KLayout geometry engine and measures: windowed pattern density (per window, because a die-average can sit mid-window while individual windows are far outside the rule), geometric litho-risk patterns (features below the printability limit, gaps below the resolution limit, notches, isolated features), and critical area. Estimates random-defect yield with a Poisson model in which a defect size lacking a density is reported as UNPRICED and gates the run -- dropping a term would shrink lambda and so RAISE the reported yield. Rule windows and printability limits come from the PDK Binding and are never defaulted. Does NOT emit an OPC-readiness verdict: OPC is verified against a simulated printed image, which needs a calibrated optical and resist model, so aerial-image, resist, process-window and OPC/RET analysis are declared out of scope rather than reported as clean. Validated on SkyWater sky130.\n",
+  "node_awareness": "node-aware",
+  "original_tags": [
+    "chip-design",
+    "dfm",
+    "lithography",
+    "yield",
+    "node-portable",
+    "sky130"
+  ],
+  "previous_tool_version": "1.1.1-rollingrepair-20261116",
+  "action_examples": {
+    "run": [
+      {
+        "name": "yield_analysis",
+        "params_json": "{\"scenario\":\"yield_analysis\",\"critical_area_um2\":{\"0.09\":1500,\"0.13\":400},\"pdk_binding\":{\"pdk\":\"sky130A\",\"defect_density\":{\"0.09\":0.05,\"0.13\":0.02}}}"
+      },
+      {
+        "name": "dfm_check",
+        "params_json": "{\"scenario\":\"dfm_check\",\"layout\":\"/input/top.gds\",\"metrics\":{\"met1\":{\"single_via_count\":40,\"redundant_via_count\":960}},\"pdk_binding\":{\"pdk\":\"sky130A\",\"dfm_rules\":{\"density_window\":{\"min\":0.2,\"max\":0.7,\"window_um\":20},\"via_redundancy_min\":0.9,\"layers\":[{\"name\":\"met1\",\"layer\":68,\"datatype\":20}]}}}"
+      },
+      {
+        "name": "litho_hotspot",
+        "params_json": "{\"scenario\":\"litho_hotspot\",\"layout\":\"/input/top.gds\",\"pdk_binding\":{\"pdk\":\"sky130A\",\"litho_decks\":{\"layers\":[{\"layer\":68,\"datatype\":20,\"rules\":{\"min_width\":0.14,\"min_space\":0.14,\"min_notch\":0.14}}]}}}"
+      }
+    ]
+  },
+  "input_schema_keywords": {
+    "run": {
+      "additionalProperties": false
+    }
+  }
+}

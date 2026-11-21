@@ -1,0 +1,14 @@
+name: chip-streamout-xor
+type: agent
+version: 1.0.0
+associated_tools:
+- agents/chip-streamout-xor/tools/streamout-xor
+publisher:
+  name: Microsoft
+  contact: discovery-catalog@microsoft.com
+  support_url: https://techcommunity.microsoft.com/category/azure/discussions/microsoft-discovery-discussions
+  party: 1p
+description: |
+  Node-aware physical-layout XOR agent using real KLayout XOR and independent Magic/KLayout DEF streamout paths. Emits a fail-closed Common Design Envelope.
+tags:
+- eda

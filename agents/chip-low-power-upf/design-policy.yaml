@@ -1,0 +1,28 @@
+schema_version: design-policy/1.0
+owner: low-power-upf
+node_awareness: node-aware
+pdk_binding:
+  required: true
+  resolved_by: PDK Binding and Node Management Agent
+  consumed_fields: [pdk, power_mgmt_cells, supplies, corners]
+  missing_binding_behavior: block
+power_intent:
+  isolate_or_level_shift_every_crossing: true
+  retention_always_on_consistent: true
+  require_complete_power_state_table: true
+  run_low_power_static_check: true
+execution:
+  missing_power_mgmt_cells: block
+  incomplete_power_state_table: block
+  isolation_violation: block
+  malformed_output: block
+
+# --- BEGIN generated effort block (catalog/gen_effort_policy.py) ---
+effort:
+  iterating: false
+  metric_kind: unavailable
+  rationale: >-
+    stage not in the residual registry -- this agent does not own an iterable closure gate.
+    Effort is bounded by max_attempts from the campaign effort-budget
+    ledger plus human judgement; no metric-driven stall rule applies.
+# --- END generated effort block ---

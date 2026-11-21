@@ -1,0 +1,21 @@
+{
+  "node_awareness": "node-aware",
+  "original_tags": [
+    "metal-fill",
+    "density",
+    "openroad",
+    "physical-signoff",
+    "tapeout",
+    "node-portable",
+    "sky130"
+  ],
+  "previous_build": {
+    "containerfile": "Containerfile",
+    "engine": "docker"
+  },
+  "input_schema_keywords": {
+    "run": {
+      "additionalProperties": false
+    }
+  }
+}

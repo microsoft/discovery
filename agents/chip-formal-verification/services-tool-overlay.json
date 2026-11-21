@@ -1,0 +1,11 @@
+{
+  "version": "1.2.0",
+  "actions": [{
+    "name": "run",
+    "description": "Execute SymbiYosys/Yosys/Z3 on immediate SV assertions from /input/params.json. Scenarios prove and cover; read common_design_envelope.json and native solver logs/witnesses. Bounded PASS proves only recorded depth.",
+    "infra_node": "worker",
+    "command": "python3 -B -u /app/run.py --params-file /input/params.json",
+    "input_schema": {"type": "object", "required": [], "properties": {}, "additionalProperties": false}
+  }],
+  "compute_limits": {"cpu": 2, "ram": "4Gi"}
+}

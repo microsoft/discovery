@@ -1,0 +1,14 @@
+name: chip-design-intent
+type: agent
+version: 1.2.0
+associated_tools:
+- agents/chip-design-intent/tools/design-intent
+publisher:
+  name: Microsoft
+  contact: discovery-catalog@microsoft.com
+  support_url: https://techcommunity.microsoft.com/category/azure/discussions/microsoft-discovery-discussions
+  party: 1p
+description: |
+  Node-agnostic design-intent / requirements agent: normalizes requirements into a machine-checkable specification and allocates PPA budgets with closure checking. Deterministic, no external engine. Emits a Common Design Envelope.
+tags:
+- eda

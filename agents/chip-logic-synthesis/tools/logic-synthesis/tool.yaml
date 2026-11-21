@@ -1,0 +1,39 @@
+name: chip-logic-synthesis
+description: Chip logic synthesis tool. Maps RTL to a gate-level netlist with Yosys + ABC against the
+  active PDK standard-cell Liberty, and extracts area, cell count, and estimated timing QoR. Emits a Common
+  Design Envelope to /output/common_design_envelope.json. DOES NOT CONSUME AN SDC -- see capability_boundaries
+  below before writing a gate that depends on constraint-aware timing.
+version: 1.1.42
+category: Chip Design
+license: MIT
+infra:
+- name: worker
+  infra_type: container
+  image:
+    acr: '{name}.azurecr.io/chip-logic-synthesis:1.1.42'
+  compute:
+    min_resources:
+      cpu: 1
+      ram: 2Gi
+      storage: 10Gi
+      gpu: 0
+    max_resources:
+      cpu: 2
+      ram: 4Gi
+      storage: 40Gi
+      gpu: 0
+    recommended_sku:
+    - Standard_D2as_v6
+    pool_type: static
+    pool_size: 1
+actions:
+- name: run
+  description: Run Yosys logic synthesis from structured JSON parameters. Maps RTL to a gate-level netlist
+    against the active PDK Liberty and extracts area/cell-count/estimated-timing QoR into /output/common_design_envelope.json
+    (Common Design Envelope).
+  infra_node: worker
+  command: python3 -u /app/action_launcher.py
+  input_schema:
+    type: object
+    properties: {}
+    required: []

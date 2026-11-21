@@ -1,0 +1,15 @@
+name: chip-drc
+type: agent
+version: 1.0.0
+associated_tools:
+- agents/chip-drc/tools/drc
+publisher:
+  name: Microsoft
+  contact: discovery-catalog@microsoft.com
+  support_url: https://techcommunity.microsoft.com/category/azure/discussions/microsoft-discovery-discussions
+  party: 1p
+description: |
+  Node-aware Design Rule Check agent driven by KLayout batch DRC, consuming the PDK Binding (DRC rule deck) and emitting a Common Design Envelope. DRC is a mandatory tapeout gate. Validated on SkyWater sky130.
+tags:
+- eda
+- sky130

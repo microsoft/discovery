@@ -1,0 +1,26 @@
+{
+  "node_awareness": "node-aware",
+  "original_tags": [
+    "gds",
+    "oasis",
+    "xor",
+    "streamout",
+    "klayout",
+    "magic",
+    "physical-signoff"
+  ],
+  "orchestration": {
+    "resource_class": "heavy",
+    "peak_ram_hint": "8Gi"
+  },
+  "previous_tool_version": "1.2.42-maprepair-20261116",
+  "previous_build": {
+    "containerfile": "Containerfile",
+    "engine": "docker"
+  },
+  "input_schema_keywords": {
+    "run": {
+      "additionalProperties": false
+    }
+  }
+}

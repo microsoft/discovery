@@ -1,0 +1,21 @@
+{
+  "original_agent_description": "Node-agnostic stimulus generator. Produces directed and constrained-random stimulus targeted at coverage goals and corner cases from the shared verification plan (vplan). Generation is SEEDED PSEUDO-RANDOM SAMPLING over ranges and weighted value-sets, with simple relational blocks honoured by bounded rejection sampling -- there is NO SMT/CSP solver. Every transaction is re-checked against the full constraint set (field domains and relational blocks) immediately before emission; a sample that does not conform is DROPPED rather than emitted, and the resulting shortfall gates the run. Satisfiability is witness-based: conforming samples prove the constraint set satisfiable, while exhausting the try budget is reported as UNKNOWN, never as proof of contradiction.\n",
+  "node_awareness": "node-agnostic",
+  "original_tags": [
+    "chip-design",
+    "verification",
+    "stimulus",
+    "constrained-random",
+    "rejection-sampling",
+    "node-agnostic"
+  ],
+  "previous_build": {
+    "containerfile": "Dockerfile",
+    "engine": "docker"
+  },
+  "input_schema_keywords": {
+    "run": {
+      "additionalProperties": false
+    }
+  }
+}

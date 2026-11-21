@@ -1,0 +1,15 @@
+name: chip-pdk-binding
+type: agent
+version: 1.0.0
+associated_tools:
+- agents/chip-pdk-binding/tools/pdk-binding
+publisher:
+  name: Microsoft
+  contact: discovery-catalog@microsoft.com
+  support_url: https://techcommunity.microsoft.com/category/azure/discussions/microsoft-discovery-discussions
+  party: 1p
+description: |
+  Cross-cutting node-portability owner. Resolves, validates, and switches the active PDK Binding for the whole chip flow so the node is a swappable configuration. Fetches/pins the PDK (Open_PDKs / volare), registers libraries, corners, and rule decks, and emits a complete, hashed PDK Binding object every node-aware agent consumes. Validated on SkyWater sky130 (sky130A).
+tags:
+- eda
+- sky130

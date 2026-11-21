@@ -1,0 +1,35 @@
+name: testbench-generation
+description: |
+  Chip testbench/UVM generation tool. Scaffolds reusable cocotb/UVM-style environments (driver, monitor, scoreboard, agent, BFM) from DUT interfaces, traces components to the vplan, and runs a Verilator smoke check. INTROSPECTS THE DUT: port names and directions are read from the elaborated RTL via Verilator, so a signal the DUT does not declare -- or a DUT output the testbench would drive -- fails at generation instead of at simulation. The generated scoreboard is a real checker: it compares against a reference model and RAISES rather than returning a verdict when none is installed, so an unfinished environment is loud instead of silently passing. An environment with no reference model is reported as not self-checking. Node-agnostic. Emits a Common Design Envelope.
+version: 1.2.0
+category: Chip Design
+infra:
+- name: worker
+  infra_type: container
+  image:
+    acr: '{name}.azurecr.io/chip-testbench-generation:1.2.0'
+  compute:
+    min_resources:
+      cpu: 1
+      ram: 2Gi
+      storage: 10Gi
+      gpu: 0
+    max_resources:
+      cpu: 8
+      ram: 16Gi
+      storage: 20Gi
+      gpu: 0
+    recommended_sku:
+    - Standard_D2as_v6
+    pool_type: static
+    pool_size: 1
+actions:
+- name: run
+  description: Scaffold a verification environment and smoke-check it. Emits generated components, vplan
+    linkage, and smoke-test status to /output/common_design_envelope.json (Common Design Envelope).
+  infra_node: worker
+  command: python3 -B -u /app/run.py --params-file /input/params.json
+  input_schema:
+    type: object
+    required: []
+    properties: {}

@@ -1,0 +1,25 @@
+{
+  "node_awareness": "node-aware",
+  "original_tags": [
+    "routing",
+    "openroad",
+    "tritonroute",
+    "node-portable",
+    "sky130"
+  ],
+  "previous_build": {
+    "containerfile": "Containerfile",
+    "engine": "docker"
+  },
+  "action_examples": {
+    "run": [
+      {
+        "name": "route",
+        "params_json": "{\"scenario\":\"route\",\"top\":\"counter\",\"def_file\":\"/input/cts.def\",\"tech_lef\":\"/input/sky130_fd_sc_hd.tlef\",\"cell_lef\":\"/input/sky130_fd_sc_hd.lef\",\"liberty\":\"/input/sky130_fd_sc_hd__tt_025C_1v80.lib\",\"bottom_layer\":\"met1\",\"top_layer\":\"met5\",\"pdk_binding\":{\"pdk\":\"sky130A\"}}"
+      }
+    ]
+  },
+  "parameter_descriptions": {
+    "params_json": "CONTRACT: one single-line JSON object (double quotes) with a top-level \"scenario\" (one of: route). Object params such as pdk_binding / deck_vars are inline JSON objects, e.g. \"pdk_binding\":{\"pdk\":\"nangate45\",\"liberty\":[\"/input/cells.lib\"]}. Params named rtl/upf/sdc/text carry inline text; file paths go in *_file(s)/sources/netlist/def/gds keys as absolute /input/... paths. On failure read the envelope `error` field. JSON with scenario route | post_global_route_repair | post_route_timing_optimization | antenna_repair. route: `top`, `def_file` (post-CTS DEF), `tech_lef`, `cell_lef`, `liberty`, `bottom_layer`, `top_layer` (from binding), `pdk_binding`, optional `unroute_first`. Writes routed.def; reports DRC violations, opens/shorts. Set `unroute_first` when the input DEF is ALREADY ROUTED -- i.e. an ECO re-route after post_route_repair: global_route emits no guides on an already-routed design and detailed_route then fails with DRT-0047. `unroute_first: true` discards ALL signal routing (clean slate). `unroute_first: ['net_a', 'crc_nxt[0]', 'clknet_*']` is the SCOPED/incremental form: it unroutes only the listed nets (exact name first, then glob) and global_route replans exactly those, leaving every other net's geometry byte-identical -- use this to fix the handful of nets an ECO touched without throwing away a proven DRC-clean route. Special (power/ground) nets are never touched. BECAUSE `unroute_first: true` DESTROYS A ROUTE THAT ALREADY EXISTS, it is REFUSED on an already-routed design unless you also pass `acknowledge_full_reroute: true`; the refusal reports how many routed nets were at risk and modifies nothing. Prefer the scoped form, and when a full reroute really is intended change ONE thing at a time -- combining a full reroute with another change (e.g. a restored PDN) in a single step makes a failure unattributable and leaves no artifact behind. Note that re-entering detailed_route perturbs clock-net geometry even when nothing was unrouted, so re-verify CTS skew and post-route timing after any reroute. antenna_repair accepts `antenna_mode` (both|diode_only|jumper_only -- diodes cost AREA and need re-legalization, layer jumping costs ROUTING RESOURCE; 'both' lets the tool choose per net) plus `antenna_iterations`, `ratio_margin`, `diode_cell` and `antenna_allow_congestion`. The two timing-repair scenarios accept the resizer TRANSFORM controls (ORFS naming): `skip_pin_swap`, `skip_gate_cloning`, `skip_size_down`, `skip_buffering`, `skip_buffer_removal`, `skip_last_gasp`, `skip_vt_swap`, `skip_crit_vt_swap`, plus `repair_sequence`, `max_passes`, `max_utilization`, `match_cell_footprint`, `repair_tns_percent`, `recover_power_percent` (setup only) and `allow_setup_violations` (hold only). FILLERS: routing does NOT insert fillers -- the single implementation is chip-placement scenario `insert_fill` (filler_placement on routed.def/odb, after this stage). route counts filler-master instances (filler_cells from caller -> tool_policy.routing -> pdk_binding.physical_cells.filler_cells) in the routed design: qor_metrics.filler_cells_total, signoff_evidence.filler_cells. If the routed design has 0 filler cells while the binding declares filler_cells, envelope_warnings/warnings carry an explicit WELL/implant-DRC warning naming insert_fill as the next step. routed.v is written with `write_verilog -include_pwr_gnd -remove_cells {<filler_cells> <tapcell_master> <endcap_master>}` (only masters OpenROAD resolves; list recorded as netlist_removed_cells). Double-quoted JSON only."
+  }
+}

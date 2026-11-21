@@ -65,6 +65,8 @@ def main(args=None):
                    "traceback": traceback.format_exc(), "input_parameters": params}
     utils.save_final_results(results)
     code = _authoritative_exit_code()
+    print("CDE_JSON=" + Path("/output/common_design_envelope.json").read_text(
+        encoding="utf-8").replace("\n", ""), flush=True)
     print(f"{TOOL}: persisted CDE exit={code}", flush=True)
     return code
 

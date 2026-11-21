@@ -1,0 +1,24 @@
+schema_version: design-policy/1.0
+owner: qor-analytics
+node_awareness: node-agnostic
+pdk_binding:
+  required: false
+analytics:
+  consumes_envelopes_only: true
+  never_reruns_flow: true
+  every_point_references_source_cde: true
+  anomalies_against_explicit_baseline: true
+  report_statistics_with_method: true
+execution:
+  point_without_source_cde: block
+  malformed_output: block
+
+# --- BEGIN generated effort block (catalog/gen_effort_policy.py) ---
+effort:
+  iterating: false
+  metric_kind: unavailable
+  rationale: >-
+    stage not in the residual registry -- this agent does not own an iterable closure gate.
+    Effort is bounded by max_attempts from the campaign effort-budget
+    ledger plus human judgement; no metric-driven stall rule applies.
+# --- END generated effort block ---

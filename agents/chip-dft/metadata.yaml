@@ -1,0 +1,16 @@
+name: chip-dft
+type: agent
+version: 1.1.0
+associated_tools:
+- agents/chip-dft/tools/dft
+publisher:
+  name: Microsoft
+  contact: discovery-catalog@microsoft.com
+  support_url: https://techcommunity.microsoft.com/category/azure/discussions/microsoft-discovery-discussions
+  party: 1p
+description: |
+  Node-aware Design-for-Test agent driven by pinned Yosys. Performs honest sequential-element classification, binding-approved scan insertion with functional equivalence, scan-aware stuck-at ATPG, and structural plus simulated scan-chain integrity. Emits a hashed Common Design Envelope. Validated on sky130.
+tags:
+- eda
+- dft
+- sky130

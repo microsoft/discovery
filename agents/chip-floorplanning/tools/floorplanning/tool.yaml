@@ -1,0 +1,35 @@
+name: floorplanning
+description: |
+  Chip floorplanning tool. Uses OpenROAD to read the netlist + node LEF/Liberty, initialize the floorplan (core/die, rows/sites) at a target utilization, place I/O pins, and write a floorplan DEF. Utilization is always measured; a routability VERDICT is issued only against a `max_routable_utilization` supplied by the caller or the PDK binding tool_policy -- no routability threshold is invented, so an unsupplied limit yields "not assessed" rather than a pass. Node-aware. Emits a Common Design Envelope.
+version: 1.1.0
+category: Chip Design
+infra:
+- name: worker
+  infra_type: container
+  image:
+    acr: '{name}.azurecr.io/chip-floorplanning:1.1.0'
+  compute:
+    min_resources:
+      cpu: 1
+      ram: 2Gi
+      storage: 10Gi
+      gpu: 0
+    max_resources:
+      cpu: 1
+      ram: 2Gi
+      storage: 40Gi
+      gpu: 0
+    recommended_sku:
+    - Standard_D2as_v6
+    pool_type: static
+    pool_size: 1
+actions:
+- name: run
+  description: Initialize a floorplan with OpenROAD and write a DEF. Emits die/core area, utilization,
+    and the DEF ref to /output/common_design_envelope.json (Common Design Envelope).
+  infra_node: worker
+  command: python3 -B -u /app/run.py --params-file /input/params.json
+  input_schema:
+    type: object
+    required: []
+    properties: {}

@@ -1,0 +1,39 @@
+name: chip-dft
+description: Chip DFT tool. Uses pinned Yosys to classify every sequential element, insert binding-approved
+  scan cells, prove functional equivalence, perform scan-aware stuck-at ATPG, and verify emitted scan
+  chains with structural tracing plus bit-exact netlist simulation. Node-aware and fail-closed. Emits
+  a Common Design Envelope with hashed evidence.
+version: 1.1.40
+category: Chip Design
+license: MIT
+infra:
+- name: worker
+  infra_type: container
+  image:
+    acr: '{name}.azurecr.io/chip-dft:1.1.40'
+  compute:
+    min_resources:
+      cpu: 1
+      ram: 2Gi
+      storage: 10Gi
+      gpu: 0
+    max_resources:
+      cpu: 2
+      ram: 4Gi
+      storage: 40Gi
+      gpu: 0
+    recommended_sku:
+    - Standard_D2as_v6
+    pool_type: static
+    pool_size: 1
+actions:
+- name: run
+  description: 'Yosys DFT execution: honest scan analysis, domain-local insertion with mandatory equivalence,
+    exhaustive or deterministic-shard stuck-at ATPG, and real emitted-netlist shift simulation. Emits
+    a Common Design Envelope.'
+  infra_node: worker
+  command: python3 -u /app/action_launcher.py
+  input_schema:
+    type: object
+    properties: {}
+    required: []

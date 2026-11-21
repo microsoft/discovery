@@ -1,0 +1,38 @@
+name: chip-dse-optimization
+description: Chip PPA design-space exploration tool. Deterministic multi-objective search and Pareto bookkeeping
+  over real flow-run results (each point traces to a source CDE). Ranks knob sensitivity and recommends
+  a recipe within budget. Node-aware. Emits a Common Design Envelope. No learning surrogates (Tier 3,
+  out of scope).
+version: 1.1.42
+category: Chip Design
+license: MIT
+infra:
+- name: worker
+  infra_type: container
+  image:
+    acr: '{name}.azurecr.io/chip-dse-optimization:1.1.42'
+  compute:
+    min_resources:
+      cpu: 1
+      ram: 2Gi
+      storage: 5Gi
+      gpu: 0
+    max_resources:
+      cpu: 2
+      ram: 4Gi
+      storage: 20Gi
+      gpu: 0
+    recommended_sku:
+    - Standard_D2as_v6
+    pool_type: static
+    pool_size: 1
+actions:
+- name: run
+  description: Deterministic PPA search + Pareto bookkeeping over run points. Emits explored points, Pareto
+    front, sensitivity, and recommended recipe to /output/common_design_envelope.json (Common Design Envelope).
+  infra_node: worker
+  command: python3 -u /app/action_launcher.py
+  input_schema:
+    type: object
+    properties: {}
+    required: []

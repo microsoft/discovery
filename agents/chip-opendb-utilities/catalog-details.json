@@ -1,0 +1,37 @@
+{
+  "node_awareness": "node-aware",
+  "original_tags": [
+    "opendb",
+    "openroad",
+    "physical-design",
+    "database-utilities",
+    "node-portable"
+  ],
+  "orchestration": {
+    "resource_class": "heavy",
+    "peak_ram_hint": "8Gi"
+  },
+  "previous_build": {
+    "containerfile": "Containerfile",
+    "engine": "docker"
+  },
+  "action_examples": {
+    "run": [
+      {
+        "name": "convert-def-to-odb",
+        "params_json": "{\"scenario\":\"convert_def_to_odb\",\"def_file\":\"/input/design.def\",\"tech_lef\":\"/input/tech.lef\",\"cell_lef\":[\"/input/cells.lef\"],\"pdk_binding\":{\"pdk\":\"bound-node\",\"tech_lef\":\"/input/tech.lef\",\"cell_lef\":[\"/input/cells.lef\"]}}"
+      },
+      {
+        "name": "report-wire-length",
+        "params_json": "{\"scenario\":\"report_wire_length\",\"odb_file\":\"/input/design.odb\",\"tech_lef\":\"/input/tech.lef\",\"cell_lef\":[\"/input/cells.lef\"],\"pdk_binding\":{\"pdk\":\"bound-node\",\"tech_lef\":\"/input/tech.lef\",\"cell_lef\":[\"/input/cells.lef\"]}}"
+      },
+      {
+        "name": "write-powered-netlist-for-lvs",
+        "params_json": "{\"scenario\":\"write_views\",\"views\":[\"powered_netlist\"],\"def_file\":\"/input/routed.def\",\"tech_lef\":\"/input/tech.lef\",\"cell_lef\":[\"/input/cells.lef\"],\"cell_models\":[\"/pdk/sky130_fd_sc_hd.spice\"],\"pdk_binding\":{\"pdk\":\"bound-node\",\"tech_lef\":\"/input/tech.lef\",\"cell_lef\":[\"/input/cells.lef\"],\"cell_spice\":[\"/pdk/sky130_fd_sc_hd.spice\"]}}"
+      }
+    ]
+  },
+  "parameter_descriptions": {
+    "params_json": "CONTRACT: one single-line JSON object (double quotes) with a top-level \"scenario\" (one of: convert_def_to_odb, report_wire_length, write_views). Object params such as pdk_binding / deck_vars are inline JSON objects, e.g. \"pdk_binding\":{\"pdk\":\"nangate45\",\"liberty\":[\"/input/cells.lib\"]}. Params named rtl/upf/sdc/text carry inline text; file paths go in *_file(s)/sources/netlist/def/gds keys as absolute /input/... paths. On failure read the envelope `error` field. Double-quoted JSON. Required: scenario, pdk_binding, exactly one of def_file/odb_file, tech_lef, cell_lef. Scenario-specific fields are documented by the agent README. Explicit params override pdk_binding.tool_policy.opendb_utilities and all decisions are recorded.\nSCENARIO write_views WITH views=[\"powered_netlist\"]: ALSO SUPPLY `cell_models` (or pdk_binding.cell_spice) -- the PDK cell netlist, e.g. sky130_fd_sc_hd.spice. IT IS REQUIRED FOR AN LVS-USABLE NETLIST. OpenROAD `write_verilog -include_pwr_gnd` emits only VPWR/VGND: it OMITS the bulk/well pins (sky130 VPB/VNB) and emits physical fill / decap / tap cells with an EMPTY connection list, because their power connectivity is implicit in the DEF rails rather than in its NETS section. Netgen then reports \"Instance of <cell> has only 8 of 10 ports\" and one port_match_error per instance, and LVS cannot match. With `cell_models` the tool reads each cell's DECLARED pin list from the PDK and connects every unconnected pin: power/bulk pins to their rails (override via pdk_binding.pg_pin_map for a node that names them differently), and every other pin to a UNIQUE per-instance net so a genuine open circuit STILL FAILS rather than being absorbed. MEASURED on a filled sky130 block: 258 vs 261 devices / 270 vs 267 nets / 1387 port errors WITHOUT it, versus 258==258 / 270==270 / 0 port errors WITH it. Omitting it does not error -- the envelope reports pin_completion.lvs_ready=false and the netlist will NOT match.\nSCENARIO report_wire_length: optional `wire_length_source` (auto|detailed_route|global_route|hpwl, default auto) and `top_n` (default 10). The tool probes the database first and issues `report_wire_length -net * -detailed_route` when nets carry routed wires, else `-global_route` when a global route/guides exist, else (auto only) a per-net HPWL ESTIMATE that is recorded as a caveat and refused when instances are unplaced. An explicitly requested source that the database does not carry fails closed. Results carry total_wire_length_um, nets_reported and the top-N longest nets.\n"
+  }
+}

@@ -1,0 +1,39 @@
+name: chip-lvs
+description: Chip LVS tool. Runs Netgen batch layout-vs-schematic comparison on a layout- extracted netlist
+  vs the source/schematic netlist, or KLayout deck-driven LVS (extraction + compare from GDS) for PDKs
+  that bind capabilities.lvs.engine=klayout (nangate45/FreePDK45), and reports a match verdict with mismatch
+  counts. Also extracts a layout SPICE netlist from a .mag/.gds via Magic ext2spice. Node-aware -- the
+  device-matching setup file comes from the PDK binding (lvs_rules). Emits a Common Design Envelope.
+version: 1.3.2
+category: Chip Design
+license: MIT
+infra:
+- name: worker
+  infra_type: container
+  image:
+    acr: '{name}.azurecr.io/chip-lvs:1.3.2'
+  compute:
+    min_resources:
+      cpu: 1
+      ram: 2Gi
+      storage: 10Gi
+      gpu: 0
+    max_resources:
+      cpu: 1
+      ram: 2Gi
+      storage: 60Gi
+      gpu: 0
+    recommended_sku:
+    - Standard_D2as_v6
+    pool_type: static
+    pool_size: 1
+actions:
+- name: run
+  description: Run Netgen or KLayout LVS (or Magic layout extraction). Emits match verdict + mismatch
+    counts to /output/common_design_envelope.json (Common Design Envelope).
+  infra_node: worker
+  command: python3 -u /app/action_launcher.py
+  input_schema:
+    type: object
+    properties: {}
+    required: []

@@ -1,0 +1,31 @@
+{
+  "node_awareness": "node-aware",
+  "original_tags": [
+    "dft",
+    "scan-chain",
+    "testability",
+    "yosys",
+    "node-portable",
+    "sky130"
+  ],
+  "action_examples": {
+    "run": [
+      {
+        "name": "scan_analysis",
+        "params_json": "{\"scenario\":\"scan_analysis\",\"top\":\"cpu\",\"rtl_files\":[\"/input/cpu.v\"],\"scan_chains\":4,\"pdk_binding\":{\"pdk\":\"sky130A\"}}"
+      },
+      {
+        "name": "scan_insert",
+        "params_json": "{\"scenario\":\"scan_insert\",\"top\":\"cpu\",\"netlist\":\"/input/cpu.v\",\"scan_chains\":2,\"max_chain_length\":800,\"scan_in_port\":\"scan_in\",\"scan_enable_port\":\"scan_en\",\"scan_out_port\":\"scan_out\",\"pdk_binding\":{\"pdk\":\"sky130A\"}}"
+      },
+      {
+        "name": "fault_atpg",
+        "params_json": "{\"scenario\":\"fault_atpg\",\"top\":\"cpu\",\"netlist\":\"/input/cpu.scan.v\",\"coverage_goal_pct\":99,\"sat_timeout_s\":60,\"pdk_binding\":{\"pdk\":\"sky130A\"}}"
+      },
+      {
+        "name": "scan_chain_integrity",
+        "params_json": "{\"scenario\":\"scan_chain_integrity\",\"top\":\"cpu\",\"netlist\":\"/input/cpu.scan.v\",\"scan_chains\":1,\"scan_in_port\":\"scan_in\",\"scan_enable_port\":\"scan_en\",\"scan_out_port\":\"scan_out\",\"liberty\":\"/input/cells.lib\",\"pdk_binding\":{\"pdk\":\"sky130A\"}}"
+      }
+    ]
+  }
+}

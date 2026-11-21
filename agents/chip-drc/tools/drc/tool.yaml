@@ -1,0 +1,39 @@
+name: chip-drc
+description: Chip DRC tool. Runs KLayout and/or Magic batch DRC on a GDS/OASIS/DEF layout and reports
+  the violation count with a per-engine, per-rule breakdown and waiver adjudication. On sky130/open PDKs
+  it runs both engines (complementary rule decks). Node-aware -- decks/tech come from the PDK binding.
+  Emits a Common Design Envelope.
+version: 1.0.2
+category: Chip Design
+license: MIT
+infra:
+- name: worker
+  infra_type: container
+  image:
+    acr: '{name}.azurecr.io/chip-drc:1.0.2'
+  compute:
+    min_resources:
+      cpu: 1
+      ram: 2Gi
+      storage: 10Gi
+      gpu: 0
+    max_resources:
+      cpu: 1
+      ram: 2Gi
+      storage: 60Gi
+      gpu: 0
+    recommended_sku:
+    - Standard_D2as_v6
+    pool_type: static
+    pool_size: 1
+actions:
+- name: run
+  description: Run KLayout and/or Magic batch DRC and report violations. Emits per-engine + total violation
+    counts, per-rule breakdown, and a waiver-adjudicated verdict to /output/common_design_envelope.json (Common
+    Design Envelope).
+  infra_node: worker
+  command: python3 -u /app/action_launcher.py
+  input_schema:
+    type: object
+    properties: {}
+    required: []
