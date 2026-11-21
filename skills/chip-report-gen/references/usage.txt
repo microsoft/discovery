@@ -1,0 +1,225 @@
+CHIP-REPORT-GEN RENDERER CONTRACT
+
+Invocation policy: load chip-report-gen before the final handoff after chip design,
+verification or implementation work, including single-stage and failed/blocked
+runs. The user need not mention reports or HTML; a short-summary request is
+not an opt-out. The parent reports once after the requested workflow without
+dispatching agents or adding engineering stages. Explicit output restrictions
+and no-report/no-HTML opt-outs still apply. Planning-only discussions and
+agent/skill configuration changes alone do not trigger chip reports.
+This is a routing instruction, not a guarantee of automatic host activation.
+
+Python 3.10+ standard library only. Entry point: scripts\render_report.py.
+Tests: python -B -m unittest discover -s .github\skills\chip-report-gen\tests -v
+For a catalog checkout: python -B -m unittest discover -s skills/chip-report-gen/tests -v
+Optional legacy-counter regression: set REPORT_GEN_REAL_RUN to the compatible
+counter evidence fixture; no original-session directory is assumed.
+Optional actual ordered-run regression: set REPORT_GEN_NATIVE_RUN to a
+conformant existing run directory before running the same command. It
+checks read-only rendering, local links and every embedded selected Icarus
+VCD record using an independent line-oriented parser. Test scratch folders
+are unique directories beside the supplied runs and are cleaned automatically.
+
+Input: an existing run folder. results.json is the summary contract; stages
+is a list of objects with stage/status and optional cde paths; artifacts is a
+label-to-run-relative-path map. coverage is a map of explicitly measured
+counters. Unknown extra fields are retained in the escaped summary JSON.
+results.md is preserved as escaped source narrative (not an HTML/Markdown
+interpreter). No claim that prose or a supplied hash has been independently
+certified. The report identifies the files/fields behind displayed metrics.
+
+Native evidence, legacy layout: discover attempt-*/smoke-test.json and
+attempt-*/<stage>/output/common_design_envelope.json. Summary-referenced
+envelopes are also read. All discovered attempts are displayed separately;
+only summary-linked CDEs are cross-checked against the summary stage.
+Audit duration_s is host/container wall time; CDE provenance.runtime.
+elapsed_seconds is native process time; neither is circuit timing.
+No inferred PASS from "completed", no evaluation of arbitrary closes_at
+expressions, and no new campaign gates. False/null gating booleans and
+nonzero ==0 metrics contradict PASS. Source verdicts remain visible.
+
+Native evidence, per-stage layout (no smoke-test audit required):
+Every summary stage must explicitly link existing evidence using this shape:
+
+{
+  "status": "pass",
+  "execution_mode": "ordered",
+  "rtl_sha256": "<actual 64-hex digest, optional but checked when supplied>",
+  "stages": [
+    {
+      "stage": "design",
+      "status": "pass",
+      "cde": "output/common_design_envelope.json",
+      "execution_evidence": {
+        "invocation": "evidence/invocation.json",
+        "exit": "evidence/container-exit.txt",
+        "rtl": "input/counter.v"
+      }
+    }
+  ],
+  "coverage": {"comparisons": 72566, "mismatches": 0},
+  "artifacts": {
+    "waveform": "stage3/output/results/counter.vcd",
+    "simulation_log": "stage3/output/logs/vvp.log"
+  }
+}
+
+The stages array above is illustrative: include ALL actual stages, each with
+its own CDE and execution_evidence, including exactly one native simulation
+stage for the single simulation_log. The renderer does not invent an audit,
+attempt count, invocation, exit, digest, timestamp or agent activation.
+Invocation is a JSON argument array or an object with an arguments array.
+It must record a container "run" followed by the image matching CDE.tool.
+Exit is a JSON integer (including plain-text 0), or {"exit_code": 0}.
+Boolean false, null, strings, missing or nonzero exits fail. Nested
+CDE.signoff_evidence.native_exit_codes must contain only integer-zero leaves.
+Actual RTL bytes are hashed and compared against all available matching
+CDE.provenance.input_hashes and signoff_evidence.source_hashes,
+source_hashes_before and source_hashes_after entries (basename-keyed objects
+with sha256 and optional bytes), or signoff_evidence.rtl_sha256_before/after
+(both required if either is present). At least one native RTL hash is
+required; summary.rtl_sha256 alone is insufficient. Recorded byte counts
+and sources_unchanged are also checked. These are consistency checks of
+recorded evidence, not cryptographic proof of execution or agent activation.
+
+execution_mode="ordered" additionally requires distinct stage names/CDEs,
+per-stage execution_evidence even when a legacy audit also exists, identical
+actual RTL hashes, timezone-qualified CDE.provenance.runtime.started_utc and
+CDE.provenance.finished_utc with nonoverlapping intervals in summary order.
+Point cde at the native worker envelope containing these fields, not just
+an enriched handoff lacking native start time. Preserve handoffs as artifacts.
+Without an ordered claim, missing timestamps are not invented or asserted.
+Existing smoke-test audits are still read and failed attempts remain issues;
+per-stage evidence never conceals them. Activation stays explicitly
+unverified when no activation audit exists.
+
+Executor attribution is separate from native gate status. Optional
+summary.workflow_status and stages[].executor are nonempty source-reported
+strings shown prominently without inferring agent activation. For example:
+workflow_status = "partial: lint/FV dispatch blocked; parent ran native contracts"
+executor = "parent native runner; chip-rtl-lint dispatch blocked"
+Keep a passing native stage status when its actual fallback tools passed;
+do not relabel a blocked named-agent dispatch as agent-executed success.
+artifacts.dispatch_record may link an existing parent-recorded JSON object
+with dispatch_order (a list of objects) and optional scope. It is read,
+hashed and displayed as escaped source attribution, explicitly NOT an
+activation audit. Blocked dispatch metadata neither masquerades as native
+tool failure nor waives actual native invocation/exit/hash/log requirements.
+Existing failed smoke-test execution audits still remain evidence issues.
+Omitted attribution is "not recorded"; no false activation audit is needed.
+
+Agent invocation diagram: the offline HTML always includes an "Agent invocation
+sequence" section. A recorded dispatch_order becomes a connected, numbered,
+status-colored flow diagram using static HTML/CSS (no Mermaid, JavaScript,
+network, external image or library required). It remains readable with scripts
+disabled and when printed. List order is recorded dispatch order, not native
+runtime order or elapsed time. All entries, including failures and blocked
+attempts before any native tool ran, must be retained. Counts describe only
+the supplied entries, not a certified total across unseen history.
+
+Recommended artifacts.dispatch_record JSON:
+{
+  "scope": "Complete parent-recorded invocation history for this run",
+  "dispatch_order": [
+    {
+      "agent": "chip-rtl-design",
+      "reason": "Initial implementation attempt",
+      "outcome": "Blocked before authoring: container engine stopped",
+      "status": "blocked"
+    },
+    {
+      "agent": "chip-rtl-design",
+      "reason": "Retry after starting the existing container engine",
+      "outcome": "RTL authored; design checks passed",
+      "status": "pass"
+    }
+  ]
+}
+
+Fields agent_type and reported_status remain supported as legacy aliases for
+agent and status; canonical fields take precedence when supplied. Missing
+agent/reason/outcome fields display "not recorded"; missing or unrecognized
+status (including "completed") displays UNKNOWN, never inferred PASS from the
+outcome text or from final native stages. Malformed supplied text fields or
+dispatch shapes produce evidence issues. Missing/empty dispatch history gets
+an explicit visual fallback, not an invented sequence. Imported text is escaped.
+The original JSON remains available in the dispatch details and SHA256 inventory.
+Historical failed dispatches do not override the independently checked final
+native-stage verdicts or conceal failed native attempt audits. This diagram is
+parent-recorded attribution, NOT proof of agent activation or engineering signoff.
+
+Artifact labels: canonical keys waveform and simulation_log are preferred.
+Case, spaces and hyphens are normalized, so "Waveform" and "Simulation log"
+also work. Conflicting aliases resolving to different files fail visibly;
+no arbitrary alias wins. All references remain strictly run-relative.
+Native CDE internal/container/absolute paths are displayed as recorded,
+not followed to arbitrary host files. Use the summary's explicit local links.
+
+Simulation is identified by native results.sim_passed, not by requiring a
+redundant summary-stage sim_passed field or a particular stage name.
+The log must have positive final COMPARISONS, zero MISMATCHES (no earlier
+nonzero mismatch accepted), an exact TEST PASSED line after the counters,
+and no TEST FAILED/FATAL/ERROR diagnostics. Compare counters against ALL
+supplied stage fields, native metrics and summary.coverage fields; missing
+or contradictory counters fail. Native sim_passed must be true. Unknown
+or multiple simulation stages are not silently assigned one log.
+Supported gating comparisons are == true, == 0 and > 0; arbitrary native
+closes_at expressions are never evaluated.
+
+VCD: whitespace-tokenized multiline definitions, nested scopes and aliases;
+wire/reg/integer/time/parameter and common digital net kinds; scalar 0/1/X/Z
+and binary vectors; nondecreasing nonnegative integer timestamps up to
+JavaScript's exact integer range; explicit 1/10/100 s/ms/us/ns/ps/fs timescale.
+Short binary vectors use VCD zero padding or leading X/Z extension. Aliases
+must agree in width. Same-timestamp changes are kept and counted visibly.
+Undeclared identifiers, bad widths/values/timestamps, unbalanced definitions,
+missing timescale or unsupported real/string/event/EVCD directives fail the
+entire trace visibly; no partial successful-looking waveform. Dump-off values
+are preserved as supplied; no interpolation of unrecorded behavior.
+
+The default signal subset chooses one exact leaf-name match for clock, reset,
+clear, enable, count and overflow, preferring shallow scopes. Otherwise it
+chooses the first six declarations. The report includes all declarations and
+aliases in embedded data and states the selection. --signals replaces it.
+All value records for selected identifier codes are embedded, without
+downsampling or deduplication. No signals or transitions are silently
+truncated to satisfy a limit: input over the configurable 32 MiB/1,000,000
+record default refuses visualization with a visible issue. At most 12 signals
+are allowed to keep navigation usable. JSON/text evidence is limited to 8 MiB
+per file, with visible refusal rather than partial log excerpts.
+
+The initial static SVG shows a short actual interval even without JavaScript.
+Embedded JavaScript supports exact integer tick windows, zoom, pan, a full-run
+view, representative windows and signal value tooltips. Subpixel transitions
+and same-time changes are marked in orange and counted, never averaged.
+Zoom to resolve them; zero-time delta ordering cannot be spatially resolved.
+Windows above 12,000 selected lane records (aliases counted per lane)
+explicitly refuse drawing and request a
+narrower range; the embedded records are never discarded. Tick-zero-only
+traces have no invented timing duration and get an explicit fallback.
+Representative "reset", "reset + clear + enable", "clear + enable",
+"count increase" and "all-ones count + overflow" windows are value-pattern
+observations only; naming/polarity assumptions are stated, not functional or
+priority/coverage proofs. Native VCD remains linked for external analysis.
+
+Security: imported text is HTML-escaped. Embedded JSON escapes <, >, & and
+Unicode line separators. JS uses textContent and SVG DOM construction, not
+imported innerHTML. Artifact references must resolve inside the run folder
+(including symlink resolution), never to a URL or arbitrary host file.
+The output uses exclusive creation; parent directories may be created.
+Rendering is deterministic for fixed input and explicit output location.
+No generated timestamp is mixed into evidence. Relocating the report without
+its input run breaks the relative artifact links, but embedded plots remain.
+
+Exit codes: 0 = rendered without evidence errors (NOT engineering acceptance);
+2 = rendered with explicit missing/malformed/contradictory evidence;
+1 = no report due to invalid CLI/output/template or filesystem error.
+Missing optional timestamps are "not recorded", not zero. Missing/empty VCD,
+missing summaries/envelopes, missing both audit and per-stage execution
+evidence, or malformed shapes are visible issues.
+Chart numbers must be finite and within the exact JavaScript integer range;
+out-of-range counters remain in the raw table with an explicit issue.
+
+Runtime: installed under the local .github\skills convention. Discovery or
+activation is unverified unless a runtime catalog actually lists/loads it.
+No registration command is assumed or dependency added.
