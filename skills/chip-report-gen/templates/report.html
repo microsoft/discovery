@@ -1,0 +1,224 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data:; connect-src 'none'; base-uri 'none'; form-action 'none'">
+<title>RTL evidence report | @@TITLE@@</title>
+<style>
+:root{color-scheme:dark;--bg:#0b1220;--card:#131f32;--line:#2b3c55;--text:#e8eef8;--muted:#a9b9ce;--accent:#5ce0c3;--warn:#f4af59}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font:15px/1.6 "Segoe UI",system-ui,sans-serif}
+main{max-width:1380px;margin:auto;padding:40px 30px 70px}header{padding:26px 0 32px;border-bottom:1px solid var(--line);margin-bottom:26px}
+.eyebrow{text-transform:uppercase;letter-spacing:.18em;color:var(--accent);font-size:12px;font-weight:700}
+h1{font-size:clamp(23px,3.8vw,42px);line-height:1.2;overflow-wrap:anywhere;margin:12px 0 20px}
+h2{font-size:23px;margin:0 0 16px}h3{font-size:17px}p{margin:10px 0}a{color:#8ed8ff;text-decoration-thickness:1px;text-underline-offset:3px}
+.cards{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px}.card,section{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:24px}
+.card h3{margin:0 0 9px;color:var(--muted);font-size:12px;letter-spacing:.08em;text-transform:uppercase}.card p{overflow-wrap:anywhere}
+section{margin-top:22px;overflow:auto}.muted,small,.source{color:var(--muted)}small{display:block;font-size:12px}.source{font-size:12px;overflow-wrap:anywhere}
+.badge{display:inline-block;border:1px solid currentColor;border-radius:20px;padding:3px 11px;font-size:12px;letter-spacing:.04em;font-weight:750;white-space:nowrap}
+.pass{color:var(--accent)}.fail,.blocked{color:#ff9797}.unknown,.skipped,.not-run{color:var(--warn)}
+table{width:100%;border-collapse:collapse;font-size:13px}th{text-align:left;color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:.06em}
+td,th{padding:12px 10px;border-bottom:1px solid var(--line);vertical-align:top}td{overflow-wrap:anywhere}code,pre{font:12px/1.65 Consolas,monospace}
+pre{white-space:pre-wrap;overflow-wrap:anywhere;background:#0b1423;border:1px solid var(--line);padding:16px;border-radius:8px;max-height:520px;overflow:auto}
+details{margin:10px 0;border-bottom:1px solid var(--line);padding:8px 0}summary{cursor:pointer;overflow-wrap:anywhere}details details{border:0}
+.bar-row{display:grid;grid-template-columns:minmax(160px,1fr) 2fr 95px;align-items:center;gap:6px 12px;margin:13px 0;font-size:12px}
+.bar-row small{grid-column:1/-1}.bar-track{height:13px;background:#22344c;border-radius:5px;overflow:hidden}.bar-track i{height:100%;display:block;background:linear-gradient(90deg,#2c9db8,var(--accent))}
+.notice{border-left:3px solid var(--warn);padding:12px 18px;background:#2c2630}.wave{min-width:700px;background:#091322;border:1px solid var(--line);border-radius:9px;padding:10px}
+.invocation-flow{list-style:none;padding:0;margin:24px auto 0;max-width:980px}
+.invocation-flow .invocation-node{position:relative;margin:0 0 34px;border:1px solid currentColor;border-left-width:5px;border-radius:12px;padding:18px 22px;background:#0d192b;break-inside:avoid}
+.invocation-node:not(:last-child)::after{content:"";position:absolute;left:50%;bottom:-27px;height:24px;border-left:2px solid var(--muted)}
+.invocation-node:not(:last-child)::before{content:"";position:absolute;left:calc(50% - 4px);bottom:-29px;width:8px;height:8px;border-right:2px solid var(--muted);border-bottom:2px solid var(--muted);transform:rotate(45deg)}
+.invocation-heading{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.invocation-heading h3{margin:0;flex:1;overflow-wrap:anywhere;min-width:0;color:var(--text)}
+.invocation-number{display:inline-grid;place-items:center;min-width:32px;height:32px;border:1px solid currentColor;border-radius:50%;font-weight:700}
+.invocation-node.blocked{color:var(--warn)}
+.invocation-node p{color:var(--text);margin:10px 0 0;white-space:pre-wrap;overflow-wrap:anywhere}
+.wave svg{display:block;width:100%;height:auto}.wave path{fill:none;stroke-width:1.4}.wave .grid{stroke:#263750;stroke-width:1}
+.wave text{fill:#d8e6f4;font:11px Consolas,monospace}.wave .density{stroke:#ffb75c;stroke-width:3}
+#wave-controls{display:flex;flex-wrap:wrap;gap:10px;align-items:end}#wave-controls[hidden]{display:none}
+label{display:flex;flex-direction:column;color:var(--muted);font-size:12px}button,input,select{background:#1d304b;border:1px solid #405876;color:var(--text);border-radius:6px;padding:8px;font:13px "Segoe UI",sans-serif}
+button{cursor:pointer}button:hover{border-color:var(--accent)}input[type=number]{width:145px}input[type=range]{width:200px}select{max-width:350px}
+#wave-note{font-size:12px;color:var(--warn)}.two{display:grid;grid-template-columns:1fr 1fr;gap:22px}.two section{min-width:0}li{margin:6px 0}
+footer{color:var(--muted);font-size:12px;margin-top:24px}@media(max-width:850px){main{padding:20px 12px}.cards,.two{grid-template-columns:1fr}.bar-row{grid-template-columns:1fr 1fr 75px}section{padding:18px}}
+@media print{body{background:white;color:black}.card,section{background:white;border-color:#aaa}.muted,small,.source{color:#444}pre{background:white;max-height:none}#wave-controls{display:none}.two{display:block}.invocation-flow .invocation-node{background:white}.invocation-heading h3,.invocation-node p{color:black}.invocation-node.pass{color:#17643b}.invocation-node.fail,.invocation-node.blocked{color:#a12222}.invocation-node.unknown,.invocation-node.skipped,.invocation-node.not-run{color:#805b00}}
+</style>
+</head>
+<body>
+<main>
+<header><div class="eyebrow">Chip / RTL &middot; evidence dossier &middot; offline</div>
+<h1>@@TITLE@@</h1><p class="muted">Measured results, native evidence, and actual simulation activity. No engineering rerun.</p></header>
+<div class="cards">
+<div class="card"><h3>Source-reported result</h3>@@REPORTED@@<p>Native result; not workflow completion, agent execution or a new signoff.</p></div>
+<div class="card"><h3>Evidence review</h3><span class="badge @@REVIEW_CLASS@@">@@REVIEW@@</span><p>Missing or contradictory evidence stays visible below.</p></div>
+<div class="card"><h3>Agent activation</h3><p>@@ACTIVATION@@</p><small>Never inferred from passing native tools.</small></div>
+</div>
+<section id="agent-invocations"><div class="eyebrow">Agent workflow &middot; recorded history</div>
+<h2>Agent invocation sequence</h2>@@INVOCATIONS@@</section>
+<section><h2>Native stage results</h2><p>@@EXECUTION@@</p><p class="muted">@@ATTEMPTS@@</p>
+<h3>Workflow completion (source-reported)</h3><p>@@WORKFLOW@@</p>
+<table><thead><tr><th>Native stage</th><th>Reported</th><th>Envelope verdict</th><th>Evidence</th></tr></thead><tbody>@@STAGES@@</tbody></table>
+@@ATTRIBUTION@@
+</section>
+<section id="waveforms"><div class="eyebrow">Actual VCD data</div><h2>Simulation timing explorer</h2>@@WAVE@@</section>
+<div class="two">
+<section><h2>Recorded tool runtimes</h2><p class="muted">Native process elapsed seconds, separate for each recorded stage/attempt. Not a circuit timing chart.</p>@@TIMING@@</section>
+<section><h2>Measured testbench activity</h2><p class="muted">Raw counters from the summary. Counters may overlap; these are not coverage percentages.</p>@@COVERAGE@@</section>
+</div>
+<section><h2>Evidence issues &amp; limitations</h2>@@ISSUES@@<ul>@@LIMITATIONS@@</ul></section>
+<section><h2>Original results narrative</h2><p class="muted">Verbatim results.md, safely displayed as text; claims remain attributed to the source.</p><pre>@@NARRATIVE@@</pre></section>
+<section><h2>Simulation console</h2><pre>@@LOG@@</pre></section>
+<section><h2>Attempts &amp; native provenance</h2>@@AUDITS@@<h3>Native envelopes and metric bases</h3>@@NATIVE@@</section>
+<section><h2>Artifacts &amp; source files</h2><ul>@@ARTIFACTS@@</ul><details><summary>Read-evidence SHA256 inventory</summary>@@HASHES@@</details>
+<details><summary>Original results.json</summary><pre>@@SUMMARY@@</pre></details></section>
+<footer>chip-report-gen &middot; Self-contained CSS, SVG, JavaScript and waveform data. No CDNs, HTTP server or network requests.
+Skill runtime discovery/activation and browser visual inspection are not certified by this report.</footer>
+</main>
+<script id="wave-data" type="application/json">@@DATA@@</script>
+<script>
+"use strict";
+(() => {
+  const trace = JSON.parse(document.getElementById("wave-data").textContent);
+  if (!trace) return;
+  const $ = id => document.getElementById(id);
+  const ns = "http://www.w3.org/2000/svg";
+  const width = 1100, left = 170, lane = 52;
+  const height = 50 + lane * trace.signals.length;
+  const svg = $("wave-svg"), note = $("wave-note");
+  let start = trace.windows[0].start, end = trace.windows[0].end;
+  function node(tag, attrs, text) {
+    const element = document.createElementNS(ns, tag);
+    for (const [key, value] of Object.entries(attrs)) element.setAttribute(key, value);
+    if (text !== undefined) element.textContent = text;
+    return element;
+  }
+  function add(tag, attrs, text) {
+    const element = node(tag, attrs, text);
+    svg.appendChild(element);
+    return element;
+  }
+  function titled(tag, attrs, title) {
+    const element = add(tag, attrs);
+    element.appendChild(node("title", {}, title));
+  }
+  function upper(records, tick) {
+    let lo = 0, hi = records.length;
+    while (lo < hi) {
+      const mid = Math.floor((lo + hi) / 2);
+      if (records[mid][0] <= tick) lo = mid + 1;
+      else hi = mid;
+    }
+    return lo;
+  }
+  function draw() {
+    svg.replaceChildren();
+    $("start").value = start; $("end").value = end;
+    $("position").value = Math.round(start / Math.max(1, trace.end - (end - start)) * 1000);
+    const scale = (width - left - 15) / (end - start);
+    let dense = 0, sameTime = 0, recordsInWindow = 0;
+    for (const signal of trace.signals) {
+      const records = trace.changes[signal.id];
+      recordsInWindow += upper(records, end) - upper(records, start - 1);
+    }
+    if (recordsInWindow > 12000) {
+      add("text", {x: 15, y: 35}, "Window too dense to draw safely. Enter a narrower tick range.");
+      note.textContent = `${recordsInWindow} lane records in this window (aliases counted per lane); visualization refused above 12,000. ` +
+        "All records remain embedded and in the native VCD; no downsampled waveform substituted.";
+      return;
+    }
+    for (let k = 0; k <= 5; k++) {
+      const t = start + Math.floor((end - start) * k / 5), x = left + (t - start) * scale;
+      add("path", {class: "grid", d: `M${x} 28V${height}`});
+      add("text", {x, y: 18}, String(t));
+    }
+    trace.signals.forEach((signal, index) => {
+      const y = 52 + lane * index, records = trace.changes[signal.id];
+      const label = add("text", {x: 8, y: y + 6}, signal.name.length > 23 ? signal.name.slice(-23) : signal.name);
+      label.appendChild(node("title", {}, `${signal.name} ${signal.range}; ${signal.width} bits`));
+      const pos = upper(records, start);
+      let value = pos ? records[pos - 1][1] : "unrecorded", cursor = start;
+      let previousPixel = null, previousTime = null;
+      function segment(a, b, bits) {
+        const x1 = left + (a - start) * scale, x2 = left + (b - start) * scale;
+        const unknown = !/^[01]+$/.test(bits), color = unknown ? "#f4af59" : "#5ce0c3";
+        const knownLabel = unknown ? bits : `0x${BigInt("0b" + bits).toString(16).toUpperCase()}`;
+        const title = `${signal.name}: ${knownLabel}; raw ${bits}; [${a}, ${b}] ticks x ${trace.timescale}`;
+        if (signal.width === 1 && !unknown) {
+          const level = y + (bits === "1" ? -10 : 10);
+          titled("path", {stroke: color, d: `M${x1} ${level}H${x2}`}, title);
+        } else {
+          const inset = Math.min(3, Math.max(0, (x2 - x1) / 2));
+          titled("path", {stroke: color, d: `M${x1} ${y}l${inset} -11H${x2 - inset}L${x2} ${y}l${-inset} 11H${x1 + inset}Z`}, title);
+          if (x2 - x1 > 40) add("text", {x: x1 + 5, y: y + 4}, knownLabel.length > 30 ? knownLabel.slice(0, 27) + "..." : knownLabel);
+        }
+      }
+      // Include start-time events for density accounting, although the visible state is final-at-start.
+      for (let j = upper(records, start - 1); j < records.length && records[j][0] <= end; j++) {
+        const [t] = records[j], pixel = Math.floor((t - start) * scale);
+        if (previousTime === t) sameTime++;
+        if (previousPixel === pixel) {
+          dense++;
+          titled("path", {class: "density", d: `M${left + pixel} ${y - 17}V${y + 17}`},
+            `Multiple records in this pixel at tick ${t}; zoom to resolve; same-time events need native VCD ordering.`);
+        }
+        previousPixel = pixel; previousTime = t;
+      }
+      for (let j = pos; j < records.length && records[j][0] <= end; j++) {
+        const [t, next] = records[j];
+        segment(cursor, t, value);
+        if (signal.width === 1 && /^[01]$/.test(value) && /^[01]$/.test(next) && value !== next) {
+          const x = left + (t - start) * scale;
+          titled("path", {stroke: "#5ce0c3", d: `M${x} ${y - 10}V${y + 10}`},
+            `${signal.name}: recorded ${value} -> ${next} edge at ${t} ticks x ${trace.timescale}`);
+        }
+        cursor = t; value = next;
+      }
+      segment(cursor, end, value);
+    });
+    note.textContent = `Window ${start} - ${end} ticks x ${trace.timescale}; ${recordsInWindow} lane records (aliases counted per lane). ` +
+      `${dense} pixel-colliding records; ${sameTime} same-timestamp records (summed per selected lane). ` +
+      "No downsampling. Orange markers indicate overlapping records; zoom or inspect native VCD.";
+  }
+  function setWindow(a, b) {
+    const span = Math.max(1, Math.min(trace.end, Math.round(b - a)));
+    start = Math.max(0, Math.min(trace.end - span, Math.round(a)));
+    end = start + span;
+    draw();
+  }
+  for (const [index, window] of trace.windows.entries()) {
+    const option = document.createElement("option");
+    option.value = index; option.textContent = window.label;
+    $("presets").appendChild(option);
+  }
+  $("presets").addEventListener("change", () => {
+    const window = trace.windows[Number($("presets").value)];
+    setWindow(window.start, window.end);
+  });
+  $("apply").addEventListener("click", () => {
+    const a = Number($("start").value), b = Number($("end").value);
+    if (!Number.isSafeInteger(a) || !Number.isSafeInteger(b) || a < 0 || b <= a || b > trace.end) {
+      note.textContent = `Invalid window: enter integer ticks with 0 <= start < end <= ${trace.end}.`;
+      return;
+    }
+    setWindow(a, b);
+  });
+  $("zoom-in").addEventListener("click", () => {
+    const center = start + (end - start) / 2;
+    setWindow(center - (end - start) / 4, center + (end - start) / 4);
+  });
+  $("zoom-out").addEventListener("click", () => {
+    const span = end - start;
+    setWindow(start - span / 2, end + span / 2);
+  });
+  $("pan-left").addEventListener("click", () => setWindow(start - (end - start) / 2, end - (end - start) / 2));
+  $("pan-right").addEventListener("click", () => setWindow(start + (end - start) / 2, end + (end - start) / 2));
+  $("full").addEventListener("click", () => setWindow(0, trace.end));
+  $("position").addEventListener("input", () => {
+    const span = end - start, a = Math.round((trace.end - span) * Number($("position").value) / 1000);
+    setWindow(a, a + span);
+  });
+  $("wave-controls").hidden = false;
+  draw();
+})();
+</script>
+</body>
+</html>
