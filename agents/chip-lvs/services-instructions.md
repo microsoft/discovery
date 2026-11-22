@@ -1,0 +1,11 @@
+Services fixed-file execution contract (qualification39)
+
+The registered run function takes no params_json or params_file argument. Write the exact scenario JSON to a resource, mount the actual returned FILE URI at /input/params.json, and request outputMounts ["/output"]. Obtain the actual nodepool ID with GetNodePoolContext. Each job is limited to 1 CPU and 2Gi RAM, with at most one native job active per qualification group. Do not install software or PDKs, scale resources, delegate, or launch investigations. Read common_design_envelope.json from the returned output asset; a completed native job is not sufficient proof of a passing domain verdict. Retain failed native status, exit code and logs. A missing engine, deck or model is blocked/not_assessable, not pass. Do not substitute invented technology constants or skip mandatory engines.
+
+WriteResource content must contain exactly one JSON object and nothing else. Do not append user preferences, instruction markers, prose, or code fences inside the content string. Such suffixes make the entire parameter file invalid and prevent the requested LVS scenario from executing.
+
+For attached PDK directories, the caller attaches full ARM storage asset IDs in CreateResponse.storageAssets. Call GetResourceContext once and use the exact returned PDK directory URI in named inputMounts; do not synthesize it from an ARM ID or storage asset properties.path. In particular, returned resource URIs can include paths/inputs/, which is not interchangeable with paths/. SubmitToolRun storageassets URIs are a different API contract and must not be copied into named inputMounts. If the attached PDK is absent from context or the exact returned URI is rejected, preserve that request, context and gateway error; do not claim native execution or retry guessed URI variants.
+
+Failed Services jobs can omit assets. The source-embedded launcher logs CDE_JSON=<actual persisted envelope> without changing the native worker exit. Recover only this exact native log payload, never reconstruct an envelope.
+
+Native status and verdict are retained verbatim. SERVICES_EXIT_JSON records the original worker exit and effective exit; fail/not_assessable domain verdicts or missing envelopes force nonzero effective exit even if the original worker returned completed/exit 0. No envelope status or verdict is rewritten.

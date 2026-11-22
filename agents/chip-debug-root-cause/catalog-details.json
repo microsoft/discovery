@@ -1,0 +1,28 @@
+{
+  "original_agent_description": "Node-agnostic verification-failure debugger. Buckets failures by error signature, PARSES THE VCD WAVEFORM to locate X-states, stuck signals and activity around the failure time, reduces a failing stimulus to a 1-minimal reproducer by real delta debugging (ddmin) against an EXECUTED oracle, and establishes determinism by RE-RUNNING the reproducer and comparing normalized outcomes -- never by observing that a seed was supplied, since a fixed seed does not constrain uninitialised state, wall-clock entropy or iteration order. Waveform-derived hypotheses outrank log-text matches. Anything it could not execute or read is reported as not_assessable, never as clean. Emits a Common Design Envelope.\n",
+  "node_awareness": "node-agnostic",
+  "original_tags": [
+    "chip-design",
+    "verification",
+    "debug",
+    "root-cause",
+    "triage",
+    "node-agnostic"
+  ],
+  "action_examples": {
+    "run": [
+      {
+        "name": "bucket_failures",
+        "params_json": "{\"scenario\":\"bucket_failures\",\"failures\":[{\"test\":\"t1\",\"seed\":11,\"message\":\"scoreboard mismatch at addr 0x40\"},{\"test\":\"t2\",\"seed\":12,\"message\":\"scoreboard mismatch at addr 0x80\"},{\"test\":\"t3\",\"seed\":13,\"message\":\"timeout waiting for ready\"}]}"
+      },
+      {
+        "name": "root_cause_with_waveform",
+        "params_json": "{\"scenario\":\"root_cause\",\"failure\":{\"test\":\"t1\",\"seed\":11,\"message\":\"scoreboard mismatch\"},\"waveform\":\"/input/dump.vcd\",\"settle_time\":100,\"failure_time\":4200}"
+      },
+      {
+        "name": "reduce_with_real_oracle",
+        "params_json": "{\"scenario\":\"reduce\",\"failure\":{\"test\":\"t1\",\"seed\":11,\"message\":\"mismatch\"},\"stimulus\":[1,2,3,4,5,6,7,8],\"repro_cmd\":\"python3 /input/replay.py {input}\",\"fail_regex\":\"MISMATCH\",\"determinism_runs\":5}"
+      }
+    ]
+  }
+}

@@ -1,0 +1,14 @@
+name: chip-ppa-signoff-design-review
+type: agent
+version: 1.2.0
+associated_tools:
+- agents/chip-ppa-signoff-design-review/tools/design-review
+publisher:
+  name: Microsoft
+  contact: discovery-catalog@microsoft.com
+  support_url: https://techcommunity.microsoft.com/category/azure/discussions/microsoft-discovery-discussions
+  party: 1p
+description: |
+  Node-agnostic signoff and design-review agent that independently judges whether the accumulated Common Design Envelopes constitute a defensible signoff. It checks required-gate coverage, adjudicates waivers (owner + justification + rule-deck version), reports PPA against budget, and never launders an un-waived violation or an unjustified waiver into a pass. It consumes envelopes and never re-runs a flow stage.
+tags:
+- eda

@@ -1,0 +1,35 @@
+name: sta
+description: |
+  Chip static-timing-analysis tool. Runs real OpenSTA on a gate-level netlist with Liberty (per corner), SDC, and optional SPEF; reports WNS/TNS and worst violating paths for setup and hold. Node-aware. Emits a Common Design Envelope.
+version: 1.6.0
+category: Chip Design
+infra:
+- name: worker
+  infra_type: container
+  image:
+    acr: '{name}.azurecr.io/chip-sta:1.6.0'
+  compute:
+    min_resources:
+      cpu: 1
+      ram: 2Gi
+      storage: 10Gi
+      gpu: 0
+    max_resources:
+      cpu: 2
+      ram: 4Gi
+      storage: 40Gi
+      gpu: 0
+    recommended_sku:
+    - Standard_D2as_v6
+    pool_type: static
+    pool_size: 1
+actions:
+- name: run
+  description: Run OpenSTA setup/hold analysis. Emits WNS/TNS per corner and worst paths to /output/common_design_envelope.json
+    (Common Design Envelope).
+  infra_node: worker
+  command: python3 -u /app/run.py
+  input_schema:
+    type: object
+    required: []
+    properties: {}

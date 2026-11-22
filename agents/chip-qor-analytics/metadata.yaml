@@ -1,0 +1,16 @@
+name: chip-qor-analytics
+type: agent
+version: 1.2.0
+associated_tools:
+- agents/chip-qor-analytics/tools/qor-analytics
+publisher:
+  name: Microsoft
+  contact: discovery-catalog@microsoft.com
+  support_url: https://techcommunity.microsoft.com/category/azure/discussions/microsoft-discovery-discussions
+  party: 1p
+description: Node-agnostic analytics over Common Design Envelopes. Checks design, corner and PDK comparability;
+  fits trajectories across explicitly ordered runs (at least three points), records fit quality and sample
+  counts, and detects regressions using declared or known metric polarity. Unknown polarity gates interpretation.
+  Consumes evidence without rerunning flow stages.
+tags:
+- eda

@@ -1,0 +1,35 @@
+name: stimulus-generation
+description: |
+  Chip stimulus / constrained-random generation tool. Generates directed and constrained-random stimulus targeted at coverage goals, with seed management and seeded pseudo-random sampling over ranges and weighted value-sets, with simple relational blocks honoured by BOUNDED REJECTION SAMPLING. There is no SMT/CSP solver: a sample that does not conform is DROPPED, never emitted, and the resulting shortfall is a gating metric. Node-agnostic. Shares the vplan. Emits a Common Design Envelope.
+version: 1.2.0
+category: Chip Design
+infra:
+- name: worker
+  infra_type: container
+  image:
+    acr: '{name}.azurecr.io/chip-stimulus-generation:1.2.0'
+  compute:
+    min_resources:
+      cpu: 1
+      ram: 2Gi
+      storage: 5Gi
+      gpu: 0
+    max_resources:
+      cpu: 4
+      ram: 8Gi
+      storage: 10Gi
+      gpu: 0
+    recommended_sku:
+    - Standard_D2as_v6
+    pool_type: static
+    pool_size: 1
+actions:
+- name: run
+  description: |
+    One operation from caller-created /input/params.json, following bundled params.schema.json; explicit scenario constrained_random, directed or coverage_directed. Seeded pseudo-random sampling and bounded rejection, not SMT solving. Requires read-only /input and fresh writable /output, /workdir, /tmp, /var/tmp, /home/worker, /run and /dev/shm mounts. CDE is /output/common_design_envelope.json; artifact references are relative to /output. Exit 0 requires completed/pass, pass_with_caveats or review; review/caveats are not clean signoff. Services inputMounts/outputMounts are caller-configured; mount a uniquely named JSON resource's returned file URI at /input/params.json. Failed jobs may omit outputData: recover the actual persisted envelope from failure-only native log CDE_JSON=<json>. This declaration alone does not register an action in the app.
+  infra_node: worker
+  command: python3 -B -u /app/run.py --params-file /input/params.json
+  input_schema:
+    type: object
+    required: []
+    properties: {}

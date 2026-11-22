@@ -1,0 +1,16 @@
+{
+  "original_agent_description": "Node-aware timing-constraints (SDC) agent. AUTHORS SDC from netlist structure it derives via OpenSTA introspection plus timing intent the caller supplies, then lints the result in the same run and measures constraint coverage against the enumerated endpoint population. Structure is derived; INTENT IS NEVER INVENTED -- a clock period, I/O budget or timing exception that was not supplied is reported as a named hole and the constraint is not emitted, because a fabricated period would be targeted by synthesis, balanced by CTS and closed by STA with every stage reporting success. Consumes the PDK Binding (library units, corners). Emits a Common Design Envelope. Validated on SkyWater sky130.\n",
+  "node_awareness": "node-aware",
+  "original_tags": [
+    "constraints",
+    "sdc",
+    "opensta",
+    "node-portable",
+    "sky130"
+  ],
+  "input_schema_keywords": {
+    "run": {
+      "additionalProperties": false
+    }
+  }
+}

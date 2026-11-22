@@ -1,0 +1,29 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Stimulus generation operation",
+  "type": "object",
+  "required": ["scenario"],
+  "properties": {
+    "scenario": {"enum": ["constrained_random", "directed", "coverage_directed"]},
+    "dut_top": {"type": "string", "minLength": 1},
+    "constraints": {"type": "object", "minProperties": 1},
+    "count": {"type": "integer", "minimum": 1, "default": 100},
+    "seeds": {"type": "array", "minItems": 1, "items": {"type": "integer"}},
+    "max_rejection_tries": {"type": "integer", "minimum": 0, "default": 50},
+    "constraint_blocks": {"type": "array", "items": {"type": "object"}},
+    "randc_fields": {"type": "array", "items": {"type": "string"}},
+    "value_distributions": {"type": "object"},
+    "soft_constraints": {"type": "object"},
+    "holes": {"type": "array", "items": {"type": ["object", "string"]}},
+    "tests": {"type": "array", "minItems": 1, "items": {"type": "object"}},
+    "pdk_binding": {"type": "object"},
+    "deck_vars": {"type": "object"},
+    "vplan_file": {"type": "string", "pattern": "^/input/.+"}
+  },
+  "allOf": [
+    {"if": {"properties": {"scenario": {"const": "directed"}}},
+     "then": {"required": ["tests"]},
+     "else": {"required": ["dut_top", "constraints"]}}
+  ],
+  "description": "Runtime validates scalar value domains, integer ranges, weights, block field references and immutable input paths. No SMT solving. Missing seeds retain legacy generated-and-recorded seed behavior."
+}

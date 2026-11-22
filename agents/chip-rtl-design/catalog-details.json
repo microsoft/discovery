@@ -1,0 +1,17 @@
+{
+  "original_agent_description": "Author specification-based RTL and verify Yosys hygiene and canonical formatting. The AGENT authors synthesizable RTL; the TOOL verifies it in the same run -- authored RTL is never reported as good until it has elaborated and passed hygiene. Screens for inferred latches, undriven and multiply-driven nets, and RESET HYGIENE read structurally from the elaborated netlist (Yosys cell types and parameters): one reset net used both async and sync, one net used at both polarities, a reset also sampled as data, or a reset tied to a constant. Naming-convention and de-assertion-synchronizer findings are reported as advisory because neither is provable from structure alone. Node-agnostic (no PDK binding required).\n",
+  "node_awareness": "node-agnostic",
+  "original_tags": [
+    "chip-design",
+    "rtl-design",
+    "yosys",
+    "lint",
+    "hygiene",
+    "node-agnostic"
+  ],
+  "input_schema_keywords": {
+    "run": {
+      "additionalProperties": false
+    }
+  }
+}

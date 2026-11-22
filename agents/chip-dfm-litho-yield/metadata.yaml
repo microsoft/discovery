@@ -1,0 +1,17 @@
+name: chip-dfm-litho-yield
+type: agent
+version: 1.1.0
+associated_tools:
+- agents/chip-dfm-litho-yield/tools/dfm
+publisher:
+  name: Microsoft
+  contact: discovery-catalog@microsoft.com
+  support_url: https://techcommunity.microsoft.com/category/azure/discussions/microsoft-discovery-discussions
+  party: 1p
+description: Node-aware KLayout geometry screening for windowed density, lithography-risk patterns, critical
+  area, and Poisson random-defect yield. PDK limits are required; missing defect densities gate the result
+  rather than inflate yield. OPC, resist and process-window simulation are outside scope. Emits a Common
+  Design Envelope, not an OPC-readiness verdict.
+tags:
+- eda
+- sky130

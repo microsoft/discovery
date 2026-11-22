@@ -1,0 +1,16 @@
+name: chip-sta
+type: agent
+version: 1.4.0
+associated_tools:
+- agents/chip-sta/tools/sta
+publisher:
+  name: Microsoft
+  contact: discovery-catalog@microsoft.com
+  support_url: https://techcommunity.microsoft.com/category/azure/discussions/microsoft-discovery-discussions
+  party: 1p
+description: |
+  Node-aware multi-corner static timing analysis agent. Runs OpenSTA on a gate-level netlist with SDC and SPEF, reports WNS/TNS per corner, diagnoses violating paths, and drives timing closure. Consumes the PDK Binding (Liberty, corners). Validated on SkyWater sky130.
+tags:
+- eda
+- static-timing-analysis
+- sky130

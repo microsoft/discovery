@@ -1,0 +1,9 @@
+{
+  "sources": [
+    {"name": "find-libpython", "version": "0.5.1", "repository": "ktbarrett/find_libpython", "commit": "2bddd359e23801b665f1d6604a17ef3c3eafe391", "sha256": "6a9900fc7f99210c3d6d0a8127b1fd71d9eef5a4a2ec2b6fca1ca583427ba829"},
+    {"name": "python-constraint", "version": "1.4.0", "repository": "python-constraint/python-constraint", "commit": "f1359ff0ff6d9a541923d071cf1c0b50f8e8925b", "sha256": "c1d7a417aa82d1a7f0081fc7a7e1cceb74a2870a6a064bb2076f52f9d224fc30"},
+    {"name": "vcdvcd", "version": "2.6.0", "repository": "cirosantilli/vcdvcd", "commit": "515273543d74da21588785a2b192159c8ac7a66a", "sha256": "06e86a31c93317d1bad74a91630c57b616cc679668cd47c25e7ab8107131d513"},
+    {"name": "cocotb", "version": "2.0.1", "repository": "cocotb/cocotb", "commit": "c3a029ab60745a2115bad465b1bdb763fae8255f", "sha256": "5a903775a8e2a17f5983e04a52681dc7e44cc22fe734a96fe3751c4dc36cd3ee"},
+    {"name": "cocotb-coverage", "version": "2.0", "repository": "mciepluc/cocotb-coverage", "commit": "201c6e19761528eb9c03f876666c485027abb7fb", "sha256": "2ceda398b0ea1ddb836df8b508fabde3fe39610e48a7a939fbcfc6d893668d34"}
+  ]
+}

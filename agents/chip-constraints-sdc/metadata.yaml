@@ -1,0 +1,15 @@
+name: chip-constraints-sdc
+type: agent
+version: 1.1.0
+associated_tools:
+- agents/chip-constraints-sdc/tools/constraints
+publisher:
+  name: Microsoft
+  contact: discovery-catalog@microsoft.com
+  support_url: https://techcommunity.microsoft.com/category/azure/discussions/microsoft-discovery-discussions
+  party: 1p
+description: |
+  Node-aware constraints agent driven by the OpenROAD/OpenSTA tool set. Authors SDC from derived netlist structure plus caller-supplied timing intent, lints the result in the same run, and measures constraint coverage against the enumerated endpoint population. Never defaults a clock period, I/O budget or exception. Consumes the PDK Binding and emits a Common Design Envelope. Validated on SkyWater sky130.
+tags:
+- eda
+- sky130

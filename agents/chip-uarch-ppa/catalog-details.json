@@ -1,0 +1,21 @@
+{
+  "node_awareness": "node-aware",
+  "original_tags": [
+    "microarchitecture",
+    "ppa",
+    "design-space-exploration",
+    "node-portable"
+  ],
+  "action_examples": {
+    "run": [
+      {
+        "name": "explore",
+        "params_json": "{\"scenario\":\"explore\",\"grid\":{\"depth\":[3,5,8],\"width\":[1,2],\"cache_kb\":[8,16]},\"pdk_binding\":{\"pdk\":\"sky130A\",\"fo4_ps\":80}}"
+      },
+      {
+        "name": "estimate",
+        "params_json": "{\"scenario\":\"estimate\",\"config\":{\"depth\":5,\"width\":2,\"cache_kb\":16},\"pdk_binding\":{\"pdk\":\"sky130A\"}}"
+      }
+    ]
+  }
+}

@@ -1,0 +1,22 @@
+{
+  "original_metadata_description": "Node-agnostic cross-run QoR analytics agent. Aggregates Common Design Envelopes, fits PPA trajectories over explicitly ordered runs, and flags regressions against a baseline USING METRIC POLARITY so improvements are never reported as regressions. Polarity is resolved from a known-metric table or a caller declaration and never guessed; unclassifiable changes are gated rather than blessed. Reports per-metric sample size and checks comparability before pooling. Consumes envelopes and never re-runs a flow stage.\n",
+  "original_agent_description": "Node-agnostic cross-run QoR analytics agent. Aggregates Common Design Envelopes across runs, blocks, and nodes; fits PPA trajectories over EXPLICITLY ORDERED runs (slope + goodness-of-fit, minimum three points); and flags regressions against a baseline using METRIC POLARITY, so a slack improvement and an area regression of the same magnitude are no longer both reported as regressions. Polarity is resolved from a known-metric table or a caller declaration and is NEVER guessed: an unclassifiable change is gated rather than blessed. Reports per-metric sample size and checks design/corner/PDK comparability before pooling. It consumes envelopes and never re-runs a flow stage.\n",
+  "node_awareness": "node-agnostic",
+  "original_tags": [
+    "chip-design",
+    "analytics",
+    "qor",
+    "ppa-trajectory",
+    "anomaly-detection",
+    "node-agnostic"
+  ],
+  "previous_build": {
+    "containerfile": "Dockerfile",
+    "engine": "docker"
+  },
+  "input_schema_keywords": {
+    "run": {
+      "additionalProperties": false
+    }
+  }
+}

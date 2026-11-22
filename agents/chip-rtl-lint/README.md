@@ -6,24 +6,41 @@ Node-agnostic RTL lint / style agent driven by Verible (verible-verilog-lint + v
 
 ## Architecture
 
-A parameterized language-model prompt performs the assigned engineering work;
-the bundled `rtl-lint` container measures results and persists a Common Design Envelope.
-The parent workflow owns dispatch, retries and downstream handoffs. The worker
-reads immutable inputs from `/input` and writes evidence under `/output`.
+The prompt agent delegates to the bundled native worker. The canonical `tools/rtl-lint/Dockerfile` builds this package independently; it does not require another chip-agent image, a shared-family build, or a private registry image. Existing worker source and native verdict gates are preserved. Legacy campaign and Services notes below describe historical runs, not validation of this migrated recipe.
+
+Public build bases: `docker.io/library/debian:12-slim`. Base images must satisfy the target repository's current allowlist; a pinned digest does not itself establish policy approval.
 
 ## Prerequisites
 
-Provide a Discovery-compatible model deployment, an authorized tool deployment
-or local Docker/Podman engine, the input artifacts, and the explicit mount contract.
-Container builds need network access to their declared upstream dependencies;
-operation examples run without network access. No PDK binding is required.
+Docker with Linux containers, network access to the named public base registries and dependency sources, and the inputs required by the scenario. Supply PDK models, rule decks, libraries and user-design files separately with appropriate licenses; these are not embedded in this package. Keep builds and native probes sequential. Retain at least 15 GB free on the host before starting any build.
+
+## Tools
+
+`rtl-lint` is defined in [tool.yaml](tools/rtl-lint/tool.yaml). Its Docker build context is `tools/rtl-lint/`; required runtime executable probes are included in the Dockerfile and fail the build when a dependency is missing.
 
 ## Configuration
 
-Set `{{CHAT-MODEL}}` to the model deployment and `{{rtlLintToolId}}` to the registered tool resource ID.
-Use [params.schema.json](tools/rtl-lint/params.schema.json) for operation parameters.
-Mount `/input` read-only and provision fresh writable `/output`, `/workdir`,
-`/tmp`, `/var/tmp`, `/home/worker`, `/run`, and `/dev/shm` directories.
+Use the action input schema and the scenario contract in `agent.yaml`. Mount design inputs and parameter files read-only at `/input`, with fresh writable `/output` and `/workdir` directories. File-based actions consume `/input/params.json`; actions declaring `params_json` retain their existing JSON argument contract. Read-only-root deployments additionally need the writable mounts described in the existing worker notes. Tool resource settings are inherited from the package, not newly measured budgets. The registry placeholder and tool ID are resolved by the catalog integration; no resource has been deployed by this migration.
+
+## Usage
+
+From this agent directory, build its own context:
+
+```sh
+docker build --file tools/rtl-lint/Dockerfile --tag chip-rtl-lint:local tools/rtl-lint
+```
+
+After a successful build, run the retained scenario-specific smoke and negative-control fixtures with mounted input/output directories. Inspect the native process exit and persisted Common Design Envelope together; a successful container launch is not a passing engineering result.
+
+## Known Limitations
+
+The migrated Dockerfile was built and exercised in the local bounded-smoke campaign. This is not full engineering signoff: the campaign retained acceptance-blocked results for logic synthesis and the historical PPA DSE workload. Rebuild and replay in the target environment before relying on a result. Historical image digests, smoke results and Services receipts are not substitutes for verification of the current bytes. The local historical dispatcher intentionally rejects source drift until an authorized rebuilt-image baseline is recorded. Missing caller intent, PDK collateral, acceptance evidence or toolchain capabilities must remain visible and cannot be replaced with invented defaults. Original long descriptions, domain keywords, action examples and removed schema-unsupported metadata are retained in [catalog-details.json](catalog-details.json); worker-side parameter validation remains unchanged.
+
+## Contributing
+
+Follow the target repository's [contribution guide](https://github.com/microsoft/discovery/blob/main/CONTRIBUTING.md) and agent-authoring requirements. Changes to base-image policy need separate maintainer review. Never edit generated registry entries.
+
+## Retained worker and historical campaign notes
 
 
 Node-agnostic **RTL lint / style** agent driven by **Verible**.
@@ -40,16 +57,38 @@ Node-agnostic **RTL lint / style** agent driven by **Verible**.
 | `format` | `verible-verilog-format --verify` per source; reports how many are not canonically formatted. |
 | `lint_gate` | Combined DEFAULT lint and canonical formatting gate; both required for stage closure. |
 
-## Usage
+## Ordinary local execution
 
-Build the canonical image from the repository root with `docker build -t rtl-lint:latest agents/chip-rtl-lint/tools/rtl-lint`.
-Podman accepts the same build and run arguments. Only build with authorization;
-never install an engine implicitly or silently reuse a stale image.
+This OpenSTA-style package contains `agent.yaml`, `metadata.yaml`, README and the
+complete `tools/rtl-lint` Dockerfile context. No shared code or host launcher is
+required. Discovery parent owns specialist activation and handoffs.
 
-The declared `run` action reads `/input/params.json`; deployment must register
-the tool and configure the mounts shown below. Merely importing this package
-does not register an action or configure mounts. If unavailable, report BLOCKED
-or use an explicitly authorized direct container invocation.
+Use local `.github/skills/discovery-add-agents/SKILL.md` Steps 5/6 with
+`$srcRoot` set to `agents-docker` and exactly the three selected role folders.
+Do not refresh these local edits from upstream. Copy only to an absent destination:
+
+```powershell
+$name = 'chip-rtl-lint'
+$dst = Join-Path (Get-Location) "discovery_catalog\$name"
+if (Test-Path $dst) { throw "Destination exists: $dst" }
+New-Item -ItemType Directory -Force discovery_catalog | Out-Null
+Copy-Item -Recurse "agents-docker\$name" $dst
+# Run the skill's Step 6 with $selected=@($name).
+```
+
+The Local branch only copies and generates companions/lazy image bootstrap:
+**no YAML action registration or mount configuration occurs**. IDs are not callable
+Copilot tools. Invoke `run` only if genuinely registered and these mounts are
+available. Otherwise directly invoke one container, without a host runner.
+The fixed action reads `/input/params.json`, described by
+`tools/rtl-lint/params.schema.json`; it does not interpolate JSON into shell text.
+
+Importer image: **`rtl-lint:latest`**. Inspect first; only if missing:
+`docker build -t rtl-lint:latest agents-docker\chip-rtl-lint\tools\rtl-lint`.
+After import the context is `discovery_catalog\chip-rtl-lint\tools\rtl-lint`.
+Podman takes the same arguments. Installation, daemon readiness and context
+selection belong to integration. Existing images are not refreshed after edits:
+select a source-current tag explicitly, never silently use stale source.
 
 PowerShell single-operation example, from project root:
 
@@ -104,22 +143,22 @@ applied only via the caller-supplied `waiver_files`; rules are never silently
 ignored. Verible is installed from the upstream static linux release (no Debian
 package exists).
 
-## Tools
+## Historical build maintenance
 
-[rtl-lint](tools/rtl-lint/tool.yaml) exposes the fixed `run` action.
-It consumes `/input/params.json` and emits `/output/common_design_envelope.json`
-with native engine diagnostics and relative artifact references. The bundled
-`Dockerfile` is the canonical build definition; no alternate Containerfile is required.
+The Verible version is pinned in the Containerfile (`ARG VERIBLE_VER`) for
+reproducible builds. Version upgrades are outside this backend-only migration.
+Use the supervised staged Docker plan without overriding the pinned version:
 
-## Known Limitations
+```powershell
+python agents-docker\shared\build_docker.py --check --run-id <run-id>
+```
 
-A passing stage establishes only the contract described above, not whole-chip
-correctness or signoff. Missing engines, mounts, metrics or evidence block a pass.
-Model and tool resource IDs are deployment inputs, not executable local tool names.
-Bookshelf grounding is optional and depends on explicitly attached sources.
-Container builds and runtime engineering checks must be performed separately;
-catalog format validation is not evidence that these engines executed.
+Latest tags: <https://github.com/chipsalliance/verible/releases>.
+# Services qualification deployment
 
-## Contributing
-
-See [CONTRIBUTING.md](https://github.com/microsoft/discovery/blob/main/CONTRIBUTING.md).
+`services-deployment.json` pins the qualified Services image when deployed.
+`tools/rtl-lint/Services.Dockerfile` retains the immutable original native engines
+and overlays the current worker without software installation. Append
+`services-instructions.md` to the source agent instructions. Jobs are capped at
+2 CPU / 4Gi. `CDE_JSON=` in native logs reproduces the exact persisted envelope
+even when failed Services jobs omit assets; completed/fail is not pass.

@@ -1,0 +1,35 @@
+{
+  "node_awareness": "node-aware",
+  "original_tags": [
+    "lvs",
+    "layout-vs-schematic",
+    "netgen",
+    "magic",
+    "physical-signoff",
+    "tapeout",
+    "node-portable",
+    "sky130"
+  ],
+  "previous_tool_version": "1.3.1-lvsrepair-20261116",
+  "action_examples": {
+    "run": [
+      {
+        "name": "lvs_compare",
+        "params_json": "{\"scenario\":\"lvs_compare\",\"top\":\"<myDesign>\",\"layout_netlist\":\"/input/<myDesign>.ext.spice\",\"schematic_netlist\":\"/input/<myDesign>.src.spice\",\"setup\":\"/pdk/sky130A_setup.tcl\",\"pdk_binding\":{\"pdk\":\"sky130A\"}}"
+      },
+      {
+        "name": "lvs_compare_klayout",
+        "params_json": "{\"scenario\":\"lvs_compare\",\"engine\":\"klayout\",\"top\":\"<myDesign>\",\"layout\":\"/input/<myDesign>.gds\",\"schematic_netlist\":\"/input/<myDesign>.v\",\"setup\":\"/input/pdk/lvs_freepdk45.lylvs\",\"cdl\":\"/input/pdk/NangateOpenCellLibrary.cdl\",\"pdk_binding\":{\"pdk\":\"nangate45\"}}"
+      },
+      {
+        "name": "extract_layout",
+        "params_json": "{\"scenario\":\"extract_layout\",\"layout\":\"/input/<myDesign>.gds\",\"cell\":\"<myDesign>\",\"magicrc\":\"/pdk/sky130A.magicrc\",\"pdk_binding\":{\"pdk\":\"sky130A\"}}"
+      }
+    ]
+  },
+  "input_schema_keywords": {
+    "run": {
+      "additionalProperties": false
+    }
+  }
+}

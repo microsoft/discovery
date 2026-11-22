@@ -1,0 +1,41 @@
+{
+  "node_awareness": "node-aware",
+  "original_tags": [
+    "placement",
+    "openroad",
+    "timing-driven",
+    "node-portable",
+    "sky130"
+  ],
+  "previous_build": {
+    "containerfile": "Containerfile",
+    "engine": "docker"
+  },
+  "action_examples": {
+    "run": [
+      {
+        "name": "place",
+        "params_json": "{\"scenario\":\"place\",\"top\":\"counter\",\"def_file\":\"/input/floorplan.def\",\"tech_lef\":\"/input/sky130_fd_sc_hd.tlef\",\"cell_lef\":\"/input/sky130_fd_sc_hd.lef\",\"liberty\":\"/input/sky130_fd_sc_hd__tt_025C_1v80.lib\",\"density\":0.6,\"pdk_binding\":{\"pdk\":\"sky130A\"}}"
+      },
+      {
+        "name": "insert_taps (pre-placement well-tap + endcap)",
+        "params_json": "{\"scenario\":\"insert_taps\",\"top\":\"counter\",\"def_file\":\"/input/pdn.def\",\"tech_lef\":\"/input/sky130_fd_sc_hd.tlef\",\"cell_lef\":\"/input/sky130_fd_sc_hd.lef\",\"tapcell_master\":\"sky130_fd_sc_hd__tapvpwrvgnd_1\",\"endcap_master\":\"sky130_fd_sc_hd__decap_3\",\"tapcell_distance\":14,\"pdk_binding\":{\"pdk\":\"sky130A\"}}"
+      },
+      {
+        "name": "insert_fill (post-placement decap/fill)",
+        "params_json": "{\"scenario\":\"insert_fill\",\"top\":\"counter\",\"def_file\":\"/input/placed.def\",\"tech_lef\":\"/input/sky130_fd_sc_hd.tlef\",\"cell_lef\":\"/input/sky130_fd_sc_hd.lef\",\"decap_cells\":[\"sky130_fd_sc_hd__decap_3\",\"sky130_fd_sc_hd__decap_4\",\"sky130_fd_sc_hd__decap_6\",\"sky130_fd_sc_hd__decap_8\",\"sky130_fd_sc_hd__decap_12\",\"sky130_fd_sc_hd__fill_1\",\"sky130_fd_sc_hd__fill_2\"],\"pdk_binding\":{\"pdk\":\"sky130A\"}}"
+      },
+      {
+        "name": "post_placement_repair (pre-route, ESTIMATED RC)",
+        "params_json": "{\"scenario\":\"post_placement_repair\",\"top\":\"counter\",\"odb_file\":\"/input/placed.odb\",\"liberty\":\"/input/sky130_fd_sc_hd__tt_025C_1v80.lib\",\"sdc\":\"/input/counter.sdc\",\"wire_rc_signal_layer\":\"met1\",\"wire_rc_clock_layer\":\"met3\",\"repair_timing\":\"none\",\"pdk_binding\":{\"pdk\":\"sky130A\"}}"
+      },
+      {
+        "name": "post_route_repair (post-route ECO, EXTRACTED SPEF)",
+        "params_json": "{\"scenario\":\"post_route_repair\",\"top\":\"counter\",\"odb_file\":\"/input/routed.odb\",\"liberty\":\"/input/sky130_fd_sc_hd__ss_100C_1v60.lib\",\"sdc\":\"/input/counter.sdc\",\"spef\":\"/input/counter.max.spef\",\"repair_timing\":\"none\",\"pdk_binding\":{\"pdk\":\"sky130A\"}}"
+      }
+    ]
+  },
+  "parameter_descriptions": {
+    "params_json": "CONTRACT: one single-line JSON object (double quotes) with a top-level \"scenario\" (one of: place, insert_taps, insert_fill, post_placement_repair, post_route_repair). Object params such as pdk_binding / deck_vars are inline JSON objects, e.g. \"pdk_binding\":{\"pdk\":\"nangate45\",\"liberty\":[\"/input/cells.lib\"]}. Params named rtl/upf/sdc/text carry inline text; file paths go in *_file(s)/sources/netlist/def/gds keys as absolute /input/... paths. On failure read the envelope `error` field. JSON with scenario place. Provide `top`, `def_file` (floorplan DEF path), `tech_lef`, `cell_lef`, `liberty` (from binding), `density`, optional `sdc`, `pdk_binding`. Writes placed.def; reports legalized, density, HPWL. POWER-NET CONTINUITY is measured across the stage: the supply rails entering and leaving are counted, and if rails ENTERED and fewer LEFT the stage FAILS CLOSED (placement destroyed the power grid). A design that arrives with NO rails does not fail -- a flow may legitimately build its PDN after placement -- but it is DISCLOSED, because on <myDesign> a pre-PDN DEF was fed to placement and six further stages then reported success on a design that could never be power-connected. A rail is a SPECIAL power/ground net carrying SWIRE geometry; POWER/GROUND sigtype alone also matches tie-off nets such as `zero_` and does not mean the design is powerable. Double-quoted JSON only. Other scenarios: `insert_taps` (well-tap + endcap on the FLOORPLAN/PDN DEF, run BEFORE placement so the placer legalizes around fixed taps -- needs tapcell_master/endcap_master/tapcell_distance; writes tapped_floorplan.def), `insert_fill` (decap/fill on the PLACED DEF, run AFTER placement -- needs decap_cells; writes filled.def), `insert_tap_endcap_decap` (combined, back-compat, does NOT re-legalize -- prefer the split taps/fill), `post_placement_repair` (repair_design on ESTIMATED RC, pre-route -- needs `sdc` + wire_rc_signal_layer/wire_rc_clock_layer or it silently no-ops per RSZ-0089), `post_route_repair` (ECO repair against EXTRACTED SPEF, post-route -- needs `sdc` AND `spef`; use when DRVs survive post_placement_repair because the placement RC estimate is optimistic vs real routed RC. Emits route_repaired.def plus measured drv_violators_before/after, and REQUIRES re-running routing -> metal fill -> extraction -> STA because the inserted buffers are unrouted). The base `place` scenario also accepts `skip_io` (global placement ignores pin locations -- PASS 1 of the standard two-pass idiom: place cells, then place I/O pins against them, then re-place without skip_io) and `cluster_flops` (fold single-bit flops into multi-bit trays where the library has them -- area and clock-power lever; tune with `tray_weight`, `flop_timing_weight`, `clock_power_weight`, `max_split_size`, `num_paths`). Both repair scenarios accept the resizer TRANSFORM controls (ORFS naming): `skip_pin_swap`, `skip_gate_cloning`, `skip_size_down`, `skip_buffering`, `skip_buffer_removal`, `skip_last_gasp`, `skip_vt_swap`, `skip_crit_vt_swap`, plus `repair_sequence`, `max_passes`, `max_utilization`, `match_cell_footprint`, `repair_tns_percent`, `recover_power_percent` (setup only) and `allow_setup_violations` (hold only). WIRE RC: `place` (timing_driven), `post_placement_repair` and `post_route_repair` establish the resizer wire-RC model first, from `setrc_tcl` (path to the PDK setRC Tcl, e.g. /input/pdk/setRC.tcl; also read from tool_policy.placement or pdk_binding.setrc_tcl/set_rc) else `set_wire_rc -signal/-clock -layer` from `wire_rc_signal_layer`/`wire_rc_clock_layer` (caller -> tool_policy -> pdk_binding.routing_layers -> pdk_binding.wire_rc_layer/wire_rc_clk_layer). `timing_driven=true` also needs `sdc` and `liberty`; if any of SDC/liberty/RC is unresolvable `place` runs NON-timing-driven global placement and records a caveat (verdict pass_with_caveats) instead of failing RSZ-0089. A named setrc_tcl that does not exist fails closed. TAPS: the tap/endcap command is built by the same helper as scenario insert_taps (preferred flow: insert_taps on the floorplan/PDN DEF, then place). As a safety net, `insert_tapcells` (place only; default TRUE when tapcell_master+endcap_master+tapcell_distance resolve from caller/tool_policy/pdk_binding.physical_cells) runs that same tapcell command BEFORE global placement when the input carries no tap/endcap instance (never re-taps, so it is a no-op after insert_taps), ties the new cells' supply pins to the special rails (pdk_binding.power_net/ground_net preferred), and records tapcell_insertion + qor tapcells_inserted. FILL: scenario insert_fill (run on the ROUTED DEF/ODB after chip-routing) runs `filler_placement {<decap_cells> <filler_cells>}`; decap_cells and/or filler_cells come from caller/tool_policy/pdk_binding.physical_cells (Nangate45: filler_cells FILLCELL_X1..X32, decap_cells []), and results.filler_cells_inserted / filler_cells_total are measured from the output DEF -- 0 fillers in the result fails the stage; insert_tapcells=false disables it."
+  }
+}

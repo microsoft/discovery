@@ -1,0 +1,31 @@
+{
+  "original_agent_description": "Node-aware Design Rule Check agent. Runs KLayout and/or Magic batch DRC on a GDS/OASIS/DEF layout and reports the violation count with a per-rule breakdown and waiver adjudication. On sky130/open PDKs it runs BOTH engines because their decks catch complementary rules; the design is clean only when every engine is clean. DRC is a mandatory tapeout gate: zero un-waived violations to sign off. Consumes the PDK Binding (KLayout deck + Magic tech). Emits a Common Design Envelope. Validated on sky130.\n",
+  "node_awareness": "node-aware",
+  "original_tags": [
+    "drc",
+    "design-rule-check",
+    "klayout",
+    "physical-signoff",
+    "tapeout",
+    "node-portable",
+    "sky130"
+  ],
+  "previous_tool_version": "1.0.1-magicdrcbox-20261117",
+  "action_examples": {
+    "run": [
+      {
+        "name": "drc_check_both",
+        "params_json": "{\"scenario\":\"drc_check\",\"engine\":\"both\",\"top\":\"<myDesign>\",\"layout\":\"/input/<myDesign>.gds\",\"drc_deck\":\"/pdk/sky130A.lydrc\",\"magicrc\":\"/pdk/sky130A.magicrc\",\"pdk_binding\":{\"pdk\":\"sky130A\"}}"
+      },
+      {
+        "name": "drc_check_klayout",
+        "params_json": "{\"scenario\":\"drc_check\",\"engine\":\"klayout\",\"top\":\"<myDesign>\",\"layout\":\"/input/<myDesign>.gds\",\"drc_deck\":\"/pdk/sky130A.lydrc\",\"pdk_binding\":{\"pdk\":\"sky130A\"}}"
+      }
+    ]
+  },
+  "input_schema_keywords": {
+    "run": {
+      "additionalProperties": false
+    }
+  }
+}

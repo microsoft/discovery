@@ -1,0 +1,15 @@
+name: chip-lvs
+type: agent
+version: 1.2.0
+associated_tools:
+- agents/chip-lvs/tools/lvs
+publisher:
+  name: Microsoft
+  contact: discovery-catalog@microsoft.com
+  support_url: https://techcommunity.microsoft.com/category/azure/discussions/microsoft-discovery-discussions
+  party: 1p
+description: |
+  Node-aware Layout-vs-Schematic agent driven by Netgen LVS (+ Magic extraction), consuming the PDK Binding (device-matching setup) and emitting a Common Design Envelope. LVS is a mandatory tapeout gate. Validated on SkyWater sky130.
+tags:
+- eda
+- sky130

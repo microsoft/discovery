@@ -1,0 +1,5 @@
+{
+  "sources": [
+    {"name": "klayout", "version": "0.30.10", "repository": "KLayout/klayout", "commit": "87060b43644e8a72ce3d209b08217ddb3aa2472b", "sha256": "0723b4e31928f45c0e0971b0d4dcc5993260c69cb80b77937922c5ae5af9ef0e"}
+  ]
+}

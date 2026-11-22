@@ -1,0 +1,14 @@
+name: chip-debug-root-cause
+type: agent
+version: 1.1.0
+associated_tools:
+- agents/chip-debug-root-cause/tools/debug
+publisher:
+  name: Microsoft
+  contact: discovery-catalog@microsoft.com
+  support_url: https://techcommunity.microsoft.com/category/azure/discussions/microsoft-discovery-discussions
+  party: 1p
+description: |
+  Node-agnostic verification-failure debugger. Buckets failures by error signature, parses the VCD waveform for X-states, stuck signals and activity around the failure, reduces a failing stimulus by real delta debugging against an executed oracle, and establishes determinism by re-running the reproducer rather than by inspecting a seed field. Reports anything it could not execute or read as not_assessable.
+tags:
+- eda

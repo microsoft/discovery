@@ -1,0 +1,83 @@
+schema_version: design-policy/1.0
+owner: pdk-binding
+node_awareness: node-aware
+role: node_portability_owner
+binding:
+  emit_complete_only: true
+  pin_and_hash_all_references: true
+  required_references: [tech_lef, liberty, drc_rules, lvs_rules, antenna_rules, erc_rules, layermap, metal_stack, corners, stdcell_library, physical_cells, units]
+  missing_reference_behavior: block
+  # physical_cells are cell-NAME masters inside the already-hashed stdcell LEF, not
+  # standalone file references, so the file-reference completeness check does NOT cover
+  # them. For a well-based node whose flow reaches physical implementation, the well-tap
+  # / endcap / decap masters (tapcell_master, endcap_master, tapcell_distance, decap_cells)
+  # MUST be bound and each name verified present in the bound stdcell LEF -- authored up
+  # front, never deferred to "when the stage needs them" (a deferral that outlived its
+  # consuming stage becoming ready is the §8/§11b pre-bind stall). Enforced mechanically
+  # by catalog/validate_pdk_binding.py (advisory in CI; --strict at setup / stage preflight).
+  physical_cells_well_based_required: [tapcell_master, endcap_master, tapcell_distance, decap_cells]
+  # routing_layers are LAYER-NAME strings inside the already-hashed tech LEF, so like
+  # physical_cells they fall outside the file-reference completeness check. Any flow
+  # that reaches physical implementation MUST bind them up front:
+  #   bottom_layer / top_layer          -> chip-routing set_routing_layers
+  #   wire_rc_signal_layer / _clock_layer -> chip-placement + chip-cts set_wire_rc
+  # THE WIRE-RC PAIR IS THE DANGEROUS ONE: absent, OpenROAD raises RSZ-0089 and
+  # repair_design SILENTLY NO-OPS (0 buffers, 0 resizes) while still reporting success,
+  # so the gap reads as a clean run instead of a failure. The binding tool emits the
+  # block from the node routing profile (or a caller override) and cross-checks every
+  # name against the tech LEF's TYPE ROUTING set; an unknown node emits NOTHING rather
+  # than fabricating. Enforced mechanically by catalog/validate_pdk_binding.py
+  # (advisory in CI; --strict at setup / stage preflight).
+  routing_layers_required: [bottom_layer, top_layer, wire_rc_signal_layer, wire_rc_clock_layer]
+  # fill_config / tool_policy.fill / density_windows are BINDING-ROOT keys (not
+  # inside physical_cells) consumed by the Metal Fill and Density Agent's OpenROAD
+  # `density_fill -rules <fill_config>` and its post-fill min/max density
+  # disposition. UNLIKE physical_cells/routing_layers there is NO fallback default:
+  # an absent key fails metal-fill CLOSED at preflight with ZERO artifacts produced
+  # (<TaskID-A>, <TaskID-B> material blockers) rather than no-opping or substituting a
+  # wrong value -- but it is still a hard stall the moment the stage is READY, so
+  # it must be bound up front rather than discovered as a stage failure. sky130
+  # numeric density-window values come verbatim from the pinned Open_PDKs Magic
+  # density checker (libs.tech/magic/check_density.py); never a bare literal.
+  # Enforced mechanically by catalog/validate_pdk_binding.py (advisory in CI;
+  # --strict at setup / stage preflight).
+  metal_fill_required: [fill_config, density_windows, tool_policy.fill]
+  # I/O PAD COLLATERAL. A LEF/Liberty/Verilog-complete I/O binding LOOKS complete and is
+  # NOT streamable: physical streamout needs a GEOMETRY view. With io_lef bound and
+  # io_gds absent, GDS assembly either fails closed or emits a DUMMY rectangle for the
+  # pad -- and a dummy pad invalidates every physical-verification result behind it while
+  # still producing a plausible-looking GDS. Measured 2026-10-07 (greenfield sky130A):
+  # the active binding carried io_lef + io_lib_{tt,ss,ff} + stdcell_gds and no io_gds;
+  # nothing flagged it at bind time, so it surfaced at the TAPEOUT DELIVERABLE with the
+  # whole physical flow already closed behind it.
+  # Conditional, not absolute: required only when an I/O library is bound at all.
+  # Cell-name similarity is NOT geometry compatibility -- measured sky130_fd_io
+  # top_gpiov2 81.655x200.000 um vs the bound sky130_ef_io LEF's 80.000x197.965 um, and
+  # corner_pad with no source cell at all. Verify COVERAGE (every io_lef MACRO is defined
+  # as a structure in the io_gds) and GEOMETRY before pinning; never bind a cache marked
+  # incompatible. Enforced mechanically by catalog/validate_pdk_binding.py
+  # (advisory in CI; --strict at setup / stage preflight).
+  io_collateral_required_when_io_lef_bound: [io_gds]
+node_switch:
+  produce_diff: true
+  flag_orphaned_references: true
+  require_zero_stage_agent_changes: true
+provenance:
+  record_pdk_source: true
+  record_version: true
+execution:
+  pdk_unavailable: block
+  incomplete_binding: block
+  malformed_output: block
+
+# --- BEGIN generated effort block (catalog/gen_effort_policy.py) ---
+effort:
+  iterating: false
+  metric_kind: unavailable
+  rationale: >-
+    declarative/one-shot stage: re-running does not move a residual.
+    Effort is bounded by max_attempts from the campaign effort-budget
+    ledger plus human judgement; no metric-driven stall rule applies.
+  stage_key: pdk
+  self_remediating: true
+# --- END generated effort block ---

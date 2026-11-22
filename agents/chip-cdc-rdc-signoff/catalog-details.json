@@ -1,0 +1,36 @@
+{
+  "original_metadata_description": "Node-agnostic clock- and reset-domain-crossing signoff agent that treats CDC and RDC as a first-class gate. Enumerates internal and asynchronous primary-input crossings, verifies synchronizers, and groups per-bit crossings into buses so a multi-bit crossing is judged as one coherency problem; an undeclared or missing required crossing fails the gate. Manages waivers and reports a signoff verdict. Drives Yosys structural analysis and optional SymbiYosys BMC, induction, reachability, fairness-backed liveness, explicit multi-clock protocol, and multi-reset release proofs. Physical metastability and recovery/removal timing remain outside digital formal scope.\n",
+  "original_agent_description": "Node-agnostic clock- and reset-domain-crossing signoff agent. Treats CDC and RDC as a first-class gate, not a lint side-effect: enumerates every crossing, verifies synchronizers, and reassembles per-bit crossings into BUSES so a multi-bit crossing is judged as one coherency problem rather than N independent bits -- per-bit synchronization of a multi-bit value is the defect, not the fix. A multi-bit crossing with no declared gray/handshake/qualifier/fifo scheme fails the gate. Infers intent from natural language, drives Yosys structural analysis and, on request, runs bounded, inductive, reachability, and explicitly fairness-backed liveness proofs. A v2 domain map enables multi-clock protocol and multi-reset assertion/release proofs. Every requested formal task must pass. Physical metastability and recovery/removal timing remain outside digital formal scope.\n",
+  "node_awareness": "node-agnostic",
+  "original_tags": [
+    "chip-design",
+    "verification",
+    "cdc",
+    "rdc",
+    "signoff",
+    "node-agnostic"
+  ],
+  "previous_build": {
+    "containerfile": "Containerfile",
+    "engine": "docker"
+  },
+  "action_examples": {
+    "run": [
+      {
+        "name": "cdc_signoff",
+        "params_json": "{\"scenario\":\"cdc_signoff\",\"top\":\"cdc\",\"rtl\":\"module cdc(input clk_a, clk_b, input d, output reg q2); reg a1; reg q1; always @(posedge clk_a) a1<=d; always @(posedge clk_b) q1<=a1; always @(posedge clk_b) q2<=q1; endmodule\",\"domain_map\":{\"clk_a\":\"A\",\"clk_b\":\"B\"}}"
+      },
+      {
+        "name": "cdc_signoff_multibit_bus_declared_gray_with_formal_proof",
+        "params_json": "{\"scenario\":\"cdc_signoff\",\"top\":\"fifo_ptr\",\"rtl_files\":[\"/input/fifo_ptr.v\"],\"domain_map\":{\"wclk\":\"W\",\"rclk\":\"R\"},\"bus_protocols\":{\"wptr_gray\":{\"scheme\":\"gray\",\"clock\":\"wclk\"}},\"formal\":true,\"formal_depth\":20}"
+      },
+      {
+        "name": "multiclock_formal",
+        "params_json": "{\"scenario\":\"cdc_signoff\",\"top\":\"async_fifo\",\"rtl_files\":[\"/input/async_fifo.sv\"],\"domain_map\":\"/input/domain_map_v2.json\",\"formal\":true,\"formal_scope\":\"multiclock\",\"formal_modes\":[\"bmc\",\"prove\",\"cover\"],\"formal_solver\":\"z3\",\"formal_timeout_s\":300}"
+      }
+    ]
+  },
+  "parameter_descriptions": {
+    "params_json": "CONTRACT: one single-line JSON object (double quotes) with a top-level \"scenario\" (one of: cdc_signoff, rdc_signoff, synchronizer_verify, reconvergence). Object params such as pdk_binding / deck_vars are inline JSON objects, e.g. \"pdk_binding\":{\"pdk\":\"nangate45\",\"liberty\":[\"/input/cells.lib\"]}. Params named rtl/upf/sdc/text carry inline text; file paths go in *_file(s)/sources/netlist/def/gds keys as absolute /input/... paths. On failure read the envelope `error` field. JSON with scenario cdc_signoff | rdc_signoff. Provide `top`, RTL, and `domain_map`: a flat map, either supported clock-reset-domain-map/v1 dialect, or strict v2. V2 is required for formal_scope multiclock|multireset|full and declares clock period/relation/phase/progress, reset assertion/release intent, and formal_crossings. Protocols: level|pulse|toggle|gray|handshake|qualifier|mcp|fifo|async_fifo|reconvergence. formal_modes must include bmc+prove+cover; live is additive and requires eventual_response, fairness_signal, and fairness_justification. Validated controls include formal_depth, formal_timeout_s, formal_solver_timeout_s, formal_jobs, formal_seed, formal_append_cycles, formal_z3_memory_mb, formal_keep_going, and a solver whitelist. Every requested task must PASS; unknown/error/timeout/cancelled/not_assessable blocks closure. Formal jobs retain VCD, Yosys witness, testbench, SMT constraints, and logs under /output/formal. Digital formal does not prove analog metastability or recovery/removal timing. Optional `waiver_authorization` requests a DISCLOSED acceptance of unsupported state cells that would otherwise fail the census closed; it is NOT a skip switch. It takes {ledger, ruling_id, sha256, attempt_path, campaign, design, task_id, task_uuid, attempt_basis, source_rtl, spec_domain_map} and is honored only when the named ruling is uniquely present in the campaign ledger, its content hash recomputes to the recorded and requested sha256, it is unsuperseded, it is a human-sourced accepted_with_waiver cdc_rdc ruling naming an authorizer and rule_deck_version, the attempt path lies inside its scope, every identity and input-hash condition matches this run, and the observed unsupported-state census exactly equals the accepted census. Any mismatch refuses and the run still fails closed. `spec_domain_map` is the authorized declared-intent domain map whose sha256 the ruling binds; the run's consumed `domain_map` must be verified as its exact {port: name} projection, so neither artifact can drift behind the other. An accepted run emits gate_scope cdc_accepted_with_waiver with clean_signoff false and the full limitations block; it never reports a clean signoff. Double-quoted JSON only."
+  }
+}

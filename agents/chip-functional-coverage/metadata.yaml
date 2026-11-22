@@ -1,0 +1,14 @@
+name: chip-functional-coverage
+type: agent
+version: 1.1.0
+associated_tools:
+- agents/chip-functional-coverage/tools/functional-coverage
+publisher:
+  name: Microsoft
+  contact: discovery-catalog@microsoft.com
+  support_url: https://techcommunity.microsoft.com/category/azure/discussions/microsoft-discovery-discussions
+  party: 1p
+description: |
+  Node-agnostic functional coverage agent. Defines, measures, and closes functional coverage (covergroups, bins, crosses, cover properties) against the verification plan. It infers coverage intent from natural language, drives cocotb / Verilator / Icarus coverage sampling, analyzes holes, and reports coverage closure directly in chat.
+tags:
+- eda

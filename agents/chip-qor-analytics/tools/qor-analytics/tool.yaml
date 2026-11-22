@@ -1,0 +1,35 @@
+name: qor-analytics
+description: |
+  Node-agnostic envelope-only QoR aggregation, ordered least-squares trajectories, polarity-aware regression detection and comparability checks. No flow reruns.
+version: 1.2.0
+category: Chip Design
+infra:
+- name: worker
+  infra_type: container
+  image:
+    acr: '{name}.azurecr.io/chip-qor-analytics:1.2.0'
+  compute:
+    min_resources:
+      cpu: 1
+      ram: 2Gi
+      storage: 5Gi
+      gpu: 0
+    max_resources:
+      cpu: 4
+      ram: 16Gi
+      storage: 20Gi
+      gpu: 0
+    recommended_sku:
+    - Standard_D2as_v6
+    pool_type: static
+    pool_size: 1
+actions:
+- name: run
+  description: |
+    Run one operation from caller-created /input/params.json, following bundled params.schema.json. Mount /input read-only and fresh writable /output, /workdir, /home/worker, /run and /dev/shm. CDE is /output/common_design_envelope.json; artifact references are relative to /output. Completed/fail and not_assessable exit nonzero. Unavailable comparability, needed polarity, requested baselines/measurements or explicit ordering cannot be accepted with caveats. Review/caveats are not clean signoff. Services callers must create a uniquely named JSON resource and mount its returned file URI at /input/params.json. Failed Services jobs may omit output assets: CDE_JSON=<json> in native logs reproduces the exact persisted failed envelope. Framework success never establishes native engineering pass. This declaration alone does not register an action in the app.
+  infra_node: worker
+  command: python3 -B -u /app/run.py --params-file /input/params.json
+  input_schema:
+    type: object
+    required: []
+    properties: {}

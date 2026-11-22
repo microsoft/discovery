@@ -1,0 +1,36 @@
+name: chip-constraints
+description: |
+  Chip constraints (SDC) tool. Uses OpenSTA to (a) AUTHOR an SDC from design structure it enumerates by Tcl introspection plus timing intent supplied by the caller, linting the authored file in the same run, and (b) lint an existing SDC for unconstrained endpoints and unclocked registers, reporting coverage against the enumerated endpoint population rather than against report keywords alone. No clock period, I/O budget or timing exception is ever defaulted: unsupplied intent becomes a gating hole and the constraint is not emitted. Node-aware. Emits a Common Design Envelope.
+version: 1.2.39
+category: Chip Design
+infra:
+- name: worker
+  infra_type: container
+  image:
+    acr: '{name}.azurecr.io/chip-constraints:1.2.39'
+  compute:
+    min_resources:
+      cpu: 1
+      ram: 2Gi
+      storage: 10Gi
+      gpu: 0
+    max_resources:
+      cpu: 2
+      ram: 4Gi
+      storage: 40Gi
+      gpu: 0
+    recommended_sku:
+    - Standard_D2as_v6
+    pool_type: static
+    pool_size: 1
+actions:
+- name: run
+  description: Execute one native operation from mounted /input/params.json; no function arguments. WriteResource
+    uses literal UTF8. CDE at /output/common_design_envelope.json; failed jobs retain actual persisted
+    CDE_JSON= in native logs. Framework completion is not native pass.
+  infra_node: worker
+  command: python3 -u /app/run.py
+  input_schema:
+    type: object
+    required: []
+    properties: {}

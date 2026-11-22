@@ -1,0 +1,36 @@
+name: functional-coverage
+description: |
+  Chip functional-coverage tool. COMPILES AND RUNS the supplied RTL under cocotb + Verilator --coverage (scenario measure_rtl_coverage), samples covergroups/bins/crosses from values the simulation emitted, measures cover properties, merges native per-seed coverage.dat, and emits an actual-measurement-basis reachability proof. Also models and merges coverage. Node-agnostic. Shares the vplan. Emits a Common Design Envelope.
+version: 1.1.0
+category: Chip Design
+infra:
+- name: worker
+  infra_type: container
+  image:
+    acr: '{name}.azurecr.io/chip-functional-coverage:1.1.0'
+  compute:
+    min_resources:
+      cpu: 1
+      ram: 2Gi
+      storage: 10Gi
+      gpu: 0
+    max_resources:
+      cpu: 8
+      ram: 16Gi
+      storage: 20Gi
+      gpu: 0
+    recommended_sku:
+    - Standard_D2as_v6
+    pool_type: static
+    pool_size: 1
+actions:
+- name: run
+  description: Measure functional coverage by RUNNING real RTL (measure_rtl_coverage), or model/score/merge
+    from structured JSON. Emits per-group/cross coverage, cover properties, holes, native coverage.dat
+    merge, and a reachability proof to /output/common_design_envelope.json (Common Design Envelope).
+  infra_node: worker
+  command: python3 -B -u /app/run.py --params-file /input/params.json
+  input_schema:
+    type: object
+    required: []
+    properties: {}

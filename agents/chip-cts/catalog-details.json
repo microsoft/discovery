@@ -1,0 +1,23 @@
+{
+  "node_awareness": "node-aware",
+  "original_tags": [
+    "cts",
+    "clock-tree",
+    "openroad",
+    "tritoncts",
+    "node-portable",
+    "sky130"
+  ],
+  "previous_build": {
+    "containerfile": "Containerfile",
+    "engine": "docker"
+  },
+  "action_examples": {
+    "run": [
+      {
+        "name": "cts",
+        "params_json": "{\"scenario\":\"cts\",\"top\":\"counter\",\"def_file\":\"/input/placed.def\",\"tech_lef\":\"/input/sky130_fd_sc_hd.tlef\",\"cell_lef\":\"/input/sky130_fd_sc_hd.lef\",\"liberty\":\"/input/sky130_fd_sc_hd__tt_025C_1v80.lib\",\"sdc\":\"/input/counter.sdc\",\"clock_buffer\":\"sky130_fd_sc_hd__clkbuf_4\",\"pdk_binding\":{\"pdk\":\"sky130A\"}}"
+      }
+    ]
+  }
+}

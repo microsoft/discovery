@@ -1,0 +1,11 @@
+{
+  "version": "1.5.1",
+  "actions": [{
+    "name": "run",
+    "description": "Execute CDC/RDC analysis from /input/params.json. Scenarios cdc_signoff, rdc_signoff, synchronizer_verify, reconvergence. Domain map required. Per-bit synchronization does not establish bus coherency. Read common_design_envelope.json.",
+    "infra_node": "worker",
+    "command": "python3 -B -u /app/run.py --params-file /input/params.json",
+    "input_schema": {"type": "object", "required": [], "properties": {}, "additionalProperties": false}
+  }],
+  "compute_limits": {"cpu": 2, "ram": "4Gi"}
+}
