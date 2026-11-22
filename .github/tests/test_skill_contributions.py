@@ -73,8 +73,29 @@ def test_commonjs_only_skill_change_is_permitted_and_classified_as_code(skill_re
     assert result.contribution.has_code
 
 
+@pytest.mark.parametrize("suffix", [".html", ".HTML"])
+def test_html_skill_templates_pass_as_untrusted_code_without_execution(skill_repo, suffix):
+    relative = write(
+        skill_repo, f"skills/demo/templates/report{suffix}",
+        "<!doctype html><html><head><style>body { color: #123; }</style></head>"
+        "<body><main>@@NARRATIVE@@</main><script>"
+        "throw new Error('Submitted HTML must not execute during validation');"
+        "</script></body></html>\n",
+    )
+
+    result = run_validation(skill_repo, [relative])
+
+    assert result.passed, result.to_dict()
+    assert result.contribution.has_code
+    assert not result.contribution.has_markdown_only
+    assert not result.contribution.has_agents
+
+
 @pytest.mark.parametrize(("filename", "content", "rule_id"), [
     ("notes.txt", b"%PDF-1.7\n%\xe2\xe3\xcf\xd3\n1 0 obj\n<< >>\nendobj\n", "POL-008"),
+    ("templates/report.html", b"%PDF-1.7\n%\xe2\xe3\xcf\xd3\n1 0 obj\n<< >>\nendobj\n", "POL-008"),
+    ("templates/report.html", b"<html>invalid \xff byte</html>\n", "POL-020"),
+    ("templates/report.html", "<html>Unsafe \u202e text</html>\n", "POL-020"),
     ("notes.unknownext", "reviewable but unapproved type\n", "POL-015"),
     ("diagram.svg", '<svg xmlns="http://www.w3.org/2000/svg"><script/></svg>', "POL-016"),
     ("SKILL.md", "# Unsafe \u202e text\n", "POL-020"),

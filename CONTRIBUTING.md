@@ -89,6 +89,10 @@ kits: content-based binary detection, approved file types, safe UTF-8, Markdown
 image safety, container-source policy, and artifact/model-weight checks.
 LaTeX (`.tex`) and BibTeX (`.bib`) text templates are approved; compiled PDFs
 and other build outputs are not.
+HTML (`.html`) source templates are also approved specifically under `skills/`,
+not under `agents/` or `starter-kits/`. They remain untrusted code for review;
+catalog validation does not execute them. Generated reports belong in run-output
+folders rather than catalog contributions.
 
 The verified-secret scan and dependency review also cover skill contributions.
 CodeQL, DevSkim, and Application Inspector provide reviewer evidence, not

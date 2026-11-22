@@ -131,6 +131,14 @@ filenames:
   - pyproject.toml
   - setup.cfg
 
+# Additional source extensions scoped to one catalog tree. This does not
+# exempt content classification, safe UTF-8 checks, secret scanning or review.
+# HTML is permitted for skill source templates, including inline CSS/JavaScript;
+# generated reports belong in run-output folders, not the catalog contribution.
+scoped_extensions:
+  skills/:
+    - .html
+
 # Filename patterns (fnmatch) permitted in addition to the lists above.
 patterns:
   - "Dockerfile.*"
