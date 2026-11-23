@@ -30,9 +30,9 @@
 
 ---
 
-# Microsoft Discovery community
+# Microsoft Discovery
 
-Welcome to the **Microsoft Discovery community** — the public home for the Discovery platform, where users, partners, and the product team build together. We're proud to announce that the [Microsoft Discovery Discussions forum](https://techcommunity.microsoft.com/category/azure/discussions/microsoft-discovery-discussions) is now open on the Microsoft Community Hub! Share what you've built, ask questions, file bugs, suggest ideas, and see what other Discovery users are doing across disciplines.
+Welcome to the **Microsoft Discovery repository** — the public home for the Discovery platform, where users, partners, and the product team build together. We're proud to announce that the [Microsoft Discovery Discussions forum](https://techcommunity.microsoft.com/category/azure/discussions/microsoft-discovery-discussions) is now open on the Microsoft Community Hub! Share what you've built, ask questions, file bugs, suggest ideas, and see what other Discovery users are doing across disciplines.
 
 > **Microsoft Discovery is an extensible platform that brings together agentic orchestration, advanced reasoning, a graph-based knowledge foundation, and high-performance computing for accelerating scientific research and R&D workflows.**
 
@@ -44,6 +44,36 @@ Microsoft Discovery is offered in two complementary experiences: an enterprise-g
 | ☁️ **Microsoft Discovery** | The cloud-hosted, team-scale experience on Azure. | [Microsoft Learn](https://learn.microsoft.com/en-us/azure/microsoft-discovery/) — full reference |
 
 In addition, this repository hosts the **public Discovery Catalog** — the canonical metadata catalog of AI research **agents** and **starter kits** contributed by Microsoft and ecosystem partners. Agent code, container images, and model weights live in each contributor's own infrastructure; the metadata and documentation that describe them live here, where they are PR-reviewed, schema-validated, and surfaced to every Discovery user.
+
+---
+
+## 🌐 Partner ecosystem
+
+Breakthrough science happens where disciplines, data, and computing meet. Microsoft Discovery is proud to work with a growing ecosystem of partners — trusted scientific publishers, AI-native research platforms, open-science initiatives, and leaders in accelerated computing — who bring their expertise into Discovery as ready-to-use agents. Together, these agents connect peer-reviewed knowledge, open data, predictive models, and high-performance simulation in a single agentic workflow, helping research teams move from question to evidence to result faster across the life sciences, chemistry and materials science, silicon and physics, quantum science, and earth and climate science.
+
+<table>
+  <tr>
+    <td align="center" valign="top" width="33%">
+      <a href="agents/wiley-nexus/"><img src="https://avatars.githubusercontent.com/u/37445193?s=192" width="96" height="96" alt="Wiley logo"></a><br>
+      <a href="agents/wiley-nexus/"><strong>Wiley Nexus</strong></a><br>
+      <sub>Citation-backed answers from Wiley's peer-reviewed scholarly literature.</sub>
+    </td>
+    <td align="center" valign="top" width="33%">
+      <a href="agents/synthesize-bio/"><img src="https://avatars.githubusercontent.com/u/145417789?s=192" width="96" height="96" alt="Synthesize Bio logo"></a><br>
+      <a href="agents/synthesize-bio/"><strong>Synthesize Bio</strong></a><br>
+      <sub>Realistic human gene-expression data for virtual experiments, generated from a plain-language description.</sub>
+    </td>
+    <td align="center" valign="top" width="33%">
+      <a href="agents/nvidia-alchemi/"><img src="https://avatars.githubusercontent.com/u/1728152?s=192" width="96" height="96" alt="NVIDIA logo"></a><br>
+      <a href="agents/nvidia-alchemi/"><strong>NVIDIA ALCHEMI</strong></a><br>
+      <sub>GPU-accelerated atomistic simulation with machine-learned interatomic potentials.</sub>
+    </td>
+  </tr>
+</table>
+
+Partner agents are published through the same PR-reviewed, schema-validated catalog as Microsoft's own agents.
+
+**For more details**, see the [Partner ecosystem page](docs/partner-ecosystem.md): every partner agent, what it does, and its setup requirements.
 
 ---
 
