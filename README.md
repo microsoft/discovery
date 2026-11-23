@@ -49,7 +49,7 @@ In addition, this repository hosts the **public Discovery Catalog** — the cano
 
 ## 🌐 Partner ecosystem
 
-Breakthrough science happens where disciplines, data, and computing meet. Microsoft Discovery is proud to work with a growing ecosystem of partners — trusted scientific publishers, AI-native research platforms, open-science initiatives, and leaders in accelerated computing — who bring their expertise into Discovery as ready-to-use agents. Together, these agents connect peer-reviewed knowledge, open data, predictive models, and high-performance simulation in a single agentic workflow, helping research teams move from question to evidence to result faster across the life sciences, chemistry and materials science, silicon and physics, quantum science, and earth and climate science.
+Breakthrough science happens where disciplines, data, and computing meet. Microsoft Discovery is proud to work with a growing ecosystem of partners — trusted scientific publishers, AI-native research platforms, open-science initiatives, and leaders in accelerated computing — who bring their expertise into Discovery as ready-to-use agents. Together, these agents connect peer-reviewed knowledge, open data, predictive models, and high-performance simulation in a single agentic workflow, helping research teams move from question to evidence to result faster across the life sciences, chemistry and materials science, silicon and physics, and quantum.
 
 <table>
   <tr>
