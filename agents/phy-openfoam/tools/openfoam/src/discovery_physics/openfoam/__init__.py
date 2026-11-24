@@ -1,0 +1,1 @@
+"""OpenFOAM Foundation 14 adapter; no prompt-family dispatch."""

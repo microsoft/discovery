@@ -1,0 +1,7 @@
+{
+  "image": "localhost/phy-openfoam:0.2.1",
+  "runtime": "auto",
+  "allow_unenforced_limits": false,
+  "max_concurrent_runs": 2,
+  "queue_timeout_s": 21600
+}

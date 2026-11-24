@@ -1,0 +1,17 @@
+{
+  "agent_name": "phy-openfoam",
+  "tool_name": "phy-openfoam",
+  "version": "0.2.1",
+  "model_parameter": "{{CHAT-MODEL}}",
+  "tool_id_parameter": "{{phyOpenfoamToolId}}",
+  "catalog_image": "{name}.azurecr.io/phy-openfoam:0.2.1",
+  "empty_confirmations_b64": "W10=",
+  "qualification": "template_only_not_a_deployed_service",
+  "required_operator_bindings": [
+    "authorized_model_deployment",
+    "registered_discovery_tool_resource_id",
+    "approved_acr_registry_and_immutable_image_identity",
+    "authenticated_confirmation_authority",
+    "persistent_signing_identity_and_external_audit_retention"
+  ]
+}

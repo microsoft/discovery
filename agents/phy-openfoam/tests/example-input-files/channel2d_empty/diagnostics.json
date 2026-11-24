@@ -1,0 +1,153 @@
+{
+ "fields": [
+  {
+   "name": "p",
+   "unit": "m2/s2",
+   "positive": false,
+   "components": 1
+  },
+  {
+   "name": "U",
+   "unit": "m/s",
+   "positive": false,
+   "components": 3
+  }
+ ],
+ "derived": [
+  {
+   "name": "dp_kinematic",
+   "op": "difference",
+   "a": "quantity.p_inlet",
+   "b": "quantity.p_outlet",
+   "factor": 1.0,
+   "reference": null,
+   "unit": "m2/s2"
+  },
+  {
+   "name": "dp_pa",
+   "op": "scale",
+   "a": "derived.dp_kinematic",
+   "b": null,
+   "factor": 998.2,
+   "reference": null,
+   "unit": "Pa"
+  },
+  {
+   "name": "dp_error_pct",
+   "op": "abs_rel_error_pct",
+   "a": "derived.dp_pa",
+   "b": null,
+   "factor": 1.0,
+   "reference": 2.8857599999999994,
+   "unit": "percent"
+  },
+  {
+   "name": "neg_flux_inlet",
+   "op": "scale",
+   "a": "quantity.q_flux_inlet",
+   "b": null,
+   "factor": -1.0,
+   "reference": null,
+   "unit": "m3/s"
+  },
+  {
+   "name": "flux_ratio",
+   "op": "ratio",
+   "a": "quantity.q_flux_outlet",
+   "b": "derived.neg_flux_inlet",
+   "factor": 1.0,
+   "reference": null,
+   "unit": "1"
+  }
+ ],
+ "initial_values": {
+  "p": 0.0,
+  "U": [
+   0.02,
+   0.0,
+   0.0
+  ]
+ },
+ "reference_hashes": {},
+ "quantities": [
+  {
+   "name": "p_inlet",
+   "function": "surfaceFieldValue",
+   "settings": {
+    "patch": "inlet",
+    "operation": "areaAverage",
+    "fields": "(p)"
+   },
+   "column": "areaAverage(p)",
+   "statistic": "last",
+   "unit": "m2/s2"
+  },
+  {
+   "name": "p_outlet",
+   "function": "surfaceFieldValue",
+   "settings": {
+    "patch": "outlet",
+    "operation": "areaAverage",
+    "fields": "(p)"
+   },
+   "column": "areaAverage(p)",
+   "statistic": "last",
+   "unit": "m2/s2"
+  },
+  {
+   "name": "p_inlet_stat",
+   "function": "surfaceFieldValue",
+   "settings": {
+    "patch": "inlet",
+    "operation": "areaAverage",
+    "fields": "(p)"
+   },
+   "column": "areaAverage(p)",
+   "statistic": "window_relative_span",
+   "unit": "m2/s2"
+  },
+  {
+   "name": "q_flux_inlet",
+   "function": "surfaceFieldValue",
+   "settings": {
+    "patch": "inlet",
+    "operation": "sum",
+    "fields": "(phi)"
+   },
+   "column": "sum(phi)",
+   "statistic": "last",
+   "unit": "m3/s"
+  },
+  {
+   "name": "q_flux_outlet",
+   "function": "surfaceFieldValue",
+   "settings": {
+    "patch": "outlet",
+    "operation": "sum",
+    "fields": "(phi)"
+   },
+   "column": "sum(phi)",
+   "statistic": "last",
+   "unit": "m3/s"
+  }
+ ],
+ "patches": [
+  "inlet",
+  "outlet",
+  "lowerWall",
+  "upperWall",
+  "frontAndBack"
+ ],
+ "inlet": "inlet",
+ "outlet": "outlet",
+ "impermeable_patches": [],
+ "expected_cells": 12000,
+ "dimensions": 2,
+ "gas": null,
+ "target_time": 2000.0,
+ "mass_balance": false,
+ "stationarity_window": 400.0,
+ "compression": null,
+ "nozzle": null,
+ "normalized": false
+}

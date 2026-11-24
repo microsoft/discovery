@@ -1,0 +1,25 @@
+# Never include application state, credentials, or workstation evidence in a PR.
+# User results belong at the user project root, never anywhere in this entry.
+.discovery/
+local-evidence/
+.venv/
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+build/
+dist/
+runs/
+*.log
+.env
+*.local.json
+deployment.local.json
+runtime-install.json
+workspace-install.json
+*.key
+*.pem
+*.pfx
+*.p12

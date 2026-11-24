@@ -1,0 +1,20 @@
+name: phy-openfoam
+type: agent
+version: 0.2.1
+associated_tools:
+  - agents/phy-openfoam/tools/openfoam
+publisher:
+  name: Microsoft
+  contact: discovery-catalog@microsoft.com
+  support_url: https://techcommunity.microsoft.com/category/azure/discussions/microsoft-discovery-discussions
+description: >
+  Evidence-gated CFD on OpenFOAM Foundation 14 for arbitrary engineering requests. The agent
+  authors a free-form case and a pre-registered scientific contract; deterministic checks on
+  native solver evidence (health, conservation, horizon, stationarity, reference agreement)
+  decide ACCEPT, REJECT, INCONCLUSIVE, or CORRECT_AND_RERUN. Corrections are bounded and audited.
+tags:
+  - computational-fluid-dynamics
+  - openfoam
+  - cfd
+  - simulation
+  - engineering
