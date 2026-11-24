@@ -14,7 +14,7 @@ import sys
 from urllib.parse import quote
 import zipfile
 
-SCENARIOS = ("biopharma", "siphy", "cms", "bookshelf")
+SCENARIOS = ("biopharma", "cms", "bookshelf")
 PRIVATE = {".git", ".discovery", ".local", "sessions", "results", "__pycache__", "node_modules", ".env"}
 RESERVED = re.compile(r"(?:CON|PRN|AUX|NUL|COM[1-9]|LPT[1-9])(?:\..*)?\Z", re.I)
 HASH = re.compile(r"[0-9a-f]{64}\Z")

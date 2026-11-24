@@ -9,8 +9,7 @@ program, an app installer or a background engine. The full scenario Markdown
 still specifies the inputs, model, scientific procedure and success criteria.
 
 Use **this shared skill and the selected full guide**. Scenario-specific
-requirements and acceptance criteria come from the guide. The optional original
-Silicon and Physics (SiPhy) runner is a separate version, not an additional setup step.
+requirements and acceptance criteria come from the guide.
 
 ## Use in a fresh project
 
@@ -32,10 +31,6 @@ skill loading** when using this fallback.
 This guide-driven runner is version **0.2.0**. Fresh-project automatic activation
 and end-to-end behavior have not been validated for this version. Manual loading
 must be distinguished from automatic discovery when recording a run.
-
-For SiPhy, follow the v1.1 guide over conflicting older instructions. See the
-[original runner notes](../../validated-scenarios/siphy/spec-to-rtl/README.md#optional-original-runner)
-before choosing that alternative.
 
 ## For maintainers only
 

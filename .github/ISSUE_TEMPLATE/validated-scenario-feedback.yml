@@ -13,7 +13,6 @@ body:
       options:
         - BioPharma - CDK Target Selection and Lead Discovery
         - Bookshelf - SCLC treatment literature research
-        - Silicon and Physics - Specification to verified RTL
         - Chemistry and Materials Science - Moisturizer formulation
         - Other (say which below)
     validations:
