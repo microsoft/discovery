@@ -38,7 +38,7 @@ local bundles only; it does not upload them.
 
 Before upload, verify rights, absence of private content, account/destination,
 author approval and exact filenames/checksums. Preserve original source and
-licence notices. The SiPhy archive is included in Git. BioPharma's large snapshot
+licence notices. BioPharma's large snapshot
 is published in the [`cdk-frozen-reference-v0.11` release](https://github.com/microsoft/discovery/releases/tag/cdk-frozen-reference-v0.11);
 the protected CMS archive is not a public download. Local file availability
 and checksum verification do not establish redistribution rights.
