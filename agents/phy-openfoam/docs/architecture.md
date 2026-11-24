@@ -104,6 +104,14 @@ a key outside the run directory. Verification and subsequent decisions check
 journal-pinned artifacts and recompute assessments from pinned worker evidence.
 Editable convenience assessments, reports, and state hints are not authority.
 
+The raw worker packet stays at `output/evidence.json` inside its run directory,
+with its byte digest pinned in the journal and its worker content digest in
+`output/evidence.sha256`. The host-enriched `evidence.json` is a **different file
+at the run root**. Assessment and permitted reassessment do not overwrite or
+reformat the raw packet. Verification re-reads the raw worker file and recomputes
+the enriched evidence and assessment; editing the convenience copy cannot
+change the verified result.
+
 These are **conditional local tamper-evidence properties**, not a public digital
 signature. The same OS identity may read the HMAC key. A valid retained prefix
 does not prove that no suffix was removed. Production needs separate key custody,
@@ -132,6 +140,17 @@ uses the ordinary gate. Criteria include accepted-member counts, three-grid GCI,
 monotonicity, ranges, and best-candidate selection with an uncertainty margin.
 Relevant cross-run claims require live accepted member lineages; one accepted
 run cannot establish mesh independence.
+
+Before staging any member, each numeric cross-run criterion must name a metric
+declared by every member with the same nonblank unit label. The unit is bound by
+the member diagnostics already frozen in the study; range bounds use that unit.
+Assessment checks recorded evidence units again before GCI, monotonicity, range
+or candidate ranking, and only unit-checked values can feed the advisory
+surrogate. Missing, invalid or incompatible evidence yields `UNKNOWN`, never a
+comparison of incompatible numbers or a default pass. There is no implicit unit
+conversion: Pa and kPa must be explicitly converted to a common declared output
+before preparation. Dimensionless/normalized outputs retain their recorded
+label; matching labels alone do not prove a common physical normalization.
 
 Candidate separation must exceed the registered combined uncertainty for a
 design-superiority claim. Seeded Latin-hypercube sampling is reproducible;

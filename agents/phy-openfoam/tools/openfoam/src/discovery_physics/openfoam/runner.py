@@ -417,11 +417,12 @@ def _assess_run(path: Path, plan: dict, container_rc: int, wall: float, digest: 
     _state(path, "assessing")
     out = path / "output"
     bundle = CaseBundle.model_validate(_read(path / "bundle.json"))
-    ev_file = out / "evidence.json"
+    worker_evidence_path = out / "evidence.json"
+    host_evidence_path = path / "evidence.json"
     raw, raw_sha, digest_ok = None, None, False
-    if ev_file.exists():
-        raw_sha = integrity.file_sha256(ev_file)
-        raw = _read(ev_file)
+    if worker_evidence_path.exists():
+        raw_sha = integrity.file_sha256(worker_evidence_path)
+        raw = _read(worker_evidence_path)
         sig = out / "evidence.sha256"
         digest_ok = sig.exists() and sig.read_text(encoding="utf-8").strip() == sha256_json(raw)
     host = {"container_exit": container_rc, "wall_s": round(wall, 2), "image": image(), "image_id": digest,
@@ -429,7 +430,9 @@ def _assess_run(path: Path, plan: dict, container_rc: int, wall: float, digest: 
             "mpi_ranks": plan["budget"].get("mpi_ranks", 1)}
     evidence = _build_evidence(bundle, plan, raw, host, digest_ok)
     assessment = assess(bundle.contract, evidence)
-    _write(path / "evidence.json", evidence.model_dump(mode="json"))
+    # Keep output/evidence.json byte-identical to the worker packet pinned below.
+    # This separate run-root copy is host-enriched and is never the raw input.
+    _write(host_evidence_path, evidence.model_dump(mode="json"))
     _write(path / "assessment.json", assessment.model_dump(mode="json"))
     from ..core.report import render
 

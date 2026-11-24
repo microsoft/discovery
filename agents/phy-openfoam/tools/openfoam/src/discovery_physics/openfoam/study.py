@@ -21,8 +21,9 @@ from ..core import integrity
 from ..core.design import quadratic_surrogate
 from ..core.gci import gci
 from ..core.hashing import sha256_json
-from ..core.models import Identifier, Number, Positive, Record, Verdict
+from ..core.models import CaseBundle, Identifier, Number, Positive, Record, Verdict
 from . import runner
+from .catalog import N, known_metrics
 
 _STUDY_ID = re.compile(r"^S[0-9]{8}T[0-9]{6}Z-[0-9a-f]{8}$")
 
@@ -120,8 +121,10 @@ def load_spec(path: Path) -> dict:
 def prepare(spec: dict) -> dict:
     study = Study.model_validate(spec)
     # Freeze every member before staging any, so one bad member stages nothing.
-    for m in study.members:
-        runner.freeze(m.bundle, study_member=True)
+    bundles = {m.name: runner.freeze(m.bundle, study_member=True)[0] for m in study.members}
+    for c in study.criteria:
+        if c.kind != "all_accept":
+            _metric_unit(c, bundles)
     sid = "S" + time.strftime("%Y%m%dT%H%M%SZ", time.gmtime()) + "-" + uuid.uuid4().hex[:8]
     path = studies_root() / sid
     path.mkdir()
@@ -161,9 +164,31 @@ def status(study_id: str) -> dict:
     return {"study_id": study_id, "members": out}
 
 
-def _value(st: dict, metric: str) -> float | None:
+def _metric_unit(criterion: Criterion, bundles: dict[str, CaseBundle]) -> str:
+    """Bind a cross-run metric to the same explicit numeric unit in every member.
+
+    Member diagnostics are already part of the frozen study, so no mutable
+    sidecar or implicit conversion is needed. Bounds use this common unit.
+    """
+    units = {}
+    for name, bundle in bundles.items():
+        spec = known_metrics(bundle.diagnostics).get(criterion.metric)
+        if spec is None or spec[0] != N:
+            raise ValueError(f"criterion {criterion.id!r}: member {name!r} must declare "
+                             f"numeric metric {criterion.metric!r}")
+        unit = spec[1]
+        if not unit.strip():
+            raise ValueError(f"criterion {criterion.id!r}: member {name!r} has a blank metric unit")
+        units[name] = unit
+    if len(set(units.values())) != 1:
+        raise ValueError(f"criterion {criterion.id!r}: metric unit mismatch across members: {units}")
+    return next(iter(units.values()))
+
+
+def _value(st: dict, metric: str, unit: str) -> float | None:
     m = st["evidence"].metrics.get(metric) if st["evidence"] else None
-    if m is None or m.status != "measured" or isinstance(m.value, bool) or not isinstance(m.value, (int, float)):
+    if m is None or m.status != "measured" or m.unit != unit or \
+            isinstance(m.value, bool) or not isinstance(m.value, (int, float)):
         return None
     return float(m.value) if math.isfinite(m.value) else None
 
@@ -171,12 +196,45 @@ def _value(st: dict, metric: str) -> float | None:
 def assess(study_id: str) -> dict:
     path, study, members = _verified_study(study_id)
     leaves = {m.name: _leaf(members[m.name]) for m in study.members}
+    bundles = {m.name: CaseBundle.model_validate(m.bundle) for m in study.members}
     final = {n: (st["final"]["final_verdict"] if st["final"] else None) for n, st in leaves.items()}
     accepted = {n for n, v in final.items() if v == Verdict.ACCEPT.value and leaves[n]["final"]["live_acceptance"]}
     results: dict[str, dict] = {}
+    checked_values: dict[str, dict[str, float]] = {}
     for c in study.criteria:
         r: dict = {"id": c.id, "kind": c.kind, "rationale": c.rationale}
-        vals = {m.name: _value(leaves[m.name], c.metric) for m in study.members} if c.metric else {}
+        vals = {}
+        if c.kind != "all_accept":
+            try:
+                unit = _metric_unit(c, bundles)
+            except ValueError as exc:
+                # Legacy studies must also fail closed instead of comparing
+                # numbers from incompatible declarations or inventing units.
+                r.update(state="UNKNOWN", detail={"issue": str(exc)})
+                results[c.id] = r
+                continue
+            r["unit"] = unit
+            required = accepted if c.kind == "best" else set(leaves)
+            recorded_units = {}
+            for name in sorted(required):
+                ev = leaves[name]["evidence"]
+                m = ev.metrics.get(c.metric) if ev else None
+                if m is not None:
+                    recorded_units[name] = m.unit
+            if any(value != unit for value in recorded_units.values()):
+                r.update(state="UNKNOWN", detail={"issue": "recorded metric unit mismatch",
+                                                  "expected_unit": unit, "recorded_units": recorded_units})
+                results[c.id] = r
+                continue
+            vals = {name: _value(st, c.metric, unit) for name, st in leaves.items()}
+            missing = sorted(name for name in required if vals[name] is None)
+            if missing:
+                r.update(state="UNKNOWN", detail={"issue": "metric missing, invalid or non-finite",
+                                                  "members": missing, "unit": unit})
+                results[c.id] = r
+                continue
+            checked_values[c.id] = {name: value for name, value in vals.items()
+                                    if name in accepted and value is not None}
         if c.kind == "all_accept":
             pending = [n for n, v in final.items() if v is None]
             failed = [n for n, v in final.items() if v is not None and n not in accepted]
@@ -239,10 +297,11 @@ def assess(study_id: str) -> dict:
         b = {k: (v[0], v[1]) for k, v in study.design_bounds.items()}
         for c in study.criteria:
             if c.kind == "best":
-                pts = [(m.parameters, _value(leaves[m.name], c.metric)) for m in study.members if m.name in accepted]
+                values = checked_values.get(c.id, {})
+                pts = [(m.parameters, values.get(m.name)) for m in study.members if m.name in accepted]
                 pts = [(p, v) for p, v in pts if v is not None and set(b) <= set(p)]
                 record["surrogate"] = quadratic_surrogate([p for p, _ in pts], [v for _, v in pts], b, c.goal) \
-                    if pts else {"ok": False, "reason": "no accepted points"}
+                    if pts else {"ok": False, "reason": "no unit-consistent accepted points"}
                 break
     integrity.append(path, "study_assessed", record=record)
     (path / "study_assessment.json").write_text(json.dumps(record, indent=1, default=str), encoding="utf-8")
@@ -259,8 +318,10 @@ def _report(study: Study, rec: dict) -> str:
         lines.append(f"| {m.name} | {json.dumps(m.parameters)} | {m.h or ''} | {info['final']} | `{info['leaf_run']}` |")
     lines += ["", "## Criteria", ""]
     for r in rec["criteria"]:
-        lines += [f"### {r['id']} ({r['kind']}): {r['state']}", "", r["rationale"], "",
-                  "```json", json.dumps(r.get("detail"), indent=1, default=str), "```", ""]
+        lines += [f"### {r['id']} ({r['kind']}): {r['state']}", "", r["rationale"], ""]
+        if "unit" in r:
+            lines += [f"Recorded comparison unit: `{r['unit']}`.", ""]
+        lines += ["```json", json.dumps(r.get("detail"), indent=1, default=str), "```", ""]
     if "surrogate" in rec:
         lines += ["## Surrogate (advisory only)", "", "```json", json.dumps(rec["surrogate"], indent=1), "```", "",
                   "The surrogate is not evidence. A design claim needs a checked run at the suggested point."]

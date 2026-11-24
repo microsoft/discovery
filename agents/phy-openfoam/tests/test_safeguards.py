@@ -203,6 +203,48 @@ def test_full_lifecycle_verifies():
         runner.propose(rid, {"action": "ACCEPT", "rationale": "second ruling attempt"})
 
 
+def test_assessment_preserves_raw_worker_bytes_through_reassessment_and_decisions(monkeypatch):
+    bundle = forward_step_bundle(TUT)
+    bundle["diagnostics"]["derived"] = [{"name": "twice_final", "op": "scale",
+        "a": "solver.final_time", "factor": 2.0, "unit": "1"}]
+    rid = runner.prepare(bundle)["run_id"]
+    path = runner.run_dir(rid)
+    raw_path = path / "output/evidence.json"
+    host_path = path / "evidence.json"
+    packets = []
+    original_write = runner._write
+
+    def capture_host_write(destination, data):
+        if destination.name == "evidence.json":
+            assert destination == host_path
+            packets.append((raw_path.read_bytes(), (path / "output/evidence.sha256").read_bytes()))
+        original_write(destination, data)
+
+    monkeypatch.setattr(runner, "_write", capture_host_write)
+    assert _fake_execute(rid, bundle)["verdict"] == "ACCEPT"
+    assert len(packets) == 1
+    raw_bytes, digest_bytes = packets[0]
+    raw = json.loads(raw_bytes)
+    enriched = json.loads(host_path.read_text(encoding="utf-8"))
+    assert "run_id" not in raw and enriched["run_id"] == rid
+    assert "derived.twice_final" not in raw["metrics"]
+    assert enriched["metrics"]["derived.twice_final"]["value"] == 8.0
+    assert enriched["runtime"]["image_id"] == "sha256:fixture"
+    pinned = integrity.last(integrity.verify_journal(path), "assessed")
+    assert pinned["raw_evidence_sha256"] == integrity.file_sha256(raw_path)
+    assert runner.verify(rid)["ok"] and runner.summary(rid)["verdict"] == "ACCEPT"
+    assert runner.reassess(rid)["verdict"] == "ACCEPT"
+    assert len(packets) == 2 and packets[1] == packets[0]
+    # The host convenience copy is not verification input.
+    host_path.write_text('{"edited":"convenience only"}', encoding="utf-8")
+    assert runner.verify(rid)["ok"] and runner.summary(rid)["verdict"] == "ACCEPT"
+    assert runner.propose(rid, {"action": "ACCEPT", "rationale": "verified raw worker packet is unchanged"})["approved"]
+    assert runner.finalize(rid)["final_verdict"] == "ACCEPT"
+    assert runner.verify(rid)["ok"]
+    assert raw_path.read_bytes() == raw_bytes
+    assert (path / "output/evidence.sha256").read_bytes() == digest_bytes
+
+
 def test_editing_convenience_copies_changes_nothing():
     rid, _, _ = _healthy_run()
     path = runner.run_dir(rid)
