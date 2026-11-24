@@ -335,7 +335,7 @@ for i, x in enumerate(probe_x, start=1):
 derived = [
     {"name": "dp_kinematic", "op": "difference", "a": "quantity.p_in", "b": "quantity.p_out",
      "unit": "m^2/s^2"},
-    {"name": "dp_Pa", "op": "scale", "a": "derived.dp_kinematic", "factor": 1.2, "unit": "Pa"},
+    {"name": "dp_Pa", "op": "scale", "a": "derived.dp_kinematic", "factor": 1.2, "factor_unit": "kg/m3", "unit": "Pa"},
 ]
 for i in range(1, len(probe_x) + 1):
     derived.append({"name": f"ux_probe{i}", "op": "scale", "a": f"quantity.probe{i}", "factor": 1.0,

@@ -29,6 +29,7 @@
    "a": "derived.dp_kinematic",
    "b": null,
    "factor": 998.2,
+    "factor_unit": "kg/m3",
    "reference": null,
    "unit": "Pa"
   },

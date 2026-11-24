@@ -220,6 +220,14 @@ error, not permission to silently use another executable. See
 
 ## Local time and output budget semantics
 
+`max_cells` has a measured pre-solve gate as well as an authoring estimate.
+After setup, `checkMesh` must complete with one positive measured cell count no
+larger than the frozen cap, before decomposition or `foamRun`. Unknown,
+ambiguous or excessive counts block serial and MPI solves. Continuations check
+the copied mesh again rather than trusting an earlier estimate or log. The raw
+packet records the measured/cap values and refusal reason; a successful static
+estimate does not authorize a larger generated mesh.
+
 CPU, memory and PID limits are requested from the container runtime; the default
 policy refuses execution when those controls cannot be enforced. The case budget's
 time and output fields have different semantics:

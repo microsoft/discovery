@@ -78,6 +78,36 @@ validation, and discretization uncertainty remain scientific review duties.
 Normalized quantities must retain their recorded units; field names alone do
 not justify assigning SI units.
 
+### Derived quantity units
+
+`diagnostics.derived` declares a numeric `factor` and its `factor_unit` (default
+`"1"`, dimensionless). Dimensional scaling must state the factor's unit explicitly:
+kinematic pressure in $\mathrm{m^2/s^2}$ becomes pressure in $\mathrm{Pa}$ only with
+a density factor in $\mathrm{kg/m^3}$ (`factor_unit: "kg/m3"`); a dimensionless
+force coefficient becomes force per depth in $\mathrm{N/m}$ with an explicit
+`factor_unit: "N/m"`. A force in $\mathrm{N}$ cannot simply be relabeled
+$\mathrm{N/m}$; the factor must carry the inverse-length unit.
+
+`difference` requires matching operand units, including prefix multipliers;
+`ratio` checks the quotient dimensions. In both cases the result, multiplied by
+`factor_unit`, must match the declared output `unit`. There is no implicit unit
+conversion, including between $\mathrm{Pa}$ and $\mathrm{kPa}$: author the numeric
+scale and factor unit explicitly before preparation. `abs_rel_error_pct` requires
+a nonzero reference in the operand's unit and output `"%"` or `"percent"`, with
+no additional factor. Its optional `reference_unit` defaults to `None`, which
+inherits operand `a`'s unit; an explicit value must match that unit, including
+its prefix multiplier. These checks establish unit consistency, not physical
+normalization or reference validity.
+
+The strict [source unit validator](../tools/openfoam/src/discovery_physics/core/units.py)
+rejects incompatible declarations before staging; runtime derivation validates
+recorded operand units again and marks incompatible results invalid, never a
+pass. These source changes do not update or qualify an installed runtime or
+worker image. Curated examples are authoring inputs, not authority to repair a
+historical run: never auto-upgrade frozen inputs or reassess old evidence to
+repair missing unit metadata. Preserve the originals; any corrected execution
+requires a separately authorized new lineage.
+
 ## Transient and restart accounting
 
 For transient mass accounting, stored mass and outward boundary flux give
@@ -110,6 +140,15 @@ expansion, untrusted libraries, and precomputed mesh substitution. The agent's
 local scientific runner, not a certified hostile multi-tenant service; use a
 dedicated VM and separate privileges for hostile workloads.
 
+`#includeEtc`, `#includeFunc` and `#includeModel` are refused, including inline
+directives: their user/site/installation search results are not frozen bundle
+bytes. Ordinary `#include` and `#includeIfPresent` must name safe delimited
+relative paths to files present in the bundle, resolved against the including
+file's directory. Missing optional targets are refused too, rather than loading
+an unpinned file that happens to exist in a mounted case. Vendor dictionary
+content must be explicitly reviewed and materialized into the bundle; no
+installation-tree traversal or implicit external model/function loading.
+
 CPU, memory, and PID enforcement fails closed by default. Only an operator may
 authorize a disclosed unenforced-limit exception. An agent must not change
 runtime settings, install privileged services, alter concurrency, or enable that
@@ -123,6 +162,14 @@ maintains a sequenced, hash-chained, HMAC-SHA-256-authenticated event journal wi
 a key outside the run directory. Verification and subsequent decisions check
 journal-pinned artifacts and recompute assessments from pinned worker evidence.
 Editable convenience assessments, reports, and state hints are not authority.
+
+Journal append holds an exclusive per-journal OS lock across verification,
+sequence selection and write/flush; cooperating readers hold a shared lock.
+Threads are guarded too. Persistent lock sidecars are not scientific evidence
+and are never deleted while waiters might use them. Key creation has a separate
+inter-process lock and exclusive, restrictive creation; a missing key for an
+existing journal, an invalid key, or overly permissive Unix key mode is an
+operator blocker, not permission to replace or silently repair the key.
 
 The raw worker packet stays at `output/evidence.json` inside its run directory,
 with its byte digest pinned in the journal and its worker content digest in
@@ -147,7 +194,9 @@ not a repaired original journal.
 
 The [retention interface](../tools/openfoam/src/discovery_physics/openfoam/retention.py)
 can export a run, optionally including fields, and can compact old finalized
-solver data after an operator review. Export does not automatically include all
+solver data after an operator review. Export refuses failed verification before
+creating an archive/destination and never overwrites an existing archive.
+Export does not automatically include all
 ancestor/member runs, code, omitted fields, or external retention records. It is
 not automatically complete or externally verifiable lineage. Never compact the
 immutable historical originals retained for the retrospective record.
@@ -192,6 +241,14 @@ Podman/Docker. Encoded JSON action inputs are not arbitrary shell fragments.
 Local in-image execution does not demonstrate Discovery/Azure action dispatch.
 The service's `platform-enforced` label identifies a code path, not a measurement
 of cloud enforcement or isolation.
+
+The service `study` action currently has no member-scoped confirmation
+transport. It validates every member and refuses any `needs_confirmation`
+assumption **before staging any member or study**, listing pending member
+parameters. Use the local interactive study/confirm workflow after obtaining
+the user's decision; the service never auto-confirms. The action result is an
+unsigned convenience copy, not a signed verdict: verify retained journals and
+pinned artifacts under the actual key-custody policy before relying on it.
 
 Keep unit/fixture tests, new CFD solves, CLIO behavioral scoring, raw model
 judgments, and deployed platform requests separate. Historical scope and known

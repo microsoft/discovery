@@ -415,8 +415,8 @@ bundle = {
             }
         ],
         "derived": [
-            {"name": "Fx_per_depth", "op": "scale", "a": "quantity.Cd_mean", "factor": factor, "unit": "N/m"},
-            {"name": "Fy_per_depth", "op": "scale", "a": "quantity.Cl_mean", "factor": factor, "unit": "N/m"}
+            {"name": "Fx_per_depth", "op": "scale", "a": "quantity.Cd_mean", "factor": factor, "factor_unit": "N/m", "unit": "N/m"},
+            {"name": "Fy_per_depth", "op": "scale", "a": "quantity.Cl_mean", "factor": factor, "factor_unit": "N/m", "unit": "N/m"}
         ],
         "patches": ["inlet", "outlet", "walls", "obstacle"],
         "inlet": "inlet",

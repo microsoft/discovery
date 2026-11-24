@@ -14,9 +14,16 @@ from . import runner
 def export(run_id: str, dest: Path, *, include_fields: bool = False) -> dict:
     path = runner.run_dir(run_id)
     check = runner.verify(run_id)
+    if check.get("ok") is not True:
+        raise integrity.IntegrityError(
+            f"run {run_id} failed verification; export refused: "
+            f"{check.get('error', 'integrity is not confirmed')}"
+        )
+    if dest.resolve().is_relative_to(path.resolve()):
+        raise ValueError("archive destination must be outside the run directory")
     dest.parent.mkdir(parents=True, exist_ok=True)
     count = 0
-    with zipfile.ZipFile(dest, "w", zipfile.ZIP_DEFLATED) as z:
+    with zipfile.ZipFile(dest, "x", zipfile.ZIP_DEFLATED) as z:
         for p in sorted(path.rglob("*")):
             rel = p.relative_to(path)
             if not p.is_file():

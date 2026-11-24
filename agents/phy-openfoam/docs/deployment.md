@@ -92,6 +92,16 @@ container engine. Its temporary per-job HMAC key does not supply durable cloud
 verification or a public signature. See [architecture](architecture.md) and
 [security](../SECURITY.md).
 
+The `study` action has no member-scoped confirmation input. Any member with a
+`needs_confirmation` assumption is refused before study/member staging, with
+pending parameters identified. Obtain the user's decisions through the local
+interactive `study-prepare` and per-member `confirm` workflow; do not relabel an
+unconfirmed assumption as user-approved to make a service request execute.
+The service's result JSON is an unsigned, editable convenience response, not a
+signed verdict record. Consumers must verify retained journals and pinned
+artifacts with the appropriate trusted key custody; possessing that result file
+or a successful hosted job is not sufficient evidence of scientific acceptance.
+
 ## Production qualification checklist — not executed
 
 1. **Authorize publication and licensing.** Confirm publisher metadata with

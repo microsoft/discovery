@@ -245,7 +245,9 @@ class Derived(Record):
     a: str = Field(min_length=1, max_length=128)
     b: str | None = Field(default=None, max_length=128)
     factor: Number = 1.0
+    factor_unit: str = Field(default="1", min_length=1, max_length=80)
     reference: Number | None = None
+    reference_unit: str | None = Field(default=None, min_length=1, max_length=80)
     unit: str = Field(default="1", max_length=80)
 
 

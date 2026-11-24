@@ -321,7 +321,7 @@ bundle = {
         "derived": [
             {"name": "dp_kinematic", "op": "difference", "a": "quantity.p_in", "b": "quantity.p_out",
              "factor": 1.0, "unit": "m^2/s^2"},
-            {"name": "dp_pa", "op": "scale", "a": "derived.dp_kinematic", "factor": rho, "unit": "Pa"},
+            {"name": "dp_pa", "op": "scale", "a": "derived.dp_kinematic", "factor": rho, "factor_unit": "kg/m3", "unit": "Pa"},
             {"name": "dp_rel_error_pct", "op": "abs_rel_error_pct", "a": "derived.dp_pa",
              "reference": dp_target, "unit": "%"},
         ],

@@ -5,6 +5,7 @@ from __future__ import annotations
 import math
 
 from .models import Derived, Metric
+from .units import validate
 
 
 def compute(derived: list[Derived], metrics: dict[str, Metric]) -> dict[str, Metric]:
@@ -12,6 +13,14 @@ def compute(derived: list[Derived], metrics: dict[str, Metric]) -> dict[str, Met
     pool = dict(metrics)
     for d in derived:
         src = f"derived {d.op}({d.a}{', ' + d.b if d.b else ''})"
+        try:
+            validate(d, {name: metric.unit for name, metric in pool.items()})
+        except ValueError as exc:
+            absent = d.a not in pool or (d.op in {"difference", "ratio"} and d.b not in pool)
+            invalid = Metric(value=None, unit=d.unit, source=(src + ": unit validation: " + str(exc))[:1024],
+                             status="missing" if absent else "invalid")
+            out[f"derived.{d.name}"] = pool[f"derived.{d.name}"] = invalid
+            continue
 
         def val(name: str | None) -> float | None:
             m = pool.get(name) if name else None

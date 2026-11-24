@@ -97,6 +97,7 @@
     "op": "scale",
     "a": "derived.dp_core_kin",
     "factor": 998.2,
+    "factor_unit": "kg/m3",
     "unit": "Pa"
    },
    {
@@ -118,6 +119,7 @@
     "op": "scale",
     "a": "derived.dp_full_kin",
     "factor": 998.2,
+    "factor_unit": "kg/m3",
     "unit": "Pa"
    },
    {

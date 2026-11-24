@@ -15,7 +15,7 @@ from discovery_physics.core import integrity
 from discovery_physics.core.design import latin_hypercube, quadratic_surrogate
 from discovery_physics.core.gci import gci
 from discovery_physics.core.hashing import sha256_json
-from discovery_physics.core.lint import inject_baseline, lint
+from discovery_physics.core.lint import ContractRejected, inject_baseline, lint
 from discovery_physics.core.models import CaseBundle, Command
 from discovery_physics.core.slots import QueueTimeout, slot
 from discovery_physics.openfoam import runner
@@ -43,7 +43,10 @@ def _contract(bundle: dict):
 
 def _errors(bundle: dict):
     b = CaseBundle.model_validate(bundle)
-    return lint(inject_baseline(b.contract, BASELINE), known_metrics(b.diagnostics))
+    try:
+        return lint(inject_baseline(b.contract, BASELINE), known_metrics(b.diagnostics))
+    except ContractRejected as exc:
+        return exc.errors, []
 
 
 # --------------------------------------------------------------------------- lint and baseline
@@ -67,7 +70,7 @@ def _with_check(bundle: dict, **check) -> dict:
     ({"metric": "quantity.missing"}, "not produced"),
     ({"metric": "fields.p.final_max", "unit": "Pa"}, "differs from the metric's unit"),
     ({"metric": "fields.p.final_max", "category": "reference"}, "single-cell extreme"),
-    ({"metric": "solver.completed", "operator": "gt"}, "boolean"),
+    ({"metric": "solver.completed", "operator": "gt"}, "mandatory baseline"),
     ({"metric": "solver.steps", "operator": "true", "threshold": None}, "numeric"),
     ({"failure": "incomplete"}, "only horizon/stationarity"),
 ])

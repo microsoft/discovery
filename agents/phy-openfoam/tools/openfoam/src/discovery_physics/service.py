@@ -27,6 +27,18 @@ MAX_ENCODED_CHARS = 65536
 MAX_PAYLOAD_BYTES = 16 * 1024 * 1024
 
 
+class StudyConfirmationRequired(ValueError):
+    def __init__(self, pending_parameters_by_member: dict[str, list[str]]) -> None:
+        self.pending_parameters_by_member = pending_parameters_by_member
+        super().__init__(
+            "The study service has no member-scoped confirmation transport; nothing was staged. "
+            "Use local discovery-physics study-prepare <spec.json>, then confirm each member's "
+            "pending parameters with discovery-physics confirm <run_id> <confirmations.json> "
+            "using the user's decisions before execution. Pending parameters by member: "
+            + json.dumps(pending_parameters_by_member)
+        )
+
+
 def _decode(b64gz: str | None, raw: str | None) -> dict:
     """Decode one bounded UTF-8 JSON object, never concatenate gzip members."""
     if b64gz:
@@ -83,6 +95,22 @@ def evaluate(bundle: dict, confirmations: list[dict] | None = None) -> dict:
             "integrity": runner.verify(run_id)}
 
 
+def _validate_service_study(spec: dict) -> None:
+    """Validate every member before refusing confirmations this transport cannot carry."""
+    from .core.models import CaseBundle
+    from .openfoam.study import Study
+
+    validated = Study.model_validate(spec)
+    pending = {}
+    for member in validated.members:
+        bundle = CaseBundle.model_validate(member.bundle)
+        parameters = [a.parameter for a in bundle.contract.assumptions if a.source == "needs_confirmation"]
+        if parameters:
+            pending[member.name] = parameters
+    if pending:
+        raise StudyConfirmationRequired(pending)
+
+
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(prog="discovery-physics-service")
     ap.add_argument("action", choices=["evaluate", "study", "lint", "capabilities"])
@@ -109,6 +137,7 @@ def main(argv: list[str] | None = None) -> int:
             from .openfoam import study
 
             spec = _decode(a.spec_b64gz, None)
+            _validate_service_study(spec)
             prepared = study.prepare(spec)
             members = {}
             for m in spec["members"]:
@@ -119,6 +148,8 @@ def main(argv: list[str] | None = None) -> int:
         status = 0
     except Exception as exc:  # report refusals as data, not stack traces
         out = {"error": type(exc).__name__, "detail": str(exc)[:4000]}
+        if isinstance(exc, StudyConfirmationRequired):
+            out["pending_parameters_by_member"] = exc.pending_parameters_by_member
         status = 2
     OUTPUT.mkdir(parents=True, exist_ok=True)
     (OUTPUT / "result.json").write_text(json.dumps(out, indent=1, default=str), encoding="utf-8")

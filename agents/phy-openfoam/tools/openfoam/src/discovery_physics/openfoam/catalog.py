@@ -8,11 +8,13 @@ instead of silently becoming UNKNOWN after an expensive solve.
 from __future__ import annotations
 
 from ..core.models import Check, Diagnostics
+from ..core.units import validate
 
 B, N = "bool", "number"
 
 _ALWAYS: dict[str, tuple[str, str]] = {
     "mesh.check_ok": (B, "1"), "mesh.stage_clean": (B, "1"), "mesh.cells": (N, "1"),
+    "mesh.within_cell_budget": (B, "1"),
     "mesh.max_nonorthogonality": (N, "1"), "mesh.max_skewness": (N, "1"), "mesh.max_aspect_ratio": (N, "1"),
     "mesh.solution_directions": (N, "1"), "mesh.expected_patches_present": (B, "1"),
     "mesh.cyclic_patch_count": (N, "1"), "mesh.planar_patch_present": (B, "1"),
@@ -96,5 +98,11 @@ def known_metrics(d: Diagnostics) -> dict[str, tuple[str, str]]:
     for q in d.quantities:
         out[f"quantity.{q.name}"] = (N, q.unit if q.statistic != "window_relative_span" else "1")
     for dv in d.derived:
+        # Invalid/forward/incompatible derived outputs must not become bindable
+        # merely because the request supplied an output unit label.
+        try:
+            validate(dv, {name: unit for name, (kind, unit) in out.items() if kind == N})
+        except ValueError:
+            continue
         out[f"derived.{dv.name}"] = (N, dv.unit)
     return out

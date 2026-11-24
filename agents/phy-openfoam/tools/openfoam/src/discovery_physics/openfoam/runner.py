@@ -24,6 +24,7 @@ from ..core.hashing import files_sha256, sha256_json, sha256_text
 from ..core.integrity import IntegrityError
 from ..core.lint import ContractRejected, inject_baseline, lint
 from ..core.models import Assessment, CaseBundle, Confirmation, Evidence, Metric, Verdict
+from ..core.units import validate as validate_derived_units
 from ..core.policy import Proposal, rule
 from ..core.slots import slot
 from .catalog import BASELINE, known_metrics
@@ -124,6 +125,7 @@ def freeze(bundle_data: dict, *, study_member: bool = False) -> tuple[CaseBundle
     require_safe(bundle.files)
     errors, warnings = lint(contract, known_metrics(bundle.diagnostics), study_member=study_member)
     known = known_metrics(bundle.diagnostics)
+    earlier_units = {name: unit for name, (kind, unit) in known.items() if kind == "number" and not name.startswith("derived.")}
     for i, dv in enumerate(bundle.diagnostics.derived):
         # A derived operand may only reference metrics produced earlier (catalog or prior derived).
         earlier = {k for k in known if not k.startswith("derived.")} | \
@@ -136,6 +138,12 @@ def freeze(bundle_data: dict, *, study_member: bool = False) -> tuple[CaseBundle
             errors.append(f"derived '{dv.name}': '{dv.op}' needs operand b")
         if dv.op == "abs_rel_error_pct" and not dv.reference:
             errors.append(f"derived '{dv.name}': abs_rel_error_pct needs a nonzero reference")
+        try:
+            validate_derived_units(dv, earlier_units)
+        except ValueError as exc:
+            errors.append(f"derived '{dv.name}': unit validation: {exc}")
+        else:
+            earlier_units[f"derived.{dv.name}"] = dv.unit
     for rel, text in bundle.files.items():
         if text.count("/*") > text.count("*/"):
             errors.append(f"{rel}: unterminated /* comment (OpenFOAM will misparse the file)")

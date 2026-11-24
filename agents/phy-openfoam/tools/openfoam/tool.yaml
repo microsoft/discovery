@@ -35,8 +35,11 @@ actions:
   - name: evaluate
     description: >
       Freeze, lint, mesh, solve, measure, and assess one case bundle inside this container, continuing
-      only to the frozen horizon by the deterministic rule. Returns the signed verdict record in
-      /output/result.json. The agent cannot touch the run during the job.
+      only to the frozen horizon by the deterministic rule. Writes /output/result.json as an unsigned,
+      untrusted convenience summary. Verify the journal and pinned artifacts before trusting a verdict.
+      The default temporary per-job HMAC key does not supply durable cloud verification; separate durable
+      key custody and evidence retention are deployment responsibilities. HMAC is not a public signature;
+      do not export the key.
     infra_node: worker
     command: "python -m discovery_physics.service evaluate --bundle-b64gz {{ bundle_b64gz }} --confirmations-b64 {{ confirmations_b64 }}"
     input_schema:
@@ -59,10 +62,18 @@ actions:
       - mount_path: /output
         auto_promote: true
         output_name: physics-evaluation
-        output_description: "Signed journal, evidence, assessment, report, figures, and logs"
+        output_description: "Run journal and pinned artifacts; unsigned summaries, reports, figures, and logs"
   - name: study
     description: >
-      Run a study (sweep, refinement with GCI, or design candidates) and return the study verdict.
+      Run a study (sweep, refinement with GCI, or design candidates) only when no member has a
+      needs_confirmation assumption. No member-scoped confirmation transport is supported: such specs
+      are rejected before any study or member run is staged, with member names and pending parameters.
+      Use local discovery-physics study-prepare and confirm each member's pending assumptions via
+      discovery-physics confirm before execution; never auto-confirm. Writes /output/result.json as an
+      unsigned, untrusted convenience summary. Verify the journal and pinned artifacts before trusting
+      a verdict. The default temporary per-job HMAC key does not supply durable cloud verification;
+      separate durable key custody and evidence retention are deployment responsibilities. HMAC is not
+      a public signature; do not export the key.
     infra_node: worker
     command: "python -m discovery_physics.service study --spec-b64gz {{ spec_b64gz }}"
     input_schema:
@@ -79,7 +90,7 @@ actions:
       - mount_path: /output
         auto_promote: true
         output_name: physics-study
-        output_description: "Member runs and the study assessment/report"
+        output_description: "Member run/study journals and pinned artifacts; unsigned convenience summary and reports"
   - name: lint
     description: "Validate and lint a bundle without running it (contract/metric binding, safety, cost estimate)."
     infra_node: worker

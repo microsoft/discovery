@@ -22,6 +22,8 @@ CLAIM_CATEGORIES: dict[str, set[str]] = {
 INCOMPLETE_CATEGORIES = {"horizon", "stationarity"}
 QUANTITATIVE = {"reference", "validation", "discretization"}
 _EXTREME = re.compile(r"^fields\.[^.]+\.final_(min|max)$")
+_BASELINE_OBJECTIVE_ID = "baseline_run_health"
+_BASELINE_OBJECTIVE_DESCRIPTION = "Mandatory run-health checks applied to every contract."
 
 
 class ContractRejected(ValueError):
@@ -30,19 +32,65 @@ class ContractRejected(ValueError):
         self.errors = errors
 
 
+def _baseline_semantics(check: Check) -> tuple[object, ...]:
+    """Ignore author labels, but never equate a boolean threshold with a number."""
+    operator, threshold = check.operator, check.threshold
+    if operator == "true" and threshold is None:
+        operator, threshold = "eq", True
+    return (check.metric, operator, type(threshold), threshold,
+            check.unit, check.category, check.failure)
+
+
 def inject_baseline(contract: Contract, baseline: list[Check]) -> Contract:
-    """Add mandatory run-health checks the author omitted (matched by metric)."""
-    have = {c.metric for c in contract.checks}
+    """Verify mandatory definitions by ID and metric, then add any missing checks.
+
+    Compatible metric aliases retain their IDs and rationales. Every definition
+    on a baseline metric must agree, even when another compatible check exists.
+    """
+    by_id = {c.id: c for c in baseline}
+    by_metric = {c.metric: c for c in baseline}
+    satisfied: set[str] = set()
+    errors: list[str] = []
+    for check in contract.checks:
+        canonical = by_id.get(check.id)
+        if canonical is None and check.id.startswith("baseline_"):
+            errors.append(f"check id '{check.id}' is reserved: unknown mandatory baseline ID")
+            continue
+        if canonical is None:
+            canonical = by_metric.get(check.metric)
+        if canonical is None:
+            continue
+        if _baseline_semantics(check) != _baseline_semantics(canonical):
+            errors.append(
+                f"check '{check.id}' on metric '{check.metric}' conflicts with mandatory baseline "
+                f"'{canonical.id}': expected metric '{canonical.metric}', "
+                f"predicate '{canonical.operator}' with threshold {canonical.threshold!r}, "
+                f"unit '{canonical.unit}', category '{canonical.category}', "
+                f"failure '{canonical.failure}'")
+        else:
+            satisfied.add(canonical.id)
+
+    extra = [c for c in baseline if c.id not in satisfied]
     ids = {c.id for c in contract.checks}
-    extra = [c for c in baseline if c.metric not in have and c.id not in ids]
+    for objective in contract.objectives:
+        if objective.id != _BASELINE_OBJECTIVE_ID:
+            continue
+        # A previous injection is recognizable after serialization without a
+        # hidden marker. An unrelated objective cannot occupy this namespace.
+        if (extra or objective.claim != "numerical_health"
+                or objective.description != _BASELINE_OBJECTIVE_DESCRIPTION
+                or not objective.check_ids
+                or len(objective.check_ids) != len(set(objective.check_ids))
+                or not set(objective.check_ids).issubset(by_id.keys() & ids)):
+            errors.append(f"objective id '{_BASELINE_OBJECTIVE_ID}' is reserved")
+    if errors:
+        raise ContractRejected(errors)
     if not extra:
         return contract
-    objective = Objective(id="baseline_run_health", claim="numerical_health",
-                          description="Mandatory run-health checks applied to every contract.",
+    objective = Objective(id=_BASELINE_OBJECTIVE_ID, claim="numerical_health",
+                          description=_BASELINE_OBJECTIVE_DESCRIPTION,
                           check_ids=[c.id for c in extra])
     objectives = list(contract.objectives)
-    if objective.id in {o.id for o in objectives}:
-        raise ContractRejected(["objective id 'baseline_run_health' is reserved"])
     return contract.model_copy(update={"checks": [*contract.checks, *extra], "objectives": [*objectives, objective]})
 
 

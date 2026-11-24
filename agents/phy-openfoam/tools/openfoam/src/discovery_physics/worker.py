@@ -63,6 +63,23 @@ def _setup_step(before: dict[str, str], after: dict[str, str], command: Command,
             "changed_files": changes, "permitted": permitted}
 
 
+def _cell_budget(case: Path, maximum: int, check_exit: int) -> dict:
+    """Use measured checkMesh output, not an author estimate, before any solve."""
+    try:
+        text = (case / "log.checkMesh").read_text(encoding="utf-8", errors="strict")
+    except (OSError, UnicodeError):
+        text = ""
+    counts = re.findall(r"(?m)^\s*cells:\s*(\d+)\s*$", text)
+    cells = int(counts[0]) if len(counts) == 1 else None
+    ok = check_exit == 0 and cells is not None and 0 < cells <= maximum
+    reason = ("measured cell count is within the frozen cap" if ok else
+              "checkMesh did not complete successfully" if check_exit else
+              "measured cell count is missing, ambiguous or non-positive" if cells is None or cells <= 0 else
+              "measured cell count exceeds the frozen cap")
+    return {"ok": ok, "measured_cells": cells, "maximum_cells": maximum,
+            "checkMesh_exit_code": check_exit, "reason": reason}
+
+
 def _run(argv: list[str], case: Path, log: Path, timeout: float) -> int:
     with log.open("w", encoding="utf-8") as fh:
         try:
@@ -119,8 +136,11 @@ def main(argv: list[str] | None = None) -> int:
             mesh_ok &= rc == 0
             if rc or not case_matches:
                 break
-        rc = run_setup(Command(executable="checkMesh"), case / "log.checkMesh")
-        mesh_ok &= rc == 0
+    # Check continuations too: their copied native mesh, not a stale estimate or
+    # old checkMesh log, is the object about to be solved.
+    rc = run_setup(Command(executable="checkMesh"), case / "log.checkMesh")
+    budget_check = _cell_budget(case, int(plan["budget"]["max_cells"]), rc)
+    mesh_ok &= budget_check["ok"]
     observed = sha256_json(current)
     setup_audit["post_setup_frozen_sha256"] = observed
     exit_code = None
@@ -153,6 +173,9 @@ def main(argv: list[str] | None = None) -> int:
     setup_audit["final_frozen_sha256"] = frozen_sha256(case)
     case_matches &= setup_audit["final_frozen_sha256"] == observed
     metrics = extract(case, diagnostics, exit_code, float(plan["end_time"]), mesh_ok)
+    metrics.put("mesh.within_cell_budget", budget_check["ok"], source="worker pre-solve checkMesh cell-count gate")
+    if not budget_check["ok"]:
+        metrics.errors.append("mesh budget: " + budget_check["reason"])
     metrics.put("setup.case_hash_matches", case_matches, source="worker input, setup-step and final re-hashes")
     if plan.get("reference_hashes"):
         files = frozen_files(case)
@@ -177,6 +200,7 @@ def main(argv: list[str] | None = None) -> int:
         "runtime": {"openfoam_build": build, "distribution": "OpenFOAM Foundation",
                     "timings_s": timings, "observed_frozen_sha256": observed, "figures": figures,
                     "setup_audit": setup_audit,
+                    "cell_budget": budget_check,
                     "figures_error": figures_error, "mpi_ranks": ranks,
                     "worker_uid": os.getuid() if hasattr(os, "getuid") else None},
     }

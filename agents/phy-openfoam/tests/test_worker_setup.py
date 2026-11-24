@@ -43,7 +43,9 @@ def staged_worker(tmp_path, monkeypatch):
         def fake_run(argv, case, log, timeout):
             state.commands.append(list(argv))
             log.write_text("Synthetic command stand-in; no native solver.\n", encoding="utf-8")
-            if argv[0] == "blockMesh":
+            if argv[0] == "checkMesh":
+                log.write_text(f"cells: {bundle['diagnostics']['expected_cells']}\nMesh OK.\n", encoding="utf-8")
+            elif argv[0] == "blockMesh":
                 geometry = case / "constant/polyMesh/points"
                 geometry.parent.mkdir(parents=True, exist_ok=True)
                 geometry.write_text("synthetic generated mesh\n", encoding="utf-8")

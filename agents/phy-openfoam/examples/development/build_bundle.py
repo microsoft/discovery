@@ -256,10 +256,10 @@ bundle = {
         ],
         "derived": [
             {"name": "dp_core_kin", "op": "difference", "a": "quantity.p_x1", "b": "quantity.p_x2", "unit": "m^2/s^2"},
-            {"name": "dp_core_Pa", "op": "scale", "a": "derived.dp_core_kin", "factor": rho, "unit": "Pa"},
+            {"name": "dp_core_Pa", "op": "scale", "a": "derived.dp_core_kin", "factor": rho, "factor_unit": "kg/m3", "unit": "Pa"},
             {"name": "dp_core_error_pct", "op": "abs_rel_error_pct", "a": "derived.dp_core_Pa", "reference": dp_core_ref, "unit": "%"},
             {"name": "dp_full_kin", "op": "difference", "a": "quantity.p_inlet", "b": "quantity.p_outlet", "unit": "m^2/s^2"},
-            {"name": "dp_full_Pa", "op": "scale", "a": "derived.dp_full_kin", "factor": rho, "unit": "Pa"},
+            {"name": "dp_full_Pa", "op": "scale", "a": "derived.dp_full_kin", "factor": rho, "factor_unit": "kg/m3", "unit": "Pa"},
             {"name": "dp_full_error_pct", "op": "abs_rel_error_pct", "a": "derived.dp_full_Pa", "reference": dp_full_ref, "unit": "%"},
         ],
         "patches": ["inlet", "outlet", "walls", "frontAndBack"],
