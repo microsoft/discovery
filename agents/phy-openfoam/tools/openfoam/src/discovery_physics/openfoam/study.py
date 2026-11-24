@@ -201,7 +201,9 @@ def assess(study_id: str) -> dict:
     accepted = {n for n, v in final.items() if v == Verdict.ACCEPT.value and leaves[n]["final"]["live_acceptance"]}
     results: dict[str, dict] = {}
     checked_values: dict[str, dict[str, float]] = {}
-    for c in study.criteria:
+    # Only rankings depend on other criteria, and only on GCI. Evaluate all
+    # independent criteria first without changing the frozen or reported order.
+    for c in sorted(study.criteria, key=lambda criterion: criterion.kind == "best"):
         r: dict = {"id": c.id, "kind": c.kind, "rationale": c.rationale}
         vals = {}
         if c.kind != "all_accept":
@@ -273,9 +275,11 @@ def assess(study_id: str) -> dict:
                 ranked = sorted(pool.items(), key=lambda kv: kv[1], reverse=c.goal == "maximize")
                 pct = c.uncertainty_pct
                 if c.uncertainty_from:
-                    g = results.get(c.uncertainty_from, {}).get("detail", {})
+                    dependency = results.get(c.uncertainty_from, {})
+                    g = dependency.get("detail", {})
                     gp = g.get("gci_fine_pct") if isinstance(g, dict) else None
-                    if gp is None:
+                    if dependency.get("state") != "PASS" or type(gp) not in (int, float) or \
+                            not math.isfinite(gp) or gp < 0:
                         r.update(state="UNKNOWN", detail="referenced GCI unavailable")
                         results[c.id] = r
                         continue
@@ -290,7 +294,7 @@ def assess(study_id: str) -> dict:
         results[c.id] = r
     states = [r["state"] for r in results.values()]
     verdict = ("REJECT" if "FAIL" in states else "INCONCLUSIVE" if "UNKNOWN" in states else "ACCEPT")
-    record = {"study_id": study_id, "verdict": verdict, "criteria": list(results.values()),
+    record = {"study_id": study_id, "verdict": verdict, "criteria": [results[c.id] for c in study.criteria],
               "members": {n: {"final": final[n], "leaf_run": leaves[n]["plan"]["run_id"]} for n in final},
               "study_sha256": sha256_json(study)}
     if study.design_bounds:

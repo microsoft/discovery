@@ -52,6 +52,26 @@ vacuously. Objectives without adequate check coverage cannot be accepted. Hard
 physical/numerical failures outrank healthy but incomplete development or horizon
 checks. A successful process exit does not establish scientific acceptance.
 
+### Audited initialization
+
+The authored initial fields and setup dictionaries stay in the original frozen
+input hash; `setFields` does **not** exempt `0/` from integrity checks. The worker
+first checks its copied input, then records per-file before/after hashes for each
+setup command. Only a successful, explicitly frozen `setFields` command may
+rewrite existing top-level initial fields. Changes to dictionaries, includes,
+deleted fields or initial fields written by other setup commands fail the case
+integrity check and prevent the solve. Generated mesh and derived geometry fields
+retain their existing exclusions.
+
+The raw worker packet records `runtime.setup_audit`: input/expected hashes,
+command changes, and post-setup/final hashes. Initial fields and dictionaries
+must remain unchanged after setup, including through solve/postprocessing.
+Reference-file hashes remain independent constraints; a deliberately rewritten
+field does not silently bypass its explicit reference hash. Continuations keep
+the original problem hash, verify the parent's journal-pinned output case, and
+bind the verified post-setup hash separately in the child plan. Initialization is
+not rerun. None of this rewrites historical inputs, evidence or journals.
+
 Acceptance means **satisfaction of the stated contract**, not universal physical
 validity. Threshold quality, turbulence-model applicability, experimental
 validation, and discretization uncertainty remain scientific review duties.
@@ -151,6 +171,12 @@ comparison of incompatible numbers or a default pass. There is no implicit unit
 conversion: Pa and kPa must be explicitly converted to a common declared output
 before preparation. Dimensionless/normalized outputs retain their recorded
 label; matching labels alone do not prove a common physical normalization.
+
+GCI criteria are evaluated before dependent `best` rankings regardless of their
+position in the authored list. Each GCI is evaluated once; the signed study and
+result/report order retain the original criterion order. A ranking may use a
+referenced GCI only if it passes with finite nonnegative uncertainty; failed or
+unavailable dependencies yield `UNKNOWN`, never an assumed zero margin.
 
 Candidate separation must exceed the registered combined uncertainty for a
 design-superiority claim. Seeded Latin-hypercube sampling is reproducible;

@@ -72,9 +72,17 @@ For `evaluate`, `confirmations_b64` is base64 of a JSON confirmation list; `W10=
 encodes an empty list. It must not be used to bypass required user decisions.
 Encoded inputs constrain transport; they do not supply user authentication.
 The catalog action schema permits at most 65,536 characters per encoded string.
+The service also enforces that encoded limit and caps decoded bundle/study JSON
+at 16 MiB (16,777,216 UTF-8 bytes), before JSON or model validation. It accepts
+exactly one complete gzip member and one JSON object; checksum failures,
+truncation, concatenated members and trailing compressed bytes (including zero
+padding) are refused. The raw service JSON option has the same decoded-byte cap.
+This fixed action-envelope bound is separate from case-file safety limits and
+accommodates the curated examples and multi-member studies; it is not a promise
+that every maximum-size local bundle fits the action interface.
 Larger bundles/studies need a separately designed and qualified transport rather
 than increasing the catalog schema's supported limit. The local CLI reads files
-and does not share this action-argument size limit.
+and does not share these service action-argument limits.
 Result mounts contain scientific reports, evidence, journals, and logs, not
 platform job receipts or private signing keys. Review promoted output for
 confidential geometry, absolute paths, and native session metadata.

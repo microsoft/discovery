@@ -16,21 +16,47 @@ from __future__ import annotations
 
 import argparse
 import base64
-import gzip
 import json
 import os
 import sys
+import zlib
 from pathlib import Path
 
 OUTPUT = Path(os.environ.get("DISCOVERY_PHYSICS_OUTPUT", "/output"))
+MAX_ENCODED_CHARS = 65536
+MAX_PAYLOAD_BYTES = 16 * 1024 * 1024
 
 
 def _decode(b64gz: str | None, raw: str | None) -> dict:
+    """Decode one bounded UTF-8 JSON object, never concatenate gzip members."""
     if b64gz:
-        return json.loads(gzip.decompress(base64.b64decode(b64gz, validate=True)).decode("utf-8"))
-    if raw:
-        return json.loads(raw)
-    raise SystemExit("a bundle/spec is required")
+        if len(b64gz) > MAX_ENCODED_CHARS:
+            raise ValueError(f"encoded payload exceeds {MAX_ENCODED_CHARS} characters")
+        compressed = base64.b64decode(b64gz, validate=True)
+        decoder = zlib.decompressobj(16 + zlib.MAX_WBITS)
+        try:
+            # The streaming decoder stops before allocating unbounded output.
+            # The extra byte distinguishes an exact-boundary payload from overflow.
+            data = decoder.decompress(compressed, MAX_PAYLOAD_BYTES + 1)
+        except zlib.error as exc:
+            raise ValueError("invalid gzip payload") from exc
+        if len(data) > MAX_PAYLOAD_BYTES or decoder.unconsumed_tail:
+            raise ValueError(f"decoded payload exceeds {MAX_PAYLOAD_BYTES} bytes")
+        if not decoder.eof:
+            raise ValueError("incomplete gzip payload")
+        if decoder.unused_data:
+            raise ValueError("trailing data after the single gzip member")
+        text = data.decode("utf-8")
+    elif raw:
+        if len(raw) > MAX_PAYLOAD_BYTES or len(raw.encode("utf-8")) > MAX_PAYLOAD_BYTES:
+            raise ValueError(f"decoded payload exceeds {MAX_PAYLOAD_BYTES} bytes")
+        text = raw
+    else:
+        raise ValueError("a bundle/spec is required")
+    value = json.loads(text)
+    if not isinstance(value, dict):
+        raise ValueError("a bundle/spec must be a JSON object")
+    return value
 
 
 def _fixed_rule(s: dict, target: float, max_end: float) -> dict:

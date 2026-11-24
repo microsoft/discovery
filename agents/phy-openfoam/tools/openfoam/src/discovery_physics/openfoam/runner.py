@@ -575,6 +575,18 @@ def _stage_continuation(path: Path, st: dict, end_time: float) -> str:
     child_plan = {**plan, "run_id": child_id, "mode": "continue", "attempt": plan["attempt"] + 1,
                   "end_time": end_time,
                   "lineage": {**plan["lineage"], "parent": plan["run_id"], "attempt": plan["attempt"] + 1}}
+    setup_audit = st["evidence"].runtime.get("setup_audit")
+    if setup_audit is not None:
+        from ..worker import frozen_sha256
+
+        restart_hash = frozen_sha256(child / "input" / "case")
+        if not isinstance(setup_audit, dict) or \
+                setup_audit.get("post_setup_frozen_sha256") != restart_hash or \
+                setup_audit.get("final_frozen_sha256") != restart_hash:
+            raise IntegrityError("restart case differs from the verified post-setup frozen fields")
+        # Preserve the original problem hash. Bind the generated initial fields
+        # separately in the child's journal-pinned plan; never rerun setFields.
+        child_plan["restart_frozen_sha256"] = restart_hash
     _write(child / "bundle.json", bundle.model_dump(mode="json"))
     _write(child / "input" / "plan.json", child_plan)
     _write(child / "plan.json", child_plan)

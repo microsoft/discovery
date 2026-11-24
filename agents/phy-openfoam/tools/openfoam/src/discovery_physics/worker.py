@@ -19,6 +19,7 @@ from pathlib import Path
 from .core.hashing import sha256_json, sha256_text
 from .core.models import Command, Diagnostics
 from .openfoam.extract import extract
+from .openfoam.safety import FIELD
 
 DERIVED_ZERO = {"C", "Ccx", "Ccy", "Ccz", "Vc"}
 
@@ -45,6 +46,21 @@ def frozen_files(case: Path) -> dict[str, str]:
 
 def frozen_sha256(case: Path) -> str:
     return sha256_json({k: sha256_text(v) for k, v in frozen_files(case).items()})
+
+
+def _frozen_hashes(case: Path) -> dict[str, str]:
+    return {name: sha256_text(text) for name, text in frozen_files(case).items()}
+
+
+def _setup_step(before: dict[str, str], after: dict[str, str], command: Command, rc: int) -> dict:
+    changes = {name: {"before_sha256": before.get(name), "after_sha256": after.get(name)}
+               for name in sorted(before.keys() | after.keys()) if before.get(name) != after.get(name)}
+    # Only a successful, explicitly frozen setFields command may rewrite
+    # existing top-level initial fields. Dictionaries/includes/deletions remain frozen.
+    permitted = not changes or (command.executable == "setFields" and rc == 0 and all(
+        FIELD.fullmatch(name) and name in before and name in after for name in changes))
+    return {"command": command.model_dump(mode="json"), "return_code": rc,
+            "changed_files": changes, "permitted": permitted}
 
 
 def _run(argv: list[str], case: Path, log: Path, timeout: float) -> int:
@@ -76,29 +92,47 @@ def main(argv: list[str] | None = None) -> int:
             dst.parent.mkdir(parents=True, exist_ok=True)
             shutil.copyfile(src, dst)
     timings: dict[str, float] = {}
+    current = _frozen_hashes(case)
+    expected = plan.get("restart_frozen_sha256", plan["frozen_sha256"]) \
+        if plan["mode"] == "continue" else plan["frozen_sha256"]
+    setup_audit = {"input_frozen_sha256": sha256_json(current), "expected_input_frozen_sha256": expected,
+                   "steps": []}
+    case_matches = setup_audit["input_frozen_sha256"] == expected
+
+    def run_setup(cmd: Command, log: Path) -> int:
+        nonlocal current, case_matches
+        rc = _run([cmd.executable, *cmd.args], case, log, deadline - time.monotonic())
+        observed_files = _frozen_hashes(case)
+        step = _setup_step(current, observed_files, cmd, rc)
+        setup_audit["steps"].append(step)
+        case_matches &= step["permitted"]
+        current = observed_files
+        return rc
+
     mesh_ok = True
-    if plan["mode"] == "fresh":
+    if plan["mode"] == "fresh" and case_matches:
         for i, raw in enumerate(plan["mesh"]):
             cmd = Command.model_validate(raw)
             t0 = time.monotonic()
-            rc = _run([cmd.executable, *cmd.args], case, case / f"log.{i:02d}.{cmd.executable}",
-                      deadline - time.monotonic())
+            rc = run_setup(cmd, case / f"log.{i:02d}.{cmd.executable}")
             timings[f"mesh.{i}.{cmd.executable}"] = time.monotonic() - t0
             mesh_ok &= rc == 0
-            if rc:
+            if rc or not case_matches:
                 break
-        rc = _run(["checkMesh"], case, case / "log.checkMesh", deadline - time.monotonic())
+        rc = run_setup(Command(executable="checkMesh"), case / "log.checkMesh")
         mesh_ok &= rc == 0
-    observed = frozen_sha256(case)
+    observed = sha256_json(current)
+    setup_audit["post_setup_frozen_sha256"] = observed
     exit_code = None
     ranks = int(plan["budget"].get("mpi_ranks", 1))
     attempt = int(plan["attempt"])
-    if mesh_ok and ranks > 1:
-        dec = ["decomposePar", "-force"] + (["-latestTime"] if plan["mode"] == "continue" else [])
+    if mesh_ok and case_matches and ranks > 1:
+        dec = Command(executable="decomposePar", args=["-force"] +
+                      (["-latestTime"] if plan["mode"] == "continue" else []))
         t0 = time.monotonic()
-        mesh_ok &= _run(dec, case, case / f"log.decomposePar.{attempt:02d}", deadline - time.monotonic()) == 0
+        mesh_ok &= run_setup(dec, case / f"log.decomposePar.{attempt:02d}") == 0
         timings["decompose"] = time.monotonic() - t0
-    if mesh_ok:
+    if mesh_ok and case_matches:
         t0 = time.monotonic()
         argv = ["foamRun"] if ranks == 1 else [
             "mpirun", "--oversubscribe", "-np", str(ranks), "foamRun", "-parallel"]
@@ -116,8 +150,10 @@ def main(argv: list[str] | None = None) -> int:
     for func in ("writeCellCentres", "writeCellVolumes"):
         if not (case / "0" / ("C" if func == "writeCellCentres" else "Vc")).exists():
             _run(["foamPostProcess", "-func", func, "-time", "0"], case, case / f"log.{func}", 600)
+    setup_audit["final_frozen_sha256"] = frozen_sha256(case)
+    case_matches &= setup_audit["final_frozen_sha256"] == observed
     metrics = extract(case, diagnostics, exit_code, float(plan["end_time"]), mesh_ok)
-    metrics.put("setup.case_hash_matches", observed == plan["frozen_sha256"], source="worker re-hash")
+    metrics.put("setup.case_hash_matches", case_matches, source="worker input, setup-step and final re-hashes")
     if plan.get("reference_hashes"):
         files = frozen_files(case)
         metrics.put("setup.reference_files_match", all(
@@ -140,6 +176,7 @@ def main(argv: list[str] | None = None) -> int:
         "errors": metrics.errors,
         "runtime": {"openfoam_build": build, "distribution": "OpenFOAM Foundation",
                     "timings_s": timings, "observed_frozen_sha256": observed, "figures": figures,
+                    "setup_audit": setup_audit,
                     "figures_error": figures_error, "mpi_ranks": ranks,
                     "worker_uid": os.getuid() if hasattr(os, "getuid") else None},
     }
