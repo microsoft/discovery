@@ -3,7 +3,7 @@ name: validated-scenario-runner
 description: >-
   Follow a supplied full Validated Scenario guide and its exact input files
   from a fresh Discovery project. Use for run this Validated Scenario, BioPharma,
-  SiPhy, CMS or Bookshelf setup. Check readiness, obtain separate setup and
+  CMS or Bookshelf setup. Check readiness, obtain separate setup and
   execution approvals, and validate actual outputs. Do not replace the guide
   with a generated profile or infer permission from examples.
 compatibility: Requires file and command tools and the capabilities stated by the selected full guide. Author-only download preparation uses Python 3.10+.
@@ -12,9 +12,8 @@ metadata: {author: Validated Scenarios contributors, version: "0.2.0"}
 
 # Validated Scenarios runner
 
-This is the shared runner. The original scenario skill remains unchanged with the
-SiPhy files; this adaptation is separately identified and still awaiting an
-end-to-end test. **The selected full Validated Scenario Markdown is authoritative.**
+This is the shared runner. It is still awaiting an end-to-end test.
+**The selected full Validated Scenario Markdown is authoritative.**
 Do not shorten it, rewrite its science/prompt, replace it with a generated
 manifest/profile, or execute a different scenario because setup is difficult.
 

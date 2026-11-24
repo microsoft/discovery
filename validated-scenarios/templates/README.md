@@ -53,5 +53,5 @@ run it once before publishing.
 
 Completed examples already available:
 [BioPharma v0.11](../biopharma/cdk-frozen-reference/Validated-Scenario-BioPharma%20LeadGen%20v0.11.md) and
-[Silicon and Physics: Spec-to-RTL](../siphy/spec-to-rtl/Validated-Scenario-Spec-to-RTL.md). Check each scenario's
+[Bookshelf: SCLC literature](../bookshelf/sclc-literature/Validated-Scenario-Bookshelf-SCLC-Literature.md). Check each scenario's
 README for current availability and validation scope.

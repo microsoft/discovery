@@ -1,9 +1,6 @@
 # Preserve checked-in guide and attachment bytes, including CRLF/BOM.
 "biopharma/cdk-frozen-reference/Validated-Scenario-BioPharma LeadGen v0.11.md" -text
 biopharma/cdk-frozen-reference/files/* -text
-siphy/spec-to-rtl/Validated-Scenario-Spec-to-RTL.md -text
-"siphy/spec-to-rtl/skill 1.md" -text
-siphy/spec-to-rtl/files/ship.tar -text
 cms/moisturizer-formulation/files/* -text
 bookshelf/sclc-literature/files/* -text
 templates/Validated-Scenario-Template.md -text
