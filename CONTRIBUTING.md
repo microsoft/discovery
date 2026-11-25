@@ -18,6 +18,11 @@ artifacts. Correctness checks, CLA, and normal CODEOWNER review still apply.
 
 For product bugs, questions, or ideas, use
 [Discussions](https://techcommunity.microsoft.com/category/azure/discussions/microsoft-discovery-discussions).
+For app examples, identify the tested channel (Stable or Preview), app version,
+platform, prerequisites, and verification outcome in the example's README.
+See [compatibility guidance](docs/stable-app/compatibility.md); don't claim
+untested catalog entries work across all Discovery experiences.
+
 For changes to `utilities/` (including its documentation), protected schemas,
 workflows, validator policy, or other trusted repository configuration, propose
 an idea there so a Microsoft maintainer can land the agreed change.

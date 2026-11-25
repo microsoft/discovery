@@ -1,5 +1,8 @@
 # Feedback Guide
 
+> **Preview app diagnostics.** For Stable channel/version reporting and
+> reproducible examples, use the [Stable feedback guide](../stable-app/feedback.md).
+
 Use [**Discussions**](https://techcommunity.microsoft.com/category/azure/discussions/microsoft-discovery-discussions) to file bugs, ideas, questions, and to share what you've built. Pick the matching category.
 
 ## At a glance

@@ -1,5 +1,9 @@
 # Microsoft Discovery: Quick Start Guide 🧪
 
+> **Applies to the Preview app.** For the separate Stable app workflows, see
+> [Stable app documentation](../stable-app/README.md). The Preview workspace,
+> CLI, and engine steps below aren't Stable session instructions.
+
 > **Your first 15 minutes with Microsoft Discovery** — zero cloud, zero IT ticket, all hands-on.
 
 ---
