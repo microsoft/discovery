@@ -1,0 +1,23 @@
+[build-system]
+requires = ["setuptools>=77,<83"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "discovery-physics-openfoam"
+version = "0.2.1"
+description = "Independent CLIO-led OpenFOAM execution and evidence-gated physics tools"
+requires-python = ">=3.11"
+license = "MIT"
+license-files = ["LICENSE", "LICENSES/*", "THIRD_PARTY_NOTICES.md"]
+dependencies = ["pydantic>=2.10,<3", "numpy>=1.26,<3"]
+
+# matplotlib (figures) and gmsh (geometry import) are installed in the worker image only.
+
+[project.optional-dependencies]
+dev = ["pytest>=8.3,<10", "pytest-cov>=6,<8", "PyYAML>=6,<7", "jsonschema>=4.23,<5", "ruff>=0.11,<1"]
+
+[project.scripts]
+discovery-physics = "discovery_physics.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]

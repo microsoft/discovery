@@ -1,0 +1,9 @@
+* text=auto eol=lf
+*.sh text eol=lf
+*.ps1 text eol=lf
+*.py text eol=lf
+*.md text eol=lf
+*.yaml text eol=lf
+*.json text eol=lf
+# Local historical records are not publication inputs and must not be normalized.
+local-evidence/** -text

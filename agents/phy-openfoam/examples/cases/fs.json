@@ -1,0 +1,401 @@
+{
+ "name": "step_M2_h0p2_x0p6",
+ "solver": "shockFluid",
+ "files": {
+  "system/fvSchemes": "/*--------------------------------*- C++ -*----------------------------------*\\\n  =========                 |\n  \\\\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox\n   \\\\    /   O peration     | Website:  https://openfoam.org\n    \\\\  /    A nd           | Version:  14\n     \\\\/     M anipulation  |\n\\*---------------------------------------------------------------------------*/\nFoamFile\n{\n    format      ascii;\n    class       dictionary;\n    location    \"system\";\n    object      fvSchemes;\n}\n// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //\n\nfluxScheme      Kurganov;\n\nddtSchemes\n{\n    default         Euler;\n}\n\ngradSchemes\n{\n    default         Gauss linear;\n}\n\ndivSchemes\n{\n    default         none;\n}\n\nlaplacianSchemes\n{\n    default         Gauss linear corrected;\n}\n\ninterpolationSchemes\n{\n    default         linear;\n\n    reconstruct(rho) vanLeer;\n    reconstruct(U)  vanLeerV;\n    reconstruct(T)  vanLeer;\n}\n\nsnGradSchemes\n{\n    default         corrected;\n}\n\n\n// ************************************************************************* //\n",
+  "system/fvSolution": "/*--------------------------------*- C++ -*----------------------------------*\\\n  =========                 |\n  \\\\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox\n   \\\\    /   O peration     | Website:  https://openfoam.org\n    \\\\  /    A nd           | Version:  14\n     \\\\/     M anipulation  |\n\\*---------------------------------------------------------------------------*/\nFoamFile\n{\n    format      ascii;\n    class       dictionary;\n    location    \"system\";\n    object      fvSolution;\n}\n// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //\n\nsolvers\n{\n    \"(rho|rhoU|rhoE).*\"\n    {\n        solver          diagonal;\n    }\n\n    \"U.*\"\n    {\n        solver          smoothSolver;\n        smoother        GaussSeidel;\n        nSweeps         2;\n        tolerance       1e-09;\n        relTol          0.01;\n    }\n\n    \"e.*\"\n    {\n        $U;\n        tolerance       1e-10;\n        relTol          0;\n    }\n}\n\nPIMPLE\n{}\n\n\n// ************************************************************************* //\n",
+  "constant/physicalProperties": "/*--------------------------------*- C++ -*----------------------------------*\\\n  =========                 |\n  \\\\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox\n   \\\\    /   O peration     | Website:  https://openfoam.org\n    \\\\  /    A nd           | Version:  14\n     \\\\/     M anipulation  |\n\\*---------------------------------------------------------------------------*/\nFoamFile\n{\n    format      ascii;\n    class       dictionary;\n    location    \"constant\";\n    object      physicalProperties;\n}\n// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //\n\nthermoType\n{\n    type            hePsiThermo;\n    mixture         pureMixture;\n    transport       const;\n    thermo          hConst;\n    equationOfState perfectGas;\n    specie          specie;\n    energy          sensibleInternalEnergy;\n}\n\n// Note: these are the properties for a \"normalised\" inviscid gas\n//       for which the speed of sound is 1 m/s at a temperature of 1K\n//       and gamma = 7/5\nmixture\n{\n    specie\n    {\n        molWeight       11640.3;\n    }\n    thermodynamics\n    {\n        Cp              2.5;\n        hf              0;\n    }\n    transport\n    {\n        mu              0;\n        Pr              1;\n    }\n}\n\n\n// ************************************************************************* //\n",
+  "constant/momentumTransport": "/*--------------------------------*- C++ -*----------------------------------*\\\n  =========                 |\n  \\\\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox\n   \\\\    /   O peration     | Website:  https://openfoam.org\n    \\\\  /    A nd           | Version:  14\n     \\\\/     M anipulation  |\n\\*---------------------------------------------------------------------------*/\nFoamFile\n{\n    format      ascii;\n    class       dictionary;\n    location    \"constant\";\n    object      momentumTransport;\n}\n// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //\n\nsimulationType  laminar;\n\n\n// ************************************************************************* //\n",
+  "system/blockMeshDict": "FoamFile\n{\n    format ascii;\n    class dictionary;\n    object blockMeshDict;\n}\n\nvertices\n(\n    (0 0 -0.05) (0.6 0 -0.05) (0 0.2 -0.05) (0.6 0.2 -0.05) (3 0.2 -0.05) (0 1 -0.05) (0.6 1 -0.05) (3 1 -0.05)\n    (0 0 0.05) (0.6 0 0.05) (0 0.2 0.05) (0.6 0.2 0.05) (3 0.2 0.05) (0 1 0.05) (0.6 1 0.05) (3 1 0.05)\n);\nblocks\n(\n    hex (0 1 3 2 8 9 11 10) (48 16 1) simpleGrading (1 1 1)\n    hex (2 3 6 5 10 11 14 13) (48 64 1) simpleGrading (1 1 1)\n    hex (3 4 7 6 11 12 15 14) (192 64 1) simpleGrading (1 1 1)\n);\ndefaultPatch { type empty; }\nboundary\n(\n    inlet { type patch; faces ((0 8 10 2) (2 10 13 5)); }\n    outlet { type patch; faces ((4 7 15 12)); }\n    bottom { type symmetryPlane; faces ((0 1 9 8)); }\n    top { type symmetryPlane; faces ((5 13 14 6) (6 14 15 7)); }\n    obstacle { type patch; faces ((1 3 11 9) (3 4 12 11)); }\n);\n",
+  "0/U": "FoamFile\n{\n    format ascii;\n    class volVectorField;\n    object U;\n}\n\ndimensions [velocity];\ninternalField uniform (2.0 0 0);\nboundaryField\n{\n    inlet { type fixedValue; value uniform (2.0 0 0); }\n    outlet { type inletOutlet; inletValue uniform (2.0 0 0); }\n    bottom { type symmetryPlane; }\n    top { type symmetryPlane; }\n    obstacle { type slip; }\n    defaultFaces { type empty; }\n}\n",
+  "0/p": "FoamFile\n{\n    format ascii;\n    class volScalarField;\n    object p;\n}\n\ndimensions [pressure];\ninternalField uniform 1;\nboundaryField\n{\n    inlet { type fixedValue; value uniform 1; }\n    outlet { type zeroGradient; }\n    bottom { type symmetryPlane; }\n    top { type symmetryPlane; }\n    obstacle { type zeroGradient; }\n    defaultFaces { type empty; }\n}\n",
+  "0/T": "FoamFile\n{\n    format ascii;\n    class volScalarField;\n    object T;\n}\n\ndimensions [temperature];\ninternalField uniform 1;\nboundaryField\n{\n    inlet { type fixedValue; value uniform 1; }\n    outlet { type inletOutlet; inletValue uniform 1; }\n    bottom { type symmetryPlane; }\n    top { type symmetryPlane; }\n    obstacle { type zeroGradient; }\n    defaultFaces { type empty; }\n}\n",
+  "system/controlDict": "FoamFile\n{\n    format ascii;\n    class dictionary;\n    object controlDict;\n}\n\nsolver shockFluid;\nstartFrom startTime;\nstartTime 0;\nstopAt endTime;\nendTime 4.0;\ndeltaT 0.002;\nwriteControl adjustableRunTime;\nwriteInterval 0.1;\npurgeWrite 0;\nwriteFormat ascii;\nwritePrecision 6;\nwriteCompression off;\ntimeFormat general;\ntimePrecision 6;\nrunTimeModifiable true;\nadjustTimeStep yes;\nmaxCo 0.2;\nmaxDeltaT 1;\n"
+ },
+ "mesh": [
+  {
+   "executable": "blockMesh",
+   "args": []
+  }
+ ],
+ "diagnostics": {
+  "fields": [
+   {
+    "name": "p",
+    "positive": true
+   },
+   {
+    "name": "T",
+    "positive": true
+   },
+   {
+    "name": "rho",
+    "positive": true
+   },
+   {
+    "name": "U",
+    "components": 3
+   }
+  ],
+  "initial_values": {
+   "p": 1.0,
+   "T": 1.0,
+   "U": [
+    2.0,
+    0.0,
+    0.0
+   ]
+  },
+  "reference_hashes": {
+   "system/fvSchemes": "1188751d12399baafa5163db03e6a874859f19e3610b80285ded31aa99335377",
+   "system/fvSolution": "6664b80775b3f099acd6becc4ca3d102bcee640cdbbe16d596b557b63992dcc5",
+   "constant/physicalProperties": "2437859ff8ef29ca4371aaa5d8e05a748a1036436b93f11f40c4edfa7cec5a16",
+   "constant/momentumTransport": "49ddd46207086d5794fbcd9b3c2ec5125412dcc5ca0308974258005c4df3dcb1"
+  },
+  "patches": [
+   "inlet",
+   "outlet",
+   "bottom",
+   "top",
+   "obstacle"
+  ],
+  "inlet": "inlet",
+  "outlet": "outlet",
+  "impermeable_patches": [
+   "bottom",
+   "top",
+   "obstacle"
+  ],
+  "expected_cells": 16128,
+  "dimensions": 2,
+  "gas": {
+   "gas_constant": 0.7142825028696203,
+   "gamma": 1.3999974822543102
+  },
+  "target_time": 4.0,
+  "mass_balance": true,
+  "normalized": true,
+  "compression": {
+   "axis": 0,
+   "transverse_axis": 1,
+   "transverse_max": 0.2,
+   "x_min": 0.0,
+   "x_max": 0.6
+  }
+ },
+ "contract": {
+  "id": "forward_step_2d_benchmark",
+  "title": "2-D forward step, Mach 2.0, h = 0.2, x = 0.6",
+  "requested_prompt": "Simulate a 2D forward-facing step with inlet Mach number 2.0, step height 0.2 channel heights, step location x = 0.6. Determine whether the final result passes deterministic scientific validation.",
+  "regime": "transient",
+  "objectives": [
+   {
+    "id": "healthy_transient_solution",
+    "claim": "numerical_health",
+    "description": "Healthy, conservative transient solution at the registered horizon.",
+    "check_ids": [
+     "solver_completed",
+     "no_fatal_error",
+     "mesh_ok",
+     "two_solution_directions",
+     "mesh_stage_clean",
+     "cell_count_matches_spec",
+     "expected_boundaries_present",
+     "no_cyclic_patches",
+     "planar_empty_patch",
+     "fixed_recipe_unchanged",
+     "case_unchanged_after_freeze",
+     "finite_all_saved",
+     "positive_all_saved",
+     "positive_every_step",
+     "courant_finite_positive",
+     "supersonic_inlet",
+     "initial_state_as_specified",
+     "impermeable_walls",
+     "transient_mass_closure",
+     "restart_seams_continuous",
+     "compression_front_measurable",
+     "p_rises_across_front",
+     "rho_rises_across_front",
+     "T_rises_across_front",
+     "registered_horizon_reached"
+    ]
+   }
+  ],
+  "checks": [
+   {
+    "id": "solver_completed",
+    "metric": "solver.completed",
+    "operator": "true",
+    "threshold": null,
+    "unit": "1",
+    "category": "execution",
+    "rationale": "The solver must exit normally at the execution horizon it was asked to reach.",
+    "failure": "hard"
+   },
+   {
+    "id": "no_fatal_error",
+    "metric": "solver.fatal_error",
+    "operator": "eq",
+    "threshold": false,
+    "unit": "1",
+    "category": "execution",
+    "rationale": "Genuine fatal signatures only; the FOAM_SIGFPE start-up banner is excluded.",
+    "failure": "hard"
+   },
+   {
+    "id": "mesh_ok",
+    "metric": "mesh.check_ok",
+    "operator": "true",
+    "threshold": null,
+    "unit": "1",
+    "category": "mesh",
+    "rationale": "checkMesh must report Mesh OK.",
+    "failure": "hard"
+   },
+   {
+    "id": "two_solution_directions",
+    "metric": "mesh.dimension_matches",
+    "operator": "true",
+    "threshold": null,
+    "unit": "1",
+    "category": "mesh",
+    "rationale": "The family is planar: exactly two solution directions.",
+    "failure": "hard"
+   },
+   {
+    "id": "mesh_stage_clean",
+    "metric": "mesh.stage_clean",
+    "operator": "true",
+    "threshold": null,
+    "unit": "1",
+    "category": "mesh",
+    "rationale": "Every meshing command must exit cleanly.",
+    "failure": "hard"
+   },
+   {
+    "id": "cell_count_matches_spec",
+    "metric": "mesh.cell_count_matches",
+    "operator": "true",
+    "threshold": null,
+    "unit": "1",
+    "category": "mesh",
+    "rationale": "Realized cells must equal the specified block layout.",
+    "failure": "hard"
+   },
+   {
+    "id": "expected_boundaries_present",
+    "metric": "mesh.expected_patches_present",
+    "operator": "true",
+    "threshold": null,
+    "unit": "1",
+    "category": "boundary",
+    "rationale": "Inlet, outlet, symmetry planes, and obstacle must exist.",
+    "failure": "hard"
+   },
+   {
+    "id": "no_cyclic_patches",
+    "metric": "mesh.cyclic_patch_count",
+    "operator": "eq",
+    "threshold": 0,
+    "unit": "1",
+    "category": "boundary",
+    "rationale": "A cyclic patch would change the planar problem.",
+    "failure": "hard"
+   },
+   {
+    "id": "planar_empty_patch",
+    "metric": "mesh.planar_patch_present",
+    "operator": "true",
+    "threshold": null,
+    "unit": "1",
+    "category": "boundary",
+    "rationale": "The spanwise direction must be empty.",
+    "failure": "hard"
+   },
+   {
+    "id": "fixed_recipe_unchanged",
+    "metric": "setup.reference_files_match",
+    "operator": "true",
+    "threshold": null,
+    "unit": "1",
+    "category": "setup",
+    "rationale": "Schemes, solution controls, and thermophysics equal the Foundation tutorial recipe.",
+    "failure": "hard"
+   },
+   {
+    "id": "case_unchanged_after_freeze",
+    "metric": "setup.case_hash_matches",
+    "operator": "true",
+    "threshold": null,
+    "unit": "1",
+    "category": "setup",
+    "rationale": "The executed case equals the case frozen before execution.",
+    "failure": "hard"
+   },
+   {
+    "id": "finite_all_saved",
+    "metric": "fields.finite_all_saved",
+    "operator": "true",
+    "threshold": null,
+    "unit": "1",
+    "category": "admissibility",
+    "rationale": "Saved fields must contain no NaN or Inf.",
+    "failure": "hard"
+   },
+   {
+    "id": "positive_all_saved",
+    "metric": "fields.positive_all_saved",
+    "operator": "true",
+    "threshold": null,
+    "unit": "1",
+    "category": "admissibility",
+    "rationale": "Pressure, temperature, and density must be positive in saved states.",
+    "failure": "hard"
+   },
+   {
+    "id": "positive_every_step",
+    "metric": "fields.positive_every_step",
+    "operator": "true",
+    "threshold": null,
+    "unit": "1",
+    "category": "admissibility",
+    "rationale": "Positivity must also hold at every intermediate step.",
+    "failure": "hard"
+   },
+   {
+    "id": "courant_finite_positive",
+    "metric": "solver.courant_finite_positive",
+    "operator": "true",
+    "threshold": null,
+    "unit": "1",
+    "category": "execution",
+    "rationale": "The Courant history must be finite and positive.",
+    "failure": "hard"
+   },
+   {
+    "id": "supersonic_inlet",
+    "metric": "flow.inlet_mach_min",
+    "operator": "gt",
+    "threshold": 1.0,
+    "unit": "1",
+    "category": "setup",
+    "rationale": "The registered problem is supersonic inflow.",
+    "failure": "hard"
+   },
+   {
+    "id": "initial_state_as_specified",
+    "metric": "setup.initial_state_max_rel_error",
+    "operator": "lt",
+    "threshold": 1e-09,
+    "unit": "1",
+    "category": "setup",
+    "rationale": "The imposed initial state must equal the specification to round-off.",
+    "failure": "hard"
+   },
+   {
+    "id": "impermeable_walls",
+    "metric": "conservation.impermeable_flux_max_rel",
+    "operator": "lt",
+    "threshold": 1e-10,
+    "unit": "1",
+    "category": "conservation",
+    "rationale": "Solid and symmetry boundaries pass no mass (floating-point scale).",
+    "failure": "hard"
+   },
+   {
+    "id": "transient_mass_closure",
+    "metric": "conservation.mass_closure_max_rel",
+    "operator": "lt",
+    "threshold": 1e-06,
+    "unit": "1",
+    "category": "conservation",
+    "rationale": "Storage-aware discrete balance closes to round-off for this explicit update.",
+    "failure": "hard"
+   },
+   {
+    "id": "restart_seams_continuous",
+    "metric": "conservation.restart_seams_continuous",
+    "operator": "true",
+    "threshold": null,
+    "unit": "1",
+    "category": "conservation",
+    "rationale": "Each restart must continue the stored checkpoint mass.",
+    "failure": "hard"
+   },
+   {
+    "id": "compression_front_measurable",
+    "metric": "compression.front_measurable",
+    "operator": "true",
+    "threshold": null,
+    "unit": "1",
+    "category": "admissibility",
+    "rationale": "A compression front must exist ahead of the step with a resolvable upstream state.",
+    "failure": "hard"
+   },
+   {
+    "id": "p_rises_across_front",
+    "metric": "compression.p_ratio",
+    "operator": "gt",
+    "threshold": 1.0,
+    "unit": "1",
+    "category": "admissibility",
+    "rationale": "Direction-of-change test only; no magnitude is required.",
+    "failure": "hard"
+   },
+   {
+    "id": "rho_rises_across_front",
+    "metric": "compression.rho_ratio",
+    "operator": "gt",
+    "threshold": 1.0,
+    "unit": "1",
+    "category": "admissibility",
+    "rationale": "Direction-of-change test only.",
+    "failure": "hard"
+   },
+   {
+    "id": "T_rises_across_front",
+    "metric": "compression.T_ratio",
+    "operator": "gt",
+    "threshold": 1.0,
+    "unit": "1",
+    "category": "admissibility",
+    "rationale": "Direction-of-change test only.",
+    "failure": "hard"
+   },
+   {
+    "id": "registered_horizon_reached",
+    "metric": "solver.reached_target_time",
+    "operator": "true",
+    "threshold": null,
+    "unit": "1",
+    "category": "horizon",
+    "rationale": "The family's reference horizon t = 4 must be reached.",
+    "failure": "incomplete"
+   }
+  ],
+  "authority": "reviewed_benchmark",
+  "assumptions": [
+   {
+    "parameter": "gas",
+    "value": "normalized perfect gas, gamma 7/5",
+    "unit": "1",
+    "source": "documented_default",
+    "justification": "Foundation forwardStep tutorial"
+   }
+  ],
+  "limitations": [
+   "Normalized (dimensionless) quantities; no SI units implied.",
+   "Single-mesh verification; no mesh-independence or experimental validation claim.",
+   "Compression checks are directional, not a reference-field comparison."
+  ]
+ },
+ "budget": {
+  "max_attempts": 4,
+  "wall_seconds": 3600,
+  "cpus": 1,
+  "memory_mb": 4096,
+  "max_cells": 200000,
+  "max_end_time": 4.0
+ }
+}

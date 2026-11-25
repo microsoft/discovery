@@ -1,0 +1,57 @@
+{
+ "schema_version": "1.0",
+ "name": "channel_path_check",
+ "adapter": "openfoam-foundation14",
+ "solver": "incompressibleFluid",
+ "files": {
+  "system/blockMeshDict": "FoamFile\n{\n    format ascii;\n    class dictionary;\n    object blockMeshDict;\n}\nscale 1;\nvertices\n(\n    (0 0 0)\n    (0.5 0 0)\n    (0.5 0.01 0)\n    (0 0.01 0)\n    (0 0 0.001)\n    (0.5 0 0.001)\n    (0.5 0.01 0.001)\n    (0 0.01 0.001)\n);\nblocks\n(\n    hex (0 1 2 3 4 5 6 7) (150 40 1) simpleGrading (1 1 1)\n);\nboundary\n(\n    inlet\n    {\n        type patch;\n        faces ((0 3 7 4));\n    }\n    outlet\n    {\n        type patch;\n        faces ((1 2 6 5));\n    }\n    walls\n    {\n        type wall;\n        faces ((0 1 5 4) (2 3 7 6));\n    }\n    frontAndBack\n    {\n        type empty;\n        faces ((0 1 2 3) (4 5 6 7));\n    }\n);\n",
+  "constant/physicalProperties": "FoamFile\n{\n    format ascii;\n    class dictionary;\n    object physicalProperties;\n}\nviscosityModel constant;\nnu 1.00380685e-06;\n",
+  "constant/momentumTransport": "FoamFile\n{\n    format ascii;\n    class dictionary;\n    object momentumTransport;\n}\nsimulationType laminar;\n",
+  "system/fvSchemes": "FoamFile\n{\n    format ascii;\n    class dictionary;\n    object fvSchemes;\n}\nddtSchemes\n{\n    default Euler;\n}\ngradSchemes\n{\n    default Gauss linear;\n}\ndivSchemes\n{\n    default none;\n    div(phi,U) Gauss linearUpwind grad(U);\n}\nlaplacianSchemes\n{\n    default Gauss linear corrected;\n}\ninterpolationSchemes\n{\n    default linear;\n}\nsnGradSchemes\n{\n    default corrected;\n}\n",
+  "system/fvSolution": "FoamFile\n{\n    format ascii;\n    class dictionary;\n    object fvSolution;\n}\nsolvers\n{\n    p\n    {\n        solver GAMG;\n        smoother DICGaussSeidel;\n        tolerance 1e-09;\n        relTol 0.01;\n    }\n    pFinal\n    {\n        $p;\n        relTol 0;\n    }\n    U\n    {\n        solver smoothSolver;\n        smoother symGaussSeidel;\n        tolerance 1e-09;\n        relTol 0.1;\n    }\n    UFinal\n    {\n        $U;\n        relTol 0;\n    }\n}\nPIMPLE\n{\n    nNonOrthogonalCorrectors 0;\n    nCorrectors 2;\n}\n",
+  "system/controlDict": "FoamFile\n{\n    format ascii;\n    class dictionary;\n    object controlDict;\n}\nsolver incompressibleFluid;\nstartFrom startTime;\nstartTime 0;\nstopAt endTime;\nendTime 30.0;\ndeltaT 0.0625;\nadjustTimeStep no;\nwriteControl timeStep;\nwriteInterval 80;\npurgeWrite 0;\nwriteFormat ascii;\nwritePrecision 17;\nwriteCompression off;\ntimeFormat general;\ntimePrecision 14;\nrunTimeModifiable false;\n",
+  "0/U": "FoamFile\n{\n    format ascii;\n    class volVectorField;\n    object U;\n}\ndimensions [velocity];\ninternalField uniform (0.01 0 0);\nboundaryField\n{\n    inlet\n    {\n        type fixedValue;\n        value uniform (0.01 0 0);\n    }\n    outlet\n    {\n        type zeroGradient;\n    }\n    walls\n    {\n        type noSlip;\n    }\n    frontAndBack\n    {\n        type empty;\n    }\n}\n",
+  "0/p": "FoamFile\n{\n    format ascii;\n    class volScalarField;\n    object p;\n}\ndimensions [kinematicPressure];\ninternalField uniform 0;\nboundaryField\n{\n    inlet\n    {\n        type zeroGradient;\n    }\n    outlet\n    {\n        type fixedValue;\n        value uniform 0;\n    }\n    walls\n    {\n        type zeroGradient;\n    }\n    frontAndBack\n    {\n        type empty;\n    }\n}\n"
+ },
+ "mesh": [{"executable": "blockMesh", "args": []}],
+ "diagnostics": {
+  "fields": [{"name": "p", "unit": "m^2/s^2"}, {"name": "U", "unit": "m/s", "components": 3}],
+  "patches": ["inlet", "outlet", "walls", "frontAndBack"],
+  "inlet": "inlet",
+  "outlet": "outlet",
+  "impermeable_patches": ["walls"],
+  "expected_cells": 6000,
+  "dimensions": 2,
+  "target_time": 30.0,
+  "mass_balance": false,
+  "stationarity_window": null
+ },
+ "contract": {
+  "id": "channel_path_health",
+  "title": "Health-only channel execution-path check",
+  "requested_prompt": "Exercise the execution and extraction paths on a channel with $L = 0.5\\,\\mathrm{m}$, $H = 0.01\\,\\mathrm{m}$, span $0.001\\,\\mathrm{m}$ and inlet speed $U = 0.01\\,\\mathrm{m/s}$. No physical prediction or validation is requested.",
+  "regime": "transient",
+  "authority": "proposed",
+  "objectives": [{
+   "id": "channel_path_health",
+   "claim": "numerical_health",
+   "description": "Complete the registered short channel run with intact inputs, the expected mesh, and finite fields; this establishes path health only.",
+   "check_ids": ["baseline_solver_completed", "baseline_no_fatal_error", "baseline_mesh_ok", "baseline_mesh_stage_clean", "baseline_fields_finite", "baseline_case_unchanged", "baseline_target_reached", "mesh_cell_count", "mesh_2d", "expected_boundaries"]
+  }],
+  "checks": [
+   {"id": "baseline_solver_completed", "metric": "solver.completed", "operator": "true", "unit": "1", "category": "execution", "rationale": "The solver must exit cleanly at the requested horizon."},
+   {"id": "baseline_no_fatal_error", "metric": "solver.fatal_error", "operator": "eq", "threshold": false, "unit": "1", "category": "execution", "rationale": "A crash or fatal error invalidates this execution-path check."},
+   {"id": "baseline_mesh_ok", "metric": "mesh.check_ok", "operator": "true", "unit": "1", "category": "mesh", "rationale": "The generated channel mesh must pass checkMesh."},
+   {"id": "baseline_mesh_stage_clean", "metric": "mesh.stage_clean", "operator": "true", "unit": "1", "category": "mesh", "rationale": "Every registered meshing command must complete successfully."},
+   {"id": "baseline_fields_finite", "metric": "fields.finite_all_saved", "operator": "true", "unit": "1", "category": "admissibility", "rationale": "All saved field values must be finite for extraction."},
+   {"id": "baseline_case_unchanged", "metric": "setup.case_hash_matches", "operator": "true", "unit": "1", "category": "setup", "rationale": "The executed case must match its frozen input files."},
+   {"id": "baseline_target_reached", "metric": "solver.reached_target_time", "operator": "true", "unit": "1", "category": "horizon", "failure": "incomplete", "rationale": "The declared diagnostic horizon must be reached, not inferred from an early stop."},
+   {"id": "mesh_cell_count", "metric": "mesh.cell_count_matches", "operator": "true", "unit": "1", "category": "mesh", "rationale": "The realized mesh must match the declared 6000-cell layout."},
+   {"id": "mesh_2d", "metric": "mesh.dimension_matches", "operator": "true", "unit": "1", "category": "mesh", "rationale": "The spanwise empty patches must give two solution directions."},
+   {"id": "expected_boundaries", "metric": "mesh.expected_patches_present", "operator": "true", "unit": "1", "category": "boundary", "rationale": "The channel inlet, outlet, walls and empty patches must exist."}
+  ],
+  "reference": "No external validation claimed.",
+  "limitations": ["Execution-path health only; no pressure-drop accuracy, developed-flow, stationarity or mesh-independence claim is made.", "The short horizon is selected for a path check, not a physical validation study."]
+ },
+ "budget": {"max_attempts": 1, "wall_seconds": 900, "cpus": 2, "memory_mb": 4096, "max_cells": 6000, "max_output_mb": 256, "max_end_time": 30.0, "mpi_ranks": 1}
+}
