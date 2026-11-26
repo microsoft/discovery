@@ -1,6 +1,6 @@
 {
-  "version": "1.10.64",
-  "vsixPath": "vsix/DiscoveryToolbox-v1.10.64.vsix",
-  "sha256": "bbdb6788ed2e2868ad94f0472a861317032cc1d2792dcf760d779319a04afb2d",
-  "publishedAt": "2026-10-11T17:07:00.134Z"
+  "version": "1.11.66",
+  "vsixPath": "vsix/DiscoveryToolbox-v1.11.66.vsix",
+  "sha256": "501d5d0bf3f22202c7689323285e3be20f9a6e353d6f610cb5b74ae22f47dbd1",
+  "publishedAt": "2026-11-13T18:45:33.204Z"
 }

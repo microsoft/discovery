@@ -1,0 +1,11 @@
+{
+  "contractVersion": "1.2.0",
+  "scopeDescription": "External-only execution, without AI model development or integration",
+  "tasks": [{
+    "id": "predict",
+    "description": "External-only prediction execution",
+    "bounded": true,
+    "depth": "bounded",
+    "validation": "included"
+  }]
+}

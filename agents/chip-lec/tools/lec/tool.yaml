@@ -1,0 +1,40 @@
+name: chip-lec
+description: Chip logical equivalence checking tool. Proves functional equivalence across transformations
+  (RTL to netlist, netlist to netlist) with the Yosys equivalence flow, maps key points, and diagnoses
+  non-equivalence. Node-aware (cell models from the PDK binding). Both sides are fully flattened (gold
+  inferred memories lowered to flops) before proof; if any user-module instance survives flattening the
+  run fails closed with "hierarchy not flattened" instead of reporting a verdict. Emits a Common Design
+  Envelope.
+version: 1.1.40
+category: Chip Design
+license: MIT
+infra:
+- name: worker
+  infra_type: container
+  image:
+    acr: '{name}.azurecr.io/chip-lec:1.1.40'
+  compute:
+    min_resources:
+      cpu: 1
+      ram: 2Gi
+      storage: 10Gi
+      gpu: 0
+    max_resources:
+      cpu: 2
+      ram: 4Gi
+      storage: 20Gi
+      gpu: 0
+    recommended_sku:
+    - Standard_D2as_v6
+    pool_type: static
+    pool_size: 1
+actions:
+- name: run
+  description: Prove equivalence between a reference and revised design with Yosys equiv. Emits verdict,
+    key-point mapping, and non-equivalence diagnosis to /output/common_design_envelope.json (Common Design Envelope).
+  infra_node: worker
+  command: python3 -u /app/action_launcher.py
+  input_schema:
+    type: object
+    properties: {}
+    required: []

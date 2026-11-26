@@ -1,0 +1,19 @@
+name: chgnet
+type: agent
+version: 0.1.0
+associated_tools:
+- agents/chgnet/tools/chgnet
+publisher:
+  name: Microsoft
+  contact: discovery-catalog@microsoft.com
+  support_url: https://techcommunity.microsoft.com/category/azure/discussions/microsoft-discovery-discussions
+  party: 1p
+description: Scaffold for Charge-informed crystal graph potential calculations for inorganic solids using
+  CHGNet.
+tags:
+- atomistic
+- molecular-dynamics
+- gnn
+- trained-model
+- gpu
+- python

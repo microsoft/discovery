@@ -15,7 +15,7 @@ Before opening a new discussion, please search existing posts — the answer or 
 
 ## Reporting security vulnerabilities
 
-**Do not** open a public GitHub Discussion or issue for security vulnerabilities. Instead, follow the private reporting process documented in [`SECURITY.md`](SECURITY.md).
+**Do not** open a public TechCommunity Discussion security vulnerabilities. Instead, follow the reporting process documented in [`SECURITY.md`](SECURITY.md).
 
 ## Microsoft Discovery app and Microsoft Discovery services
 

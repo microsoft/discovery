@@ -1,0 +1,229 @@
+{
+  "schema_version": "1.0",
+  "task": "community-calibration-2026-11",
+  "as_of": "2026-11-03",
+  "purpose": "Public-safe provisional references for coarse planning ranges.",
+  "classification_status": "Work classes are provisional modeling categories, not measured exclusive buckets.",
+  "calibration_revision": {
+    "task": "community-calibration-revision-2026-11",
+    "date": "2026-11-03",
+    "uncertainty": "Reference-only planning inputs; not statistical bounds or guarantees."
+  },
+  "operational_revision": {
+    "task": "community-operational-revision-2026-11",
+    "date": "2026-11-03",
+    "method": "Use rounded coarse range transfer only."
+  },
+  "observations": [
+    {
+      "id": "assessment-session",
+      "attribution_unit": "agent_session",
+      "calibration_ref": "community-calibration-2026-11",
+      "summary": "Bounded assessment-style AI task reference.",
+      "limitations": [
+        "Reference only.",
+        "Not a complete project or lifetime total."
+      ]
+    },
+    {
+      "id": "literature-screening-child",
+      "attribution_unit": "agent_session",
+      "calibration_ref": "community-calibration-2026-11",
+      "summary": "Bounded screening and synthesis style AI task reference.",
+      "limitations": [
+        "Reference only.",
+        "Not a complete project or lifetime total."
+      ]
+    },
+    {
+      "id": "local-verification-pilot",
+      "attribution_unit": "agent_session",
+      "calibration_ref": "community-calibration-2026-11",
+      "summary": "Bounded verification and analysis style AI task reference.",
+      "limitations": [
+        "Reference only.",
+        "Not a complete project or lifetime total."
+      ]
+    },
+    {
+      "id": "literature-parent-endpoint",
+      "attribution_unit": "agent_session",
+      "calibration_ref": "community-calibration-2026-11",
+      "summary": "Mixed context-only reference for non-additive scale cues.",
+      "limitations": [
+        "Context only.",
+        "Not additive with child references."
+      ]
+    },
+    {
+      "id": "simulation-supervision-gap",
+      "attribution_unit": "agent_session",
+      "calibration_ref": "community-calibration-2026-11",
+      "summary": "Supervision-style context reference with unresolved boundaries.",
+      "limitations": [
+        "No direct numeric usage is bundled.",
+        "Not a bounded development estimate."
+      ]
+    },
+    {
+      "id": "external-simulation-leg",
+      "attribution_unit": "external_compute_job",
+      "calibration_ref": "community-calibration-2026-11",
+      "summary": "External compute context reference kept separate from AI token planning.",
+      "limitations": [
+        "No token/runtime conversion.",
+        "Not an AI development range."
+      ]
+    },
+    {
+      "id": "simulation-build-probe",
+      "attribution_unit": "external_compute_job",
+      "calibration_ref": "community-calibration-2026-11",
+      "summary": "External build-probe context reference.",
+      "limitations": [
+        "No token/runtime conversion.",
+        "Not an AI development range."
+      ]
+    },
+    {
+      "id": "solver-completion-interval",
+      "attribution_unit": "external_compute_job",
+      "calibration_ref": "community-calibration-2026-11",
+      "summary": "External solver-stage context reference.",
+      "limitations": [
+        "No token/runtime conversion.",
+        "Not an AI development range."
+      ]
+    },
+    {
+      "id": "prediction-cycle",
+      "attribution_unit": "external_compute_job",
+      "calibration_ref": "community-calibration-2026-11",
+      "summary": "Integrated prediction-cycle context reference.",
+      "limitations": [
+        "No token/runtime conversion.",
+        "Not an AI development range."
+      ]
+    },
+    {
+      "id": "prediction-validation-stage",
+      "attribution_unit": "workflow_stage_task",
+      "calibration_ref": "community-calibration-2026-11",
+      "summary": "Contained validation-stage context reference.",
+      "limitations": [
+        "No token/runtime conversion.",
+        "Not additive with parent cycle."
+      ]
+    },
+    {
+      "id": "simulation-implementation",
+      "attribution_unit": "agent_session",
+      "calibration_ref": "community-calibration-2026-11",
+      "summary": "Simulation implementation phase reference.",
+      "limitations": [
+        "Reference only.",
+        "Not a complete project or lifetime total."
+      ]
+    },
+    {
+      "id": "simulation-correction",
+      "attribution_unit": "agent_session",
+      "calibration_ref": "community-calibration-2026-11",
+      "summary": "Simulation correction phase reference.",
+      "limitations": [
+        "Reference only.",
+        "Not a complete project or lifetime total."
+      ]
+    },
+    {
+      "id": "simulation-sweep",
+      "attribution_unit": "agent_session",
+      "calibration_ref": "community-calibration-2026-11",
+      "summary": "Simulation sweep phase reference.",
+      "limitations": [
+        "Reference only.",
+        "Not a complete project or lifetime total."
+      ]
+    },
+    {
+      "id": "prediction-synthetic-prototype",
+      "attribution_unit": "agent_session",
+      "calibration_ref": "community-calibration-2026-11",
+      "summary": "Synthetic prototype phase reference.",
+      "limitations": [
+        "Reference only.",
+        "Not a complete project or lifetime total."
+      ]
+    },
+    {
+      "id": "prediction-real-data-trajectory",
+      "attribution_unit": "agent_session",
+      "calibration_ref": "community-calibration-2026-11",
+      "summary": "Real-data trajectory phase reference.",
+      "limitations": [
+        "Reference only.",
+        "Not a complete project or lifetime total."
+      ]
+    },
+    {
+      "id": "prediction-real-data-distribution",
+      "attribution_unit": "agent_session",
+      "calibration_ref": "community-calibration-2026-11",
+      "summary": "Real-data distribution phase reference.",
+      "limitations": [
+        "Reference only.",
+        "Not a complete project or lifetime total."
+      ]
+    },
+    {
+      "id": "prediction-pipeline-integration",
+      "attribution_unit": "agent_session",
+      "calibration_ref": "community-calibration-2026-11",
+      "summary": "Existing-component integration phase reference.",
+      "limitations": [
+        "Reference only.",
+        "Not a complete project or lifetime total."
+      ]
+    },
+    {
+      "id": "operational-readiness",
+      "attribution_unit": "agent_session",
+      "calibration_ref": "community-operational-revision-2026-11",
+      "summary": "Operational readiness-style preparation reference.",
+      "limitations": [
+        "Reference only.",
+        "Not a successful external launch measurement."
+      ]
+    },
+    {
+      "id": "operational-payload-preparation",
+      "attribution_unit": "agent_session",
+      "calibration_ref": "community-operational-revision-2026-11",
+      "summary": "Operational payload preparation-style reference.",
+      "limitations": [
+        "Reference only.",
+        "Not a successful external launch measurement."
+      ]
+    },
+    {
+      "id": "operational-driver-compliance",
+      "attribution_unit": "agent_session",
+      "calibration_ref": "community-operational-revision-2026-11",
+      "summary": "Operational handoff/compliance-style reference.",
+      "limitations": [
+        "Reference only.",
+        "Not a successful external launch measurement."
+      ]
+    },
+    {
+      "id": "operational-exit-repair",
+      "attribution_unit": "agent_session",
+      "calibration_ref": "community-operational-revision-2026-11",
+      "summary": "Operational exit-repair-style reference.",
+      "limitations": [
+        "Reference only.",
+        "Not a successful external launch measurement."
+      ]
+    }
+  ]
+}

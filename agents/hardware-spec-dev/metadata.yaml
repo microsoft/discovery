@@ -1,0 +1,17 @@
+name: hardware-spec-dev
+type: agent
+version: 1.0.0
+associated_tools: []
+publisher:
+  name: Microsoft
+  contact: discovery-catalog@microsoft.com
+  support_url: https://techcommunity.microsoft.com/category/azure/discussions/microsoft-discovery-discussions
+  party: 1p
+description: Retrieve official product and design information and author evidence-grounded local Markdown
+  specifications.
+tags:
+- hardware-design
+- digital-design
+- engineering
+- evidence-synthesis
+- research

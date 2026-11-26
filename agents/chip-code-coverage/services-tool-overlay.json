@@ -1,0 +1,11 @@
+{
+  "version": "1.2.0",
+  "actions": [{
+    "name": "run",
+    "description": "Measure/merge/exclude structural coverage from /input/params.json. Scenarios measure_coverage, merge_coverage, exclude. Supply actual RTL plus tb_top or cocotb driver for measured counters; no-driver instrumentation is review only. Read common_design_envelope.json and coverage.dat.",
+    "infra_node": "worker",
+    "command": "python3 -B -u /app/run.py --params-file /input/params.json",
+    "input_schema": {"type": "object", "required": [], "properties": {}, "additionalProperties": false}
+  }],
+  "compute_limits": {"cpu": 2, "ram": "4Gi"}
+}

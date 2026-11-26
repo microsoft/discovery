@@ -1,0 +1,21 @@
+{
+  "original_agent_description": "Node-agnostic signoff and design-review agent. Independently judges whether the accumulated Common Design Envelopes constitute a defensible signoff: checks that every required gate has evidence, adjudicates waivers (owner + justification + rule-deck version), and never launders an un-waived violation or an unjustified waiver into a pass. Infers intent from natural language, drives an envelope-consuming review, and reports a signoff verdict directly in chat. It consumes envelopes and never re-runs a flow stage.\n",
+  "node_awareness": "node-agnostic",
+  "original_tags": [
+    "chip-design",
+    "signoff",
+    "design-review",
+    "waiver-adjudication",
+    "verification-validation",
+    "node-agnostic"
+  ],
+  "previous_build": {
+    "containerfile": "Dockerfile",
+    "engine": "docker"
+  },
+  "input_schema_keywords": {
+    "run": {
+      "additionalProperties": false
+    }
+  }
+}

@@ -1,0 +1,19 @@
+name: matgl
+type: agent
+version: 0.1.0
+associated_tools:
+- agents/matgl/tools/matgl
+publisher:
+  name: Microsoft
+  contact: discovery-catalog@microsoft.com
+  support_url: https://techcommunity.microsoft.com/category/azure/discussions/microsoft-discovery-discussions
+  party: 1p
+description: Scaffold for Graph-based materials potentials and property models, including compatible M3GNet
+  architectures, using MatGL.
+tags:
+- atomistic
+- molecular-dynamics
+- gnn
+- trained-model
+- gpu
+- python

@@ -112,6 +112,49 @@ Describe 'Get-ModelQuotaResult' {
         $result.status | Should Be 'Pass'
     }
 
+    It 'accepts the unlabeled rate-limit shape returned by Azure CLI' {
+        $model = New-ModelRecord
+        $model.model.skus[0].rateLimits = @(
+            [pscustomobject]@{ count = 10.0; renewalPeriod = 60.0; rules = $null },
+            [pscustomobject]@{ count = 1000.0; renewalPeriod = 60.0; rules = $null }
+        )
+        Set-QuotaMocks -Usage @(New-QuotaUsage -Current 3100 -Limit 4000) -Models @($model)
+
+        $result = Get-ModelQuotaResult -Config $config -Fr 'FR3.6e'
+
+        $result.status | Should Be 'Pass'
+        $result.data.available | Should Be 900
+        $result.data.quotaUnit | Should Be '1K TPM'
+    }
+
+    It 'does not treat an unrelated unlabeled one-minute rate limit as the quota conversion' {
+        $model = New-ModelRecord
+        $model.model.skus[0].rateLimits = @(
+            [pscustomobject]@{ count = 10.0; renewalPeriod = 60.0; rules = $null }
+        )
+        Set-QuotaMocks -Usage @(New-QuotaUsage) -Models @($model)
+
+        $result = Get-ModelQuotaResult -Config $config -Fr 'FR3.6e'
+
+        $result.status | Should Be 'Fail'
+        $result.detail | Should Match 'one capacity unit to 1,000 tokens per minute'
+    }
+
+    It 'prefers explicit token metadata over an unlabeled fallback' {
+        $model = New-ModelRecord -TokenRate 2000
+        $model.model.skus[0].rateLimits += [pscustomobject]@{
+            count = 1000.0
+            renewalPeriod = 60.0
+            rules = $null
+        }
+        Set-QuotaMocks -Usage @(New-QuotaUsage) -Models @($model)
+
+        $result = Get-ModelQuotaResult -Config $config -Fr 'FR3.6e'
+
+        $result.status | Should Be 'Fail'
+        $result.detail | Should Match 'one capacity unit to 1,000 tokens per minute'
+    }
+
     It 'fails at 449K free' {
         Set-QuotaMocks -Usage @(New-QuotaUsage -Current 551 -Limit 1000) -Models @(New-ModelRecord)
 

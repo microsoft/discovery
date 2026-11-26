@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-"""Build a Docker image using Azure Container Registry (ACR) Tasks.
+"""Build and push a Docker image using ACR Tasks or opt-in local Docker.
 
 Features:
   * Discovers available ACR registries via `az acr list`
@@ -7,6 +7,7 @@ Features:
     or when the --configure flag is provided
   * Positional argument for build context (directory) - defaults to current directory '.'
   * Optional --tag parameter (defaults to 'latest')
+  * Opt-in local Docker/BuildKit builds, still published to the configured ACR
   * Confirmation prompt before executing build unless --yes supplied
   * Minimal, dependency-light (uses Typer + stdlib + az CLI)
 
@@ -14,7 +15,8 @@ Exit codes:
   0 success
   2 configuration / missing input problem
   3 registry discovery failure
-  4 az cli invocation failure
+  4 CLI invocation failure, local timeout, or ACR build failure
+  Other Docker command failures preserve their exit status.
 
 NOTE: This script purposefully does not replicate every flag of `az acr build`; extend as needed.
 """
@@ -22,6 +24,7 @@ NOTE: This script purposefully does not replicate every flag of `az acr build`; 
 from __future__ import annotations
 
 import contextlib
+import os
 import shutil
 import subprocess
 import tempfile
@@ -127,6 +130,79 @@ def acr_registry_exists(name: str) -> bool:
     return proc.returncode == 0
 
 
+def resolve_image_tag(image: str, tag: str) -> tuple[str, str]:
+    """Resolve an embedded image tag, preserving an explicit non-default tag."""
+    if ":" in image:
+        image, embedded_tag = image.rsplit(":", 1)
+        if tag == DEFAULT_TAG and embedded_tag:
+            tag = embedded_tag
+    return image, tag
+
+
+def _run_docker(args: list[str], *, timeout: int, context: Path | None = None) -> int:
+    """Run Docker with streamed output and return a nonzero status on failure."""
+    try:
+        proc = subprocess.run(
+            ["docker", *args],
+            cwd=context,
+            env={**os.environ, "DOCKER_BUILDKIT": "1"},
+            timeout=timeout,
+            check=False,
+        )
+    except OSError as exc:
+        typer.secho(f"Failed invoking docker {args[0]}: {exc}", fg=typer.colors.RED, err=True)
+        return 4
+    except subprocess.TimeoutExpired:
+        typer.secho(
+            f"docker {args[0]} timed out after {timeout} seconds",
+            fg=typer.colors.RED,
+            err=True,
+        )
+        return 4
+    if proc.returncode != 0:
+        typer.secho(
+            f"docker {args[0]} failed (exit {proc.returncode})",
+            fg=typer.colors.RED,
+            err=True,
+        )
+    return proc.returncode
+
+
+def ensure_docker_cli() -> None:
+    """Require an existing Docker CLI and reachable daemon without configuring either."""
+    if not shutil.which("docker"):
+        typer.secho(
+            "Docker CLI 'docker' not found in PATH; --local requires Docker with BuildKit.",
+            fg=typer.colors.RED,
+            err=True,
+        )
+        raise typer.Exit(4)
+    rc = _run_docker(["info", "--format", "Docker daemon: {{.OSType}}"], timeout=30)
+    if rc != 0:
+        typer.secho(
+            "--local requires a running Linux Docker daemon. No ACR Task was scheduled.",
+            fg=typer.colors.RED,
+            err=True,
+        )
+        raise typer.Exit(rc)
+
+
+def _build_local_image(full_image: str, context: Path, timeout: int) -> int:
+    """Build a Linux/amd64 image locally, then push it only after a successful build."""
+    rc = _run_docker(
+        ["build", "--load", "--platform", "linux/amd64", "--tag", full_image, "."],
+        context=context,
+        timeout=timeout,
+    )
+    if rc != 0:
+        return rc
+    typer.secho(f"Pushing {full_image} to ACR...", fg=typer.colors.CYAN)
+    rc = _run_docker(["push", full_image], timeout=timeout)
+    if rc == 0:
+        typer.secho(f"Image pushed: {full_image}", fg=typer.colors.CYAN)
+    return rc
+
+
 def build_image(
     registry: str,
     image: str,
@@ -134,20 +210,26 @@ def build_image(
     context: Path,
     timeout: int = 7200,
     login_server: str = "",
+    *,
+    local: bool = False,
 ) -> int:
-    """Build and push an image to ACR using BuildKit-enabled ACR tasks.
+    """Build and push an image to ACR using BuildKit-enabled ACR tasks or local Docker.
 
     Emits a temporary multi-step task that enables BuildKit (via ``DOCKER_BUILDKIT=1``)
     and executes it with ``az acr run``.
-    Returns 0 on success else non-zero exit code (4 used for build failure).
+    Local mode instead builds with Docker and pushes the same image reference.
+    Returns 0 on success else non-zero exit code (4 used for ACR build failure).
     """
     context = context.resolve()
     effective_server = login_server or f"{registry}.azurecr.io"
     full_image = f"{effective_server}/{image}:{tag}"
+    backend = "local Docker/BuildKit" if local else "BuildKit"
     typer.secho(
-        f"Building {full_image} (context={context}) [BuildKit]",
+        f"Building {full_image} (context={context}) [{backend}]",
         fg=typer.colors.GREEN,
     )
+    if local:
+        return _build_local_image(full_image, context, timeout)
 
     task_filename = f".acr-task-{uuid.uuid4().hex}.yaml"
     task_path = context / task_filename
@@ -204,6 +286,8 @@ def _layer_vscode_and_build(
     target_tag: str,
     timeout: int = 7200,
     login_server: str = "",
+    *,
+    local: bool = False,
 ) -> int:
     """Layer VS Code CLI onto a base image and push to ACR."""
     with tempfile.TemporaryDirectory(prefix="vscode-layer-") as td:
@@ -214,7 +298,9 @@ def _layer_vscode_and_build(
             + (" with CMD wrapper" if wrapper else ""),
             fg=typer.colors.GREEN,
         )
-        return build_image(acr_name, image, target_tag, temp_ctx, timeout, login_server)
+        return build_image(
+            acr_name, image, target_tag, temp_ctx, timeout, login_server, local=local
+        )
 
 
 def execute_build(
@@ -225,7 +311,9 @@ def execute_build(
     vscode: bool = False,
     timeout: int = 7200,
     login_server: str = "",
-):
+    *,
+    local: bool = False,
+) -> int:
     """Build & push an image to a pre-configured ACR.
 
     Expects `ACR_NAME` to be present in the provided env file (takes precedence)
@@ -238,14 +326,18 @@ def execute_build(
         tag: Image tag to use.
         vscode: When True, perform a second build layering the VS Code CLI binary
             into the final image at /usr/local/bin/code (reusing same tag).
+        timeout: Maximum seconds per ACR task or local Docker build/push.
         login_server: ACR login server (e.g. ``myacr.azurecr.io``).  When empty,
             falls back to ``{acr_name}.azurecr.io``.
+        local: Build with local Docker instead of ACR Tasks; still push to ACR
+            using the caller's existing Docker authentication.
 
     Exit codes:
         0 success (or user abort)
         2 configuration error (missing ACR_NAME)
         3 registry not found/inaccessible
-        4 az cli invocation failure
+        4 CLI invocation failure or local timeout; other Docker failures retain
+            their exit status.
     """
     ensure_az_cli()
 
@@ -258,29 +350,35 @@ def execute_build(
         )
         raise typer.Exit(3)
 
-    # Strip tag from image name if the user included one (e.g. "myimage:latest")
-    if ":" in image:
-        image, embedded_tag = image.rsplit(":", 1)
-        if tag == "latest" and embedded_tag:
-            tag = embedded_tag
+    image, tag = resolve_image_tag(image, tag)
 
     effective_server = login_server or f"{acr_name}.azurecr.io"
     full_image = f"{effective_server}/{image}:{tag}"
 
     # Display commands that will be executed
+    build_command = (
+        "docker build --load --platform linux/amd64 --tag <image>"
+        if local
+        else f"az acr run --registry {acr_name} --file <task.yaml>"
+    )
     typer.echo("\nThe following commands will be executed:\n")
+    if local:
+        typer.echo(
+            "Each local BuildKit build is followed by docker push <image> to ACR.\n"
+            "Docker must already be logged in to the configured registry.\n"
+        )
     if vscode:
         temp_tag = tag + "-temp"
         temp_image = f"{effective_server}/{image}:{temp_tag}"
         typer.secho("1. Base image build:", fg=typer.colors.CYAN, bold=True)
-        typer.echo(f"   az acr run --registry {acr_name} --file <task.yaml> {context}")
+        typer.echo(f"   {build_command} {context}")
         typer.echo(f"   → {temp_image}")
         typer.secho("\n2. Layer VS Code CLI:", fg=typer.colors.CYAN, bold=True)
-        typer.echo(f"   az acr run --registry {acr_name} --file <task.yaml> <temp_context>")
+        typer.echo(f"   {build_command} <temp_context>")
         typer.echo(f"   → {full_image}")
     else:
         typer.secho("1. Image build:", fg=typer.colors.CYAN, bold=True)
-        typer.echo(f"   az acr run --registry {acr_name} --file <task.yaml> {context}")
+        typer.echo(f"   {build_command} {context}")
         typer.echo(f"   → {full_image}")
 
     # Prompt for confirmation
@@ -289,13 +387,16 @@ def execute_build(
         typer.secho("Build cancelled.", fg=typer.colors.YELLOW)
         raise typer.Exit(0)
 
+    if local:
+        ensure_docker_cli()
+
     if vscode:
         final_tag = tag
         tag = tag + "-temp"
     else:
         final_tag = tag
     # Phase 1: base image build
-    rc = build_image(acr_name, image, tag, context, timeout, login_server)
+    rc = build_image(acr_name, image, tag, context, timeout, login_server, local=local)
     if rc != 0:
         raise typer.Exit(rc)
 
@@ -303,7 +404,7 @@ def execute_build(
         # Phase 2: create temporary context layering VS Code CLI
         base_full_image = f"{effective_server}/{image}:{tag}"
         rc2 = _layer_vscode_and_build(
-            acr_name, image, base_full_image, final_tag, timeout, login_server
+            acr_name, image, base_full_image, final_tag, timeout, login_server, local=local
         )
         if rc2 != 0:
             raise typer.Exit(rc2)
@@ -319,6 +420,8 @@ def execute_rebuild(
     target_tag: str | None = None,
     timeout: int = 7200,
     login_server: str = "",
+    *,
+    local: bool = False,
 ) -> int:
     """Layer VS Code CLI onto an existing ACR image.
 
@@ -328,7 +431,9 @@ def execute_rebuild(
         acr_name: Name of the ACR registry.
         target_image: Optional target repository name. If None, uses `image`.
         target_tag: Optional new tag for the output image. If None, overwrites `tag`.
+        timeout: Maximum seconds per ACR task or local Docker build/push.
         login_server: ACR login server.  Falls back to ``{acr_name}.azurecr.io``.
+        local: Build the VS Code layer locally, then push to ACR.
     """
     ensure_az_cli()
 
@@ -340,11 +445,7 @@ def execute_rebuild(
         )
         raise typer.Exit(3)
 
-    # Strip tag from image name if the user included one (e.g. "myimage:latest")
-    if ":" in image:
-        image, embedded_tag = image.rsplit(":", 1)
-        if tag == "latest" and embedded_tag:
-            tag = embedded_tag
+    image, tag = resolve_image_tag(image, tag)
 
     effective_server = login_server or f"{acr_name}.azurecr.io"
     base_full_image = f"{effective_server}/{image}:{tag}"
@@ -355,9 +456,17 @@ def execute_rebuild(
     typer.secho("Layering VS Code CLI:", fg=typer.colors.CYAN, bold=True)
     typer.echo(f"   Base:   {base_full_image}")
     typer.echo(f"   Target: {final_full_image}")
+    if local:
+        typer.echo("   Build locally with Docker/BuildKit, then docker push to ACR.")
+        typer.echo("   Docker must already be logged in to the configured registry.")
 
     if not typer.confirm("Continue with rebuild?", default=True):
         typer.secho("Rebuild cancelled.", fg=typer.colors.YELLOW)
         raise typer.Exit(0)
 
-    return _layer_vscode_and_build(acr_name, final_image, base_full_image, final_tag, timeout, login_server)
+    if local:
+        ensure_docker_cli()
+
+    return _layer_vscode_and_build(
+        acr_name, final_image, base_full_image, final_tag, timeout, login_server, local=local
+    )

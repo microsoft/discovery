@@ -1,0 +1,18 @@
+{
+  "contractVersion": "1.2.0",
+  "scopeDescription": "One focused screening deliverable and a separate external-only solver execution; explicitly disjoint",
+  "nonOverlap": true,
+  "tasks": [{
+    "id": "screen",
+    "description": "Screen literature for a focused evidence table",
+    "bounded": true,
+    "depth": "bounded",
+    "validation": "included"
+  }, {
+    "id": "solver",
+    "description": "External-only simulation execution",
+    "bounded": true,
+    "depth": "bounded",
+    "validation": "included"
+  }]
+}

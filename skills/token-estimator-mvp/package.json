@@ -1,0 +1,10 @@
+{
+  "name": "token-estimator-mvp",
+  "version": "1.2.0",
+  "private": true,
+  "description": "Portable dependency-free coarse token planning estimator",
+  "scripts": {
+    "estimate": "node scripts/estimate.js",
+    "test": "node --test tests/model.test.js tests/phases.test.js tests/operations.test.js tests/behavior.test.js tests/packaging.test.js tests/skill-guidance.test.js"
+  }
+}

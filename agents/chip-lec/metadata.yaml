@@ -1,0 +1,15 @@
+name: chip-lec
+type: agent
+version: 1.1.0
+associated_tools:
+- agents/chip-lec/tools/lec
+publisher:
+  name: Microsoft
+  contact: discovery-catalog@microsoft.com
+  support_url: https://techcommunity.microsoft.com/category/azure/discussions/microsoft-discovery-discussions
+  party: 1p
+description: |
+  Node-aware logical equivalence checking (LEC) agent that proves functional equivalence across transformations (RTL to netlist, netlist to netlist after DFT/CTS/ECO) as a first-class signoff gate. Consumes the PDK Binding (cell functional models), drives Yosys equivalence / eqy, and reports an equivalence verdict. Validated on SkyWater sky130.
+tags:
+- eda
+- sky130

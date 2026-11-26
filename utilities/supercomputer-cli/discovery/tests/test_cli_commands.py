@@ -3,11 +3,21 @@
 from __future__ import annotations
 
 import json
+import subprocess
+from pathlib import Path
 from unittest.mock import MagicMock, patch
 
+import pytest
 from typer.testing import CliRunner
 
-from discovery.poll import az_extensions, cli_configure, cli_doctor, cli_helpers, cli_submit
+from discovery.poll import (
+    az_extensions,
+    cli_build,
+    cli_configure,
+    cli_doctor,
+    cli_helpers,
+    cli_submit,
+)
 from discovery.poll.cli import app
 
 
@@ -339,6 +349,116 @@ class TestVSCodeCommand:
 
 
 # =============================================================================
+# Pool Size Override Tests
+# =============================================================================
+
+
+class TestPoolSizeOverrides:
+    """Per-job replica counts are independent of MPI ranks and batch size."""
+
+    @pytest.fixture
+    def submission(self, monkeypatch: pytest.MonkeyPatch) -> tuple[MagicMock, MagicMock]:
+        """Stub submission dependencies without Azure or device-flow calls."""
+        cfg = MagicMock(
+            project_name="test-project",
+            workspace_url="https://example.com",
+            tool_id="tool-123",
+            nodepool_id="nodepool-123",
+            nodepools=[],
+            datacontainer_id="dc-123",
+            storagecontainer_id="sc-123",
+            api_version="2026-06-01",
+        )
+        submit = MagicMock(return_value=MagicMock(id="op-size"))
+        monkeypatch.setattr(cli_submit, "load_project_config", lambda *_a: cfg)
+        monkeypatch.setattr(cli_submit, "load_tool_config", lambda *_a: None)
+        monkeypatch.setattr(cli_submit, "ensure_datacontainer", lambda *_a: None)
+        monkeypatch.setattr(cli_submit, "emit_env", lambda *_a: None)
+        monkeypatch.setattr(cli_submit, "prepare_command", lambda command, *_a, **_k: command)
+        monkeypatch.setattr(cli_submit, "start_tool_run", submit)
+        monkeypatch.setattr(cli_submit, "_record_job_submission", lambda *_a, **_k: None)
+        monkeypatch.setattr(cli_submit, "_poll_for_device_flow_url", lambda *_a, **_k: None)
+        return cfg, submit
+
+    @pytest.mark.parametrize(
+        ("command_args", "job_count"),
+        [
+            (["start", "--no-wait", "mpirun -np 6 /app/program"], 1),
+            (["batch", "3", "mpirun -np 6 /app/program"], 3),
+            (["vscode"], 1),
+        ],
+    )
+    @pytest.mark.parametrize(
+        ("api_version", "size_field"),
+        [
+            ("2025-07-01-preview", "poolSize"),
+            ("2025-12-01-preview", "replicaCount"),
+            ("2026-02-01-preview", "replicaCount"),
+            ("2026-06-01", "replicaCount"),
+        ],
+    )
+    def test_pool_size_reaches_each_job(
+        self,
+        submission: tuple[MagicMock, MagicMock],
+        command_args: list[str],
+        job_count: int,
+        api_version: str,
+        size_field: str,
+    ) -> None:
+        """Every submission command honors the selected API and per-job size."""
+        _, submit = submission
+        result = runner.invoke(
+            app,
+            [
+                "job", *command_args, "--username", "u", "--pool-size", "2",
+                "--api-version", api_version,
+            ],
+        )
+
+        assert result.exit_code == 0, result.output
+        assert submit.call_count == job_count
+        for call in submit.call_args_list:
+            payload = json.loads(call.args[1].model_dump_json())
+            assert payload["infraOverrides"] == {size_field: 2}
+            assert call.kwargs["api_version"] == api_version
+            if command_args[0] != "vscode":
+                assert payload["command"] == "mpirun -np 6 /app/program"
+
+    @pytest.mark.parametrize(
+        "command_args",
+        [["start", "--no-wait", "echo test"], ["batch", "2", "echo test"], ["vscode"]],
+    )
+    def test_omitted_pool_size_preserves_tool_default(
+        self, submission: tuple[MagicMock, MagicMock], command_args: list[str]
+    ) -> None:
+        """Existing invocations do not emit a replica-count override."""
+        _, submit = submission
+        result = runner.invoke(app, ["job", *command_args, "--username", "u"])
+
+        assert result.exit_code == 0, result.output
+        assert submit.called
+        for call in submit.call_args_list:
+            payload = json.loads(call.args[1].model_dump_json())
+            assert "infraOverrides" not in payload
+
+    @pytest.mark.parametrize(
+        "command_args",
+        [["start", "--no-wait", "echo test"], ["batch", "2", "echo test"], ["vscode"]],
+    )
+    @pytest.mark.parametrize("pool_size", ["0", "-1", "1.5"])
+    def test_invalid_pool_size_fails_before_submission(
+        self, command_args: list[str], pool_size: str
+    ) -> None:
+        """All submission commands reject nonpositive and noninteger sizes."""
+        with patch.object(cli_submit, "load_project_config") as load_config:
+            result = runner.invoke(app, ["job", *command_args, "--pool-size", pool_size])
+
+        assert result.exit_code == 2, result.output
+        assert "--pool-size" in result.output
+        load_config.assert_not_called()
+
+
+# =============================================================================
 # Cancel Command Tests
 # =============================================================================
 
@@ -424,6 +544,284 @@ class TestBuildCommand:
         assert result.exit_code == 0
         assert "image" in result.output or "rebuild" in result.output
 
+    def test_build_image_help(self) -> None:
+        """Local mode is discoverable on the existing image command."""
+        result = runner.invoke(app, ["build", "image", "--help"])
+        assert result.exit_code == 0
+        assert "--local" in result.output
+
+    @pytest.mark.parametrize("local", [False, True])
+    @pytest.mark.parametrize(
+        ("options", "mpi", "pool_size", "infiniband"),
+        [
+            ([], False, 1, False),
+            (["--mpi"], True, 2, False),
+            (["--pool-size", "1"], False, 1, False),
+            (["--pool-size", "3"], False, 3, False),
+            (["--mpi", "--pool-size", "3"], True, 3, False),
+            (["--mpi", "--infiniband"], True, 2, True),
+            (["--mpi", "--pool-size", "2", "--infiniband"], True, 2, True),
+            (["--infiniband"], False, 1, True),
+        ],
+    )
+    def test_build_deploys_requested_tool_mode(
+        self,
+        tmp_path: Path,
+        options: list[str],
+        mpi: bool,
+        pool_size: int,
+        infiniband: bool,
+        local: bool,
+    ) -> None:
+        """Build flags reach the existing tool-definition deployment flow."""
+        cfg = MagicMock(
+            subscription="sub", resource_group="rg", acr_name="acr", acr_url="acr.azurecr.io"
+        )
+        with (
+            patch.object(cli_build, "_load_acr_config", return_value=cfg),
+            patch.object(cli_build.acr, "execute_build", return_value=0) as build_image,
+            patch.object(cli_build, "get_location_from_supercomputer", return_value="eastus"),
+            patch.object(cli_build, "deploy_tool_definition") as deploy,
+        ):
+            result = runner.invoke(
+                app,
+                [
+                    "build",
+                    "image",
+                    str(tmp_path),
+                    "--image",
+                    "demo",
+                    "--tag",
+                    "latest",
+                    *options,
+                    *(["--local"] if local else []),
+                ],
+                input="y\ndemo\nDemo tool\n",
+            )
+
+        assert result.exit_code == 0, result.output
+        assert build_image.call_args.kwargs["local"] is local
+        deploy.assert_called_once()
+        inputs = deploy.call_args.kwargs["inputs"]
+        assert inputs.image == "acr.azurecr.io/demo:latest"
+        assert inputs.mpi is mpi
+        assert inputs.pool_size == pool_size
+        assert inputs.infiniband is infiniband
+
+    @pytest.mark.parametrize(("tag", "expected_tag"), [("latest", "v2"), ("v3", "v3")])
+    def test_local_build_deploys_the_built_reference(
+        self, tmp_path: Path, tag: str, expected_tag: str
+    ) -> None:
+        """Embedded tags and custom ACR hostnames stay consistent with tool deployment."""
+        cfg = MagicMock(
+            subscription="sub", resource_group="rg", acr_name="acr", acr_url="acr.azurecr.cn"
+        )
+        with (
+            patch.object(cli_build, "_load_acr_config", return_value=cfg),
+            patch.object(cli_build.acr, "execute_build", return_value=0) as build_image,
+            patch.object(cli_build, "get_location_from_supercomputer", return_value="eastus"),
+            patch.object(cli_build, "deploy_tool_definition") as deploy,
+        ):
+            result = runner.invoke(
+                app,
+                [
+                    "build",
+                    "image",
+                    str(tmp_path),
+                    "--local",
+                    "--image",
+                    "demo:v2",
+                    "--tag",
+                    tag,
+                ],
+                input="y\ndemo\nDemo tool\n",
+            )
+        assert result.exit_code == 0, result.output
+        assert build_image.call_args.kwargs["image"] == "demo"
+        assert build_image.call_args.kwargs["tag"] == expected_tag
+        assert build_image.call_args.kwargs["login_server"] == "acr.azurecr.cn"
+        assert deploy.call_args.kwargs["inputs"].image == f"acr.azurecr.cn/demo:{expected_tag}"
+
+    @pytest.mark.parametrize(
+        ("failure", "exit_code", "steps"),
+        [
+            ("missing", 4, []),
+            ("daemon", 17, ["info"]),
+            ("build", 17, ["info", "build"]),
+            ("push", 17, ["info", "build", "push"]),
+            ("timeout", 4, ["info", "build"]),
+            ("launch", 4, ["info", "build"]),
+            ("cancel", 130, ["info", "build"]),
+            ("layer-build", 17, ["info", "build", "push", "build"]),
+            ("layer-push", 17, ["info", "build", "push", "build", "push"]),
+            ("layer-cancel", 130, ["info", "build", "push", "build"]),
+        ],
+    )
+    def test_local_failure_stops_publishing_and_deployment(
+        self, tmp_path: Path, failure: str, exit_code: int, steps: list[str]
+    ) -> None:
+        """Engine/build/push failures and interrupts never fall back or deploy a tool."""
+        calls: list[str] = []
+
+        def fake_run(cmd: list[str], **_kwargs) -> subprocess.CompletedProcess[str]:
+            operation = cmd[1]
+            calls.append(operation)
+            assert cmd[0] == "docker"
+            is_layer = calls.count("build") == 2
+            if (
+                failure == operation
+                or (failure == "daemon" and operation == "info")
+                or (failure == f"layer-{operation}" and is_layer)
+            ):
+                return subprocess.CompletedProcess(cmd, 17)
+            if operation == "build":
+                if failure == "timeout":
+                    raise subprocess.TimeoutExpired(cmd, 90)
+                if failure == "launch":
+                    msg = "Docker executable is unavailable"
+                    raise OSError(msg)
+                if failure == "cancel" or (failure == "layer-cancel" and is_layer):
+                    raise KeyboardInterrupt
+            return subprocess.CompletedProcess(cmd, 0)
+
+        cfg = MagicMock(acr_name="acr", acr_url="acr.azurecr.io")
+        with (
+            patch("discovery.poll.cli._arm_auto_update"),
+            patch.object(cli_build, "get_config_file_path", return_value=tmp_path / "config.json"),
+            patch.object(cli_build, "_load_acr_config", return_value=cfg),
+            patch.object(cli_build.acr, "ensure_az_cli"),
+            patch.object(cli_build.acr, "acr_registry_exists", return_value=True),
+            patch.object(
+                cli_build.acr.shutil,
+                "which",
+                return_value=None if failure == "missing" else "docker",
+            ),
+            patch.object(cli_build.acr.subprocess, "run", side_effect=fake_run),
+            patch.object(cli_build.acr, "prepare_vscode_layer") as prepare,
+            patch.object(cli_build, "deploy_tool_definition") as deploy,
+        ):
+            result = runner.invoke(
+                app,
+                [
+                    "build",
+                    "image",
+                    str(tmp_path),
+                    "--local",
+                    "--vscode",
+                    "--image",
+                    "demo",
+                    "--tag",
+                    "v2",
+                ],
+                input="y\ny\ndemo\nDemo tool\n",
+                catch_exceptions=False,
+            )
+
+        assert result.exit_code == exit_code, result.output
+        assert calls == steps
+        assert "Deploy tool definition now?" not in result.output
+        assert "Build completed successfully." not in result.output
+        deploy.assert_not_called()
+        if failure.startswith("layer-"):
+            prepare.assert_called_once()
+            assert not prepare.call_args.args[1].exists()
+        else:
+            prepare.assert_not_called()
+        assert not list(tmp_path.glob(".acr-task-*.yaml"))
+
+    @pytest.mark.parametrize("pool_size", ["0", "-1", "1.5"])
+    def test_build_rejects_invalid_pool_size(self, tmp_path: Path, pool_size: str) -> None:
+        """Invalid sizes are rejected before config, image build, or deployment."""
+        with patch.object(cli_build, "_load_acr_config") as load_config:
+            result = runner.invoke(
+                app,
+                [
+                    "build", "image", str(tmp_path), "--image", "demo", "--tag", "latest",
+                    "--pool-size", pool_size,
+                ],
+            )
+
+        assert result.exit_code == 2, result.output
+        assert "--pool-size" in result.output
+        load_config.assert_not_called()
+
+    @pytest.mark.parametrize("pool_size", ["0", "-1", "1", "1.5"])
+    def test_build_rejects_invalid_mpi_pool_size(self, tmp_path: Path, pool_size: str) -> None:
+        """MPI size errors must fail before config, ACR build, or deployment."""
+        with (
+            patch.object(cli_build, "_load_acr_config") as load_config,
+            patch.object(cli_build.acr, "execute_build") as build_image,
+            patch.object(cli_build, "deploy_tool_definition") as deploy,
+        ):
+            result = runner.invoke(
+                app,
+                [
+                    "build", "image", str(tmp_path), "--image", "demo", "--tag", "latest",
+                    "--mpi", "--pool-size", pool_size,
+                ],
+            )
+
+        assert result.exit_code == 2, result.output
+        assert "--pool-size" in result.output
+        load_config.assert_not_called()
+        build_image.assert_not_called()
+        deploy.assert_not_called()
+
+    @pytest.mark.parametrize(
+        ("options", "expected_api"),
+        [
+            ([], "2026-06-01"),
+            (["--tool-api-version", "2025-07-01-preview"], "2025-07-01-preview"),
+            (["--tool-api-version", "2025-12-01-preview"], "2025-12-01-preview"),
+            (["--tool-api-version", "2026-02-01-preview"], "2026-02-01-preview"),
+            (["--tool-api-version", "2026-06-01"], "2026-06-01"),
+        ],
+    )
+    def test_tool_api_selection_is_independent_of_job_api(
+        self, tmp_path: Path, options: list[str], expected_api: str
+    ) -> None:
+        """Build uses the selected ARM protocol without changing the saved job API."""
+        cfg = MagicMock(
+            subscription="sub", resource_group="rg", acr_name="acr",
+            acr_url="acr.azurecr.io", api_version="2025-07-01-preview",
+        )
+        with (
+            patch.object(cli_build, "_load_acr_config", return_value=cfg),
+            patch.object(cli_build.acr, "execute_build", return_value=0),
+            patch.object(cli_build, "get_location_from_supercomputer", return_value="eastus"),
+            patch.object(cli_build, "deploy_tool_definition") as deploy,
+        ):
+            result = runner.invoke(
+                app,
+                [
+                    "build", "image", str(tmp_path), "--image", "demo", "--tag", "latest",
+                    "--mpi", "--pool-size", "3", *options,
+                ],
+                input="y\ndemo\nMPI tool\n",
+            )
+
+        assert result.exit_code == 0, result.output
+        assert deploy.call_args.kwargs["inputs"].api_version == expected_api
+        assert deploy.call_args.kwargs["inputs"].pool_size == 3
+        assert cfg.api_version == "2025-07-01-preview"
+
+    def test_unknown_tool_api_fails_before_build(self, tmp_path: Path) -> None:
+        """Unknown ARM API choices fail before any configuration or cloud work."""
+        with (
+            patch.object(cli_build, "_load_acr_config") as load_config,
+            patch.object(cli_build.acr, "execute_build") as build_image,
+        ):
+            result = runner.invoke(
+                app,
+                [
+                    "build", "image", str(tmp_path), "--image", "demo", "--tag", "latest",
+                    "--tool-api-version", "unsupported",
+                ],
+            )
+        assert result.exit_code == 2, result.output
+        load_config.assert_not_called()
+        build_image.assert_not_called()
+
 
 # =============================================================================
 # Rebuild Command Tests
@@ -438,6 +836,29 @@ class TestRebuildCommand:
         result = runner.invoke(app, ["build", "rebuild", "--help"])
         assert result.exit_code == 0
         assert "--image" in result.output
+        assert "--local" in result.output
+
+    @pytest.mark.parametrize("local", [False, True])
+    def test_rebuild_selects_backend(self, local: bool) -> None:
+        """Both default and local rebuilds use the existing registry and target options."""
+        cfg = MagicMock(acr_name="acr", acr_url="acr.azurecr.cn")
+        with (
+            patch.object(cli_build, "_load_acr_config", return_value=cfg),
+            patch.object(cli_build.acr, "execute_rebuild", return_value=0) as rebuild,
+        ):
+            result = runner.invoke(
+                app,
+                [
+                    "build", "rebuild", "--image", "demo", "--tag", "v2",
+                    "--target-image", "demo-code", "--target-tag", "v3",
+                    *(["--local"] if local else []),
+                ],
+            )
+        assert result.exit_code == 0, result.output
+        assert rebuild.call_args.kwargs["local"] is local
+        assert rebuild.call_args.kwargs["target_image"] == "demo-code"
+        assert rebuild.call_args.kwargs["target_tag"] == "v3"
+        assert rebuild.call_args.kwargs["login_server"] == "acr.azurecr.cn"
 
 
 # =============================================================================

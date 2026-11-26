@@ -1,0 +1,23 @@
+{
+  "node_awareness": "node-agnostic",
+  "original_tags": [
+    "chip-design",
+    "verification",
+    "assertions",
+    "sva",
+    "formal",
+    "node-agnostic"
+  ],
+  "previous_build": {
+    "containerfile": "Containerfile",
+    "engine": "docker"
+  },
+  "action_examples": {
+    "run": [
+      {
+        "name": "author_assertions",
+        "params_json": "{\"scenario\":\"author_assertions\",\"dut_top\":\"fifo\",\"intent\":[{\"name\":\"no_overflow\",\"kind\":\"implication\",\"clk\":\"clk\",\"signals\":{\"antecedent\":\"full\",\"consequent\":\"!wr_en\"},\"vplan_item\":\"FIFO.overflow\"},{\"name\":\"gnt_onehot\",\"kind\":\"onehot\",\"clk\":\"clk\",\"signals\":{\"vector\":\"grant\"},\"vplan_item\":\"ARB.onehot\"}]}"
+      }
+    ]
+  }
+}

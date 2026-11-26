@@ -49,15 +49,17 @@
       ]
     },
     "controlPlaneRegion": {
-      "type": "string"
+      "type": "string",
+      "description": "Region for Discovery control-plane resources. Can differ from workloadRegion."
     },
     "workloadRegion": {
-      "type": "string"
+      "type": "string",
+      "description": "Region for the VNet/subnets and all managed-resource-group resources."
     },
     "systemSku": {
       "type": "string",
       "minLength": 1,
-      "description": "Optional Stage 4 system-pool VM SKU override. Defaults to Standard_D4s_v6."
+      "description": "Supercomputer system-pool VM SKU selected in the planning form or JSON config. Defaults to Standard_D4s_v6. Stages 1 and 3 check quota for 3 nodes of this SKU."
     },
     "nodePoolVmSize": {
       "type": "string",

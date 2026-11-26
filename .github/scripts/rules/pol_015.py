@@ -16,7 +16,7 @@ from pathlib import Path
 
 from rules.base import Finding, Rule, RuleContext, Scope, Severity
 
-GUARDED_PREFIXES = ("agents/", "starter-kits/")
+GUARDED_PREFIXES = ("agents/", "starter-kits/", "skills/")
 
 
 def _agent_party(ctx: RuleContext, rel: str) -> str | None:

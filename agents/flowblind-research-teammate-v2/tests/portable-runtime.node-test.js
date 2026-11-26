@@ -1682,6 +1682,19 @@ test('V2-PKG-001 V2-PKG-005 V2-PKG-006 V2-PKG-007 validate package mirrors and c
       ),
       'utf8',
     )
+    assert.equal(
+      dockerfile,
+      await readFile(
+        resolve(
+          packageRoot,
+          'runtime/generated/data/package',
+          `${folder}.Dockerfile`,
+        ),
+        'utf8',
+      ),
+      `${folder} Dockerfile must match its attested package copy`,
+    )
+    assert.match(dockerfile, /^RUN node --version$/mu)
     assert.match(dockerfile, /USER 10001:10001/u)
     assert.match(dockerfile, /--require-hashes/u)
     assert.match(

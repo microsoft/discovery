@@ -1,16 +1,8 @@
 name: Update Registry
 
 on:
-  push:
-    branches: [main]
-    paths:
-      - "agents/**"
-      - "starter-kits/**"
-      - ".github/policy/base-images.yaml"
-      - ".github/scripts/compute_tags.py"
-      - ".github/scripts/dockerfile_parser.py"
-      - ".github/scripts/list_base_images.py"
-      - ".github/scripts/rules/base.py"
+  schedule:
+    - cron: "23 9 * * *"
 
   workflow_dispatch:
     inputs:
@@ -30,6 +22,7 @@ concurrency:
 jobs:
   update-registry:
     name: Rebuild .auto-registry/*-registry.json
+    if: github.repository == 'microsoft/discovery' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     timeout-minutes: 20
 
@@ -37,12 +30,12 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          # Full history needed so the commit author is resolved correctly
+          ref: main
           fetch-depth: 1
           persist-credentials: false
 
       - name: Set up Python
-        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
         with:
           python-version: "3.11"
 
@@ -138,25 +131,13 @@ jobs:
       - name: Rebuild .auto-registry/agent-tags.json
         run: python .github/scripts/compute_tags.py --repo-root .
 
-      - name: Check for changes
+      - name: Check meaningful changes and existing registry PRs
         id: diff
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          # `git diff` ignores untracked files, so we must `git add` first
-          # otherwise a brand-new .auto-registry/*.json (i.e. the very first
-          # time this workflow runs, or after the files are deleted) would
-          # be classified as "no change" and never committed.
-          git add .auto-registry/agent-registry.json
-          if [ -f .auto-registry/starter-kit-registry.json ]; then
-            git add .auto-registry/starter-kit-registry.json
-          fi
-          if [ -f .auto-registry/agent-tags.json ]; then
-            git add .auto-registry/agent-tags.json
-          fi
-          if git diff --cached --quiet -- .auto-registry/; then
-            echo "changed=false" >> "$GITHUB_OUTPUT"
-          else
-            echo "changed=true" >> "$GITHUB_OUTPUT"
-          fi
+          python .github/scripts/registry_refresh.py \
+            --repo-root . --repository "$GITHUB_REPOSITORY"
 
       # Detect whether the App secrets are configured. GitHub Actions does
       # NOT allow `secrets.X` to be referenced from a step-level `if:`
@@ -165,7 +146,7 @@ jobs:
       # a step output, then gate subsequent steps on that.
       - name: Check for App secrets
         id: app_check
-        if: steps.diff.outputs.changed == 'true'
+        if: steps.diff.outputs.publish == 'true'
         env:
           REGISTRY_APP_ID: ${{ secrets.REGISTRY_APP_ID }}
           REGISTRY_APP_PRIVATE_KEY: ${{ secrets.REGISTRY_APP_PRIVATE_KEY }}
@@ -180,22 +161,26 @@ jobs:
       # because the default GITHUB_TOKEN is read-only. The App
       # (discovery-registry-bot) must have Contents: Write and Pull requests:
       # Write on microsoft/discovery.
+      # This App still creates PRs; it does not approve or enroll auto-merge.
       # If REGISTRY_APP_ID is unset (App not yet wired up), this step is
       # skipped and the workflow fails without pushing any branch.
       - name: Generate App installation token
         if: steps.app_check.outputs.configured == 'true'
         id: app_token
-        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
+        uses: actions/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510 # v3.3.0
         with:
           app-id: ${{ secrets.REGISTRY_APP_ID }}
           private-key: ${{ secrets.REGISTRY_APP_PRIVATE_KEY }}
+          permission-contents: write
+          permission-pull-requests: write
 
       - name: Commit updated registry to a PR
-        if: steps.diff.outputs.changed == 'true' && steps.app_check.outputs.configured == 'true'
+        if: steps.diff.outputs.publish == 'true' && steps.app_check.outputs.configured == 'true'
         env:
           GH_TOKEN: ${{ steps.app_token.outputs.token }}
         run: |
           set -euo pipefail
+          git add -- .auto-registry/
           git config user.name  "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
@@ -205,7 +190,7 @@ jobs:
           git checkout -b "$BRANCH"
 
           # Compose a commit message that reflects what actually changed.
-          # Both files are already staged in the previous step. `|| true`
+          # Generated registry files are staged above. `|| true`
           # inside a subshell so grep exit 1 (no matches) doesn't abort
           # the script under `set -euo pipefail`.
           AGENT_DIFF=$(git diff --cached -- .auto-registry/agent-registry.json || true)
@@ -236,10 +221,10 @@ jobs:
             --base main \
             --head "$BRANCH" \
             --title "$COMMIT_MSG" \
-            --body "Automated registry refresh triggered by catalog changes. Generated by the *Update Registry* workflow. A human CODEOWNER must approve this PR before the approval-gated auto-merge workflow can act."
+            --body "Automated registry refresh triggered by catalog changes. Generated by the *Update Registry* workflow. A human CODEOWNER must approve this PR. A maintainer must merge it or enable GitHub auto-merge once all required checks and review requirements are satisfied."
 
       - name: Report missing App credentials
-        if: steps.diff.outputs.changed == 'true' && steps.app_check.outputs.configured != 'true'
+        if: steps.diff.outputs.publish == 'true' && steps.app_check.outputs.configured != 'true'
         run: |
           echo "::error::Registry output changed, but REGISTRY_APP_ID/REGISTRY_APP_PRIVATE_KEY are not configured. No branch was pushed. Configure the write-scoped registry App and rerun this workflow."
           exit 1

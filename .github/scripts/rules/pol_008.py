@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-POL-008 — no binaries in agents/ or starter-kits/, decided by content.
+POL-008 — no binaries in agents/, starter-kits/, or skills/, decided by content.
 
 The previous implementation compared file extensions against a denylist, which
 a contributor defeats by renaming ``payload.so`` to ``notes.txt``. This rule
@@ -20,7 +20,7 @@ from image_inspector import is_image_path
 from rules.base import Finding, Rule, RuleContext, Scope, Severity
 
 #: Only these trees accept contributions; everything else is out of scope.
-GUARDED_PREFIXES = ("agents/", "starter-kits/")
+GUARDED_PREFIXES = ("agents/", "starter-kits/", "skills/")
 
 
 def _is_guarded(rel: str) -> bool:
@@ -50,8 +50,8 @@ def check(ctx: RuleContext) -> list[Finding]:
             message = (
                 f"'{Path(rel).name}' is a binary file disguised with a text "
                 f"extension. {result.detail} Only source code may be "
-                f"contributed to {GUARDED_PREFIXES[0]} and "
-                f"{GUARDED_PREFIXES[1]}. Remove the file; build artifacts "
+                f"contributed to {', '.join(GUARDED_PREFIXES)}. "
+                f"Remove the file; build artifacts "
                 f"belong in the container image, and large assets belong in "
                 f"external storage referenced from the Dockerfile."
             )
@@ -71,7 +71,7 @@ def check(ctx: RuleContext) -> list[Finding]:
 
 RULE = Rule(
     id="POL-008",
-    summary="Files under agents/ and starter-kits/ must be source code or POL-016-compliant Markdown images, verified by content inspection.",
+    summary="Files under agents/, starter-kits/, and skills/ must be source code or POL-016-compliant Markdown images, verified by content inspection.",
     scope=Scope.CHANGED_FILES,
     severity=Severity.ERROR,
     remediation=(

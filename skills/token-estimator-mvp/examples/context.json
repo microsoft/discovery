@@ -1,0 +1,13 @@
+{
+  "contractVersion": "1.2.0",
+  "scopeDescription": "Safe fixture README scope: one focused screening session, basic checks included",
+  "tasks": [{
+    "id": "screen",
+    "description": "Screen literature for a focused evidence table",
+    "count": 1,
+    "bounded": true,
+    "depth": "bounded",
+    "validation": "included",
+    "amountDescription": "One generic policy question; no independent review"
+  }]
+}

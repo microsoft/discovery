@@ -304,6 +304,43 @@ discovery job status <operation-id>
 discovery job cancel <operation-id>
 ```
 
+### MPI Jobs and Per-Job Pool Size
+
+Select an MPI-enabled tool with `discovery configure --tool` after creating it
+with `discovery build image --mpi` (see [Build Commands](#build-commands-discovery-build)).
+Submit the leader command with the Discovery-provided hostfile:
+
+```bash
+# One MPI job: three pods (one leader, two workers), running six MPI ranks
+discovery job start --pool-size 3 \
+  "mpirun --allow-run-as-root --hostfile /var/run/Microsoft.Discovery/mpi-hosts -np 6 /app/program"
+
+# Four independent MPI jobs, each with three pods and six ranks
+# --parallel limits concurrent submission requests, not MPI execution
+discovery job batch 4 --parallel 2 --pool-size 3 \
+  "mpirun --allow-run-as-root --hostfile /var/run/Microsoft.Discovery/mpi-hosts -np 6 /app/program"
+
+# The same per-job override is available for a VS Code session
+discovery job vscode --pool-size 2
+```
+
+`--pool-size` must be a positive integer. On `start`, `batch`, and `vscode`,
+omitting it sends no size override and preserves the tool definition's default.
+The CLI uses `infraOverrides.poolSize` for API version `2025-07-01-preview` and
+`infraOverrides.replicaCount` for `2025-12-01-preview` and later versions.
+An MPI job requires at least two pods; size 1 is only valid for a non-MPI job.
+
+| Setting | Meaning |
+|---------|---------|
+| `--pool` | Target nodepool; does not change the job's replica count |
+| `--pool-size N` | Pods per job, including the MPI leader; not necessarily distinct VM nodes |
+| `mpirun -np R` | MPI ranks per job, controlled by your MPI launcher |
+| `batch COUNT` / `batch --parallel W` | Independent job count / submission concurrency, not MPI ranks or pods per job |
+
+Increasing pool size alone does **not** make a tool MPI-capable. The tool must
+have MPI metadata, and its image must supply a compatible MPI runtime and the
+application executable. CPU, GPU, and memory requests remain per pod.
+
 ### Blob Storage Commands (`discovery blob`)
 
 Upload, download, and manage files in Discovery storage:
@@ -339,12 +376,13 @@ discovery blob ls shared:
 
 ### Build Commands (`discovery build`)
 
-Build and manage container images via ACR Tasks:
+Build and publish container images to the configured ACR. Builds run via ACR Tasks
+by default; pass `--local` to use your local Docker/BuildKit engine instead:
 
 | Command | Description |
 |---------|-------------|
-| `discovery build image <context>` | Build a Docker image via ACR Task |
-| `discovery build rebuild` | Layer VS Code CLI onto an existing ACR image |
+| `discovery build image [--local] <context>` | Build a Docker image and push to ACR |
+| `discovery build rebuild [--local]` | Layer VS Code CLI onto an existing ACR image and push to ACR |
 
 **Examples:**
 
@@ -354,7 +392,94 @@ discovery build image --vscode .
 
 # Build with custom image name and tag
 discovery build image --image my-tool --tag v2 .
+
+# Build locally, then push the same fully qualified image to the configured ACR
+discovery build image --local --image my-tool --tag v2 .
+
+# Local builds also support VS Code layering and rebuilding an existing ACR image
+discovery build image --local --vscode --image my-tool --tag v2 .
+discovery build rebuild --local --image my-tool --tag v2 --target-tag v2-code
 ```
+
+**Local-mode prerequisites and publishing:** Install Docker with BuildKit/buildx
+support and use a running **Linux** Docker daemon. The CLI does not install or
+start Docker, change Docker configuration, or fall back to ACR Tasks on failure.
+Azure CLI authentication and the existing ACR configuration are still required.
+Docker must already have pull/push access to the configured registry (for example,
+run `az acr login --name <ACR_NAME>` yourself beforehand). The local machine needs
+network access to ACR, including any private endpoint, and any base-image registries.
+
+Local mode uses the selected context's `Dockerfile` and `.dockerignore`, enables
+BuildKit, and builds **linux/amd64** images to match the ACR workflow and VS Code
+CLI architecture, including on ARM hosts with emulation configured. It loads the
+result into Docker and then runs `docker push` with the same configured registry
+hostname, image name, and tag as the default workflow. This is **not** a
+local-only/offline build mode: the tool-deployment prompt appears only after
+publishing succeeds. `--local --vscode` builds and pushes both the `-temp` base
+tag and final tag, just like ACR Tasks; temporary layer contexts are cleaned up,
+while built images remain in Docker and ACR. Existing `--mpi`, `--pool-size`,
+`--infiniband`, and `--tool-api-version` options work unchanged with `--local`.
+
+Build output streams to the terminal. `--timeout` applies to each local Docker
+build/push (or each ACR task); a missing engine, inaccessible daemon, failed push,
+timeout, or canceled/failed build stops the workflow without tool deployment.
+Docker command failures retain their nonzero exit status; launch failures and
+local timeouts exit with code 4.
+
+### Creating an MPI Tool
+
+The existing post-build **Deploy tool definition now?** prompt supports these
+creation options:
+
+```bash
+# Ordinary MPI: omit size to use the valid two-pod default
+discovery build image . --image my-mpi --tag latest --mpi
+
+# MPI requiring InfiniBand-capable compute and an RDMA-ready image
+discovery build image . --image my-ib-mpi --tag latest --mpi --pool-size 2 --infiniband
+```
+
+Answer **yes** to the deployment prompt and supply the tool name and description.
+Tool resource names must be 3-24 alphanumeric or hyphen characters. If the image
+repository name is longer, enter a shorter tool name at that prompt.
+These flags configure the deployed tool definition; they do not install MPI or
+modify the application's image. Declining deployment only builds the image.
+
+`--mpi` keeps `infra_type: container` and adds
+`mpi.follower_command: /opt/Microsoft.Discovery/mpid` plus an internal TCP port 22
+declaration for worker startup. `--pool-size` sets `compute.pool_size` and
+defaults to **2 with `--mpi`**, otherwise **1**. An explicitly supplied MPI
+creation size must be at least 2; invalid values are rejected before the image
+build or tool deployment. Without these flags, the existing single-container
+definition is unchanged. Setting a larger pool size alone does not enable MPI.
+
+Tool creation explicitly selects ARM API **`2026-06-01`** by default. This is
+independent of the configured job/data-plane API version. The verified resource
+type remains `Microsoft.Discovery/tools`, with the same
+`properties.version`, `definitionContent`, and `environmentVariables` envelope.
+For an older environment that supports an earlier tool API, select it explicitly:
+
+```bash
+discovery build image . --image my-mpi --tag latest --mpi \
+  --tool-api-version 2025-07-01-preview
+```
+
+The CLI also accepts `2025-12-01-preview` and `2026-02-01-preview`; support on the
+target must be checked. An explicitly selected version is never silently
+replaced. The packaged ARM template keeps its legacy fallback for standalone
+callers, while Python deployments always pass the selected tool API parameter.
+
+`--infiniband` adds `compute.infiniband: true`; when omitted, the field stays
+absent. It can also be used for a non-MPI tool requiring InfiniBand. This flag
+does **not** provision or upgrade cluster networking, install RDMA drivers/device
+plugins, or verify that MPI uses RDMA instead of TCP. Target a prepared
+IB-capable nodepool with `--pool` at submission time and use an image with
+compatible RDMA userspace libraries and MPI transport.
+
+The MPI metadata follows the Supercomputer service's tool contract. The
+[catalog tool-definition schema](../../docs/schemas/tool-definition-schema.json)
+does not yet describe `mpi` or `internal_ports`; this CLI deploys through ARM,
+not catalog schema validation.
 
 ### Smoke Test Commands (`discovery smoke`)
 

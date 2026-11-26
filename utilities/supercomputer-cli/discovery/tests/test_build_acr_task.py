@@ -1,8 +1,10 @@
 """Tests for build_acr_task helper functions."""
 from __future__ import annotations
 
+import subprocess
 from pathlib import Path
 from typing import Any
+from unittest.mock import MagicMock
 
 import pytest
 
@@ -149,11 +151,17 @@ def test_build_image_failure(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) ->
     assert not (tmp_path / ".acr-task-feedface.yaml").exists()
 
 
-def test_execute_build_dry_run(monkeypatch: pytest.MonkeyPatch, tmp_path) -> None:
+@pytest.mark.parametrize("local", [False, True])
+def test_execute_build_dry_run(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path, local: bool
+) -> None:
     """Test execute_build cancellation via typer.confirm."""
     monkeypatch.setattr(build_acr_task, "ensure_az_cli", lambda: None)
     monkeypatch.setattr(build_acr_task, "acr_registry_exists", lambda name: True)
-    monkeypatch.setattr(build_acr_task, "build_image", lambda *args, **kwargs: 0)
+    build = MagicMock()
+    docker = MagicMock()
+    monkeypatch.setattr(build_acr_task, "build_image", build)
+    monkeypatch.setattr(build_acr_task, "ensure_docker_cli", docker)
     # Simulate user declining the confirmation prompt
     monkeypatch.setattr(build_acr_task.typer, "confirm", lambda *args, **kwargs: False)
 
@@ -163,16 +171,23 @@ def test_execute_build_dry_run(monkeypatch: pytest.MonkeyPatch, tmp_path) -> Non
             image="img",
             tag="tag",
             acr_name="acr",
+            local=local,
         )
     assert exc.value.exit_code == 0
+    build.assert_not_called()
+    docker.assert_not_called()
 
 
 def test_execute_build_success(monkeypatch: pytest.MonkeyPatch, tmp_path) -> None:
     monkeypatch.setattr(build_acr_task, "ensure_az_cli", lambda: None)
     monkeypatch.setattr(build_acr_task, "acr_registry_exists", lambda name: True)
     monkeypatch.setattr(build_acr_task.typer, "confirm", lambda *args, **kwargs: True)
+    docker = MagicMock()
+    monkeypatch.setattr(build_acr_task, "ensure_docker_cli", docker)
     calls: list[tuple] = []
-    monkeypatch.setattr(build_acr_task, "build_image", lambda *args: (calls.append(args), 0)[1])
+    monkeypatch.setattr(
+        build_acr_task, "build_image", lambda *args, **kwargs: (calls.append(args), 0)[1]
+    )
     rc = build_acr_task.execute_build(
         context=tmp_path,
         image="img",
@@ -181,6 +196,7 @@ def test_execute_build_success(monkeypatch: pytest.MonkeyPatch, tmp_path) -> Non
     )
     assert rc == 0
     assert calls[0][0] == "acr"
+    docker.assert_not_called()
 
 
 def test_execute_build_with_vscode(monkeypatch: pytest.MonkeyPatch, tmp_path) -> None:
@@ -189,7 +205,7 @@ def test_execute_build_with_vscode(monkeypatch: pytest.MonkeyPatch, tmp_path) ->
     monkeypatch.setattr(build_acr_task.typer, "confirm", lambda *args, **kwargs: True)
     build_calls: list[tuple] = []
 
-    def fake_build(*args):
+    def fake_build(*args, **kwargs):
         build_calls.append(args)
         return 0
 
@@ -222,3 +238,121 @@ def test_execute_build_with_vscode(monkeypatch: pytest.MonkeyPatch, tmp_path) ->
     assert rc == 0
     assert prepared["called"] is True
     assert len(build_calls) == 2
+
+
+@pytest.mark.parametrize("vscode", [False, True])
+def test_execute_build_local_uses_context_and_publishes(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path, vscode: bool
+) -> None:
+    """Local mode preserves context, tags and layering without scheduling an ACR task."""
+    context = tmp_path / "context with spaces & shell"
+    context.mkdir()
+    dockerfile = context / "Dockerfile"
+    dockerfile.write_text("FROM scratch\nCOPY input /input\n", encoding="utf-8")
+    dockerignore = context / ".dockerignore"
+    dockerignore.write_text("ignored\n", encoding="utf-8")
+    monkeypatch.setattr(build_acr_task, "ensure_az_cli", lambda: None)
+    monkeypatch.setattr(build_acr_task, "acr_registry_exists", lambda name: True)
+    monkeypatch.setattr(build_acr_task.shutil, "which", lambda name: "docker")
+    monkeypatch.setattr(build_acr_task.typer, "confirm", lambda *args, **kwargs: True)
+    monkeypatch.setenv("LOCAL_BUILD_TEST", "preserved")
+    run = MagicMock(return_value=subprocess.CompletedProcess([], 0))
+    prepare = MagicMock(return_value="/usr/local/bin/start-vscode-tunnel.sh")
+    monkeypatch.setattr(build_acr_task.subprocess, "run", run)
+    monkeypatch.setattr(build_acr_task, "prepare_vscode_layer", prepare)
+
+    rc = build_acr_task.execute_build(
+        context=context,
+        image="team/img:v2",
+        acr_name="acr",
+        vscode=vscode,
+        timeout=123,
+        login_server="acr.azurecr.cn",
+        local=True,
+    )
+
+    assert rc == 0
+    full_image = "acr.azurecr.cn/team/img:v2"
+    base_image = f"{full_image}-temp" if vscode else full_image
+    build_args = ["docker", "build", "--load", "--platform", "linux/amd64", "--tag"]
+    expected = [
+        ["docker", "info", "--format", "Docker daemon: {{.OSType}}"],
+        [*build_args, base_image, "."],
+        ["docker", "push", base_image],
+    ]
+    if vscode:
+        expected.extend(
+            [
+                [*build_args, full_image, "."],
+                ["docker", "push", full_image],
+            ]
+        )
+        layer_context = run.call_args_list[3].kwargs["cwd"]
+        prepare.assert_called_once()
+        assert prepare.call_args.args[0] == base_image
+        assert prepare.call_args.args[1].resolve() == layer_context
+        assert not layer_context.exists()
+    else:
+        prepare.assert_not_called()
+    assert [call.args[0] for call in run.call_args_list] == expected
+    assert run.call_args_list[1].kwargs["cwd"] == context.resolve()
+    for call in run.call_args_list[1:]:
+        assert call.kwargs["timeout"] == 123
+        assert call.kwargs["check"] is False
+        assert call.kwargs["env"]["DOCKER_BUILDKIT"] == "1"
+        assert call.kwargs["env"]["LOCAL_BUILD_TEST"] == "preserved"
+        assert not call.kwargs.get("shell")
+        assert "capture_output" not in call.kwargs
+    assert dockerfile.read_text(encoding="utf-8") == "FROM scratch\nCOPY input /input\n"
+    assert dockerignore.read_text(encoding="utf-8") == "ignored\n"
+    assert sorted(path.name for path in context.iterdir()) == [".dockerignore", "Dockerfile"]
+
+
+@pytest.mark.parametrize("local", [False, True])
+@pytest.mark.parametrize("retarget", [False, True])
+def test_execute_rebuild_uses_selected_backend(
+    monkeypatch: pytest.MonkeyPatch, local: bool, retarget: bool
+) -> None:
+    """Rebuild shares the same layer context, target reference and publishing backend."""
+    monkeypatch.setattr(build_acr_task, "ensure_az_cli", lambda: None)
+    monkeypatch.setattr(build_acr_task, "acr_registry_exists", lambda name: True)
+    monkeypatch.setattr(build_acr_task.shutil, "which", lambda name: "docker")
+    monkeypatch.setattr(build_acr_task.typer, "confirm", lambda *args, **kwargs: True)
+    run = MagicMock(return_value=subprocess.CompletedProcess([], 0))
+    prepare = MagicMock(return_value="/usr/local/bin/start-vscode-tunnel.sh")
+    monkeypatch.setattr(build_acr_task.subprocess, "run", run)
+    monkeypatch.setattr(build_acr_task, "prepare_vscode_layer", prepare)
+
+    rc = build_acr_task.execute_rebuild(
+        image="img:v2",
+        tag="latest",
+        acr_name="acr",
+        target_image="other" if retarget else None,
+        target_tag="code" if retarget else None,
+        login_server="acr.azurecr.cn",
+        local=local,
+    )
+
+    assert rc == 0
+    prepare.assert_called_once()
+    base, context = prepare.call_args.args
+    assert base == "acr.azurecr.cn/img:v2"
+    assert not context.exists()
+    commands = [call.args[0] for call in run.call_args_list]
+    if local:
+        full_image = "acr.azurecr.cn/other:code" if retarget else base
+        assert commands[1] == [
+            "docker",
+            "build",
+            "--load",
+            "--platform",
+            "linux/amd64",
+            "--tag",
+            full_image,
+            ".",
+        ]
+        assert commands[2] == ["docker", "push", full_image]
+        assert run.call_args_list[1].kwargs["cwd"] == context.resolve()
+    else:
+        assert len(commands) == 1
+        assert commands[0][:5] == ["az", "acr", "run", "--registry", "acr"]

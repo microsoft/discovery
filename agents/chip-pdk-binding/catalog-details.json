@@ -1,0 +1,25 @@
+{
+  "node_awareness": "node-aware",
+  "original_tags": [
+    "chip-design",
+    "pdk",
+    "node-portability",
+    "open-pdks",
+    "volare",
+    "sky130"
+  ],
+  "previous_tool_version": "1.0.0-pdk-requalification20261115-r2",
+  "action_examples": {
+    "run": [
+      {
+        "name": "resolve_binding",
+        "params_json": "{\"scenario\":\"resolve_binding\",\"pdk\":\"sky130A\",\"stdcell_library\":\"sky130_fd_sc_hd\",\"corners\":[\"tt_025C_1v80\",\"ss_100C_1v60\",\"ff_n40C_1v95\"],\"references\":{\"tech_lef\":\"/input/sky130.tlef\",\"liberty\":\"/input/sky130_hd_tt.lib\"}}"
+      }
+    ]
+  },
+  "input_schema_keywords": {
+    "run": {
+      "additionalProperties": false
+    }
+  }
+}

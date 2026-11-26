@@ -1,0 +1,16 @@
+name: chip-ppa-dse
+type: agent
+version: 1.1.0
+associated_tools:
+- agents/chip-ppa-dse/tools/dse-optimization
+publisher:
+  name: Microsoft
+  contact: discovery-catalog@microsoft.com
+  support_url: https://techcommunity.microsoft.com/category/azure/discussions/microsoft-discovery-discussions
+  party: 1p
+description: |
+  Node-aware PPA / design-space exploration agent that searches recipe/parameter space to optimize power/performance/area against the target budget using deterministic multi-objective search and Pareto bookkeeping over real flow runs. Consumes the PDK Binding and reports the Pareto front and recommended recipe. Validated on SkyWater sky130.
+tags:
+- eda
+- optimization
+- sky130

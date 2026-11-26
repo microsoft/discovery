@@ -1,0 +1,18 @@
+{
+  "contractVersion": "1.2.0",
+  "scopeDescription": "A focused operation and genuinely disjoint written evidence assessment, no shared work",
+  "nonOverlap": true,
+  "tasks": [{
+    "id": "launch",
+    "description": "Read instructions, launch an existing workflow and confirm startup.",
+    "bounded": true,
+    "readiness": "ready",
+    "validation": "separate-tasks"
+  }, {
+    "id": "independent-assessment",
+    "description": "Assess separate available evidence in an independent written conclusion, not startup verification.",
+    "profileId": "evidence-assessment",
+    "bounded": true,
+    "validation": "separate-tasks"
+  }]
+}

@@ -1,0 +1,24 @@
+schema_version: design-policy/1.0
+owner: chip-streamout-xor
+node_awareness: node-aware
+pdk_binding:
+  required: true
+  resolved_by: PDK Binding and Node Management Agent
+  consumed_fields: [pdk, tech_lef, cell_lef, cell_gds, klayout_tech, magicrc, magic_tech, tool_policy]
+  missing_binding_behavior: block
+execution:
+  missing_binding_reference: block
+  missing_engine: block
+  missing_mapping_or_tech_data: block
+  engine_failure: block
+  malformed_output: block
+
+# --- BEGIN generated effort block (catalog/gen_effort_policy.py) ---
+effort:
+  iterating: false
+  metric_kind: unavailable
+  rationale: >-
+    stage not in the residual registry -- this agent does not own an iterable closure gate.
+    Effort is bounded by max_attempts from the campaign effort-budget
+    ledger plus human judgement; no metric-driven stall rule applies.
+# --- END generated effort block ---

@@ -27,7 +27,7 @@ Search Wiley Nexus from multiple distinct angles and build the evidence base tha
 
 Produce two files.
 
-File 1 - evidence_passages.md (markdown). Open with a "## Search coverage" section containing one bullet per search angle, giving the query used, what it supported, and any facet that returned little or nothing. Then a "## Publications" section with one "### [n] Title" entry per unique publication, deduplicated by DOI, each carrying these labeled fields, using exactly these names: DOI, Authors, Journal, Full Text Available, Wiley Online Library. Under each entry, include that publication's passages quoted verbatim as blockquotes.
+File 1 - evidence_passages.md (markdown). Open with a "## Index" section listing every publication on one line as "[n] DOI — Title", using the same numbers as the Publications section below. Then a "## Search coverage" section containing one bullet per search angle, giving the query used, what it supported, and any facet that returned little or nothing. Then a "## Publications" section with one "### [n] Title" entry per unique publication, deduplicated by DOI, each carrying these labeled fields, using exactly these names: DOI, Authors, Journal, Full Text Available, Wiley Online Library. Under each entry, include that publication's passages quoted verbatim as blockquotes.
 
 File 2 - fulltext_shortlist.json (JSON), of the form {"shortlist":[{"doi":"...","title":"...","rationale":"...","full_text_token":"..."}]}, listing the 3 to 5 publications most worth reading in full. Only shortlist papers whose search hit carried a full_text_token, and copy each token verbatim.
 
@@ -42,6 +42,7 @@ In your reply, list every shortlisted paper's DOI and title, one per line. The n
 3. evidence_passages.md includes a search coverage section that names each angle searched and flags any facet with little or no evidence.
 4. fulltext_shortlist.json exists and contains 3 to 5 entries, each with a doi, a title, a rationale, and a non-empty full_text_token.
 5. The task result text lists the DOI and title of every shortlisted paper.
+6. evidence_passages.md opens with an Index that lists every publication's number and DOI, matching the "### [n]" entries.
 ```
 
 ---
@@ -100,7 +101,7 @@ Research question: {{RESEARCH_QUESTION}}
 
 The upstream tasks produced evidence_passages.md, containing passage-level evidence and metadata for every publication found, and one analysis file per shortlisted paper, marked unavailable if it could not be retrieved. The number of analysis files varies per run, so list the available resources and read every analysis file present rather than assuming a single one. Do not search or download anything; work only from these files.
 
-Write research_response.md: a structured, chat-style answer to the research question, not a formal report. Lead with the direct answer in the first paragraph or two, then develop detail under headings, using a table where comparing studies or outcomes is clearer than prose. Cite in IEEE style, numbering sources in order of first appearance with bracketed inline markers tied to a "## References" list whose entries are built only from metadata in these files and linked to Wiley Online Library. Give more weight to findings from papers read in full than to passage-only evidence, state plainly what the retrieved literature does not establish, including any paper marked unavailable, and close with a one-line evidence basis.
+Write research_response.md: a structured, chat-style answer to the research question, not a formal report. Lead with the direct answer in the first paragraph or two, then develop detail under headings, using a table where comparing studies or outcomes is clearer than prose. Cite in IEEE style, reusing each publication's number from the "### [n]" headings in evidence_passages.md (never renumbering by first appearance) as bracketed inline markers tied to a "## References" list whose entries are built only from metadata in these files and linked to Wiley Online Library. Give more weight to findings from papers read in full than to passage-only evidence, state plainly what the retrieved literature does not establish, including any paper marked unavailable, and close with a one-line evidence basis.
 ```
 
 **Validation Criteria**

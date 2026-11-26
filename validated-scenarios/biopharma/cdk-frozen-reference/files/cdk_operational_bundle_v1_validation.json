@@ -1,0 +1,29 @@
+{
+  "status": "passed",
+  "archive": "cdk_operational_bundle_v1.zip",
+  "sha256": "874eba9d9e1ee72d38c257f7904d93953bcb8dc2ec55cf4c2732009c57e74f2f",
+  "bytes": 50301,
+  "entries": 23,
+  "manifested_payloads": 22,
+  "checks": [
+    "safe paths",
+    "exact allowlisted inventory",
+    "CRC",
+    "all payload bytes",
+    "manifest hashes",
+    "private host path scan"
+  ],
+  "scientific_validation": "validation/engineering_validation.json inside archive",
+  "snapshot_shipped_separately": "cdk_non_md_deliverables.zip",
+  "snapshot_sha256": "bfc939735a574ccc2375ae9808e9242fb79efc545d5b3f314cc38e5d0cefa076",
+  "public_publication": "not performed",
+  "extracted_handoff_check": {
+    "status": "passed",
+    "packaged_contract_tests": 14,
+    "packaged_comparison_tests": 7,
+    "powershell_wrapper_preflight": "ready",
+    "downloads_guide_matches_zip": true,
+    "guide_sha256": "a205be44aa2d53eafa6b893fa17b3eb36a6ae9715699d532edbfeea47c9db537",
+    "scope": "Existing host; small operational ZIP freshly extracted, scientific snapshot passed explicitly; no installation or new scientific replay in this check"
+  }
+}

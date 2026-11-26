@@ -1,0 +1,18 @@
+name: allegro
+type: agent
+version: 0.1.0
+associated_tools:
+- agents/allegro/tools/allegro
+publisher:
+  name: Microsoft
+  contact: discovery-catalog@microsoft.com
+  support_url: https://techcommunity.microsoft.com/category/azure/discussions/microsoft-discovery-discussions
+  party: 1p
+description: Scaffold for Local equivariant interatomic potential training and inference using Allegro.
+tags:
+- atomistic
+- molecular-dynamics
+- gnn
+- trained-model
+- gpu
+- python

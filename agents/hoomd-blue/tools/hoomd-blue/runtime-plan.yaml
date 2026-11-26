@@ -1,0 +1,40 @@
+name: hoomd-blue
+status: scaffold-only
+image_built: false
+deployment_ready: false
+upstream: https://github.com/glotzerlab/hoomd-blue
+candidate_license_hint: BSD-3
+license_verified: false
+upstream_revision: null
+base_image_candidate: nvidia/cuda:12.2.2-cudnn8-devel-ubuntu22.04
+base_image_compatibility_verified: false
+planned_interfaces:
+- hoomd
+planned_dependencies:
+- CUDA-enabled HOOMD-blue build
+- Compatible Python and NumPy
+- GSD
+- Optional MPI integration
+required_inputs:
+- Initial particle configuration
+- Interaction parameters and units
+- Integrator and simulation settings
+expected_outputs:
+- GSD trajectories
+- Thermodynamic logs
+- Final configurations
+domain_requirements: Select hoomd.device.GPU explicitly; validate timestep, equilibration, units, and
+  GPU support for the selected integrator.
+release_requirements:
+- Confirm publisher ownership and contacts before catalog publication.
+- Review upstream code, dependency, checkpoint, and database license terms.
+- Select and pin an upstream revision and compatible Python/CUDA/framework versions.
+- Install the tool and native extensions in its self-contained Docker build context.
+- Provision authorized model/data artifacts with immutable identities and checksums.
+- Choose local artifacts or an approved cache; do not rely on undeclared downloads.
+- Verify CLI/API availability against the selected upstream release.
+- Check GPU visibility and actual scientific backend device selection.
+- Run a small real-input scientific smoke test with output and convergence checks.
+- Measure memory, VRAM, CPU, and storage requirements; update worker sizing.
+- Remove the Dockerfile build gate only after completing runtime provisioning.
+- Build, scan, publish, and deploy only when explicitly authorized in the cloud project.

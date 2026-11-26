@@ -24,6 +24,8 @@ CP2K is an open-source atomistic simulation package for DFT (GPW/GAPW), ab initi
 - **Compressed size**: ~803 MB
 - **Base**: `mambaorg/micromamba:1.5-jammy` (2-stage build)
 - **CP2K**: Source-built with DFT-D4 support (`cp2k.psmp` MPI+OMP, `cp2k.ssmp` OMP-only fallback)
+- **Build tools**: The builder installs `binutils` to provide the `ar` and `ranlib` utilities required by CMake for DBCSR and CP2K static libraries.
+- **LibXSMM**: Pinned to `1.17`, which supplies the `libxsmmext` and `libxsmmnoblas` components required by CP2K 2024.2. Its pkg-config files are discovered directly under the conda environment's `lib/` directory.
 - **Hybrid DFT**: still blocked in `cp2k_utils.py` pending stable libint/HFX validation
 - **Python**: 3.11 with numpy, scipy, matplotlib, pandas, ASE, pymatgen, cp2k-input-tools, MDAnalysis
 

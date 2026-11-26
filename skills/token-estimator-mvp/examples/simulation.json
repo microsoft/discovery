@@ -1,0 +1,10 @@
+{
+  "contractVersion": "1.2.0",
+  "tasks": [{
+    "id": "simulation",
+    "description": "Implement a scoped simulation model in one focused development task with included checks",
+    "bounded": true,
+    "depth": "bounded",
+    "validation": "included"
+  }]
+}

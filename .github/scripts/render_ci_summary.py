@@ -476,7 +476,7 @@ def main() -> None:
                 "Schema regression suite",
                 args.schema_outcome,
                 args.schema_log,
-                "python -m pytest .github/tests/test_schema_security.py -q",
+                "python -m pytest .github/tests/test_catalog_schema_security.py -q",
             ),
             starter_kits=TextCheck(
                 "Starter-kit validator",

@@ -104,7 +104,7 @@ class InfraOverrides(BaseModel):
     """
 
     resources: ResourceSpec | None = None
-    pool_size: int | None = Field(None, alias="poolSize")
+    pool_size: int | None = Field(None, alias="poolSize", gt=0)
     image_uri: str | None = Field(None, alias="imageUri")
 
     model_config = ConfigDict(
@@ -128,7 +128,7 @@ class InfraOverridesFlat(BaseModel):
     ram: str | None = None
     gpu: str | None = None
     shm: str | None = None
-    replica_count: int | None = Field(None, alias="replicaCount")
+    replica_count: int | None = Field(None, alias="replicaCount", gt=0)
     image_uri: str | None = Field(None, alias="imageUri")
 
     model_config = ConfigDict(

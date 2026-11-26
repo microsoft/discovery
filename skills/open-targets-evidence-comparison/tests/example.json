@@ -1,0 +1,43 @@
+{
+  "disease": {
+    "id": "SYNTH-DISEASE:001",
+    "label": "Synthetic condition"
+  },
+  "provenance": {
+    "source": "Synthetic example only; not Open Targets data",
+    "retrieved": null,
+    "release": null,
+    "query": "Synthetic input; no provider query",
+    "scope": "Two synthetic target associations and two evidence rows; not a ranking",
+    "propagation": "not established",
+    "uncertainty": "Every identifier, value and relationship is invented for software testing."
+  },
+  "associations": [
+    {"target_id": "SYNTH-TARGET:001", "target_label": "Example alpha", "score": 0.62},
+    {"target_id": "SYNTH-TARGET:002", "target_label": "Example beta", "score": 0}
+  ],
+  "evidence": [
+    {
+      "target_id": "SYNTH-TARGET:001",
+      "evidence_id": "SYNTH-EVIDENCE:001",
+      "datasource": "synthetic-registry",
+      "datatype": "synthetic-study",
+      "source_id": "SYNTH-SOURCE:001",
+      "score": 0,
+      "release": null,
+      "uncertainty": "Invented record; not a real study",
+      "links": [{"url": "https://example.org/record/001", "origin": "returned", "verified": false}]
+    },
+    {
+      "target_id": "SYNTH-TARGET:002",
+      "evidence_id": "SYNTH-EVIDENCE:002",
+      "datasource": null,
+      "datatype": null,
+      "source_id": null,
+      "score": null,
+      "release": null,
+      "uncertainty": "Invented record with missing fields",
+      "links": []
+    }
+  ]
+}

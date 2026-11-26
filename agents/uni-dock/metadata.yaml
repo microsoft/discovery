@@ -1,0 +1,17 @@
+name: uni-dock
+type: agent
+version: 0.1.0
+associated_tools:
+- agents/uni-dock/tools/uni-dock
+publisher:
+  name: Microsoft
+  contact: discovery-catalog@microsoft.com
+  support_url: https://techcommunity.microsoft.com/category/azure/discussions/microsoft-discovery-discussions
+  party: 1p
+description: Scaffold for High-throughput GPU-accelerated Vina or Vinardo molecular docking using Uni-Dock.
+tags:
+- docking
+- virtual-screening
+- drug-discovery
+- gpu
+- python

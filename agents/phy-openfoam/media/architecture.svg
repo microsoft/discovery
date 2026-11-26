@@ -1,0 +1,79 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="760" height="766" viewBox="0 0 760 766" role="img" aria-labelledby="architecture-title architecture-description" font-family="Segoe UI, Arial, sans-serif">
+  <title id="architecture-title">phy-openfoam local execution architecture</title>
+  <desc id="architecture-description">A user submits a CFD prompt in Microsoft Discovery. Scientific Researcher coordinates the investigation and can use the phy-openfoam specialist agent. Both follow the phy-openfoam skill for case authoring, diagnosis, and action proposals. The discovery-physics CLI on the local host freezes inputs, verifies evidence, and computes verdicts. It retains a private run record and launches an isolated OpenFOAM Foundation 14 container. Downward arrows carry requests and frozen input; upward arrows return measurements, evidence, and verdicts.</desc>
+
+  <defs>
+    <marker id="request-arrow" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto" markerUnits="strokeWidth">
+      <path d="M 0 0 L 8 4 L 0 8 Z" fill="#576574"/>
+    </marker>
+    <marker id="evidence-arrow" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto" markerUnits="strokeWidth">
+      <path d="M 0 0 L 8 4 L 0 8 Z" fill="#0078d4"/>
+    </marker>
+  </defs>
+
+  <rect x="0.75" y="0.75" width="758.5" height="764.5" rx="16" fill="#ffffff" stroke="#d8dee4" stroke-width="1.5"/>
+
+  <!-- The request enters through the Discovery research capability. -->
+  <rect x="240" y="24" width="280" height="44" rx="22" fill="#f6f8fa" stroke="#d8dee4"/>
+  <text x="380" y="52" text-anchor="middle" fill="#24292f" font-size="17" font-weight="600">CFD prompt</text>
+  <path d="M 380 68 V 109" fill="none" stroke="#576574" stroke-width="1.8" marker-end="url(#request-arrow)"/>
+
+  <!-- Research orchestration; this layer does not decide acceptance. -->
+  <rect x="20" y="110" width="720" height="152" rx="12" fill="#ffffff" stroke="#b6c8d8" stroke-width="1.5"/>
+  <text x="44" y="138" fill="#0969b1" font-size="12" font-weight="700" letter-spacing="1.2">MICROSOFT DISCOVERY</text>
+  <rect x="590" y="123" width="126" height="24" rx="12" fill="#eef6fc"/>
+  <text x="653" y="139" text-anchor="middle" fill="#0969b1" font-size="10.5" font-weight="700" letter-spacing="0.7">REASONING</text>
+  <text x="44" y="179" fill="#142b42" font-size="23" font-weight="600">Scientific Researcher</text>
+  <text x="44" y="209" fill="#475569" font-size="15">Plan the study. Coordinate research.</text>
+  <text x="44" y="233" fill="#475569" font-size="15">Interpret evidence. Report findings.</text>
+  <g id="phy-openfoam-agent">
+    <rect x="500" y="158" width="216" height="44" rx="8" fill="#eef6fc" stroke="#b6c8d8"/>
+    <text x="516" y="178" fill="#142b42" font-size="16" font-weight="600">phy-openfoam agent</text>
+    <text x="516" y="194" fill="#576574" font-size="11.5">CFD specialist</text>
+  </g>
+  <path d="M 608 202 V 215" fill="none" stroke="#8998a5" stroke-width="1.3" marker-end="url(#request-arrow)"/>
+  <path d="M 400 233 H 499" fill="none" stroke="#8998a5" stroke-width="1.4" marker-end="url(#request-arrow)"/>
+  <text x="423" y="223" fill="#576574" font-size="11">uses</text>
+  <g id="phy-openfoam-skill">
+    <rect x="500" y="216" width="216" height="33" rx="8" fill="#f6f9fc" stroke="#d8e3ed"/>
+    <text x="516" y="238" fill="#142b42" font-size="15" font-weight="600">phy-openfoam skill</text>
+  </g>
+
+  <!-- Requests and results cross the application/host boundary. -->
+  <path d="M 212 262 V 337" fill="none" stroke="#576574" stroke-width="1.8" marker-end="url(#request-arrow)"/>
+  <text x="228" y="294" fill="#475569" font-size="13">Case + contract</text>
+  <text x="228" y="314" fill="#475569" font-size="13">Proposed action</text>
+  <path d="M 548 338 V 263" fill="none" stroke="#0078d4" stroke-width="1.8" marker-end="url(#evidence-arrow)"/>
+  <text x="564" y="304" fill="#0969b1" font-size="13">Evidence + verdict</text>
+
+  <!-- Deterministic authority and private retained evidence are on the host. -->
+  <rect x="20" y="338" width="720" height="186" rx="12" fill="#f8fafc" stroke="#9caebb" stroke-width="1.5"/>
+  <text x="44" y="367" fill="#475569" font-size="12" font-weight="700" letter-spacing="1.2">LOCAL HOST</text>
+  <rect x="548" y="351" width="168" height="24" rx="12" fill="#142b42"/>
+  <text x="632" y="367" text-anchor="middle" fill="#ffffff" font-size="10.5" font-weight="700" letter-spacing="0.5">DECISION AUTHORITY</text>
+  <text x="44" y="409" fill="#142b42" font-size="23" font-weight="600">discovery-physics CLI</text>
+  <text x="44" y="440" fill="#475569" font-size="14">Lint and freeze. Verify evidence. Gate actions.</text>
+  <text x="44" y="465" fill="#475569" font-size="14">Scientific acceptance is computed here,</text>
+  <text x="44" y="487" fill="#475569" font-size="14">never by the model or the solver.</text>
+  <path d="M 448 440 H 509" fill="none" stroke="#8998a5" stroke-width="1.5" marker-end="url(#request-arrow)"/>
+  <rect x="510" y="390" width="206" height="112" rx="8" fill="#ffffff" stroke="#d1d9e0"/>
+  <text x="526" y="418" fill="#142b42" font-size="16" font-weight="600">Private run record</text>
+  <text x="526" y="444" fill="#576574" font-size="13">Case · contract · journal</text>
+  <text x="526" y="466" fill="#576574" font-size="13">Measurements · report</text>
+
+  <!-- Only frozen inputs and native outputs cross the worker boundary. -->
+  <path d="M 212 524 V 599" fill="none" stroke="#576574" stroke-width="1.8" marker-end="url(#request-arrow)"/>
+  <text x="228" y="567" fill="#475569" font-size="13">Frozen input</text>
+  <path d="M 548 600 V 525" fill="none" stroke="#0078d4" stroke-width="1.8" marker-end="url(#evidence-arrow)"/>
+  <text x="564" y="567" fill="#0969b1" font-size="13">Native measurements</text>
+
+  <rect x="20" y="600" width="720" height="124" rx="12" fill="#ffffff" stroke="#c5cdd5" stroke-width="1.5"/>
+  <text x="44" y="628" fill="#475569" font-size="12" font-weight="700" letter-spacing="1.2">ISOLATED CONTAINER</text>
+  <rect x="550" y="613" width="166" height="24" rx="12" fill="#f1f4f7"/>
+  <text x="633" y="630" text-anchor="middle" fill="#475569" font-size="12" font-weight="600">Podman / Docker</text>
+  <text x="44" y="669" fill="#142b42" font-size="23" font-weight="600">OpenFOAM Foundation 14</text>
+  <text x="44" y="695" fill="#475569" font-size="15">Mesh · solve · extract native diagnostics</text>
+  <text x="716" y="714" text-anchor="end" fill="#64748b" font-size="11">No network · read-only root · non-root user</text>
+
+  <text x="380" y="749" text-anchor="middle" fill="#475569" font-size="13" font-weight="600">Scientific Researcher proposes. Deterministic tools decide.</text>
+</svg>

@@ -8,6 +8,7 @@ on:
     paths:
       - "agents/**"
       - "starter-kits/**"
+      - "skills/**"
       - ".github/requirements-ci.txt"
       - ".github/dependabot.yml"
       - ".github/workflows/**"

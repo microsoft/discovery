@@ -11,24 +11,26 @@ name: Code Scan
 #                         untrusted scientific tool most needs answered.
 #
 # Every analyzer in this workflow is scoped to contributed catalog code under
-# agents/ and starter-kits/.
+# agents/, starter-kits/, and skills/.
 #
 # Rollout posture: reporting, not gating. Pointing three new analyzers at 46
 # pre-existing agents would produce a flood of findings that blocks unrelated
-# contributions. Results land in the Security tab and the job summary; promote
-# to blocking once the backlog is triaged, the same way the rule engine's
-# ratchet works.
+# contributions. Findings are retained as downloadable artifacts; promote to
+# blocking once the backlog is triaged, the same way the rule engine's ratchet
+# works.
 
 on:
   pull_request:
     paths:
       - "agents/**"
       - "starter-kits/**"
+      - "skills/**"
   push:
     branches: [main]
     paths:
       - "agents/**"
       - "starter-kits/**"
+      - "skills/**"
   schedule:
     # 06:00 UTC Monday — a full-catalog sweep that *raises* pre-existing
     # breakage (e.g. a contributed file CodeQL cannot even parse). On a PR the
@@ -66,22 +68,25 @@ jobs:
         # parse must not fail an unrelated contributor's PR. Scheduled and
         # push runs stay gating so the breakage is raised for triage.
         continue-on-error: ${{ github.event_name == 'pull_request' }}
-        uses: github/codeql-action/init@2892aa5e19bbd11bc0cff5427e3b750a04d9e3c2 # v4
+        uses: github/codeql-action/init@33d7b85da1a04171e211befe2c739303b9a4c066 # v4
         with:
           languages: ${{ matrix.language }}
           config-file: ${{ matrix.config }}
 
       - name: Analyze
         continue-on-error: ${{ github.event_name == 'pull_request' }}
-        uses: github/codeql-action/analyze@2892aa5e19bbd11bc0cff5427e3b750a04d9e3c2 # v4
+        uses: github/codeql-action/analyze@33d7b85da1a04171e211befe2c739303b9a4c066 # v4
         with:
           category: "/language:${{ matrix.language }}/scope:${{ matrix.scope }}"
           output: codeql-results
-          upload: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository }}
+          # This repository has CodeQL default setup enabled, which rejects
+          # SARIF uploads from advanced configurations. Keep the scoped scan
+          # and publish its SARIF through the artifact step below instead.
+          upload: false
 
       - name: Upload CodeQL SARIF artifact
         if: always()
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
           name: codeql-${{ matrix.scope }}-sarif
           path: codeql-results
@@ -95,7 +100,7 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
-      # The action scans a single directory, so the two guarded trees are
+      # The action scans a single directory, so the guarded trees are
       # scanned separately and their SARIF kept apart by category below.
       - name: Scan agents/
         uses: microsoft/DevSkim-Action@4b5047945a44163b94642a1cecc0d93a3f428cc6 # v1
@@ -111,13 +116,20 @@ jobs:
           output-filename: devskim-starter-kits.sarif
           ignore-globs: "**/.git/**,starter-kits/tmp/**"
 
+      - name: Scan skills/
+        uses: microsoft/DevSkim-Action@4b5047945a44163b94642a1cecc0d93a3f428cc6 # v1
+        with:
+          directory-to-scan: skills
+          output-filename: devskim-skills.sarif
+          ignore-globs: "**/.git/**"
+
       # A fork PR runs with a read-only token, so the Security tab upload is
       # not available. Skip it there rather than failing the job; the artifact
       # below carries the same findings for the reviewer either way.
       - name: Upload agents SARIF
         if: ${{ github.event.pull_request.head.repo.full_name == github.repository || github.event_name != 'pull_request' }}
         continue-on-error: true
-        uses: github/codeql-action/upload-sarif@2892aa5e19bbd11bc0cff5427e3b750a04d9e3c2 # v4
+        uses: github/codeql-action/upload-sarif@33d7b85da1a04171e211befe2c739303b9a4c066 # v4
         with:
           sarif_file: devskim-agents.sarif
           category: devskim-agents
@@ -125,10 +137,18 @@ jobs:
       - name: Upload starter-kits SARIF
         if: ${{ github.event.pull_request.head.repo.full_name == github.repository || github.event_name != 'pull_request' }}
         continue-on-error: true
-        uses: github/codeql-action/upload-sarif@2892aa5e19bbd11bc0cff5427e3b750a04d9e3c2 # v4
+        uses: github/codeql-action/upload-sarif@33d7b85da1a04171e211befe2c739303b9a4c066 # v4
         with:
           sarif_file: devskim-starter-kits.sarif
           category: devskim-starter-kits
+
+      - name: Upload skills SARIF
+        if: ${{ github.event.pull_request.head.repo.full_name == github.repository || github.event_name != 'pull_request' }}
+        continue-on-error: true
+        uses: github/codeql-action/upload-sarif@33d7b85da1a04171e211befe2c739303b9a4c066 # v4
+        with:
+          sarif_file: devskim-skills.sarif
+          category: devskim-skills
 
       - name: Summarize findings
         if: always()
@@ -153,13 +173,14 @@ jobs:
             echo
             summarize devskim-agents.sarif "agents/"
             summarize devskim-starter-kits.sarif "starter-kits/"
+            summarize devskim-skills.sarif "skills/"
             echo
             echo "Findings are reported, not enforced. Download the \`devskim-sarif\` artifact for detail."
           } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Upload SARIF artifacts
         if: always()
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
           name: devskim-sarif
           path: devskim-*.sarif
@@ -173,7 +194,7 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
-      - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
+      - uses: actions/setup-dotnet@0f4a354dd5547a28c70b7853dbd95d5b67886e73 # v6.1.0
         with:
           dotnet-version: "8.0"
 
@@ -202,6 +223,7 @@ jobs:
           }
           scan agents capabilities-agents.md
           scan starter-kits capabilities-starter-kits.md
+          scan skills capabilities-skills.md
 
           {
             echo "## Capability report"
@@ -221,11 +243,17 @@ jobs:
             head -c 10000 capabilities-starter-kits.md 2>/dev/null || echo "_No report._"
             echo
             echo "</details>"
+            echo
+            echo "<details><summary>skills/</summary>"
+            echo
+            head -c 10000 capabilities-skills.md 2>/dev/null || echo "_No report._"
+            echo
+            echo "</details>"
           } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Upload capability report
         if: always()
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
           name: capability-report
           path: capabilities-*.md

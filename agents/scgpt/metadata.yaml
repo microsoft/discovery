@@ -1,0 +1,17 @@
+name: scgpt
+type: agent
+version: 0.1.0
+associated_tools:
+- agents/scgpt/tools/scgpt
+publisher:
+  name: Microsoft
+  contact: discovery-catalog@microsoft.com
+  support_url: https://techcommunity.microsoft.com/category/azure/discussions/microsoft-discovery-discussions
+  party: 1p
+description: Scaffold for Single-cell foundation-model embeddings and task-specific adaptation using scGPT.
+tags:
+- genomics
+- bioinformatics
+- machine-learning
+- gpu
+- python

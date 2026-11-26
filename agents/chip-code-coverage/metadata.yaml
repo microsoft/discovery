@@ -1,0 +1,14 @@
+name: chip-code-coverage
+type: agent
+version: 1.1.0
+associated_tools:
+- agents/chip-code-coverage/tools/code-coverage
+publisher:
+  name: Microsoft
+  contact: discovery-catalog@microsoft.com
+  support_url: https://techcommunity.microsoft.com/category/azure/discussions/microsoft-discovery-discussions
+  party: 1p
+description: |
+  Node-agnostic code coverage agent. Measures and closes structural coverage (line, toggle, branch, condition/expression, FSM-state) of RTL under the regression. It infers coverage intent from natural language, drives Verilator --coverage and Icarus, analyzes unreachable items, manages exclusions/waivers, and reports coverage closure directly in chat.
+tags:
+- eda

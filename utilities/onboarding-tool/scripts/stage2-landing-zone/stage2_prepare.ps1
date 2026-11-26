@@ -1,7 +1,9 @@
 #!/usr/bin/env pwsh
 #Requires -Version 7.0
+
 <#
-.SYNOPSIS  Stage 2 / FR2.1-FR2.9 — prepare the Discovery landing zone.
+.SYNOPSIS
+    Stage 2 / FR2.1-FR2.9 — prepare the Discovery landing zone.
 .DESCRIPTION
     Single self-contained Stage 2 script. Prepares the landing zone in dependency order and aggregates reports.
 
@@ -15,15 +17,25 @@
     UDR route tables, and private DNS zones/links — FR2.2-FR2.5) instead of the
     former imperative nsg_rules.ps1 / route_tables.ps1 / private_dns.ps1 az calls.
 
-    Spec: ../../script-specs/stage2-landing-zone/stage2_prepare.md
+.PARAMETER DryRun
+    List intended actions offline without Azure calls. Reports use PLAN, not GO.
+    PassThru returns plan objects without writing JsonPath reports.
+
+.LINK
+    ../../script-specs/stage2-landing-zone/stage2_prepare.md
 #>
 [CmdletBinding()]
 param(
     [Parameter(Mandatory)][string]$ConfigPath,
     [string]$JsonPath,
+    [switch]$DryRun,
     [switch]$PassThru
 )
 Import-Module (Join-Path $PSScriptRoot '..\lib\OnboardingCommon.psm1') -Force
+if ($DryRun) {
+    Write-OnboardingPlan -Stage 2 -ConfigPath $ConfigPath -Options $PSBoundParameters -JsonPath $JsonPath -PassThru:$PassThru -ErrorAction Stop
+    return
+}
 
 function Invoke-RpRegister {
     param(

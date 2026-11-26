@@ -9,13 +9,63 @@ $ast = [System.Management.Automation.Language.Parser]::ParseFile(
     [ref]$errors
 )
 if ($errors.Count) { throw ($errors.Message -join [Environment]::NewLine) }
-foreach ($name in @('Read-XlsxSheet', 'Split-CellRef', 'ConvertFrom-ConfigSheet', 'ConvertTo-ConfigModel', 'Merge-ConfigDefaults', 'Get-RequiredVmSkuResult')) {
+foreach ($name in @('Read-XlsxSheet', 'Split-CellRef', 'ConvertFrom-ConfigSheet', 'ConvertTo-ConfigModel', 'Merge-ConfigDefaults', 'Get-RequiredVmSkuResult', 'Test-Field', 'Get-Stage1PropertyValue', 'Get-LivePolicyAssignments', 'Invoke-Stage1Checks')) {
     $functionAst = $ast.Find({
             param($node)
             $node -is [System.Management.Automation.Language.FunctionDefinitionAst] -and $node.Name -eq $name
         }, $true)
     if (-not $functionAst) { throw "$name was not found in $stage1Path." }
     Invoke-Expression $functionAst.Extent.Text
+}
+foreach ($statement in $ast.EndBlock.Statements) {
+    if ($statement -is [System.Management.Automation.Language.AssignmentStatementAst] -and
+        $statement.Left -is [System.Management.Automation.Language.VariableExpressionAst] -and
+        $statement.Left.VariablePath.UserPath -like 'script:*') {
+        Invoke-Expression $statement.Extent.Text
+    }
+}
+
+Describe 'Stage 1 existing VNet region alignment' {
+    BeforeEach {
+        $configPath = Join-Path (Split-Path -Parent $stage1Path) '..\examples\sample-config.json'
+        $config = Get-Content -LiteralPath $configPath -Raw | ConvertFrom-Json
+        $defaults = ConvertTo-ConfigModel -Parsed ([pscustomobject]@{ Scalars = @{}; Subnets = @(); Policies = @(); Waivers = @() }) |
+            ConvertTo-Json -Depth 20 | ConvertFrom-Json
+        $config = Merge-ConfigDefaults -Config $config -Defaults $defaults
+        $config.network.model = 'byo-existing'
+        $script:existingVnet = [pscustomobject]@{
+            id           = '/subscriptions/sub/resourceGroups/network-rg/providers/Microsoft.Network/virtualNetworks/vnet'
+            location     = 'uksouth'
+            addressSpace = [pscustomobject]@{ addressPrefixes = @($config.network.vnetCidr) }
+            subnets      = @($config.network.subnets | ForEach-Object {
+                    [pscustomobject]@{ name = "snet-$($_.role)"; addressPrefix = $_.cidr }
+                })
+        }
+        Mock Get-AzJson { $null }
+        Mock Get-AzJson { [pscustomobject]@{ id = 'sub' } } -ParameterFilter { $Args[0] -eq 'account' }
+        Mock Get-AzJson { $script:existingVnet } -ParameterFilter { $Args[0] -eq 'network' }
+        Mock Get-VcpuQuotaResult {}
+        Mock Get-ModelQuotaResult {}
+        Mock Get-LivePolicyAssignments { @() }
+    }
+
+    It 'checks the workload region independently of the control plane' -TestCases @(
+        @{ Control = 'eastus'; Workload = 'uksouth'; Expected = 'Pass' },
+        @{ Control = 'uksouth'; Workload = 'uksouth'; Expected = 'Pass' },
+        @{ Control = 'uksouth'; Workload = 'eastus'; Expected = 'Fail' }
+    ) {
+        param($Control, $Workload, $Expected)
+        $config.controlPlaneRegion = $Control
+        $config.workloadRegion = $Workload
+
+        $result = Invoke-Stage1Checks -Cfg $config | Where-Object id -eq 'byo-vnet'
+
+        $result.status | Should Be $Expected
+        if ($Expected -eq 'Fail') {
+            $result.remediation | Should Match "Set workloadRegion to 'uksouth'"
+            $result.remediation | Should Not Match 'Set controlPlaneRegion'
+        }
+    }
 }
 
 Describe 'Stage 1 required VM SKU availability' {
@@ -165,6 +215,130 @@ Describe 'Stage 1 planning form conversion' {
             $parsed.Scalars.ContainsKey('subscriptionId') | Should Be $true
             $parsed.Scalars.ContainsKey('rbac.humanAccessMode') | Should Be $true
             $parsed.Scalars.ContainsKey('network.dnsResourceGroup') | Should Be $true
+            $parsed.Scalars.systemSku | Should Be 'Standard_D4s_v6'
+            (ConvertTo-ConfigModel -Parsed $parsed).systemSku | Should Be 'Standard_D4s_v6'
+        }
+    }
+
+    It 'defaults the system SKU for older forms without a selection' {
+        $model = ConvertTo-ConfigModel -Parsed ([pscustomobject]@{
+                Scalars = @{}; Subnets = @(); Policies = @(); Waivers = @()
+            })
+
+        $model.systemSku | Should Be 'Standard_D4s_v6'
+    }
+
+    It 'preserves the selected system SKU through config serialization' {
+        $parsed = ConvertFrom-ConfigSheet -Cells @{
+            A1 = 'systemSku'; B1 = ' Standard_D16as_v5 '
+        }
+
+        $config = ConvertTo-ConfigModel -Parsed $parsed | ConvertTo-Json -Depth 20 | ConvertFrom-Json
+
+        $config.systemSku | Should Be 'Standard_D16as_v5'
+        $merged = Merge-ConfigDefaults -Config $config -Defaults (
+            ConvertTo-ConfigModel -Parsed ([pscustomobject]@{
+                    Scalars = @{}; Subnets = @(); Policies = @(); Waivers = @()
+                }) | ConvertTo-Json -Depth 20 | ConvertFrom-Json
+        )
+        $merged.systemSku | Should Be 'Standard_D16as_v5'
+    }
+}
+
+Describe 'Stage 1 system SKU workbook dropdowns' {
+    It 'offers every pictured SKU once under SIZING & SCALE and preserves existing dropdown targets' {
+        $expectedSkus = @(
+            'Standard_D16as_v5', 'Standard_D16s_v5',
+            'Standard_D4ads_v5', 'Standard_D4ads_v6',
+            'Standard_D4as_v5', 'Standard_D4as_v6', 'Standard_D4as_v7',
+            'Standard_D4ds_v5',
+            'Standard_D4s_v3', 'Standard_D4s_v4', 'Standard_D4s_v5', 'Standard_D4s_v6',
+            'Standard_D8as_v5', 'Standard_D8as_v6', 'Standard_D8s_v5'
+        )
+        foreach ($fileName in @(
+                'discovery-resource-planning-form-byo-vnet.xlsx',
+                'discovery-resource-planning-form-managed-vnet.xlsx'
+            )) {
+            $path = Join-Path (Split-Path -Parent $stage1Path) $fileName
+            $cells = Read-XlsxSheet -Path $path -SheetName 'Config'
+            $skuKeys = @($cells.Keys | Where-Object { $_ -match '^A\d+$' -and $cells[$_] -eq 'systemSku' })
+            $skuKeys.Count | Should Be 1
+            $skuRow = (Split-CellRef $skuKeys[0]).Row
+            $cells["A$($skuRow - 1)"] | Should Be 'SIZING & SCALE'
+            $cells["B$skuRow"] | Should Be 'Standard_D4s_v6'
+
+            $zip = [System.IO.Compression.ZipFile]::OpenRead($path)
+            try {
+                $reader = [System.IO.StreamReader]::new($zip.GetEntry('xl/worksheets/sheet1.xml').Open())
+                try { [xml]$sheet = $reader.ReadToEnd() } finally { $reader.Dispose() }
+            }
+            finally { $zip.Dispose() }
+            $validation = @($sheet.worksheet.dataValidations.dataValidation | Where-Object { $_.sqref -eq "B$skuRow" })
+            $validation.Count | Should Be 1
+            $validation[0].type | Should Be 'list'
+            $validation[0].showDropDown | Should Be '0'
+            $validation[0].showErrorMessage | Should Be '1'
+            $validation[0].allowBlank | Should Be '0'
+            $formula = [string]$validation[0].formula1
+            ($formula.Trim('"').Length -le 255) | Should Be $true
+            $choices = @($formula.Trim('"') -split ',')
+            ($choices -join ',') | Should Be ($expectedSkus -join ',')
+            @($choices | Select-Object -Unique).Count | Should Be $expectedSkus.Count
+
+            foreach ($v in $sheet.worksheet.dataValidations.dataValidation | Where-Object { $_.type -eq 'list' }) {
+                foreach ($ref in ([string]$v.sqref -split ' ')) {
+                    if ($ref -match '^B\d+$') {
+                        $cells[$ref.Replace('B', 'A')] | Should Not BeNullOrEmpty
+                        $cells[$ref.Replace('B', 'A')] | Should Not Match '^(SIZING & SCALE|NAMES |POLICY SET|WAIVERS )'
+                    }
+                }
+            }
+            foreach ($choice in $choices) {
+                $cells["B$skuRow"] = $choice
+                $config = ConvertTo-ConfigModel -Parsed (ConvertFrom-ConfigSheet -Cells $cells) |
+                    ConvertTo-Json -Depth 20 | ConvertFrom-Json
+                $config.systemSku | Should Be $choice
+                $result = Get-RequiredVmSkuResult -Config $config -Region $config.workloadRegion -Skus @(
+                    [pscustomobject]@{ name = $choice; restrictions = @() },
+                    [pscustomobject]@{ name = 'Standard_D4ds_v6'; restrictions = @() }
+                )
+                $result.status | Should Be 'Pass'
+                $result.data[0].name | Should Be $choice
+            }
+        }
+    }
+
+    It 'checks quota against the system SKU selected in either workbook rather than the default' {
+        Mock Get-AzJson -ModuleName OnboardingCommon {
+            @(
+                [pscustomobject]@{ name = 'Standard_D16as_v5'; family = 'StandardDasv5Family'; restrictions = @(); capabilities = @([pscustomobject]@{ name = 'vCPUs'; value = '16' }) },
+                [pscustomobject]@{ name = 'Standard_D4ds_v6'; family = 'StandardDdsv6Family'; restrictions = @(); capabilities = @([pscustomobject]@{ name = 'vCPUs'; value = '4' }) }
+            )
+        } -ParameterFilter { $Args -contains 'list-skus' }
+        Mock Get-AzJson -ModuleName OnboardingCommon {
+            @(
+                [pscustomobject]@{ name = [pscustomobject]@{ value = 'cores' }; limit = 100; currentValue = 0 },
+                [pscustomobject]@{ name = [pscustomobject]@{ value = 'StandardDasv5Family' }; limit = 47; currentValue = 0 },
+                [pscustomobject]@{ name = [pscustomobject]@{ value = 'StandardDdsv6Family' }; limit = 12; currentValue = 0 }
+            )
+        } -ParameterFilter { $Args -contains 'list-usage' }
+        foreach ($fileName in @(
+                'discovery-resource-planning-form-byo-vnet.xlsx',
+                'discovery-resource-planning-form-managed-vnet.xlsx'
+            )) {
+            $path = Join-Path (Split-Path -Parent $stage1Path) $fileName
+            $cells = Read-XlsxSheet -Path $path -SheetName 'Config'
+            $skuKey = $cells.Keys | Where-Object { $_ -match '^A\d+$' -and $cells[$_] -eq 'systemSku' } | Select-Object -First 1
+            $skuKey | Should Not BeNullOrEmpty
+            $cells[$skuKey.Replace('A', 'B')] = 'Standard_D16as_v5'
+            $config = ConvertTo-ConfigModel -Parsed (ConvertFrom-ConfigSheet -Cells $cells) |
+                ConvertTo-Json -Depth 20 | ConvertFrom-Json
+
+            $result = Get-VcpuQuotaResult -Config $config -Fr 'FR1.5'
+
+            $result.status | Should Be 'Fail'
+            $result.detail | Should Match '3 x Standard_D16as_v5 = 48 vCPUs'
+            @($result.data | Where-Object blocking)[0].required | Should Be 48
         }
     }
 }

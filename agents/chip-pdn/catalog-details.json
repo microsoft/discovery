@@ -1,0 +1,23 @@
+{
+  "node_awareness": "node-aware",
+  "original_tags": [
+    "pdn",
+    "power-grid",
+    "openroad",
+    "pdngen",
+    "node-portable",
+    "sky130"
+  ],
+  "previous_build": {
+    "containerfile": "Containerfile",
+    "engine": "docker"
+  },
+  "action_examples": {
+    "run": [
+      {
+        "name": "build_pdn",
+        "params_json": "{\"scenario\":\"build_pdn\",\"top\":\"counter\",\"def_file\":\"/input/floorplan.def\",\"tech_lef\":\"/input/sky130_fd_sc_hd.tlef\",\"cell_lef\":\"/input/sky130_fd_sc_hd.lef\",\"liberty\":\"/input/sky130_fd_sc_hd__tt_025C_1v80.lib\",\"pdn_config\":\"/input/pdn.tcl\",\"pdk_binding\":{\"pdk\":\"sky130A\"}}"
+      }
+    ]
+  }
+}

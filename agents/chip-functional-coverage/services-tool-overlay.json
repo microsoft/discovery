@@ -1,0 +1,11 @@
+{
+  "version": "1.2.0",
+  "actions": [{
+    "name": "run",
+    "description": "Execute functional coverage from /input/params.json. measure_rtl_coverage compiles RTL and runs cocotb; testbench must call chip_fcov_sampler.sample. model_coverage, measure_coverage, merge_coverage are also supported but caller-asserted samples are not native signoff evidence. Read common_design_envelope.json.",
+    "infra_node": "worker",
+    "command": "python3 -B -u /app/run.py --params-file /input/params.json",
+    "input_schema": {"type": "object", "required": [], "properties": {}, "additionalProperties": false}
+  }],
+  "compute_limits": {"cpu": 2, "ram": "4Gi"}
+}

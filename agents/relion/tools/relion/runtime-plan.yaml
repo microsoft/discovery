@@ -1,0 +1,40 @@
+name: relion
+status: scaffold-only
+image_built: false
+deployment_ready: false
+upstream: https://github.com/3dem/relion
+candidate_license_hint: GPLv2
+license_verified: false
+upstream_revision: null
+base_image_candidate: nvidia/cuda:12.2.2-cudnn8-devel-ubuntu22.04
+base_image_compatibility_verified: false
+planned_interfaces:
+- relion_refine and release-specific pipeline tools
+planned_dependencies:
+- CUDA-enabled RELION build
+- FFTW
+- MPI when required
+- Cryo-EM image processing dependencies
+required_inputs:
+- STAR metadata and referenced particle stacks
+- CTF and acquisition metadata
+- Refinement configuration and optional reference maps
+expected_outputs:
+- Reconstructed MRC maps
+- Updated STAR metadata
+- Refinement and resolution diagnostics
+domain_requirements: Preserve pixel size, optics groups, and half-map separation; multi-process and multi-GPU
+  execution require separate validation.
+release_requirements:
+- Confirm publisher ownership and contacts before catalog publication.
+- Review upstream code, dependency, checkpoint, and database license terms.
+- Select and pin an upstream revision and compatible Python/CUDA/framework versions.
+- Install the tool and native extensions in its self-contained Docker build context.
+- Provision authorized model/data artifacts with immutable identities and checksums.
+- Choose local artifacts or an approved cache; do not rely on undeclared downloads.
+- Verify CLI/API availability against the selected upstream release.
+- Check GPU visibility and actual scientific backend device selection.
+- Run a small real-input scientific smoke test with output and convergence checks.
+- Measure memory, VRAM, CPU, and storage requirements; update worker sizing.
+- Remove the Dockerfile build gate only after completing runtime provisioning.
+- Build, scan, publish, and deploy only when explicitly authorized in the cloud project.

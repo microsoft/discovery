@@ -37,6 +37,10 @@ Confirm the subscription is allowlisted for Discovery, record the RP-registratio
 
 ### capture_fields — FR1.1
 Capture and normalize control-plane region, workload region, VNet CIDR, per-service subnet CIDRs, BYO storage model, deploying identity, and policy set. Normalize regions to Azure short names and CIDRs to canonical form; flag any required field left blank.
+
+For `byo-existing`, validate the existing VNet against `workloadRegion`, not `controlPlaneRegion`.
+The VNet/subnets and all managed-resource-group resources must share the workload region;
+the Discovery control-plane resources can use a different region.
 - Missing field: complete the corresponding cell in the planning sheet.
 
 ### project_storage — FR1.1
@@ -74,7 +78,7 @@ Confirm the workload region offers required features, and distinguish capacity f
 
 ### quota_sku — FR1.5
 Expand the sizing tier (Small|Medium|Large) into concrete resource counts and required quota, then validate:
-- Effective Stage 4 VM SKUs are offered in-region and unrestricted for the configured subscription. Defaults are a 3-node `Standard_D4s_v6` system pool and a node pool scaling from 0 to 3 `Standard_D4ds_v6` nodes; advanced JSON configs can override `systemSku`, `nodePoolVmSize`, and `nodePoolMaxNodeCount`.
+- Effective Stage 4 VM SKUs are offered in-region and unrestricted for the configured subscription. Both planning workbooks expose `systemSku` (SC system SKU) as a dropdown under **SIZING & SCALE**, defaulting to `Standard_D4s_v6`. Preserve the selection in the exported config and calculate system-pool quota for 3 nodes of that SKU. Older forms without the field retain the default. The node pool defaults to scaling from 0 to 3 `Standard_D4ds_v6` nodes; JSON configs can also set `systemSku`, `nodePoolVmSize`, and `nodePoolMaxNodeCount`.
 - Total Regional and VM-family quota are calculated from the live vCPU/family metadata of those effective SKUs. System-pool shortfalls fail the gate; node-pool scale-out shortfalls warn because initial deployment can still succeed.
 - Cosmos autoscale RU/s: workspace 2,400 (max 4,000); each project 400 (max 4,000); sized 2,400 + 400 × projects.
 - Model TPM: GPT-5.4 workspace/cognition 250K plus gpt-5-4 validation chat 200K, requiring 450K free for a fresh deployment; resumed deployments count only missing allocations. Bookshelf planning estimates per instance are GPT-5.2 200K, GPT-5 Mini 2M and Text Embedding 3 Small 2M, but the current quota check validates only GPT-5.4.
@@ -88,7 +92,9 @@ Expand the sizing tier (Small|Medium|Large) into concrete resource counts and re
   by model and SKU first, prefer a compatible default version, then fall back to the latest
   compatible version. The workspace can use a service-pinned version independently. The check
   confirms from SKU rate-limit metadata that each quota capacity unit represents 1,000 tokens per
-  minute before interpreting usage values as K TPM. Every query is pinned to `subscriptionId` and
+  minute before interpreting usage values as K TPM. It supports both token-labeled metadata and the
+  unlabeled `1000` per `60` second rate-limit entry returned by Azure CLI for the exact matching
+  GPT-5.4 GlobalStandard SKU. Every query is pinned to `subscriptionId` and
   forces JSON output. A fresh deployment needs 450K (workspace 250K + chat model 200K); a resumed
   deployment counts only allocations whose Discovery resources are not already `Succeeded`.
   Quota is scoped by subscription, region, model, and deployment type. A numeric quota row by

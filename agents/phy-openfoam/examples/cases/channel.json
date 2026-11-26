@@ -1,0 +1,345 @@
+{
+ "name": "channel_poiseuille_water_20C",
+ "solver": "incompressibleFluid",
+ "files": {
+  "system/blockMeshDict": "FoamFile\n{\n    format ascii;\n    class dictionary;\n    object blockMeshDict;\n}\n\nvertices\n(\n    (0 0 -0.0005) (0.3 0 -0.0005) (0.3 0.005 -0.0005) (0 0.005 -0.0005)\n    (0 0 0.0005) (0.3 0 0.0005) (0.3 0.005 0.0005) (0 0.005 0.0005)\n);\nblocks\n(\n    hex (0 1 2 3 4 5 6 7) (150 60 1) simpleGrading (1 1 1)\n);\ndefaultPatch { type empty; }\nboundary\n(\n    inlet { type patch; faces ((0 3 7 4)); }\n    outlet { type patch; faces ((1 2 6 5)); }\n    walls { type wall; faces ((0 1 5 4) (3 2 6 7)); }\n    frontAndBack { type empty; faces ((0 1 2 3) (4 5 6 7)); }\n);\n",
+  "system/controlDict": "FoamFile\n{\n    format ascii;\n    class dictionary;\n    object controlDict;\n}\n\nsolver          incompressibleFluid;\nstartFrom       startTime;\nstartTime       0;\nstopAt          endTime;\nendTime         2000;\ndeltaT          1;\nwriteControl    timeStep;\nwriteInterval   20;\npurgeWrite      0;\nwriteFormat     ascii;\nwritePrecision  8;\nwriteCompression off;\ntimeFormat      general;\ntimePrecision   6;\nrunTimeModifiable true;\n",
+  "system/fvSchemes": "FoamFile\n{\n    format ascii;\n    class dictionary;\n    object fvSchemes;\n}\n\nddtSchemes\n{\n    default steadyState;\n}\n\ngradSchemes\n{\n    default Gauss linear;\n}\n\ndivSchemes\n{\n    default none;\n    div(phi,U) bounded Gauss linearUpwind grad(U);\n}\n\nlaplacianSchemes\n{\n    default Gauss linear corrected;\n}\n\ninterpolationSchemes\n{\n    default linear;\n}\n\nsnGradSchemes\n{\n    default corrected;\n}\n",
+  "system/fvSolution": "FoamFile\n{\n    format ascii;\n    class dictionary;\n    object fvSolution;\n}\n\nsolvers\n{\n    p\n    {\n        solver          GAMG;\n        tolerance       1e-09;\n        relTol          0.01;\n        smoother        GaussSeidel;\n    }\n\n    pFinal\n    {\n        $p;\n        tolerance       1e-09;\n        relTol          0;\n    }\n\n    U\n    {\n        solver          smoothSolver;\n        smoother        symGaussSeidel;\n        tolerance       1e-10;\n        relTol          0.1;\n    }\n}\n\nSIMPLE\n{\n    nNonOrthogonalCorrectors 0;\n    consistent      yes;\n\n    residualControl\n    {\n        p   1e-8;\n        U   1e-9;\n    }\n}\n\nrelaxationFactors\n{\n    equations\n    {\n        U   0.9;\n        \".*\" 0.9;\n    }\n}\n",
+  "constant/physicalProperties": "FoamFile\n{\n    format ascii;\n    class dictionary;\n    object physicalProperties;\n}\n\nviscosityModel  constant;\n\nnu              1.004e-06 [m^2/s];\n",
+  "constant/momentumTransport": "FoamFile\n{\n    format ascii;\n    class dictionary;\n    object momentumTransport;\n}\n\nsimulationType laminar;\n",
+  "0/U": "FoamFile\n{\n    format ascii;\n    class volVectorField;\n    object U;\n}\n\ndimensions [velocity];\ninternalField uniform (0.02 0 0);\nboundaryField\n{\n    inlet { type fixedValue; value uniform (0.02 0 0); }\n    outlet { type zeroGradient; }\n    walls { type noSlip; }\n    frontAndBack { type empty; }\n}\n",
+  "0/p": "FoamFile\n{\n    format ascii;\n    class volScalarField;\n    object p;\n}\n\ndimensions [kinematicPressure];\ninternalField uniform 0;\nboundaryField\n{\n    inlet { type zeroGradient; }\n    outlet { type fixedValue; value uniform 0; }\n    walls { type zeroGradient; }\n    frontAndBack { type empty; }\n}\n"
+ },
+ "mesh": [
+  {
+   "executable": "blockMesh",
+   "args": []
+  },
+  {
+   "executable": "checkMesh",
+   "args": []
+  }
+ ],
+ "diagnostics": {
+  "fields": [
+   {
+    "name": "p",
+    "unit": "m^2/s^2",
+    "positive": true
+   },
+   {
+    "name": "U",
+    "unit": "m/s",
+    "components": 3
+   }
+  ],
+  "quantities": [
+   {
+    "name": "p_inlet",
+    "function": "surfaceFieldValue",
+    "settings": {
+     "select": "patch",
+     "patch": "inlet",
+     "operation": "areaAverage",
+     "fields": "(p)"
+    },
+    "column": "areaAverage(p)",
+    "statistic": "window_mean",
+    "unit": "m^2/s^2"
+   },
+   {
+    "name": "p_outlet",
+    "function": "surfaceFieldValue",
+    "settings": {
+     "select": "patch",
+     "patch": "outlet",
+     "operation": "areaAverage",
+     "fields": "(p)"
+    },
+    "column": "areaAverage(p)",
+    "statistic": "window_mean",
+    "unit": "m^2/s^2"
+   },
+   {
+    "name": "p_x1",
+    "function": "probes",
+    "settings": {
+     "fields": "(p)",
+     "probeLocations": "((0.05 0.0025 0))"
+    },
+    "column": "0",
+    "statistic": "window_mean",
+    "unit": "m^2/s^2"
+   },
+   {
+    "name": "p_x2",
+    "function": "probes",
+    "settings": {
+     "fields": "(p)",
+     "probeLocations": "((0.25 0.0025 0))"
+    },
+    "column": "0",
+    "statistic": "window_mean",
+    "unit": "m^2/s^2"
+   }
+  ],
+  "derived": [
+   {
+    "name": "dp_core_kin",
+    "op": "difference",
+    "a": "quantity.p_x1",
+    "b": "quantity.p_x2",
+    "unit": "m^2/s^2"
+   },
+   {
+    "name": "dp_core_Pa",
+    "op": "scale",
+    "a": "derived.dp_core_kin",
+    "factor": 998.2,
+    "factor_unit": "kg/m3",
+    "unit": "Pa"
+   },
+   {
+    "name": "dp_core_error_pct",
+    "op": "abs_rel_error_pct",
+    "a": "derived.dp_core_Pa",
+    "reference": 1.9242101760000003,
+    "unit": "%"
+   },
+   {
+    "name": "dp_full_kin",
+    "op": "difference",
+    "a": "quantity.p_inlet",
+    "b": "quantity.p_outlet",
+    "unit": "m^2/s^2"
+   },
+   {
+    "name": "dp_full_Pa",
+    "op": "scale",
+    "a": "derived.dp_full_kin",
+    "factor": 998.2,
+    "factor_unit": "kg/m3",
+    "unit": "Pa"
+   },
+   {
+    "name": "dp_full_error_pct",
+    "op": "abs_rel_error_pct",
+    "a": "derived.dp_full_Pa",
+    "reference": 2.8863152640000003,
+    "unit": "%"
+   }
+  ],
+  "patches": [
+   "inlet",
+   "outlet",
+   "walls",
+   "frontAndBack"
+  ],
+  "inlet": "inlet",
+  "outlet": "outlet",
+  "impermeable_patches": [
+   "walls"
+  ],
+  "expected_cells": 9000,
+  "dimensions": 2,
+  "target_time": 2000,
+  "mass_balance": false,
+  "stationarity_window": 50,
+  "normalized": false
+ },
+ "contract": {
+  "id": "channel_poiseuille_water_20C",
+  "title": "Laminar pressure drop in a 5 mm x 0.3 m 2D water channel at Um=0.02 m/s",
+  "requested_prompt": "Water at 20 C flows through a 2D channel of height 5 mm and length 0.3 m at a mean velocity of 0.02 m/s. What is the pressure drop, and how does it compare with the analytic laminar value?",
+  "regime": "steady",
+  "objectives": [
+   {
+    "id": "healthy_steady_solution",
+    "claim": "numerical_health",
+    "description": "A healthy, mesh-resolved steady laminar solution is reached within budget (solver/mesh/case-integrity baseline checks are injected automatically at freeze; these cover the geometry- and field-specific health claims beyond that baseline).",
+    "check_ids": [
+     "two_solution_directions",
+     "cell_count_matches_spec",
+     "expected_boundaries_present",
+     "no_cyclic_patches",
+     "planar_empty_patch",
+     "positive_all_saved"
+    ]
+   },
+   {
+    "id": "steady_state_reached",
+    "claim": "stationarity",
+    "description": "The SIMPLE iteration reaches a stationary (residual-converged) state before the horizon, and the reported quantities are read from that stationary window.",
+    "check_ids": [
+     "stationary_window_covered",
+     "simple_converged"
+    ]
+   },
+   {
+    "id": "pressure_drop_matches_poiseuille",
+    "claim": "reference_agreement",
+    "description": "The measured pressure drop in the fully-developed core of the channel (x = 0.05-0.25 m, beyond the ~0.02 m laminar entrance length) matches the analytic plane-Poiseuille gradient dp/dx = 12 mu Um / H^2.",
+    "check_ids": [
+     "core_pressure_drop_matches_analytic"
+    ]
+   },
+   {
+    "id": "total_pressure_drop_reasonable",
+    "claim": "quantity",
+    "description": "The total inlet-to-outlet pressure drop (which also includes entrance-region excess loss) is reported and is consistent in magnitude with the fully-developed analytic total.",
+    "check_ids": [
+     "full_channel_pressure_drop_reasonable"
+    ]
+   }
+  ],
+  "checks": [
+   {
+    "id": "two_solution_directions",
+    "metric": "mesh.dimension_matches",
+    "operator": "true",
+    "unit": "1",
+    "category": "mesh",
+    "rationale": "The channel is planar: exactly two solution directions (x, y).",
+    "failure": "hard"
+   },
+   {
+    "id": "cell_count_matches_spec",
+    "metric": "mesh.cell_count_matches",
+    "operator": "true",
+    "unit": "1",
+    "category": "mesh",
+    "rationale": "Realized cell count must equal the specified 150x60x1 block layout (9000 cells).",
+    "failure": "hard"
+   },
+   {
+    "id": "expected_boundaries_present",
+    "metric": "mesh.expected_patches_present",
+    "operator": "true",
+    "unit": "1",
+    "category": "boundary",
+    "rationale": "Inlet, outlet, walls, and the spanwise empty patch must exist.",
+    "failure": "hard"
+   },
+   {
+    "id": "no_cyclic_patches",
+    "metric": "mesh.cyclic_patch_count",
+    "operator": "eq",
+    "threshold": 0,
+    "unit": "1",
+    "category": "boundary",
+    "rationale": "A cyclic patch would turn this into a different (periodic) problem.",
+    "failure": "hard"
+   },
+   {
+    "id": "planar_empty_patch",
+    "metric": "mesh.planar_patch_present",
+    "operator": "true",
+    "unit": "1",
+    "category": "boundary",
+    "rationale": "The spanwise (z) direction must be declared empty for the 2D case.",
+    "failure": "hard"
+   },
+   {
+    "id": "positive_all_saved",
+    "metric": "fields.positive_all_saved",
+    "operator": "true",
+    "unit": "1",
+    "category": "admissibility",
+    "rationale": "With the outlet referenced at p=0 and a monotonically falling pressure, kinematic pressure must stay non-negative everywhere in this unidirectional laminar flow.",
+    "failure": "hard"
+   },
+   {
+    "id": "stationary_window_covered",
+    "metric": "stationarity.window_covered",
+    "operator": "true",
+    "unit": "1",
+    "category": "stationarity",
+    "rationale": "The reported window_mean statistics must be computed from a window that is at least as long as the declared stationarity window (50 iterations), so they are not contaminated by the startup transient.",
+    "failure": "incomplete"
+   },
+   {
+    "id": "simple_converged",
+    "metric": "solver.converged_by_residual_control",
+    "operator": "true",
+    "unit": "1",
+    "category": "stationarity",
+    "rationale": "SIMPLE's residualControl block (p<1e-8, U<1e-9) must report convergence, confirming the steady solution has settled rather than merely exhausting the iteration budget.",
+    "failure": "incomplete"
+   },
+   {
+    "id": "core_pressure_drop_matches_analytic",
+    "metric": "derived.dp_core_error_pct",
+    "operator": "lt",
+    "threshold": 5.0,
+    "unit": "%",
+    "category": "reference",
+    "rationale": "In the fully-developed core (x=0.05-0.25 m, well beyond the ~0.0199 m laminar entrance length for Re~100), the measured pressure gradient must match the analytic plane-Poiseuille formula dp/dx = 12*mu*Um/H^2 (reference 1.92421 Pa over 0.2 m) to within 5%, a bound that covers the discretization error of a 150x60 orthogonal mesh at this Re without masking a genuine defect.",
+    "failure": "hard"
+   },
+   {
+    "id": "full_channel_pressure_drop_reasonable",
+    "metric": "derived.dp_full_error_pct",
+    "operator": "lt",
+    "threshold": 25.0,
+    "unit": "%",
+    "category": "validation",
+    "rationale": "The inlet-to-outlet drop (reference 2.88632 Pa for the fully-developed formula over the full 0.3 m) also carries an entrance-region excess loss bounded by a few multiples of the dynamic pressure 0.5*rho*Um^2 (0.1996 Pa, ~6.9% of the analytic total) plus outlet-BC discretization; 25% accommodates this physically-expected excess without masking a genuine solver defect.",
+    "failure": "hard"
+   }
+  ],
+  "authority": "proposed",
+  "assumptions": [
+   {
+    "parameter": "fluid_density",
+    "value": 998.2,
+    "unit": "kg/m^3",
+    "source": "documented_default",
+    "justification": "Standard density of liquid water at 20 C, 1 atm (e.g. NIST/CRC tables, rho(20C)=998.2 kg/m^3)."
+   },
+   {
+    "parameter": "fluid_kinematic_viscosity",
+    "value": 1.004e-06,
+    "unit": "m^2/s",
+    "source": "documented_default",
+    "justification": "Standard kinematic viscosity of liquid water at 20 C (nu=1.004e-6 m^2/s, i.e. dynamic viscosity mu=1.0016e-3 Pa s)."
+   },
+   {
+    "parameter": "geometry",
+    "value": "2D planar channel, H=0.005 m, L=0.3 m",
+    "unit": "1",
+    "source": "user",
+    "justification": "Directly stated in the request (channel height 5 mm, length 0.3 m, 2D)."
+   },
+   {
+    "parameter": "inlet_velocity_profile",
+    "value": "uniform (plug) inlet at the stated mean velocity 0.02 m/s",
+    "unit": "1",
+    "source": "derived",
+    "justification": "The request gives only a mean velocity with no inlet profile; a uniform inlet is the standard choice and lets the laminar entrance region develop naturally inside the domain (entrance length ~0.02 m << 0.3 m domain length)."
+   },
+   {
+    "parameter": "flow_regime",
+    "value": "laminar, Re=rho*Um*H/mu~99.6",
+    "unit": "1",
+    "source": "derived",
+    "justification": "Re~100 is far below the plane-channel transitional Reynolds number (~2300), so a laminar (not RAS/LES) model is the physically correct and budget-cheapest choice; this is not separately gated by a CFD-measured metric but follows directly from the stated geometry and velocity."
+   }
+  ],
+  "reference": "Analytic reference: fully-developed plane (2D) Poiseuille flow between parallel plates, dp/dx = 12*mu*Um/H^2 (e.g. F.M. White, Viscous Fluid Flow, 3rd ed., Sec. 3-2; equivalently Fox, McDonald & Pritchard, Introduction to Fluid Mechanics, laminar flow between parallel plates). Water properties at 20 C, 1 atm (rho=998.2 kg/m^3, nu=1.004e-6 m^2/s) from standard tables (NIST WebBook / CRC Handbook of Chemistry and Physics).",
+  "limitations": [
+   "Single-mesh verification on a 150x60 orthogonal grid; no formal mesh-independence (GCI) study was performed.",
+   "The analytic reference (dp/dx = 12 mu Um / H^2) is the fully-developed plane-Poiseuille solution; it does not include the entrance-region excess pressure loss, which is why the full inlet-to-outlet comparison uses a looser tolerance than the core-region comparison.",
+   "Water properties are standard 20 C table values, not independently re-derived from an equation of state."
+  ]
+ },
+ "budget": {
+  "max_attempts": 4,
+  "wall_seconds": 1800,
+  "cpus": 2,
+  "memory_mb": 4096,
+  "max_cells": 50000,
+  "mpi_ranks": 1,
+  "max_end_time": 2000
+ }
+}

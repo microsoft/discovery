@@ -4,7 +4,7 @@
   "acrName": "<your-acr-name-without-azurecr-io>",
   "acrResourceGroup": "<optional-acr-resource-group-when-different-from-resourceGroup>",
   "location": "uksouth",
-  "apiVersion": "2026-02-01-preview",
+  "apiVersion": "2026-06-01",
   "workspaceEndpoint": "https://<your-workspace>.workspace.discovery.azure.com",
   "project": "<your-project-name>",
   "tenantId": "<your-tenant-id-guid>",

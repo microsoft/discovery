@@ -21,7 +21,9 @@ Usage example (execute mode):
         location="eastus",
     )
 
-The template currently targets Microsoft.Discovery/tools (apiVersion 2025-07-01-preview).
+The resource type and properties envelope remain Microsoft.Discovery/tools across
+the supported tool ARM APIs. Python deployments explicitly select GA by default;
+the template retains a legacy fallback for standalone callers.
 """
 
 from __future__ import annotations
@@ -38,9 +40,21 @@ from typing import Any
 import typer
 
 from discovery.common.logging import debug, pretty_debug
+from discovery.poll.models.arm_versions import TOOL_ARM_API_VERSION, ToolArmApiVersion
 
 
 TEMPLATE_DIR = files("discovery.poll").joinpath("templates/tooldef")
+
+
+def resolve_tool_pool_size(mpi: bool, pool_size: int | None) -> int:
+    """Resolve and validate the default pod count for a tool definition."""
+    minimum = 2 if mpi else 1
+    effective_size = minimum if pool_size is None else pool_size
+    if effective_size < minimum:
+        suffix = " for MPI tools" if mpi else ""
+        msg = f"pool_size must be at least {minimum}{suffix}"
+        raise ValueError(msg)
+    return effective_size
 
 
 @dataclass
@@ -52,6 +66,15 @@ class ToolDefinitionInputs:
     version: str = "1.0"
     environment: dict[str, str] | None = None
     tags: dict[str, dict[str, str]] | None = None  # tagsByResource structure
+    mpi: bool = False
+    pool_size: int | None = None
+    infiniband: bool = False
+    api_version: str = TOOL_ARM_API_VERSION
+
+    def __post_init__(self) -> None:
+        """Validate pod count and the independent tool ARM API selection."""
+        self.pool_size = resolve_tool_pool_size(self.mpi, self.pool_size)
+        self.api_version = ToolArmApiVersion(self.api_version).value
 
 
 def _load_text(name: str) -> str:
@@ -72,7 +95,16 @@ def render_tool_definition(inputs: ToolDefinitionInputs) -> dict[str, Any]:
     raw = raw.replace("NAME_PLACEHOLDER", inputs.name)
     raw = raw.replace("DESC_PLACEHOLDER", inputs.description)
     raw = raw.replace("ACR_IMAGE_PLACEHOLDER", inputs.image)
-    return json.loads(raw)
+    tool_def: dict[str, Any] = json.loads(raw)
+    infra = tool_def["infra"][0]
+    infra["compute"]["pool_size"] = inputs.pool_size
+    if inputs.mpi:
+        # MPI is selected by this metadata, not infra_type or replica count.
+        infra["mpi"] = {"follower_command": "/opt/Microsoft.Discovery/mpid"}
+        infra["internal_ports"] = [{"destination": 22, "protocol": "tcp"}]
+    if inputs.infiniband:
+        infra["compute"]["infiniband"] = True
+    return tool_def
 
 
 def build_arm_parameters(inputs: ToolDefinitionInputs, tool_def: dict[str, Any]) -> dict[str, Any]:
@@ -87,6 +119,7 @@ def build_arm_parameters(inputs: ToolDefinitionInputs, tool_def: dict[str, Any])
     # Respect version override if provided
     raw_params = raw_params.replace('"1.0"', json.dumps(inputs.version))
     params_obj = json.loads(raw_params)
+    params_obj["parameters"]["outApiVersion"] = {"value": inputs.api_version}
     # Inject env vars if provided
     if inputs.environment:
         params_obj["parameters"]["OutEnvironmentVariables"]["value"] = json.dumps(
@@ -130,6 +163,12 @@ def deploy_tool_definition(
     typer.echo(f"  Description: {inputs.description}")
     typer.echo(f"  Image: {inputs.image}")
     typer.echo(f"  Location: {inputs.location}")
+    typer.echo(
+        f"  Tool ARM API: {inputs.api_version}\n"
+        f"  MPI: {inputs.mpi}\n"
+        f"  Pool size (pods per run): {inputs.pool_size}\n"
+        f"  InfiniBand required: {inputs.infiniband}"
+    )
     typer.echo()
     typer.secho("Target:", fg=typer.colors.CYAN, bold=True)
     typer.echo(f"  Subscription: {subscription_id}")
@@ -199,4 +238,5 @@ __all__ = [
     "build_arm_parameters",
     "deploy_tool_definition",
     "render_tool_definition",
+    "resolve_tool_pool_size",
 ]

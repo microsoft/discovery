@@ -18,7 +18,8 @@ foreach ($name in @(
         'Get-ProfileSubnetRoles',
         'Invoke-CheckNsgEffective',
         'Invoke-CheckEffectiveRoutes',
-        'Invoke-CheckDnsAndPe'
+        'Invoke-CheckDnsAndPe',
+        'Invoke-CheckQuota'
     )) {
     $functionAst = $ast.Find({
             param($node)
@@ -39,6 +40,41 @@ function New-Stage3DnsConfig {
         storage       = [pscustomobject]@{
             accountId = '/subscriptions/sub/resourceGroups/storage-rg/providers/Microsoft.Storage/storageAccounts/data'
         }
+    }
+}
+
+Describe 'Stage 3 selected system SKU quota re-check' {
+    BeforeEach {
+        $config = [pscustomobject]@{
+            subscriptionId = 'sub'
+            resourceGroup = 'platform-rg'
+            workloadRegion = 'eastus'
+            systemSku = 'Standard_D16as_v5'
+            names = [pscustomobject]@{ supercomputer = 'sc' }
+            waivers = @()
+        }
+        Mock Invoke-Az { 'NotFound' }
+        Mock Get-VcpuQuotaResult {
+            New-CheckResult -Id 'vcpu-quota' -Name 'Compute vCPU quota' -Status 'Fail' -Fr 'FR3.6e' -Detail 'Selected SKU has insufficient quota.'
+        }
+    }
+
+    It 'passes the selected SKU to the shared quota check and preserves a failure' {
+        $result = Invoke-CheckQuota -Config $config -Profile 'supercomputer'
+
+        $result.status | Should Be 'Fail'
+        Assert-MockCalled Get-VcpuQuotaResult -Times 1 -Exactly -Scope It -ParameterFilter {
+            $Config.systemSku -eq 'Standard_D16as_v5' -and $Fr -eq 'FR3.6e' -and $RerunStage -eq 'Stage 3'
+        }
+    }
+
+    It 'preserves the skip for a supercomputer that already holds its quota' {
+        Mock Invoke-Az { 'Succeeded' }
+
+        $result = Invoke-CheckQuota -Config $config -Profile 'supercomputer'
+
+        $result.status | Should Be 'Skip'
+        Assert-MockCalled Get-VcpuQuotaResult -Times 0 -Exactly -Scope It
     }
 }
 
@@ -236,6 +272,7 @@ Describe 'Stage 3 private DNS validation' {
                 virtualNetwork = [pscustomobject]@{ id = '/subscriptions/sub/resourceGroups/network-rg/providers/Microsoft.Network/virtualNetworks/vnet' }
             })
         $global:Stage3PrivateEndpoints = @()
+        $global:Stage3DnsZoneGroups = @()
         Mock Get-AzJson { [pscustomobject]@{ name = 'zone' } } -ParameterFilter {
             $Args -contains 'private-dns' -and $Args -contains 'zone' -and $Args -contains 'show'
         }
@@ -245,6 +282,9 @@ Describe 'Stage 3 private DNS validation' {
         Mock Get-AzJson { @($global:Stage3PrivateEndpoints) } -ParameterFilter {
             $Args -contains 'private-endpoint' -and $Args -contains 'list'
         }
+        Mock Get-AzJson { @($global:Stage3DnsZoneGroups) } -ParameterFilter {
+            $Args -contains 'dns-zone-group' -and $Args -contains 'list'
+        }
         Mock Get-AzJson {
             [pscustomobject]@{ id = '/subscriptions/sub/resourceGroups/network-rg/providers/Microsoft.Network/virtualNetworks/vnet' }
         } -ParameterFilter {
@@ -253,35 +293,22 @@ Describe 'Stage 3 private DNS validation' {
     }
 
     AfterEach {
-        Remove-Variable Stage3DnsLinks, Stage3PrivateEndpoints -Scope Global -ErrorAction SilentlyContinue
+        Remove-Variable Stage3DnsLinks, Stage3PrivateEndpoints, Stage3DnsZoneGroups -Scope Global -ErrorAction SilentlyContinue
     }
 
-    It 'passes private DNS zones only when they link to the configured VNet' {
-        $results = @(Invoke-CheckDnsAndPe -Config (New-Stage3DnsConfig) -Profile 'supercomputer')
-        $zones = @($results | Where-Object { $_.id -like 'private-dns-zone-*' })
-
-        ($zones.Count -gt 0) | Should Be $true
-        @($zones | Where-Object status -ne 'Pass').Count | Should Be 0
+    It 'does not check private DNS zones for any profile' {
+        foreach ($profileName in @('supercomputer', 'workspace', 'bookshelf')) {
+            $results = @(Invoke-CheckDnsAndPe -Config (New-Stage3DnsConfig) -Profile $profileName)
+            @($results | Where-Object { $_.id -like 'private-dns-zone-*' }).Count | Should Be 0
+        }
+        Assert-MockCalled Get-AzJson -Scope It -Times 0 -ParameterFilter {
+            $Args -contains 'private-dns' -and $Args -contains 'zone' -and $Args -contains 'show'
+        }
     }
 
-    It 'fails zones linked to a different VNet' {
-        $global:Stage3DnsLinks = @([pscustomobject]@{
-                virtualNetwork = [pscustomobject]@{ id = '/subscriptions/sub/resourceGroups/network-rg/providers/Microsoft.Network/virtualNetworks/other-vnet' }
-            })
-
-        $results = @(Invoke-CheckDnsAndPe -Config (New-Stage3DnsConfig) -Profile 'supercomputer')
-        $zones = @($results | Where-Object { $_.id -like 'private-dns-zone-*' })
-
-        @($zones | Where-Object status -eq 'Fail').Count | Should Be $zones.Count
-    }
-
-    It 'resolves the VNet from the network resource group and searches endpoint resource groups' {
+    It 'searches endpoint resource groups' {
         $null = @(Invoke-CheckDnsAndPe -Config (New-Stage3DnsConfig) -Profile 'supercomputer')
 
-        Assert-MockCalled Get-AzJson -Scope It -Times 1 -ParameterFilter {
-            $Args -contains 'vnet' -and $Args -contains 'show' -and
-            $Args -contains 'network-rg' -and $Args -notcontains 'dns-rg'
-        }
         foreach ($resourceGroup in @('network-rg', 'platform-rg', 'storage-rg')) {
             Assert-MockCalled Get-AzJson -Scope It -Times 1 -ParameterFilter {
                 $Args -contains 'private-endpoint' -and $Args -contains 'list' -and $Args -contains $resourceGroup
@@ -292,10 +319,38 @@ Describe 'Stage 3 private DNS validation' {
         }
     }
 
-    It 'requires approved private endpoints to expose DNS configuration' {
+    It 'accepts a succeeded DNS zone group when custom DNS configs are empty' {
         $global:Stage3PrivateEndpoints = @([pscustomobject]@{
                 id                            = '/subscriptions/sub/resourceGroups/network-rg/providers/Microsoft.Network/privateEndpoints/pe'
                 name                          = 'pe'
+                provisioningState             = 'Succeeded'
+                subnet                        = [pscustomobject]@{ id = '/subscriptions/sub/resourceGroups/network-rg/providers/Microsoft.Network/virtualNetworks/vnet/subnets/pe' }
+                privateLinkServiceConnections = @([pscustomobject]@{
+                        privateLinkServiceConnectionState = [pscustomobject]@{ status = 'Approved' }
+                    })
+                customDnsConfigs              = @()
+            })
+        $global:Stage3DnsZoneGroups = @([pscustomobject]@{
+                provisioningState     = 'Succeeded'
+                privateDnsZoneConfigs = @([pscustomobject]@{
+                        privateDnsZoneId = '/subscriptions/sub/resourceGroups/dns-rg/providers/Microsoft.Network/privateDnsZones/privatelink.blob.core.windows.net'
+                    })
+            })
+
+        $results = @(Invoke-CheckDnsAndPe -Config (New-Stage3DnsConfig) -Profile 'supercomputer')
+        $endpoint = @($results | Where-Object id -eq 'private-endpoint-pe')[0]
+
+        $endpoint.status | Should Be 'Pass'
+        $endpoint.data.approved | Should Be $true
+        $endpoint.data.succeededDnsZoneGroups | Should Be 1
+        $endpoint.data.customDnsConfigCount | Should Be 0
+    }
+
+    It 'fails an approved endpoint without a succeeded DNS zone group or custom DNS configuration' {
+        $global:Stage3PrivateEndpoints = @([pscustomobject]@{
+                id                            = '/subscriptions/sub/resourceGroups/network-rg/providers/Microsoft.Network/privateEndpoints/pe'
+                name                          = 'pe'
+                provisioningState             = 'Succeeded'
                 subnet                        = [pscustomobject]@{ id = '/subscriptions/sub/resourceGroups/network-rg/providers/Microsoft.Network/virtualNetworks/vnet/subnets/pe' }
                 privateLinkServiceConnections = @([pscustomobject]@{
                         privateLinkServiceConnectionState = [pscustomobject]@{ status = 'Approved' }
@@ -307,7 +362,7 @@ Describe 'Stage 3 private DNS validation' {
         $endpoint = @($results | Where-Object id -eq 'private-endpoint-pe')[0]
 
         $endpoint.status | Should Be 'Fail'
-        $endpoint.data.approved | Should Be $true
-        $endpoint.data.dnsCount | Should Be 0
+        $endpoint.data.succeededDnsZoneGroups | Should Be 0
+        $endpoint.data.customDnsConfigCount | Should Be 0
     }
 }

@@ -72,7 +72,7 @@ jobs:
 
       - name: Set up Python
         if: steps.changes.outputs.relevant == 'true'
-        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
         with:
           python-version: '3.12'
       - name: Install dependencies
@@ -99,7 +99,11 @@ jobs:
           # cannot weaken the assertions that guard its own schema changes.
           # During bootstrap, use an embedded data-only validator rather than
           # executing any Python from the PR checkout.
-          test="trusted/.github/tests/test_schema_security.py"
+          test="trusted/.github/tests/test_catalog_schema_security.py"
+          # Support trusted bases from before the suite was renamed.
+          if [ ! -f "$test" ]; then
+            test="trusted/.github/tests/test_schema_security.py"
+          fi
           scripts="${{ github.workspace }}/trusted/.github/scripts"
           if [ -f "$test" ]; then
             PYTHONPATH="$scripts" python -m pytest "$test" -q

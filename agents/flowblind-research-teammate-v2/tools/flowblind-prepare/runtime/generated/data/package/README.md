@@ -90,6 +90,29 @@ decision. Preparation then also asks for approval; that is expected.
 
 The runtime requires no Git repository or repository metadata.
 
+## Base image maintenance
+
+Both public tool images use the same pinned Node 26.11.1 and Python 3.12.14
+bases. The Node executable is copied into the Python final stage together
+with its required `libatomic.so.1` library. `RUN node --version` makes a
+missing loader dependency fail during the image build, before registration.
+
+A base-image update is a coordinated package change, not just a `FROM` edit:
+
+1. Update both tool Dockerfiles and their current canonical copies under
+   `runtime/generated/data/package/`.
+2. Refresh the affected byte lengths and SHA-256 values in the current package
+   lock, the verifier's expected lock identity, and the verifier release record.
+3. Keep both tool-local runtime trees byte-identical to the package runtime.
+   Do not rewrite retained historical manifests or enable private activation.
+4. Run `npm test`, build both images for `linux/amd64`, and validate preparation
+   followed by execution using those exact images. Package tests check that
+   each outer Dockerfile matches its attested copy.
+
+The Python 3.12 wheel lock remains enforced with `--require-hashes`. A Python
+minor-version migration needs separate wheel-lock and numerical compatibility
+validation; the Node upgrade does not authorize or perform that migration.
+
 ## Architecture
 
 The public lifecycle is deliberately split across two host-owned boundaries:

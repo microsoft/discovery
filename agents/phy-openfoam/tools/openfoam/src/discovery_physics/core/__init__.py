@@ -1,0 +1,1 @@
+"""Physics-independent contracts and evidence checks."""

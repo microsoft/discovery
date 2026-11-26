@@ -1,0 +1,11 @@
+{
+  "contractVersion": "1.2.0",
+  "tasks": [{
+    "id": "model",
+    "description": "Develop and validate a predictive model on usable real data in one focused task",
+    "bounded": true,
+    "readiness": "ready",
+    "depth": "bounded",
+    "validation": "included"
+  }]
+}

@@ -1,0 +1,11 @@
+{
+  "contractVersion": "1.2.0",
+  "scopeDescription": "One focused prediction deliverable, but the development phase is unspecified",
+  "tasks": [{
+    "id": "prediction",
+    "description": "Develop a prediction workflow",
+    "bounded": true,
+    "depth": "bounded",
+    "validation": "included"
+  }]
+}

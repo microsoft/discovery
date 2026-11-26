@@ -1,0 +1,17 @@
+name: cellpose
+type: agent
+version: 0.1.0
+associated_tools:
+- agents/cellpose/tools/cellpose
+publisher:
+  name: Microsoft
+  contact: discovery-catalog@microsoft.com
+  support_url: https://techcommunity.microsoft.com/category/azure/discussions/microsoft-discovery-discussions
+  party: 1p
+description: Scaffold for GPU cell and nucleus instance segmentation using Cellpose.
+tags:
+- life-sciences
+- data-analysis
+- machine-learning
+- gpu
+- python

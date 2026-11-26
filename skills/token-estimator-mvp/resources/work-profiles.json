@@ -1,0 +1,631 @@
+{
+  "schema_version": "1.2",
+  "task": "community-policy-2026-11",
+  "calibration": "calibration.json",
+  "guide": "work-classes.md",
+  "purpose": "Authoritative public-safe coarse-class and optional-phase inputs for the shared portable core.",
+  "selection": {
+    "basis": "Recognize the work from its description; profiles may overlap within one investigation.",
+    "required_user_token_input": false,
+    "questions": [
+      {
+        "id": "output",
+        "text": "What result do you need: an evidence assessment, a screened evidence table, a checked tool/result, a simulation, or a validated prediction workflow?"
+      },
+      {
+        "id": "scope",
+        "text": "Is this one bounded task or several investigations? What separate questions, deliverables or cases are already planned?"
+      },
+      {
+        "id": "depth",
+        "text": "Is this a first pass or a detailed review with independent checks, revised methods or repeated validation?"
+      },
+      {
+        "id": "readiness",
+        "text": "For computational work, is the method already working, or must software, data preparation and the execution environment be developed or repaired?"
+      }
+    ],
+    "question_policy": "Give a supported coarse class allowance first under visible comparable-task/readiness assumptions. Exact phases and bounded confirmation are optional refinements, not numeric gates. Preserve conditional bases with unknown extra scope. Ask only unanswered material questions; users never supply token guesses.",
+    "unmatched_work": "Unknown: do not select the nearest numeric band merely to produce a number.",
+    "phase_question": "Which focused deliverable is needed: understand/setup/launch/confirm an existing workflow; simulation implementation, correction or sweep; a synthetic predictive prototype, real-data model development/validation, or integration/debugging using existing component models?",
+    "unsupported_scope_pattern": "\\b(greenfield|from scratch|whole[ -](?:project|investigation|campaign)|entire (?:project|investigation|campaign)|full (?:project|investigation|campaign)|repeat[ -]only|execution[ -]only|external[ -]only|supervision[ -]only|monitoring[ -]only|only (?:run|execute|repeat|monitor)|raw[ -]data (?:preparation|cleaning)|(?:prepar(?:e|ing|ation)|clean(?:ing)?) (?:of )?(?:the )?raw[ -]data|all components|end[ -]to[ -]end)\\b",
+    "unsupported_scope_reason": "The bundled calibration covers bounded AI development and existing-workflow operations, not whole/greenfield, included raw-data-preparation, repeat-only, supervision-only or external-only solver-resource scope. Clarify separately comparable tasks; no nearest-band fallback.",
+    "operation_comparison": {
+      "max_retry_limit": 2,
+      "max_monitoring_checks": 3,
+      "interpretation": "Conservative intake guard retaining focused startup examples, not empirically measured maxima, token rates or guaranteed coverage. Larger limits require a targeted comparability decision."
+    }
+  },
+  "range_method": {
+    "id": "outward_1_3_decade_envelope",
+    "unit": "input_plus_output_tokens",
+    "grid": "Positive values 1 and 3 times each integer power of ten.",
+    "rule": "For a numeric anchor, use the largest grid value at or below it and the smallest grid value at or above it.",
+    "interpretation": "Provisional rounded planning heuristic around bundled references; not observed lower/upper bounds, a fitted distribution, confidence interval, lifetime certification or guaranteed coverage.",
+    "coverage": "Community reference set for coarse planning only; references are not additive work items or independent replications.",
+    "whole_investigation_tokens": null,
+    "missing_breakdown_policy": "One comparable task/session is a visible conditional planning base, not a confirmed scale or investigation total. Extra scope remains unknown; aggregate only explicit nonoverlapping work units.",
+    "composition_policy": "Sum only explicit disjoint hypothetical work units once. Do not sum parent/child or contained stage/cycle references.",
+    "operational_rule": "For existing_workflow_operation only: apply the same outward 1/3-decade grid to the minimum and maximum of selected operational-preparation references. The resulting envelope is provisional and not a guaranteed lower bound."
+  },
+  "bands": [
+    {
+      "id": "assessment_session",
+      "lower": 1000000,
+      "upper": 3000000,
+      "anchor_id": "assessment-session",
+      "use": "bounded_session_analogy"
+    },
+    {
+      "id": "screening_session",
+      "lower": 3000000,
+      "upper": 10000000,
+      "anchor_id": "literature-screening-child",
+      "use": "bounded_session_analogy"
+    },
+    {
+      "id": "verification_session",
+      "lower": 3000000,
+      "upper": 10000000,
+      "anchor_id": "local-verification-pilot",
+      "use": "bounded_session_analogy"
+    },
+    {
+      "id": "mixed_endpoint_context",
+      "lower": 10000000,
+      "upper": 30000000,
+      "anchor_id": "literature-parent-endpoint",
+      "use": "mixed_partial_context_only"
+    },
+    {
+      "id": "simulation_implementation",
+      "lower": 3000000,
+      "upper": 10000000,
+      "anchor_id": "simulation-implementation",
+      "use": "bounded_session_analogy"
+    },
+    {
+      "id": "simulation_correction",
+      "lower": 3000000,
+      "upper": 10000000,
+      "anchor_id": "simulation-correction",
+      "use": "bounded_session_analogy"
+    },
+    {
+      "id": "simulation_sweep",
+      "lower": 3000000,
+      "upper": 10000000,
+      "anchor_id": "simulation-sweep",
+      "use": "bounded_session_analogy"
+    },
+    {
+      "id": "prediction_synthetic_prototype",
+      "lower": 3000000,
+      "upper": 10000000,
+      "anchor_id": "prediction-synthetic-prototype",
+      "use": "bounded_session_analogy"
+    },
+    {
+      "id": "prediction_real_data_trajectory",
+      "lower": 10000000,
+      "upper": 30000000,
+      "anchor_id": "prediction-real-data-trajectory",
+      "use": "bounded_session_analogy"
+    },
+    {
+      "id": "prediction_real_data_distribution",
+      "lower": 10000000,
+      "upper": 30000000,
+      "anchor_id": "prediction-real-data-distribution",
+      "use": "bounded_session_analogy"
+    },
+    {
+      "id": "prediction_pipeline_integration",
+      "lower": 30000000,
+      "upper": 100000000,
+      "anchor_id": "prediction-pipeline-integration",
+      "use": "bounded_session_analogy"
+    },
+    {
+      "id": "existing_workflow_operation",
+      "lower": 300000,
+      "upper": 3000000,
+      "anchor_id": "operational-readiness",
+      "comparison_ids": [
+        "operational-readiness",
+        "operational-payload-preparation",
+        "operational-driver-compliance",
+        "operational-exit-repair"
+      ],
+      "use": "bounded_session_analogy"
+    }
+  ],
+  "profiles": [
+    {
+      "id": "evidence-assessment",
+      "label": "Evidence review and outcome assessment",
+      "description": "Review available evidence against a stated question or outcome and explain what is supported, missing or uncertain.",
+      "recognize_by": [
+        "A review of existing results rather than generating new simulation results",
+        "A bounded assessment with a written conclusion"
+      ],
+      "estimation_unit": "agent_session",
+      "token_band_id": "assessment_session",
+      "token_status": "provisional_session_analogy",
+      "evidence_ids": [
+        "assessment-session"
+      ],
+      "assumptions": [
+        "One bounded assessment session with relevant evidence already available.",
+        "Task attribution and lifetime completeness are unresolved; treat this as a planning analogy only."
+      ],
+      "not_covered": [
+        "Producing underlying scientific results",
+        "An entire investigation",
+        "A calibrated relationship between evidence volume and tokens"
+      ],
+      "external_compute": {
+        "tokens": null,
+        "elapsed_seconds": null,
+        "utilized_cpu_gpu_time": null,
+        "note": "No external job estimate is attached to this profile."
+      }
+    },
+    {
+      "id": "literature-screening-synthesis",
+      "label": "Literature screening and bounded synthesis",
+      "description": "Screen relevant documents, extract comparable evidence and summarize it for a focused question.",
+      "recognize_by": [
+        "A focused evidence table and concise synthesis",
+        "Screening and extraction rather than a whole research program"
+      ],
+      "estimation_unit": "agent_session",
+      "token_band_id": "screening_session",
+      "token_status": "provisional_session_analogy",
+      "evidence_ids": [
+        "literature-screening-child"
+      ],
+      "assumptions": [
+        "One bounded screening/extraction session comparable in scope to the anchor.",
+        "Extra manuscript writing or deep synthesis is not automatically covered."
+      ],
+      "not_covered": [
+        "All literature work in an investigation",
+        "A calibrated document-count or page-count conversion",
+        "Unspecified follow-up searches, rewrites or independent reviews"
+      ],
+      "external_compute": {
+        "tokens": null,
+        "elapsed_seconds": null,
+        "utilized_cpu_gpu_time": null,
+        "note": "External numerical execution was not measured for this task."
+      }
+    },
+    {
+      "id": "tool-verification-analysis",
+      "label": "Tool verification and bounded analysis",
+      "description": "Check a numerical or analytical tool against references, investigate discrepancies and prepare a short report.",
+      "recognize_by": [
+        "A bounded pilot verifying a tool or result",
+        "Reference comparisons and repeat checks included in the task"
+      ],
+      "estimation_unit": "agent_session",
+      "token_band_id": "verification_session",
+      "token_status": "provisional_session_analogy",
+      "evidence_ids": [
+        "local-verification-pilot"
+      ],
+      "assumptions": [
+        "One verification pilot including checks and writeup.",
+        "Repeat-only and development-only token consumption are unknown."
+      ],
+      "not_covered": [
+        "Full simulation development",
+        "A pure repeat-use execution rate",
+        "A complete prediction pipeline or large data-analysis investigation"
+      ],
+      "external_compute": {
+        "tokens": null,
+        "elapsed_seconds": null,
+        "utilized_cpu_gpu_time": null,
+        "note": "Lifecycle and external runtime remain separate from this AI planning estimate."
+      }
+    },
+    {
+      "id": "simulation-development-execution",
+      "label": "Numerical simulation development and execution",
+      "description": "Build or adapt a scientific simulation, make the environment work, run cases and check results.",
+      "recognize_by": [
+        "A model or solver requiring external CPU/GPU execution",
+        "Environment debugging, build probes, case runs and result checks"
+      ],
+      "estimation_unit": "agent_session",
+      "token_band_id": null,
+      "token_status": "coarse_class_envelope_optional_phase",
+      "evidence_ids": [
+        "simulation-supervision-gap",
+        "external-simulation-leg",
+        "simulation-build-probe",
+        "solver-completion-interval"
+      ],
+      "assumptions": [
+        "Without a phase, use the envelope of implementation/correction/sweep bands as alternatives, not a summed workflow total.",
+        "External runtime/resource references remain separate from AI token planning."
+      ],
+      "not_covered": [
+        "Unresolved or whole-project scope, repeat-only execution and supervision-only usage",
+        "Future runtime, utilized CPU/GPU, cost, capacity and whole-investigation totals"
+      ],
+      "external_compute": {
+        "tokens": null,
+        "elapsed_seconds": null,
+        "utilized_cpu_gpu_time": null,
+        "historical_metric_refs": [
+          {
+            "observation_id": "external-simulation-leg",
+            "metric": "external_runtime_context"
+          },
+          {
+            "observation_id": "simulation-build-probe",
+            "metric": "build_probe_context"
+          },
+          {
+            "observation_id": "solver-completion-interval",
+            "metric": "solver_stage_context"
+          }
+        ],
+        "note": "External runtime and hardware observations remain context only and do not convert to token estimates."
+      },
+      "phase_ids": [
+        "simulation-implementation",
+        "simulation-correction",
+        "simulation-sweep"
+      ]
+    },
+    {
+      "id": "prediction-development-validation",
+      "label": "Predictive modeling workflow development and validation",
+      "description": "Prepare an integrated training, evaluation and prediction workflow and validate generalization.",
+      "recognize_by": [
+        "Model fitting and held-out validation inside an integrated cycle",
+        "Potential data/dependency/memory/identity repairs before successful execution"
+      ],
+      "estimation_unit": "agent_session",
+      "token_band_id": null,
+      "token_status": "coarse_class_envelope_optional_phase",
+      "evidence_ids": [
+        "prediction-cycle",
+        "prediction-validation-stage"
+      ],
+      "assumptions": [
+        "Without a phase, use the envelope of synthetic-prototype, real-data and integration bands as alternatives, not an additive sequence.",
+        "External timing and hardware references are context only."
+      ],
+      "not_covered": [
+        "Unresolved or whole-project scope, repeat-only execution and supervision-only usage",
+        "Future runtime, utilized CPU/GPU, cost, capacity and whole-investigation totals"
+      ],
+      "external_compute": {
+        "tokens": null,
+        "elapsed_seconds": null,
+        "utilized_cpu_gpu_time": null,
+        "historical_metric_refs": [
+          {
+            "observation_id": "prediction-cycle",
+            "metric": "cycle_context"
+          },
+          {
+            "observation_id": "prediction-validation-stage",
+            "metric": "stage_context"
+          }
+        ],
+        "note": "External runtime and hardware observations remain context only and do not convert to token estimates."
+      },
+      "phase_ids": [
+        "prediction-synthetic-prototype",
+        "prediction-real-data-trajectory",
+        "prediction-real-data-distribution",
+        "prediction-pipeline-integration",
+        "prediction-real-data-modeling"
+      ]
+    },
+    {
+      "id": "existing-workflow-operation",
+      "label": "Existing workflow: understand, prepare, launch and confirm",
+      "description": "A bounded AI operational task around an existing documented simulation, tool or workflow; external execution is separate.",
+      "recognize_by": [
+        "Run or launch an existing workflow with instruction/input review and startup confirmation",
+        "Bounded command/environment preparation and local checks, not scientific-model development"
+      ],
+      "estimation_unit": "agent_session",
+      "token_band_id": null,
+      "token_status": "coarse_class_envelope_optional_phase",
+      "evidence_ids": [
+        "operational-readiness",
+        "operational-payload-preparation",
+        "operational-driver-compliance",
+        "operational-exit-repair"
+      ],
+      "assumptions": [
+        "One focused AI operation: read/understand existing instructions and inputs, establish readiness, construct commands, launch or report blocked attempt, then confirm startup/status/errors and provide a short handoff.",
+        "Environment/tool/input readiness is a comparison assumption unless explicitly provided.",
+        "Operational references support a provisional 0.3-3 million transfer envelope and are not a successful-launch minimum."
+      ],
+      "not_covered": [
+        "External solver CPU/GPU runtime, utilization, cost and resource provisioning",
+        "Scientific-model development, raw scientific data preparation, new methods and whole-job/investigation consumption",
+        "Open-ended setup repair, unresolved access/permissions, continuous monitoring and additional independent scientific review"
+      ],
+      "phase_ids": [
+        "existing-workflow-launch"
+      ],
+      "external_compute": {
+        "tokens": null,
+        "elapsed_seconds": null,
+        "utilized_cpu_gpu_time": null,
+        "note": "Operational AI allowance only; no external resource or duration conversion."
+      }
+    }
+  ],
+  "drivers": [
+    {
+      "id": "size",
+      "effect": "More evidence, cases or distinct outputs may require more bounded tasks; no token-per-document, row, fit or case law is measured."
+    },
+    {
+      "id": "depth",
+      "effect": "Deeper extraction, method revision and independent synthesis can create additional tasks. Within-session token multipliers are unmeasured."
+    },
+    {
+      "id": "validation",
+      "effect": "Specify whether checks are already inside a task or are separate reviews."
+    },
+    {
+      "id": "development-retries",
+      "effect": "Environment repairs, failed builds and duplicate runs add work, but repeat-only rates are unknown."
+    },
+    {
+      "id": "concurrency",
+      "effect": "Scheduling metadata only; do not multiply or divide token bands by concurrency."
+    }
+  ],
+  "accounting": {
+    "aggregation": "explicit_disjoint_units_only",
+    "cache": "included_input_components_not_added",
+    "reasoning": "unknown_inclusion_not_added",
+    "cumulative": "one_reference_endpoint_not_snapshot_sum",
+    "parent_child": "never_sum_or_subtract",
+    "stage_cycle": "never_add_contained_stage",
+    "pilot_repeats": "already_in_anchor",
+    "concurrency_changes_consumption": false,
+    "allocated_is_utilized": false,
+    "unknown_is_zero": false,
+    "whole_investigation_measured": false,
+    "no_validated_rates_costs_capacity": true
+  },
+  "phases": [
+    {
+      "id": "simulation-implementation",
+      "profile_id": "simulation-development-execution",
+      "label": "Scoped simulation implementation",
+      "token_band_id": "simulation_implementation",
+      "evidence_ids": [
+        "simulation-implementation"
+      ],
+      "estimation_unit": "agent_session",
+      "recognition": {
+        "pattern": "\\b(implement(?:ation|ing)?|build|develop|adapt|port|translator)\\b",
+        "exclude": "\\b(correct|fix|repair|debug|sweep)\\b"
+      },
+      "assumptions": [
+        "One focused AI implementation task represented by one retained session analogy.",
+        "Included checks count once; no document, fit, model, retry or accuracy multiplier is measured."
+      ],
+      "not_covered": [
+        "External execution resources/runtime, supervision-only or repeat-only AI usage",
+        "Unresolved deeper scope, raw-data preparation, full-project/all-contributor or whole-investigation totals"
+      ],
+      "readiness_required": false
+    },
+    {
+      "id": "simulation-correction",
+      "profile_id": "simulation-development-execution",
+      "label": "Simulation correction and included validation",
+      "token_band_id": "simulation_correction",
+      "evidence_ids": [
+        "simulation-correction"
+      ],
+      "estimation_unit": "agent_session",
+      "recognition": {
+        "pattern": "\\b(correct(?:ion)?|fix|repair|debug|validate an? existing)\\b",
+        "exclude": ""
+      },
+      "assumptions": [
+        "One scoped correction task on an existing implementation.",
+        "Included checks count once; no document, fit, model, retry or accuracy multiplier is measured."
+      ],
+      "not_covered": [
+        "External execution resources/runtime, supervision-only or repeat-only AI usage",
+        "Unresolved deeper scope, raw-data preparation, full-project/all-contributor or whole-investigation totals"
+      ],
+      "readiness_required": false
+    },
+    {
+      "id": "simulation-sweep",
+      "profile_id": "simulation-development-execution",
+      "label": "Bounded simulation sweep development",
+      "token_band_id": "simulation_sweep",
+      "evidence_ids": [
+        "simulation-sweep"
+      ],
+      "estimation_unit": "agent_session",
+      "recognition": {
+        "pattern": "\\b(sweep|parameter study|packing study)\\b",
+        "exclude": ""
+      },
+      "assumptions": [
+        "One bounded sweep-development task with preparation and checks included.",
+        "Included checks count once; no document, fit, model, retry or accuracy multiplier is measured."
+      ],
+      "not_covered": [
+        "External execution resources/runtime, supervision-only or repeat-only AI usage",
+        "Unresolved deeper scope, raw-data preparation, full-project/all-contributor or whole-investigation totals"
+      ],
+      "readiness_required": false
+    },
+    {
+      "id": "prediction-synthetic-prototype",
+      "profile_id": "prediction-development-validation",
+      "label": "Initial synthetic predictive prototype",
+      "token_band_id": "prediction_synthetic_prototype",
+      "evidence_ids": [
+        "prediction-synthetic-prototype"
+      ],
+      "estimation_unit": "agent_session",
+      "recognition": {
+        "pattern": "\\b(synthetic|toy|simulated data)\\b.*\\b(prototype|proof.of.concept|model)\\b|\\b(prototype|proof.of.concept)\\b.*\\b(synthetic|toy|simulated data)\\b",
+        "exclude": ""
+      },
+      "assumptions": [
+        "One initial synthetic prototype task.",
+        "Included checks count once; no document, fit, model, retry or accuracy multiplier is measured."
+      ],
+      "not_covered": [
+        "External execution resources/runtime, supervision-only or repeat-only AI usage",
+        "Unresolved deeper scope, raw-data preparation, full-project/all-contributor or whole-investigation totals"
+      ],
+      "readiness_required": false
+    },
+    {
+      "id": "prediction-real-data-trajectory",
+      "profile_id": "prediction-development-validation",
+      "label": "Real-data trajectory model development",
+      "token_band_id": "prediction_real_data_trajectory",
+      "evidence_ids": [
+        "prediction-real-data-trajectory"
+      ],
+      "estimation_unit": "agent_session",
+      "recognition": {
+        "pattern": "\\b(real[ -]data|real[ -]world|observed data)\\b.*\\btrajectory\\b|\\btrajectory\\b.*\\b(real[ -]data|real[ -]world|observed data)\\b",
+        "exclude": ""
+      },
+      "assumptions": [
+        "One real-data trajectory modeling/validation task with usable data and a comparable method/environment assumed ready.",
+        "Included checks count once; no document, fit, model, retry or accuracy multiplier is measured."
+      ],
+      "not_covered": [
+        "External execution resources/runtime, supervision-only or repeat-only AI usage",
+        "Unresolved deeper scope, raw-data preparation, full-project/all-contributor or whole-investigation totals"
+      ],
+      "readiness_required": true
+    },
+    {
+      "id": "prediction-real-data-distribution",
+      "profile_id": "prediction-development-validation",
+      "label": "Real-data distribution model development",
+      "token_band_id": "prediction_real_data_distribution",
+      "evidence_ids": [
+        "prediction-real-data-distribution"
+      ],
+      "estimation_unit": "agent_session",
+      "recognition": {
+        "pattern": "\\b(real[ -]data|real[ -]world|observed data)\\b.*\\bdistribution\\b|\\bdistribution\\b.*\\b(real[ -]data|real[ -]world|observed data)\\b",
+        "exclude": ""
+      },
+      "assumptions": [
+        "One real-data distribution modeling/validation task with usable data and a comparable method/environment assumed ready.",
+        "Included checks count once; no document, fit, model, retry or accuracy multiplier is measured."
+      ],
+      "not_covered": [
+        "External execution resources/runtime, supervision-only or repeat-only AI usage",
+        "Unresolved deeper scope, raw-data preparation, full-project/all-contributor or whole-investigation totals"
+      ],
+      "readiness_required": true
+    },
+    {
+      "id": "prediction-pipeline-integration",
+      "profile_id": "prediction-development-validation",
+      "label": "Existing-component prediction pipeline integration",
+      "token_band_id": "prediction_pipeline_integration",
+      "evidence_ids": [
+        "prediction-pipeline-integration"
+      ],
+      "estimation_unit": "agent_session",
+      "recognition": {
+        "pattern": "\\b(integrat(?:e|ion|ing)|wire|debug|connect)\\b.*\\b(workflow|pipeline|components?|models?)\\b",
+        "exclude": ""
+      },
+      "assumptions": [
+        "One integration/debugging task reusing existing component models.",
+        "Included checks count once; no document, fit, model, retry or accuracy multiplier is measured."
+      ],
+      "not_covered": [
+        "External execution resources/runtime, supervision-only or repeat-only AI usage",
+        "Unresolved deeper scope, raw-data preparation, full-project/all-contributor or whole-investigation totals"
+      ],
+      "readiness_required": true
+    },
+    {
+      "id": "prediction-real-data-modeling",
+      "profile_id": "prediction-development-validation",
+      "label": "Real-data model development and validation",
+      "token_band_id": "prediction_real_data_trajectory",
+      "evidence_ids": [
+        "prediction-real-data-trajectory",
+        "prediction-real-data-distribution"
+      ],
+      "estimation_unit": "agent_session",
+      "recognition": {
+        "pattern": "\\b(real[ -]data|real[ -]world|observed data)\\b.*\\b(model|modeling|modelling|predictive|prediction)\\b|\\b(model|modeling|modelling|predictive|prediction)\\b.*\\b(real[ -]data|real[ -]world|observed data)\\b",
+        "exclude": "\\b(trajectory|distribution)\\b"
+      },
+      "assumptions": [
+        "One real-data model development/validation task with usable data and comparable method/environment assumed ready.",
+        "Two related references are alternative comparability evidence, not additive historical budget."
+      ],
+      "not_covered": [
+        "Generic raw-data preparation, data-size/model-count/fit-count scaling",
+        "External execution resources/runtime and all-contributor/lifetime/investigation totals"
+      ],
+      "readiness_required": true
+    },
+    {
+      "id": "existing-workflow-launch",
+      "profile_id": "existing-workflow-operation",
+      "label": "Bounded understand, prepare, launch and confirm",
+      "token_band_id": "existing_workflow_operation",
+      "evidence_ids": [
+        "operational-readiness",
+        "operational-payload-preparation",
+        "operational-driver-compliance",
+        "operational-exit-repair"
+      ],
+      "estimation_unit": "agent_session",
+      "recognition": {
+        "pattern": "\\b(existing|working|documented|provided|known|operational)\\b",
+        "exclude": null
+      },
+      "assumptions": [
+        "One focused AI operation: read/understand existing instructions/configuration and inputs, establish readiness, construct commands, launch or report a blocked attempt, confirm startup/status/errors and give a short handoff.",
+        "Environment/tool/input readiness is a comparison assumption unless explicitly provided.",
+        "Operational references support a provisional transfer envelope, not a successful-launch minimum."
+      ],
+      "not_covered": [
+        "External solver CPU/GPU runtime, utilization, cost and resource provisioning",
+        "Scientific-model/solver development, raw scientific data preparation, new methods and whole-job/investigation consumption",
+        "Open-ended setup repair, unresolved access/permissions, continuous monitoring and additional independent scientific review"
+      ],
+      "readiness_required": true
+    }
+  ],
+  "compatibility": {
+    "contract_version": "1.2.0",
+    "accepted_input_versions": [
+      "1.0.0",
+      "1.1.0",
+      "1.2.0"
+    ],
+    "stable_work_classes": true,
+    "change": "Adds a bounded existing-workflow AI operation without reclassifying scientific development, raw-data preparation or pure external resource work."
+  }
+}

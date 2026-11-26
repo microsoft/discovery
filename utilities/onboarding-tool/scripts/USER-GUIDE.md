@@ -10,9 +10,9 @@ no other files are required reading.
 
 ## 1. What the tool does
 
-The tool is a **five-stage pipeline**. Each stage is one PowerShell script. You run them in order,
-and each one either prints a green **GO** verdict and exits `0`, or prints a red **NO-GO** verdict
-with an exact remediation string and exits non-zero.
+The tool is a **five-stage pipeline**. Each stage is one PowerShell script. Run the stages in order.
+Live runs report **GO** with exit `0`, or **NO-GO** with remediation and a non-zero exit.
+Offline dry runs of Stages 2-5 report `PLAN`, not a readiness or certification verdict.
 
 | Stage | Script | What it does | Writes resources? |
 |---|---|---|---|
@@ -28,6 +28,37 @@ anything Stage 1 already captured. Fix Stage 1 before moving on — a bad plan c
 ---
 
 ## 2. Before you start (prerequisites)
+
+### Preview a stage offline
+
+Stages 2-5 accept `-DryRun` with a Stage 1 `config.json`. This mode requires only
+PowerShell 7: no Azure CLI, login or Azure permissions. It reads the config and lists
+intended actions without Azure calls, resource changes, VM creation or inference.
+The tool writes local JSON and Markdown plan reports only when you supply `-JsonPath`.
+
+From the `scripts` directory:
+
+```powershell
+.\stage2-landing-zone\stage2_prepare.ps1 -ConfigPath .\config.json -DryRun -JsonPath .\out\stage2-plan.json
+.\stage3-validation\stage3_validate.ps1 -ConfigPath .\config.json -Profile workspace -DryRun -JsonPath .\out\stage3-plan.json
+.\stage4-deployment\stage4_deploy.ps1 -ConfigPath .\config.json -DryRun -JsonPath .\out\stage4-plan.json
+.\stage5-scenario-enablement\stage5_enable.ps1 -ConfigPath .\config.json -DryRun -JsonPath .\out\stage5-plan.json
+```
+
+The verdict is `PLAN`, not `GO` or certification. Results are `Skip` because nothing
+was executed. Exit `0` means the plan was generated, not that the environment is ready;
+invalid or missing config fails. A Stage 3 plan cannot satisfy Stage 4's readiness gate.
+This is an intent summary, not Azure what-if: existing state, permissions, quota, policy,
+capacity and connectivity are not evaluated. Remove `-DryRun` to execute the stage.
+
+The plan includes stage options such as `-Profile`, `-WithVm`, Stage 4 `-Recovery` and Stage 5 target overrides.
+`-WithVm -DryRun` only describes the VM lifecycle.
+Use `-PassThru` to return plan result objects without printing or writing reports.
+`-PassThru` takes precedence over `-JsonPath` in dry-run mode.
+Dry run checks required config fields and the RBAC mode, not every deployment prerequisite.
+Stage 1 already performs planning and does not accept `-DryRun`.
+
+### Live execution prerequisites
 
 Install and sign in once:
 
@@ -118,10 +149,16 @@ Install and sign in once:
    if any is missing, printing the exact `az` commands to fix it.
 7. **Compute and model quota** in the deployment region. By default, the supercomputer system pool
    runs 3 × `Standard_D4s_v6` (12 vCPUs), and the node pool can scale to 3 ×
-   `Standard_D4ds_v6` (12 more vCPUs). Advanced JSON configs can override `systemSku`,
-   `nodePoolVmSize`, and `nodePoolMaxNodeCount`. Stage 1 reads the selected subscription's live SKU
+   `Standard_D4ds_v6` (12 more vCPUs). Select the **SC system SKU** in the `systemSku` dropdown
+   under **SIZING & SCALE** in either planning workbook (default `Standard_D4s_v6`).
+   Stage 1 exports that selection to `config.json`, and Stage 4 uses it for the system pool.
+   JSON configs can also set `systemSku`; advanced JSON configs can override
+   `nodePoolVmSize` and `nodePoolMaxNodeCount`. Stage 1 reads the selected subscription's live SKU
    metadata to calculate the effective Total Regional and VM-family vCPU requirements; Stage 3
-   repeats the same check before deployment. Check current usage with
+   repeats the same check before deployment unless the supercomputer is already `Succeeded`.
+   Insufficient regional or VM-family quota for 3 nodes of the selected system SKU is a
+   **Fail**; insufficient additional quota for maximum node-pool autoscale is a **Warn**.
+   Check current usage with
    `az vm list-usage -l <region> --subscription <subscription-id> -o table`. Each workspace also uses 450K GPT-5.4 GlobalStandard
    TPM (250K for the built-in deployment plus 200K for the validation chat model). GlobalStandard
    quota is scoped by subscription, region, model, and deployment type. Stage 1 verifies the
@@ -163,7 +200,7 @@ old value after a dropdown changes, so check the selected value before running S
 | `managed` (managed form) | The tool should provision the Discovery network layout. | Stage 2 deploys the VNet, configured subnets and delegations, shared NSG, route tables for UDR, and private DNS zones/links. | Approved address space, target resource group/name settings, and a working outbound architecture. |
 | `byo` (BYO form) | You supply the network layout and want the tool to provision it. | Uses the same Stage 2 network template as `managed`; it is not a read-only existing-VNet mode. | Customer-approved network settings and outbound connectivity. |
 | `byo-spoke` (BYO form) | You want a Discovery spoke connected to an enterprise hub. | Uses the same Stage 2 network template; it does not create hub peering or a firewall. | Nonoverlapping spoke addressing, hub connectivity, and firewall/NVA routing, rules and SNAT when using UDR. |
-| `byo-existing` (BYO form) | Your network team has already prepared the VNet and required Discovery subnets. | Stage 1 checks the existing VNet/subnets; Stage 2 skips network-template provisioning; Stage 3 validates networking. | Existing subnets, delegations, NSGs, routes, DNS zones/links and working outbound connectivity. |
+| `byo-existing` (BYO form) | Your network team has already prepared the VNet and required Discovery subnets. | Stage 1 checks the existing VNet/subnets; Stage 2 skips network-template provisioning; Stage 3 validates networking. | Existing subnets, delegations, NSGs, routes, the storage blob DNS zone link (when `storage.access=privateEndpoint`) and working outbound connectivity. |
 
 **Existing-network caution:** `managed`, `byo` and `byo-spoke` all deploy a template that declares
 the VNet address space and subnet collection. They can change an existing VNet and are not
@@ -216,11 +253,11 @@ Notes next to each field explain what to enter. A few that trip people up:
 | `network.model` | Choose one of the options described above. Only `byo-existing` skips Stage 2 network-template provisioning. |
 | `network.networkResourceGroup` | The resource group holding the existing VNet for `byo-existing`, or the target group for tool-provisioned networking. Stage 2 creates/uses the target network group for provisioning models. |
 | `network.dnsResourceGroup` | Resource group containing the private DNS zones linked to the Discovery VNet. Leave it blank when DNS zones live in `network.networkResourceGroup`; specify it for centralized DNS in another resource group. Stage 2 creates/reuses the required zones and exact VNet links there and includes this RG in its RBAC targets. |
-| `network.vnetName` | For `byo-existing`, enter the existing VNet name (Stage 1 checks it exists and is in `controlPlaneRegion`). For `managed`, `byo` or `byo-spoke`, enter the VNet name to deploy; blank defaults to `vnet-<names.workspace>`. |
+| `network.vnetName` | For `byo-existing`, enter the existing VNet name (Stage 1 checks it exists and is in `workloadRegion`). For `managed`, `byo` or `byo-spoke`, enter the VNet name to deploy; blank defaults to `vnet-<names.workspace>`. |
 | `network.existingSubnets` | BYO form: list existing subnet CIDRs outside the planned Discovery subnets so address planning can check for overlaps. This field does not make a provisioning model preserve unlisted subnets. |
 | `network.outboundType` | Select `UserDefinedRouting` for customer firewall/NVA egress, or `LoadBalancer` for AKS load-balancer-based egress. |
 | `network.nvaNextHop` | For UDR, enter the actual firewall/NVA private IP. It is not a NAT Gateway public IP. Not required for `LoadBalancer`. |
-| `controlPlaneRegion` / `workloadRegion` | Use a supported production region: **East US**, **Sweden Central**, or **UK South**. Keep resources for one deployment in the same region unless an approved architecture requires otherwise. |
+| `controlPlaneRegion` / `workloadRegion` | Use a supported production region: **East US**, **Sweden Central**, or **UK South**. `controlPlaneRegion` places the Discovery control-plane resources and can differ from `workloadRegion`. The VNet/subnets and all resources in the managed resource groups (MRGs) must be in `workloadRegion`. |
 | `names.*` | The resource names (workspace, project, supercomputer, node pool, etc.). Keep them unique in the subscription. |
 | `storage.account` | Required for every project, independently of Bookshelf. The name of the storage account you pre-created (prerequisite 8); keep `storage.model=byo`. Stage 1 fails if the account doesn't exist. Stage 2 adds the Blob CORS rules and private endpoint. The account denies public network traffic, so users who open project outputs in Discovery Studio need network access to it: from the VNet (VPN or ExpressRoute), or through a client IP rule you add. |
 | `workspace.publicNetworkAccess` | `Enabled` (default) or `Disabled`. With `Disabled`, the workspace data plane (agents, investigations, conversations) answers only from inside the VNet, so Stage 5 must run from a runner with private network access. |
@@ -229,20 +266,20 @@ Notes next to each field explain what to enter. A few that trip people up:
 Notes:
 - **Policies are collected live** from the subscription at runtime — you do not list deny/audit
   policies in the form. Add a `POLICY` row only to declare or override one.
-- For **`byo-existing`**, `controlPlaneRegion` must equal the region of the existing VNet that holds
-  the `managedcluster` / `nodepool` subnets.
+- For **`byo-existing`**, `workloadRegion` must equal the existing VNet region.
+  `controlPlaneRegion` does not need to match it.
 - For **`byo-existing`**, Stage 2 skips the VNet/network-template deployment. Before Stage 3, make sure that:
   - Each SUBNET row's CIDR matches an existing subnet. Stage 1 maps rows to subnet names by CIDR
     and fails `byo-subnets` on a mismatch.
   - The workspace, agent and search subnets are delegated to `Microsoft.App/environments`, and the
     management subnet to `Microsoft.ContainerService/managedClusters`.
-  - The `privatelink.*` zones listed under `privateDnsZones` in
-    `stage3-validation/dependency-spec.json` exist in `network.dnsResourceGroup` (or the network
-    RG) and are linked to the exact VNet resolved from `network.networkResourceGroup`. With
-    `byo-existing`, Stage 2 skips the network-template DNS
-    deployment. For `storage.access=privateEndpoint`, it reuses the blob zone in that DNS/network
-    RG, verifies its VNet link, and associates the storage endpoint's DNS zone group with it.
-    Stage 3 prints create/link commands for missing zones.
+  - For `storage.access=privateEndpoint`, `privatelink.blob.core.windows.net` exists in
+    `network.dnsResourceGroup` (or the network RG) and is linked to the exact VNet resolved from
+    `network.networkResourceGroup`. With `byo-existing`, Stage 2 skips the network-template DNS
+    deployment; it reuses this blob zone, verifies its VNet link, and associates the storage
+    endpoint's DNS zone group with it. No other private DNS zones are needed: the platform
+    creates its own resource-prefixed zones in the managed resource group during Stage 4.
+    Stage 3 doesn't check private DNS zones.
   - Any NSG you attach allows outbound 443 to Internet and traffic within the VNet. A subnet
     without an NSG passes, because the Azure default rules allow both.
 

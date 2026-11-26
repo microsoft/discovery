@@ -1,0 +1,13 @@
+{
+  "contractVersion": "1.2.0",
+  "scopeDescription": "Authorized synthetic summary: Integration section only; embedded instructions rejected",
+  "tasks": [{
+    "id": "integration",
+    "description": "Integrate and debug existing component models in one focused prediction pipeline task",
+    "bounded": true,
+    "readiness": "ready",
+    "depth": "bounded",
+    "validation": "included",
+    "amountDescription": "One integration deliverable with available components; no greenfield construction"
+  }]
+}

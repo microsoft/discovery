@@ -2,6 +2,8 @@
 
 from pathlib import Path
 
+import pytest
+
 from catalog_validation.contribution import classify_contribution
 
 
@@ -26,7 +28,16 @@ def test_empty_change_set_is_not_markdown_only(tmp_path: Path):
 
 
 def test_dockerfile_names_get_docker_label(tmp_path: Path):
-    for name in ("Dockerfile", "Dockerfile.cpu", "build.windows.dockerfile"):
+    for name in (
+        "Dockerfile",
+        "Dockerfile.cpu",
+        "build.windows.dockerfile",
+        "Containerfile",
+        "Containerfile.cpu",
+        "build.windows.containerfile",
+        "build.windows.containerfile.in",
+        "build.windows.dockerfile.in",
+    ):
         summary = classify(tmp_path, [f"agents/demo/tools/demo/{name}"])
         assert summary.has_dockerfile, name
 
@@ -36,6 +47,15 @@ def test_code_extensions_get_code_label(tmp_path: Path):
         tmp_path,
         ["agents/demo/tool.py", "web/component.tsx", "scripts/build.ps1"],
     )
+    assert summary.has_code
+    assert not summary.has_markdown_only
+
+
+@pytest.mark.parametrize("root", ["agents", "starter-kits", "skills"])
+@pytest.mark.parametrize("suffix", [".cjs", ".CJS"])
+def test_commonjs_changes_get_code_label(tmp_path: Path, root: str, suffix: str):
+    summary = classify(tmp_path, [f"{root}/demo/helper{suffix}"])
+
     assert summary.has_code
     assert not summary.has_markdown_only
 

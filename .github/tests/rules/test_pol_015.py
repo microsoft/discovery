@@ -1,10 +1,11 @@
-"""POL-015 — approved file types under agents/ and starter-kits/."""
+"""POL-015 — approved file types under agents/, starter-kits/, and skills/."""
 
 from __future__ import annotations
 
 import pytest
 from conftest import files, run_rule, write
 
+from rules.base import PolicyConfig
 from rules.pol_015 import RULE
 
 
@@ -29,12 +30,64 @@ def test_approved_types_pass(repo, rel):
     assert result.findings == []
 
 
+@pytest.mark.parametrize("root", ["agents", "starter-kits", "skills"])
+@pytest.mark.parametrize("suffix", [".cjs", ".CJS"])
+def test_commonjs_source_files_are_approved(repo, root, suffix):
+    rel = write(repo, f"{root}/demo/scripts/helper{suffix}", "module.exports = {};\n")
+
+    assert run_rule(repo, RULE, [rel]).findings == []
+
+
+@pytest.mark.parametrize("rel", [
+    "skills/demo/templates/report.html",
+    "skills/demo/templates/nested/dashboard.HTML",
+    "skills/demo/report.HtMl",
+])
+def test_html_source_templates_are_approved_in_skills_only(repo, rel):
+    write(repo, rel, "<!doctype html><html><body>Source template</body></html>\n")
+
+    assert run_rule(repo, RULE, [rel]).findings == []
+    assert ".html" not in PolicyConfig.load(repo).allowed_extensions
+
+
+@pytest.mark.parametrize("rel", [
+    "agents/demo/templates/report.html",
+    "starter-kits/demo/templates/report.HTML",
+    "skills/demo/templates/report.htm",
+    "skills/demo/templates/report.xhtml",
+    "skills/demo/templates/report.html.exe",
+])
+def test_html_allowance_does_not_expand_other_trees_or_suffixes(repo, rel):
+    write(repo, rel, "<!doctype html><html><body>Template</body></html>\n")
+
+    assert files(run_rule(repo, RULE, [rel])) == [rel]
+
+
+@pytest.mark.parametrize("rel", [
+    "skills-other/demo/template.html",
+    ".github/skills/demo/template.html",
+    "skills/../agents/demo/template.html",
+    "skills/../../template.html",
+])
+def test_scoped_html_allowance_requires_a_matching_canonical_root(repo, rel):
+    assert not PolicyConfig.load(repo).is_allowed_source_file(rel)
+
+
+def test_scoped_allowance_handles_windows_path_separators(repo):
+    assert PolicyConfig.load(repo).is_allowed_source_file(
+        r"skills\demo\templates\report.HTML"
+    )
+
+
 @pytest.mark.parametrize("rel", [
     "agents/demo/notes.docx",
     "agents/demo/sheet.xlsx",
     "agents/demo/tools/t/archive.tar",
     "agents/demo/tools/t/lib.so",
     "agents/demo/tools/t/thing.unknownext",
+    "agents/demo/tools/t/helper.cjsx",
+    "starter-kits/demo/helper.cjsx",
+    "skills/demo/helper.cjsx",
 ])
 def test_unapproved_types_are_blocked(repo, rel):
     write(repo, rel, "content\n")

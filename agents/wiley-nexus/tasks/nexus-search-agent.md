@@ -40,6 +40,11 @@ Persist both files with the data-handling tools, then list the shortlist in your
 ```
 # Evidence — <the precise research question>
 
+## Index
+- [1] <doi> — <Title>
+- [2] <doi> — <Title>
+- ... (one line per publication, same numbers as the Publications section)
+
 ## Search coverage
 - **<angle>** — query: "<query text>" — coverage: <what it supported; note any facet that returned little or nothing>
 - ... (one bullet per angle)
@@ -62,7 +67,7 @@ Passages:
 - ... (same fields)
 ```
 
-One `###` entry per UNIQUE publication (dedupe by DOI), numbered in listing order. Set **Full Text Available: Yes** when the hit carried a `full_text_token`. Quote passages verbatim under `>` blockquotes (trim obvious boilerplate, never paraphrase — downstream stages need the actual evidence). Record any thin/empty facet in the Search coverage bullets.
+One `###` entry per UNIQUE publication (dedupe by DOI), numbered in listing order. The `## Index` at the top lists every publication's number, DOI and title in one line each, with exactly the same numbers as the `###` entries; keep it first, because downstream readers of a long file may only see its opening lines. Set **Full Text Available: Yes** when the hit carried a `full_text_token`. Quote passages verbatim under `>` blockquotes (trim obvious boilerplate, never paraphrase — downstream stages need the actual evidence). Record any thin/empty facet in the Search coverage bullets.
 
 **2. `fulltext_shortlist.json`** — the 3–5 publications MOST worth reading in full (most on-point and substantive; prefer complementary coverage over near-duplicates). This one stays **JSON** because the next stage parses it to pass each paper's token to a full-text analyzer. A JSON object:
 

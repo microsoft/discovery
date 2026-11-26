@@ -9,6 +9,7 @@ import sys
 from pathlib import Path
 
 import pytest
+import registry_refresh
 from jsonschema import Draft7Validator, FormatChecker
 from referencing import Registry, Resource
 
@@ -32,6 +33,202 @@ from update_starter_kits_registry import (
 REPO_ROOT = Path(__file__).resolve().parents[2]
 SCRIPTS_DIR = REPO_ROOT / ".github" / "scripts"
 SCHEMA_DIR = REPO_ROOT / "docs" / "schemas"
+
+
+@pytest.fixture
+def registry_repo(tmp_path: Path) -> Path:
+    snapshots = {
+        "agent-registry.json": {
+            "version": "1.0.0", "generated_at": "2026-01-01T00:00:00Z",
+            "entries": [{"path": "agents/demo", "version": "1.0.0"}],
+        },
+        "starter-kit-registry.json": {
+            "schemaVersion": "1.0.0", "generatedAt": "2026-01-01T00:00:00Z",
+            "commitSha": "old-source",
+            "kits": [{"kitPath": "starter-kits/demo", "availability": "healthy",
+                      "computedAt": "2026-01-01T00:00:00Z"}],
+        },
+        "agent-tags.json": {
+            "schemaVersion": "1.0.0", "count": 1,
+            "agents": [{"path": "agents/demo", "computed_tags": ["tier:bronze"]}],
+        },
+    }
+    for name, payload in snapshots.items():
+        write(tmp_path, f".auto-registry/{name}", (json.dumps(payload) + "\n").encode())
+    subprocess.run(["git", "init", "-q", str(tmp_path)], check=True)
+    subprocess.run(["git", "add", ".auto-registry"], cwd=tmp_path, check=True)
+    subprocess.run(
+        ["git", "-c", "user.name=Test", "-c", "user.email=test@example.com",
+         "-c", "commit.gpgsign=false", "commit", "-qm", "Published snapshot"],
+        cwd=tmp_path, check=True,
+    )
+    return tmp_path
+
+
+def registry_cli(monkeypatch, repo: Path) -> Path:
+    output = repo / "github-output.txt"
+    monkeypatch.setattr(sys, "argv", [
+        "registry_refresh.py", "--repo-root", str(repo),
+        "--repository", "microsoft/discovery",
+    ])
+    monkeypatch.setenv("GITHUB_OUTPUT", str(output))
+    monkeypatch.setenv("GITHUB_STEP_SUMMARY", str(repo / "summary.md"))
+    return output
+
+
+def test_registry_refresh_preserves_metadata_only_snapshots(registry_repo, monkeypatch):
+    output = registry_cli(monkeypatch, registry_repo)
+    previous = {
+        relative: (registry_repo / relative).read_bytes()
+        for relative in registry_refresh.REGISTRY_COLLECTIONS
+    }
+    for relative in previous:
+        payload = json.loads(previous[relative])
+        if "generated_at" in payload:
+            payload["generated_at"] = "2026-11-18T00:00:00Z"
+        if "kits" in payload:
+            payload["generatedAt"] = "2026-11-18T00:00:00Z"
+            payload["commitSha"] = "unrelated-main-commit"
+            payload["kits"][0]["computedAt"] = "2026-11-18T00:00:00Z"
+        write(registry_repo, relative, json.dumps(payload, indent=2))
+    monkeypatch.setattr(
+        registry_refresh, "existing_refresh_prs",
+        lambda repository: pytest.fail("A semantic no-op must not query or create PRs"),
+    )
+
+    assert registry_refresh.main() == 0
+    assert output.read_text(encoding="utf-8") == "publish=false\n"
+    assert {
+        relative: (registry_repo / relative).read_bytes()
+        for relative in previous
+    } == previous
+
+
+@pytest.mark.parametrize(("filename", "collection", "field", "value"), [
+    ("agent-registry.json", "entries", "version", "2.0.0"),
+    ("agent-registry.json", None, "version", "2.0.0"),
+    ("starter-kit-registry.json", "kits", "availability", "degraded"),
+    ("agent-tags.json", "agents", "computed_tags", ["tier:silver"]),
+])
+def test_registry_refresh_detects_real_payload_changes(
+    registry_repo, filename, collection, field, value,
+):
+    relative = f".auto-registry/{filename}"
+    payload = json.loads((registry_repo / relative).read_bytes())
+    target = payload[collection][0] if collection else payload
+    target[field] = value
+    write(registry_repo, relative, json.dumps(payload))
+
+    assert registry_refresh.prepare_changes(registry_repo) == [relative]
+    current = json.loads((registry_repo / relative).read_bytes())
+    target = current[collection][0] if collection else current
+    assert target[field] == value
+
+
+def test_registry_refresh_detects_untracked_bootstrap_outputs(registry_repo):
+    subprocess.run(
+        ["git", "rm", "--cached", "-r", ".auto-registry"],
+        cwd=registry_repo, check=True, capture_output=True,
+    )
+    subprocess.run(
+        ["git", "-c", "user.name=Test", "-c", "user.email=test@example.com",
+         "-c", "commit.gpgsign=false", "commit", "-qm", "Before first publication"],
+        cwd=registry_repo, check=True,
+    )
+
+    assert registry_refresh.prepare_changes(registry_repo) == list(
+        registry_refresh.REGISTRY_COLLECTIONS
+    )
+
+
+@pytest.mark.parametrize(("existing", "publish"), [([], "true"), ([77], "false")])
+def test_registry_refresh_queues_changes_without_rewriting_reviewed_prs(
+    registry_repo, monkeypatch, existing, publish,
+):
+    output = registry_cli(monkeypatch, registry_repo)
+    relative = ".auto-registry/agent-registry.json"
+    payload = json.loads((registry_repo / relative).read_bytes())
+    payload["entries"].append({"path": "agents/new"})
+    write(registry_repo, relative, json.dumps(payload))
+    calls = []
+
+    def lookup(repository):
+        calls.append(repository)
+        return existing
+
+    monkeypatch.setattr(registry_refresh, "existing_refresh_prs", lookup)
+    assert registry_refresh.main() == 0
+    assert calls == ["microsoft/discovery"]
+    assert output.read_text(encoding="utf-8") == f"publish={publish}\n"
+    assert subprocess.run(
+        ["git", "diff", "--cached", "--quiet"], cwd=registry_repo,
+    ).returncode == 0
+    summary = (registry_repo / "summary.md").read_text(encoding="utf-8")
+    if existing:
+        assert "https://github.com/microsoft/discovery/pull/77" in summary
+        assert "will not be rewritten" in summary
+
+
+def test_registry_refresh_lookup_requires_trusted_same_repository_pr(monkeypatch):
+    def pr(number, author="discovery-registry-bot[bot]",
+           repository="microsoft/discovery", ref="chore/registry-refresh-123"):
+        return {
+            "number": number, "state": "open", "base": {"ref": "main"},
+            "head": {"ref": ref, "repo": {"full_name": repository}},
+            "user": {"login": author},
+        }
+
+    pages = [
+        [pr(1, author="octocat"), pr(2, repository="octocat/discovery")],
+        [pr(3, ref="feature/update"), pr(4)],
+    ]
+    calls = []
+
+    def run(command, **kwargs):
+        calls.append(command)
+        return subprocess.CompletedProcess(command, 0, stdout=json.dumps(pages))
+
+    monkeypatch.setattr(registry_refresh.subprocess, "run", run)
+    assert registry_refresh.existing_refresh_prs("microsoft/discovery") == [4]
+    assert calls == [[
+        "gh", "api",
+        "repos/microsoft/discovery/pulls?state=open&base=main&per_page=100",
+        "--paginate", "--slurp",
+    ]]
+
+
+def test_registry_refresh_api_failure_does_not_permit_publication(
+    registry_repo, monkeypatch, capsys,
+):
+    output = registry_cli(monkeypatch, registry_repo)
+    relative = ".auto-registry/agent-tags.json"
+    payload = json.loads((registry_repo / relative).read_bytes())
+    payload["agents"][0]["computed_tags"] = ["tier:gold"]
+    write(registry_repo, relative, json.dumps(payload))
+
+    def unavailable(repository):
+        raise subprocess.CalledProcessError(1, ["gh", "api"], stderr="HTTP 403")
+
+    monkeypatch.setattr(registry_refresh, "existing_refresh_prs", unavailable)
+    assert registry_refresh.main() == 1
+    assert not output.exists()
+    assert "HTTP 403" in capsys.readouterr().err
+
+
+def test_registry_refresh_rejects_malformed_published_snapshot(registry_repo):
+    relative = ".auto-registry/agent-registry.json"
+    generated = (registry_repo / relative).read_bytes()
+    write(registry_repo, relative, "{}")
+    subprocess.run(["git", "add", relative], cwd=registry_repo, check=True)
+    subprocess.run(
+        ["git", "-c", "user.name=Test", "-c", "user.email=test@example.com",
+         "-c", "commit.gpgsign=false", "commit", "-qm", "Invalid snapshot"],
+        cwd=registry_repo, check=True,
+    )
+    write(registry_repo, relative, generated)
+
+    with pytest.raises(ValueError, match="array of objects"):
+        registry_refresh.prepare_changes(registry_repo)
 
 
 def baseline_entry(rule_id: str, file: str) -> dict[str, str]:

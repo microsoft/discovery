@@ -2,6 +2,8 @@
 
 from pathlib import Path
 
+import pytest
+
 from validate_starter_kits import build_dry_run_registry, validate_kit
 
 
@@ -58,9 +60,20 @@ def test_starter_kit_allows_markdown_and_web_images(tmp_path: Path):
     assert not any("SKT-AST-002" in error for error in errors)
 
 
-def test_starter_kit_rejects_arbitrary_extra_files(tmp_path: Path):
-    errors = _validate_extra_files(tmp_path, ["kit.json", "payload.py"])
-    assert any("SKT-STR-008" in error and "payload.py" in error for error in errors)
+@pytest.mark.parametrize("filename", [
+    "helper.cjs", "scripts/helper.cjs", "tests/guard.cjs", "helper.CJS",
+])
+def test_starter_kit_allows_commonjs_source(tmp_path: Path, filename: str):
+    errors = _validate_extra_files(tmp_path, ["kit.json", filename])
+    assert not any("SKT-STR-008" in error for error in errors)
+
+
+@pytest.mark.parametrize("filename", [
+    "payload.py", "payload.js", "payload.sh", "helper.cjsx", "helper.cjs.exe",
+])
+def test_starter_kit_rejects_arbitrary_extra_files(tmp_path: Path, filename: str):
+    errors = _validate_extra_files(tmp_path, ["kit.json", filename])
+    assert any("SKT-STR-008" in error and filename in error for error in errors)
 
 
 def test_starter_kit_rejects_orphaned_image(tmp_path: Path):

@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import fnmatch
 import json
+import re
 from dataclasses import dataclass, field
 from enum import Enum
 from pathlib import Path
@@ -59,7 +60,7 @@ class Finding:
     severity: Severity = Severity.ERROR
 
     def to_dict(self) -> dict:
-        # Matches the JSON contract consumed by pr-review.yml's posting step.
+        # Validation artifact contract consumed by the separate trusted reporter.
         return {
             "rule_id": self.rule_id,
             "file": self.file,
@@ -76,6 +77,7 @@ class PolicyConfig:
     allowed_extensions: frozenset[str] = frozenset()
     allowed_filenames: frozenset[str] = frozenset()
     allowed_patterns: tuple[str, ...] = ()
+    allowed_scoped_extensions: tuple[tuple[str, frozenset[str]], ...] = ()
     exempt_directories: frozenset[str] = frozenset()
     model_weight_extensions: frozenset[str] = frozenset()
     allow_docker_official_images: bool = True
@@ -208,6 +210,45 @@ class PolicyConfig:
                 return default
             return val
 
+        def _scoped_extensions(
+            rel: str, mapping: dict
+        ) -> tuple[tuple[str, frozenset[str]], ...]:
+            """Optional catalog-root extension grants; reject malformed scopes."""
+            if "scoped_extensions" not in mapping:
+                return ()
+            val = mapping["scoped_extensions"]
+            if not isinstance(val, dict):
+                errors.append((rel, "'scoped_extensions' must be a mapping."))
+                return ()
+            before_errors = len(errors)
+            scoped: list[tuple[str, frozenset[str]]] = []
+            for prefix, extensions in val.items():
+                if prefix not in ("agents/", "starter-kits/", "skills/"):
+                    errors.append((rel, (
+                        "scoped_extensions keys must be exact catalog roots: "
+                        "'agents/', 'starter-kits/' or 'skills/'."
+                    )))
+                    continue
+                if not isinstance(extensions, list):
+                    errors.append((rel, (
+                        f"scoped_extensions.{prefix} must be a list of extensions."
+                    )))
+                    continue
+                valid: list[str] = []
+                for index, extension in enumerate(extensions):
+                    if not isinstance(extension, str) or not re.fullmatch(
+                        r"\.[A-Za-z0-9][A-Za-z0-9_-]*", extension
+                    ):
+                        errors.append((rel, (
+                            f"scoped_extensions.{prefix}[{index}] must be a single "
+                            "dot-prefixed extension, not a path or glob."
+                        )))
+                    else:
+                        valid.append(extension.lower())
+                scoped.append((prefix, frozenset(valid)))
+            # Never partially apply a malformed scoped allowance.
+            return tuple(scoped) if len(errors) == before_errors else ()
+
         al_rel, allowlist = _load("source-allowlist.yaml")
         bi_rel, base_images = _load("base-images.yaml")
         tx_rel, taxonomy = _load("tag-taxonomy.yaml")
@@ -249,6 +290,7 @@ class PolicyConfig:
             ),
             allowed_filenames=frozenset(_str_list(al_rel, allowlist, "filenames")),
             allowed_patterns=tuple(_str_list(al_rel, allowlist, "patterns")),
+            allowed_scoped_extensions=_scoped_extensions(al_rel, allowlist),
             exempt_directories=frozenset(
                 d.strip("/") for d in _str_list(al_rel, allowlist, "exempt_directories")
             ),
@@ -293,13 +335,20 @@ class PolicyConfig:
         This is a readability control, not a security control — the content
         sniffer is what actually stops a renamed binary.
         """
-        parts = Path(rel_path.replace("\\", "/")).parts
+        normalized = rel_path.replace("\\", "/")
+        parts = Path(normalized).parts
         if any(p in self.exempt_directories for p in parts[:-1]):
             return True
         name = parts[-1] if parts else rel_path
         if name in self.allowed_filenames:
             return True
-        if Path(rel_path).suffix.lower() in self.allowed_extensions:
+        suffix = Path(normalized).suffix.lower()
+        if suffix in self.allowed_extensions:
+            return True
+        if ".." not in parts and any(
+            normalized.startswith(prefix) and suffix in extensions
+            for prefix, extensions in self.allowed_scoped_extensions
+        ):
             return True
         return any(fnmatch.fnmatch(name, pat) for pat in self.allowed_patterns)
 

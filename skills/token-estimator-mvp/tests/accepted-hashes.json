@@ -1,0 +1,11 @@
+{
+  "scripts/estimate.js": "6ccf4d59dbd186714aef0f1fe74623314246ca860bb649727f10d0d01eb20d9a",
+  "scripts/model.js": "043f07e2dead5e555fe40f9e512d3ddb5a5222a03770cd7acf1c230943c960a2",
+  "resources/calibration.json": "3094b664fe858dfbcbe4d0afb3eeaa6cd2f88928c9f65560e2d92b52920ca962",
+  "resources/contract.schema.json": "baf773f36dc126ab17f4338a4f5d7ca212eab0e2ff439ee859577bf612ebf06e",
+  "resources/work-profiles.json": "c095caa59bf25f739b5ace1a2697f756a04e0538d7aa3544ee55432c8ec20329",
+  "package.json": "e460230fb8314b44194ac03bc496236e4fe919c2787e7c71784c708ce6ce09bb",
+  "tests/model.test.js": "b9f8d22a5368d5c4c682329ed8717886fd27338ab9b11d56635c5b0f3d230c1f",
+  "tests/phases.test.js": "a374749388db5ee6cfde1ce55b716b6f3a608db079ac99bf115c147afc17588d",
+  "tests/operations.test.js": "9f26e329b2c8272c36889e7db8ed6473294589d29fe2bf06761afc8aee02f10f"
+}

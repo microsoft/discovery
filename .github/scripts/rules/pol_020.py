@@ -12,7 +12,7 @@ from content_sniffer import classify
 from rules.base import Finding, Rule, RuleContext, Scope, Severity
 
 
-GUARDED_PREFIXES = ("agents/", "starter-kits/")
+GUARDED_PREFIXES = ("agents/", "starter-kits/", "skills/")
 READ_CHUNK_BYTES = 64 * 1024
 ALLOWED_CONTROLS = frozenset({"\t", "\n", "\r"})
 

@@ -1,0 +1,32 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Functional verification worker parameters at /input/params.json",
+  "type": "object",
+  "required": ["scenario"],
+  "properties": {
+    "scenario": {"enum": ["run_sim", "lint", "gls"]},
+    "top": {"type": "string", "pattern": "^[A-Za-z_][A-Za-z0-9_$]*$"},
+    "rtl": {"type": "string", "minLength": 1},
+    "rtl_files": {"type": "array", "minItems": 1, "items": {"type": "string", "pattern": "^/input/"}},
+    "testbench": {"type": "string", "minLength": 1},
+    "testbench_files": {"type": "array", "minItems": 1, "items": {"type": "string", "pattern": "^/input/"}},
+    "generation": {"enum": ["2012", "2005", "1995"], "default": "2012"},
+    "defines": {"type": "object"},
+    "include_dirs": {"type": "array", "items": {"type": "string", "pattern": "^/input/"}},
+    "library_dirs": {"type": "array", "items": {"type": "string", "pattern": "^/input/"}},
+    "libraries": {"type": "array", "items": {"type": "string", "pattern": "^/input/"}},
+    "warnings": {"type": "array", "items": {"type": "string"}},
+    "timescale": {"type": "string"},
+    "wave_format": {"enum": ["vcd", "lxt2", "fst"], "default": "vcd"},
+    "plusargs": {"type": "array", "items": {"type": "string"}},
+    "sdf": {"type": "string", "pattern": "^/input/"},
+    "sdf_scope": {"type": "string"},
+    "sdf_mtm": {"enum": ["min", "typ", "max"], "default": "max"}
+  },
+  "anyOf": [{"required": ["rtl"]}, {"required": ["rtl_files"]}],
+  "allOf": [{
+    "if": {"properties": {"scenario": {"enum": ["run_sim", "gls"]}}},
+    "then": {"anyOf": [{"required": ["testbench"]}, {"required": ["testbench_files"]}]}
+  }],
+  "additionalProperties": true
+}

@@ -1,0 +1,19 @@
+{
+  "node_awareness": "node-aware",
+  "original_tags": [
+    "chip-design",
+    "soc-integration",
+    "hierarchical",
+    "noc",
+    "node-portable",
+    "sky130"
+  ],
+  "action_examples": {
+    "run": [
+      {
+        "name": "assemble",
+        "params_json": "{\"scenario\":\"assemble\",\"top_budget\":{\"freq_mhz\":1000,\"power_mw\":500,\"area_um2\":2000000},\"blocks\":[{\"name\":\"cpu\",\"weight\":0.5,\"interfaces\":[\"axi\"]},{\"name\":\"dma\",\"weight\":0.2,\"interfaces\":[\"axi\"]},{\"name\":\"mem\",\"weight\":0.3,\"interfaces\":[\"axi\"]}],\"pdk_binding\":{\"pdk\":\"sky130A\"}}"
+      }
+    ]
+  }
+}

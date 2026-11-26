@@ -10,7 +10,7 @@ This agent gives Discovery users conversational access to three framings of that
 
 **Intended user:** medicinal chemists, computational chemists, and computational biologists prioritizing compounds and assessing off-target liabilities.
 
-**Related agents.** [`aqcat`](../aqcat/README.md) covers catalysis and surface reactivity on the same platform and the same connection. [`sandboxaq`](../sandboxaq/README.md) is separate — it prompts a SandboxAQ model you have subscribed to in Azure AI Foundry, and needs no platform tenant.
+**Related agents.** [`aqcat`](../aqcat/README.md) covers catalysis and surface reactivity on the same platform and the same connection.
 
 **Successful outcome:** predicted potencies with uncertainty, correctly attributed to molecule and target, with weakly-supported predictions clearly marked so they are not ranked as though they were confident.
 
@@ -39,10 +39,11 @@ The agent holds no compute of its own and ships no container. It is a prompt age
 
 - An Azure AI Foundry project with a chat model deployment, supplied as `{{CHAT-MODEL}}`.
 - Access to a SandboxAQ AI Simulation Platform tenant with AQPotency enabled. Contact <support@sandboxaq.com> if your organization does not have one.
-- The MCP server URL for your tenant, and a credential that server accepts as a **request header**, stored as a connection in your Azure AI Foundry project. The agent references that connection by name; the credential never enters the agent definition.
+- The MCP server URL for your tenant, configured as a connection in your Azure AI Foundry project. The agent references that connection by name.
+- A SandboxAQ account for each user. Sign-in is per-user OAuth; no API keys or service tokens are issued or accepted.
 - Awareness of your organization's data-handling policy for proprietary chemical matter: the SMILES you submit are sent to the platform.
 
-> **Authentication note.** Foundry's MCP tool authenticates with a stored connection or static headers; it cannot complete an interactive browser OAuth flow. If your tenant is configured for interactive consent only, request a service token or equivalent header credential from your platform administrator before deploying.
+> **Authentication note.** Each user signs in with their own SandboxAQ account through a browser OAuth flow. Discovery does not yet support per-user sign-in for MCP tools, so this agent cannot connect from Discovery until it does; until then, validate it in the Azure AI Foundry playground. Foundry supports browser sign-in, but each connection needs its own OAuth client, and the platform must accept the redirect URL Foundry generates for that connection (these begin with `https://global.consent.azure-apim.net/redirect/`). Contact <support@sandboxaq.com> to have a redirect URL accepted.
 
 ## Configuration
 
@@ -50,9 +51,9 @@ The agent holds no compute of its own and ships no container. It is a prompt age
 |---|---|---|
 | `{{CHAT-MODEL}}` | Azure AI Foundry chat model deployment name | `gpt-4o-deployment` |
 | `{{AQ_MCP_SERVER_URL}}` | Base URL of your tenant's SandboxAQ AI Simulation Platform MCP server | `https://mcp.demo.aisim.sandboxaq.com` |
-| `{{AQ_MCP_CONNECTION}}` | Name of the connection in your Foundry project holding the MCP server credential | `sandboxaq-aisim` |
+| `{{AQ_MCP_CONNECTION}}` | Name of the MCP server connection in your Foundry project | `sandboxaq-aisim` |
 
-Create the connection in your own Azure AI Foundry project before deploying. The agent definition references it by name and never carries the credential itself, so no secret appears in this catalog entry or in your deployed agent's configuration.
+Create the connection in your own Azure AI Foundry project before deploying. The agent definition references it by name, so no secret appears in this catalog entry or in your deployed agent's configuration.
 
 ## Usage
 
@@ -111,7 +112,7 @@ Provided by the SandboxAQ AI Simulation Platform MCP server; no container images
 - **Accession mapping is a failure mode.** Prose target names must be resolved to accessions; the agent confirms its intended accession rather than assuming, but a wrong accession produces a plausible number for the wrong protein.
 - **Jobs can outlive a conversation.** Panel scans in particular may not complete within a turn; the agent returns a job identifier for later retrieval.
 - **Submitted molecules leave your environment.** Every prediction sends chemical matter to the platform. Confirm this is permitted under your organization's data-handling policy before submitting proprietary structures.
-- **Interactive-OAuth tenants are not supported** without a header credential — see the authentication note under Prerequisites.
+- **Not yet usable from Discovery.** Sign-in is per-user OAuth, which Discovery does not yet support for MCP tools — see the authentication note under Prerequisites.
 
 ## Support
 

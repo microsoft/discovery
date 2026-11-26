@@ -139,7 +139,7 @@ def _catalog_file(repo_root: Path, changed_path: str) -> tuple[Path, str] | None
         or relative.is_absolute()
         or ".." in relative.parts
         or not relative.parts
-        or relative.parts[0] not in {"agents", "starter-kits"}
+        or relative.parts[0] not in {"agents", "starter-kits", "skills"}
     ):
         return None
 

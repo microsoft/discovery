@@ -1,0 +1,29 @@
+{
+  "node_awareness": "node-aware",
+  "original_tags": [
+    "analog",
+    "spice",
+    "ngspice",
+    "xschem",
+    "node-portable",
+    "sky130"
+  ],
+  "previous_tool_version": "1.1.0-qualification39-r3",
+  "action_examples": {
+    "run": [
+      {
+        "name": "simulate",
+        "params_json": "{\"scenario\":\"simulate\",\"deck\":\"/input/amp.sp\",\"pdk_binding\":{\"pdk\":\"sky130A\"}}"
+      },
+      {
+        "name": "netlist",
+        "params_json": "{\"scenario\":\"netlist\",\"schematic\":\"/input/amp.sch\",\"xschemrc\":\"/pdk/xschemrc\"}"
+      }
+    ]
+  },
+  "input_schema_keywords": {
+    "run": {
+      "additionalProperties": false
+    }
+  }
+}

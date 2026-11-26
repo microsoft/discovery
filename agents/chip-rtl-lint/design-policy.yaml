@@ -1,0 +1,51 @@
+schema_version: design-policy/1.0
+owner: chip-rtl-lint
+node_awareness: node-agnostic
+pdk_binding:
+  required: false
+  resolved_by: PDK Binding and Node Management Agent
+  consumed_fields: []
+  missing_binding_behavior: allow
+execution:
+  engine_failure: block
+  malformed_output: block
+
+# --- BEGIN generated effort block (catalog/gen_effort_policy.py) ---
+effort:
+  iterating: true
+  stage_key: lint
+  metric_kind: discrete
+  progress_metric:
+    id: unwaived_violations
+    direction: minimize
+    closes_at: 0
+    # STABLE pointer: every stage reports its residual here. The
+    # per-stage extraction lives in catalog/tools/cde_progress.py, so a
+    # consumer never has to know this stage's freeform result keys.
+    source: common_design_envelope.json#/progress/residual
+    denominator: common_design_envelope.json#/progress/denominator
+    # Compare WITHIN a unit family, never across families: counts and
+    # nanoseconds are not commensurable, and a scalar comparison lets
+    # the residual silently switch basis while a regression hides.
+    families: common_design_envelope.json#/progress/families
+    primary_family: count
+    unit: violations
+  # Stall rule (PRIMARY stop): if the best-so-far residual has not
+  # improved by >= min_delta across the last k attempts, the stage has
+  # converged and further attempts are not expected to close it.
+  min_delta: 1.0
+  k: 2
+  provisional: true   # not yet calibrated against normalized history
+  # Progress requires that NO unit family regressed -- a stage whose
+  # gate has several families (e.g. latch counts AND timing slack) must
+  # not report progress when one improves while another backslides.
+  no_family_regression: true
+  # Cost is charged in resource units, not attempts: judge marginal
+  # gain PER UNIT COST (see EFFORT-COST-WEIGHTS-001).
+  cost_weighted_roi: true
+  # Can THIS stage close its own gate by re-running? An analysis
+  # stage cannot (it observes, it does not modify design data), so
+  # rung-1 is a provable no-op and the ladder must route straight to
+  # rung 2 -- see EFFORT-AUTO-RUNG2-001 `not-self-remediable`.
+  self_remediating: false
+# --- END generated effort block ---

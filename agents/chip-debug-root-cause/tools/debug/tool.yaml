@@ -1,0 +1,42 @@
+name: chip-debug
+description: Chip debug / root-cause tool. Buckets verification failures by error signature, PARSES THE
+  VCD WAVEFORM (X-states, stuck signals, activity around the failure time), reduces a failing stimulus
+  to a 1-minimal case by delta debugging (ddmin) against an oracle that RE-EXECUTES the test, and establishes
+  reproducer determinism by re-running and comparing normalized outcomes -- never from the presence of
+  a seed. Waveform-derived hypotheses outrank log-text matches. Unreadable traces and unrunnable commands
+  are reported as not_assessable, never as clean. Dependency-free (no pip packages). Node-agnostic. Emits
+  a Common Design Envelope.
+version: 1.1.41
+category: Chip Design
+license: MIT
+infra:
+- name: worker
+  infra_type: container
+  image:
+    acr: '{name}.azurecr.io/chip-debug:1.1.41'
+  compute:
+    min_resources:
+      cpu: 1
+      ram: 2Gi
+      storage: 5Gi
+      gpu: 0
+    max_resources:
+      cpu: 2
+      ram: 4Gi
+      storage: 10Gi
+      gpu: 0
+    recommended_sku:
+    - Standard_D2as_v6
+    pool_type: static
+    pool_size: 1
+actions:
+- name: run
+  description: Triage failures, reduce to a measured-minimal reproducer, observe determinism by re-execution,
+    and rank root causes from waveform + log evidence. Emits to /output/common_design_envelope.json (Common Design
+    Envelope).
+  infra_node: worker
+  command: python3 -u /app/action_launcher.py
+  input_schema:
+    type: object
+    properties: {}
+    required: []

@@ -1,0 +1,98 @@
+schema_version: design-policy/1.0
+owner: chip-floorplanning
+node_awareness: node-aware
+pdk_binding:
+  required: true
+  resolved_by: PDK Binding and Node Management Agent
+  consumed_fields: [pdk, tech_lef, site, tracks, metal_stack]
+  missing_binding_behavior: block
+execution:
+  missing_binding_reference: block
+  engine_failure: block
+  malformed_output: block
+
+# Boundary assertions this stage must satisfy before it may report a passing attempt,
+# whenever the design instantiates a pad ring and/or hard macros. Each closes a defect
+# class that previously passed the floorplan gate and stopped the flow 1-3 stages later.
+gate_checks:
+  - id: io_pin_on_pad_terminal_layer
+    description: >-
+      Every top-level BTerm bonded to a pad must be placed on that pad master's own
+      terminal-pin layer, read from the bound io_lef. The pad obstructs the lower stack
+      across its footprint, so a BTerm on any other layer is in a capacity:0 GCell.
+    closes_at: 0
+    severity: block
+    evidence: python catalog/validate_pad_macro_boundary.py --campaign <slug>   (PB2)
+    incident: >-
+      2026-10-07 floorplan.5: 34 BTerms on met4 vs gpiov2 PAD pin met5 -> 525
+      capacity:0 pin-access GCells, GRT overflow 1073, detailed route never started.
+  - id: abutment_nets_declared_special
+    description: >-
+      Every net whose real connection is physical (a 2-terminal PORT<->pad bond net, or
+      a pad-ring bus continuous through abutted cells) must be declared SPECIAL so the
+      signal router does not attempt to route it.
+    closes_at: 0
+    severity: block
+    evidence: python catalog/validate_pad_macro_boundary.py --campaign <slug>   (PB3)
+    incident: >-
+      2026-10-07/08: undeclared amuxbus_a/b flooded the pad ring (364/561 congestion
+      GCells); 30 undeclared PORT<->pad bond nets then aborted detailed route with
+      31x DRT-0073 "no access point".
+  - id: rows_cut_and_blocked_under_macros
+    description: >-
+      Std-cell rows must be cut under every hard macro, with a li1/met1 power+routing
+      blockage over macro-footprint+halo, BEFORE pdngen runs. Macro LEF OBS does not
+      stop follow-pin power rails.
+    closes_at: 0
+    severity: block
+    evidence: python catalog/validate_pad_macro_boundary.py --campaign <slug>   (PB1)
+    incident: >-
+      2026-10-08: rows left uncut -> 55 met1 followpins across 2 macros -> 1573 m1.2
+      violations at signoff DRC.
+  - id: grt_sanity_overflow
+    description: >-
+      The floorplan's global-route sanity must run with detailed-route-representative
+      layer settings and assert overflow = 0. A permissive sanity run false-passes
+      pin-access defects.
+    closes_at: 0
+    severity: block
+
+# --- BEGIN generated effort block (catalog/gen_effort_policy.py) ---
+effort:
+  iterating: true
+  stage_key: floorplan
+  metric_kind: discrete
+  progress_metric:
+    id: floorplan_open_gate_items
+    direction: minimize
+    closes_at: 0
+    # STABLE pointer: every stage reports its residual here. The
+    # per-stage extraction lives in catalog/tools/cde_progress.py, so a
+    # consumer never has to know this stage's freeform result keys.
+    source: common_design_envelope.json#/progress/residual
+    denominator: common_design_envelope.json#/progress/denominator
+    # Compare WITHIN a unit family, never across families: counts and
+    # nanoseconds are not commensurable, and a scalar comparison lets
+    # the residual silently switch basis while a regression hides.
+    families: common_design_envelope.json#/progress/families
+    primary_family: count
+    unit: items
+  # Stall rule (PRIMARY stop): if the best-so-far residual has not
+  # improved by >= min_delta across the last k attempts, the stage has
+  # converged and further attempts are not expected to close it.
+  min_delta: 1.0
+  k: 2
+  provisional: true   # not yet calibrated against normalized history
+  # Progress requires that NO unit family regressed -- a stage whose
+  # gate has several families (e.g. latch counts AND timing slack) must
+  # not report progress when one improves while another backslides.
+  no_family_regression: true
+  # Cost is charged in resource units, not attempts: judge marginal
+  # gain PER UNIT COST (see EFFORT-COST-WEIGHTS-001).
+  cost_weighted_roi: true
+  # Can THIS stage close its own gate by re-running? An analysis
+  # stage cannot (it observes, it does not modify design data), so
+  # rung-1 is a provable no-op and the ladder must route straight to
+  # rung 2 -- see EFFORT-AUTO-RUNG2-001 `not-self-remediable`.
+  self_remediating: true
+# --- END generated effort block ---

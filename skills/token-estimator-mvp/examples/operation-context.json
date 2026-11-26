@@ -1,0 +1,13 @@
+{
+  "contractVersion": "1.2.0",
+  "scopeDescription": "Authorized synthetic operation.md Ready instructions section only",
+  "tasks": [{
+    "id": "ready-instructions",
+    "description": "Read instructions and inputs, prepare commands, launch an existing simulation and confirm startup/status/errors.",
+    "bounded": true,
+    "readiness": "ready",
+    "retryLimit": 0,
+    "monitoring": "startup-only",
+    "validation": "included"
+  }]
+}

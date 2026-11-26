@@ -33,6 +33,7 @@ from discovery.poll.models.tool_run import (
     DataMount,
     InfraOverridesFlat,
     StorageMountProtocol,
+    ToolRunRequest,
 )
 
 
@@ -195,6 +196,85 @@ def test_validate_shm_override_rejects_on_pre_ga(av):
 def test_validate_shm_override_accepts_ga():
     """GA accepts the shared-memory override."""
     cli_submit._validate_shm_override_or_exit("1Gi", ApiVersion.V2026_06_01)
+
+
+# ---------------------------------------------------------------------------
+# Per-job pool-size overrides
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize(
+    ("api_version", "size_field"),
+    [
+        ("2025-07-01-preview", "poolSize"),
+        ("2025-12-01-preview", "replicaCount"),
+        ("2026-02-01-preview", "replicaCount"),
+        ("2026-06-01", "replicaCount"),
+        (None, "replicaCount"),
+        (ApiVersion.V2026_06_01, "replicaCount"),
+    ],
+)
+@pytest.mark.parametrize("pool_size", [1, 3])
+def test_pool_size_only_override_serializes_for_api_version(
+    api_version: str | ApiVersion | None, size_field: str, pool_size: int
+) -> None:
+    """A size-only override uses exactly the version-specific wire field."""
+    overrides = cli_submit.build_infra_overrides(
+        api_version, cpus=None, gpus=None, memory=None, image=None, pool_size=pool_size
+    )
+    request = ToolRunRequest(
+        toolId="tool", storageId=None, command="mpirun -np 6 /app/program", infraOverrides=overrides
+    )
+    payload = json.loads(request.model_dump_json())
+    assert payload["infraOverrides"] == {size_field: pool_size}
+    assert payload["command"] == "mpirun -np 6 /app/program"
+
+
+@pytest.mark.parametrize("api_version", list(ApiVersion))
+def test_pool_size_override_preserves_other_overrides(api_version: ApiVersion) -> None:
+    """Replica count composes with existing resource and image overrides."""
+    overrides = cli_submit.build_infra_overrides(
+        api_version, cpus=4, gpus=1, memory="8Gi", image="acr/demo:v2", pool_size=2
+    )
+    assert overrides is not None
+    payload = json.loads(overrides.model_dump_json(by_alias=True, exclude_none=True))
+    if api_version is ApiVersion.V2025_07_01_PREVIEW:
+        assert payload == {
+            "resources": {"cpu": "4", "ram": "8Gi", "gpu": 1},
+            "imageUri": "acr/demo:v2",
+            "poolSize": 2,
+        }
+    else:
+        assert payload == {
+            "cpu": "4", "ram": "8Gi", "gpu": "1", "imageUri": "acr/demo:v2", "replicaCount": 2,
+        }
+
+
+@pytest.mark.parametrize("api_version", list(ApiVersion))
+def test_unspecified_pool_size_preserves_defaults(api_version: ApiVersion) -> None:
+    """Omission neither creates overrides nor replaces the tool's pool size."""
+    assert cli_submit.build_infra_overrides(
+        api_version, cpus=None, gpus=None, memory=None, image=None
+    ) is None
+    overrides = cli_submit.build_infra_overrides(
+        api_version, cpus=4, gpus=None, memory=None, image=None
+    )
+    assert overrides is not None
+    payload = json.loads(overrides.model_dump_json(by_alias=True, exclude_none=True))
+    assert "poolSize" not in payload
+    assert "replicaCount" not in payload
+
+
+@pytest.mark.parametrize("api_version", list(ApiVersion))
+@pytest.mark.parametrize("pool_size", [0, -1])
+def test_pool_size_override_rejects_nonpositive_size(
+    api_version: ApiVersion, pool_size: int
+) -> None:
+    """Invalid size-only overrides must not be silently treated as omitted."""
+    with pytest.raises(ValueError, match="greater than 0"):
+        cli_submit.build_infra_overrides(
+            api_version, cpus=None, gpus=None, memory=None, image=None, pool_size=pool_size
+        )
 
 
 # ---------------------------------------------------------------------------

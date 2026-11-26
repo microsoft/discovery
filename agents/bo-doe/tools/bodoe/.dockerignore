@@ -1,0 +1,14 @@
+# Keep the build context small and reproducible.
+# The Dockerfile only COPYs app/*.py and app/entrypoint.sh, so nothing below
+# reaches the image -- but excluding it avoids shipping stale bytecode and
+# multi-megabyte context transfers on every build.
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+*.egg-info/
+.ipynb_checkpoints/
+*.log
+.DS_Store

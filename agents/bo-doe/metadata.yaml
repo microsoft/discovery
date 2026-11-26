@@ -1,0 +1,22 @@
+name: bo-doe
+type: agent
+version: 1.0.0
+associated_tools:
+  - agents/bo-doe/tools/bodoe
+publisher:
+  name: Microsoft
+  contact: discovery-catalog@microsoft.com
+  support_url: https://techcommunity.microsoft.com/category/azure/discussions/microsoft-discovery-discussions
+  party: 1p
+description: >
+  Expert agent for Bayesian optimization and design of experiments. Plans experimental campaigns, generates classical,
+  space-filling and mixture designs, fits Gaussian-process surrogates, and suggests the next batch of experiments for
+  single- or multi-objective goals under hard constraints. Runs in a general Python environment with BoTorch available,
+  so it can delegate to BoTorch directly when an unconstrained problem is better served that way.
+tags:
+  - optimization
+  - machine-learning
+  - statistics
+  - data-analysis
+  - materials-discovery
+  - python

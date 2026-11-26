@@ -237,14 +237,17 @@ def build_infra_overrides(
     memory: str | None,
     image: str | None,
     shm: str | None = None,
+    *,
+    pool_size: int | None = None,
 ) -> InfraOverrides | InfraOverridesFlat | None:
     """Build the correct InfraOverrides variant for the target api-version.
 
     Returns None if no override parameters were supplied. Otherwise returns the shape
     mandated by the target api-version's server contract (nested for 2025-07-01-preview,
-    flat for everything else). ``shm`` is only valid for 2026-06-01 and later.
+    flat for everything else). ``pool_size`` counts pods, including the MPI leader,
+    not MPI ranks. ``shm`` is only valid for 2026-06-01 and later.
     """
-    if not any([cpus, gpus, memory, image, shm]):
+    if pool_size is None and not any([cpus, gpus, memory, image, shm]):
         return None
 
     av = ApiVersion.parse(api_version)
@@ -259,15 +262,15 @@ def build_infra_overrides(
                 gpu=gpus,
                 ram=memory,
             )
-        return InfraOverrides(resources=resources, pool_size=None, image_uri=image)
+        return InfraOverrides(resources=resources, poolSize=pool_size, imageUri=image)
 
     return InfraOverridesFlat(
         cpu=str(cpus) if cpus is not None else None,
         ram=memory,
         gpu=str(gpus) if gpus is not None else None,
         shm=shm,
-        replica_count=None,
-        image_uri=image,
+        replicaCount=pool_size,
+        imageUri=image,
     )
 
 
@@ -518,6 +521,13 @@ def start(
             "protocol."
         ),
     ),
+    *,
+    pool_size: int | None = typer.Option(
+        None,
+        "--pool-size",
+        min=1,
+        help="Pods per job, including the MPI leader (not ranks). Omit to use the tool default.",
+    ),
 ) -> None:
     """Start a tool run. Polls until terminal status unless --no-wait provided."""
     debug("start(): entering")
@@ -594,7 +604,9 @@ def start(
     _validate_shm_override_or_exit(shm, av)
 
     # Build infra_overrides using the schema variant matching the target api-version.
-    infra_overrides = build_infra_overrides(effective_api_version, cpus, gpus, memory, image, shm)
+    infra_overrides = build_infra_overrides(
+        effective_api_version, cpus, gpus, memory, image, shm, pool_size=pool_size
+    )
 
     # Build payload — branching on API version capability.
     # Legacy: uri + discovery://dataassets, storageId required.
@@ -783,6 +795,13 @@ def batch(
             "(case-insensitive). Requires API version 2026-06-01 (GA) or later."
         ),
     ),
+    *,
+    pool_size: int | None = typer.Option(
+        None,
+        "--pool-size",
+        min=1,
+        help="Pods per job, not MPI ranks or batch job count. Omit to use the tool default.",
+    ),
 ) -> None:
     """Submit multiple independent tool runs. Does not poll for output.
 
@@ -893,7 +912,9 @@ def batch(
     _scratch_mount = _scratch_mount_or_exit(np_info, env_cfg, av, scratch)
 
     # Build infra_overrides using the schema variant matching the target api-version.
-    infra_overrides = build_infra_overrides(effective_api_version, cpus, gpus, memory, image, shm)
+    infra_overrides = build_infra_overrides(
+        effective_api_version, cpus, gpus, memory, image, shm, pool_size=pool_size
+    )
 
     # Helper function to submit a single job
     def submit_job(idx: int, cmd: str) -> tuple[int, str | None, str | None]:
@@ -1080,6 +1101,13 @@ def vscode_cmd(
             "(case-insensitive). Requires API version 2026-06-01 (GA) or later."
         ),
     ),
+    *,
+    pool_size: int | None = typer.Option(
+        None,
+        "--pool-size",
+        min=1,
+        help="Pods per job, including the MPI leader (not ranks). Omit to use the tool default.",
+    ),
 ) -> None:
     """Start a VS Code tunnel session. Submits job and polls for device-flow URL."""
     debug("vscode(): entering")
@@ -1174,7 +1202,9 @@ def vscode_cmd(
 
     # Build infra_overrides with full-node resources using the schema variant matching
     # the target api-version.
-    infra_overrides = build_infra_overrides(effective_api_version, cpus, gpus, memory, image, shm)
+    infra_overrides = build_infra_overrides(
+        effective_api_version, cpus, gpus, memory, image, shm, pool_size=pool_size
+    )
 
     # Build payload — branching on API version capability.
     # Validate --mount-protocol before scratch resolution + submission.

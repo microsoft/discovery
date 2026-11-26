@@ -1,0 +1,567 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:token-estimation:contract:1.2.0",
+  "title": "Token estimation contract 1.2.0 (accepts 1.0.0 and 1.1.0 input)",
+  "description": "Select #/$defs/input or #/$defs/output. No token fields are accepted as inputs.",
+  "$defs": {
+    "positiveInteger": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 9007199254740991
+    },
+    "text": {
+      "type": "string",
+      "pattern": "\\S"
+    },
+    "inputTask": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id"
+      ],
+      "anyOf": [
+        {
+          "required": [
+            "profileId"
+          ]
+        },
+        {
+          "required": [
+            "description"
+          ]
+        }
+      ],
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/text"
+        },
+        "profileId": {
+          "$ref": "#/$defs/text"
+        },
+        "description": {
+          "$ref": "#/$defs/text"
+        },
+        "count": {
+          "$ref": "#/$defs/positiveInteger"
+        },
+        "bounded": {
+          "description": "Optional confirmation of comparable task/session scale. False or omitted retains a conditional base with visible assumed scale, not a complete broader-effort total.",
+          "type": "boolean"
+        },
+        "depth": {
+          "enum": [
+            "bounded",
+            "unresolved"
+          ]
+        },
+        "validation": {
+          "enum": [
+            "included",
+            "separate-tasks",
+            "unresolved"
+          ]
+        },
+        "amountDescription": {
+          "$ref": "#/$defs/text"
+        },
+        "phaseId": {
+          "$ref": "#/$defs/text"
+        },
+        "readiness": {
+          "enum": [
+            "ready",
+            "not-ready",
+            "unresolved"
+          ]
+        },
+        "retryLimit": {
+          "description": "Scope limit, not a rate. Finite values alone do not establish a focused comparable operation; larger limits prompt re-scoping in the shared model.",
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9007199254740991
+        },
+        "monitoring": {
+          "enum": [
+            "startup-only",
+            "bounded",
+            "ongoing",
+            "unresolved"
+          ]
+        },
+        "monitoringChecks": {
+          "description": "Bounded startup-inspection scope, not job-lifetime monitoring. Requires monitoring=bounded; finite counts alone do not establish comparability.",
+          "$ref": "#/$defs/positiveInteger"
+        }
+      }
+    },
+    "input": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "contractVersion",
+        "tasks"
+      ],
+      "properties": {
+        "contractVersion": {
+          "enum": [
+            "1.0.0",
+            "1.1.0",
+            "1.2.0"
+          ]
+        },
+        "tasks": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/inputTask"
+          }
+        },
+        "concurrency": {
+          "$ref": "#/$defs/positiveInteger"
+        },
+        "nonOverlap": {
+          "type": "boolean"
+        },
+        "scopeDescription": {
+          "$ref": "#/$defs/text"
+        }
+      }
+    },
+    "range": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "lower",
+        "upper",
+        "unit"
+      ],
+      "properties": {
+        "lower": {
+          "$ref": "#/$defs/positiveInteger"
+        },
+        "upper": {
+          "$ref": "#/$defs/positiveInteger"
+        },
+        "unit": {
+          "const": "input_plus_output_tokens"
+        }
+      }
+    },
+    "nullableRange": {
+      "anyOf": [
+        {
+          "type": "null"
+        },
+        {
+          "$ref": "#/$defs/range"
+        }
+      ]
+    },
+    "outputTask": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "description",
+        "profileId",
+        "count",
+        "mapping",
+        "status",
+        "attributionUnit",
+        "perUnitTokens",
+        "listedTaskTokens",
+        "drivers",
+        "assumptions",
+        "notCovered",
+        "provenance",
+        "externalCompute",
+        "phaseId",
+        "unknownReasons",
+        "uncertainty"
+      ],
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/text"
+        },
+        "description": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "profileId": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "count": {
+          "$ref": "#/$defs/positiveInteger"
+        },
+        "mapping": {
+          "type": "object",
+          "required": [
+            "basis",
+            "requestedProfileId",
+            "candidates",
+            "ambiguous",
+            "status"
+          ]
+        },
+        "status": {
+          "enum": [
+            "estimated",
+            "partial",
+            "unknown"
+          ]
+        },
+        "attributionUnit": {
+          "enum": [
+            "agent_session",
+            "external_compute_job",
+            null
+          ]
+        },
+        "perUnitTokens": {
+          "$ref": "#/$defs/nullableRange"
+        },
+        "listedTaskTokens": {
+          "$ref": "#/$defs/nullableRange"
+        },
+        "drivers": {
+          "type": "object"
+        },
+        "assumptions": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "notCovered": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "provenance": {
+          "type": [
+            "object",
+            "null"
+          ]
+        },
+        "externalCompute": {
+          "type": "object",
+          "required": [
+            "estimatedElapsedSeconds",
+            "estimatedCpuCoreSeconds",
+            "estimatedGpuSeconds",
+            "allocatedResources",
+            "utilization",
+            "historicalMetricReferences",
+            "note"
+          ],
+          "properties": {
+            "estimatedElapsedSeconds": {
+              "type": "null"
+            },
+            "estimatedCpuCoreSeconds": {
+              "type": "null"
+            },
+            "estimatedGpuSeconds": {
+              "type": "null"
+            },
+            "allocatedResources": {
+              "type": "null"
+            },
+            "utilization": {
+              "type": "null"
+            },
+            "historicalMetricReferences": {
+              "type": "array"
+            },
+            "note": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false
+        },
+        "phaseId": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "unknownReasons": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "uncertainty": {
+          "type": "string"
+        }
+      }
+    },
+    "output": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "contractVersion",
+        "modelVersion",
+        "status",
+        "boundary",
+        "scopeDescription",
+        "coverage",
+        "totalTokens",
+        "knownSubtotalTokens",
+        "wholeInvestigationTokens",
+        "tasks",
+        "scheduling",
+        "externalCompute",
+        "cost",
+        "assumptions",
+        "drivers",
+        "accounting",
+        "provenance",
+        "clarifications"
+      ],
+      "properties": {
+        "contractVersion": {
+          "const": "1.2.0"
+        },
+        "modelVersion": {
+          "const": "1.2.0"
+        },
+        "status": {
+          "enum": [
+            "estimated",
+            "partial",
+            "unknown"
+          ]
+        },
+        "boundary": {
+          "const": "listed_hypothetical_tasks_only"
+        },
+        "scopeDescription": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "coverage": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "totalUnits",
+            "knownUnits",
+            "unknownUnits",
+            "aggregationAllowed",
+            "completeForListedTasks"
+          ],
+          "properties": {
+            "totalUnits": {
+              "$ref": "#/$defs/positiveInteger"
+            },
+            "knownUnits": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 9007199254740991
+            },
+            "unknownUnits": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 9007199254740991
+            },
+            "aggregationAllowed": {
+              "type": "boolean"
+            },
+            "completeForListedTasks": {
+              "type": "boolean"
+            }
+          }
+        },
+        "totalTokens": {
+          "$ref": "#/$defs/nullableRange"
+        },
+        "knownSubtotalTokens": {
+          "$ref": "#/$defs/nullableRange"
+        },
+        "wholeInvestigationTokens": {
+          "type": "null"
+        },
+        "tasks": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/outputTask"
+          }
+        },
+        "scheduling": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "requestedConcurrency",
+            "changesConsumption",
+            "elapsedSeconds",
+            "peakActiveAgents",
+            "peakTokens",
+            "tokensPerSecond",
+            "speedup",
+            "capacityCeiling",
+            "note"
+          ],
+          "properties": {
+            "requestedConcurrency": {
+              "$ref": "#/$defs/positiveInteger"
+            },
+            "changesConsumption": {
+              "const": false
+            },
+            "elapsedSeconds": {
+              "type": "null"
+            },
+            "peakActiveAgents": {
+              "type": "null"
+            },
+            "peakTokens": {
+              "type": "null"
+            },
+            "tokensPerSecond": {
+              "type": "null"
+            },
+            "speedup": {
+              "type": "null"
+            },
+            "capacityCeiling": {
+              "type": "null"
+            },
+            "note": {
+              "type": "string"
+            }
+          }
+        },
+        "externalCompute": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "elapsedSeconds",
+            "cpuCoreSeconds",
+            "gpuSeconds",
+            "allocatedResources",
+            "utilization",
+            "peakMemoryGiB"
+          ],
+          "properties": {
+            "elapsedSeconds": {
+              "type": "null"
+            },
+            "cpuCoreSeconds": {
+              "type": "null"
+            },
+            "gpuSeconds": {
+              "type": "null"
+            },
+            "allocatedResources": {
+              "type": "null"
+            },
+            "utilization": {
+              "type": "null"
+            },
+            "peakMemoryGiB": {
+              "type": "null"
+            }
+          }
+        },
+        "cost": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "amount",
+            "currency",
+            "reason"
+          ],
+          "properties": {
+            "amount": {
+              "type": "null"
+            },
+            "currency": {
+              "type": "null"
+            },
+            "reason": {
+              "type": "string"
+            }
+          }
+        },
+        "assumptions": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "drivers": {
+          "type": "array"
+        },
+        "accounting": {
+          "type": "object"
+        },
+        "provenance": {
+          "type": "object"
+        },
+        "clarifications": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "taskId",
+              "question"
+            ],
+            "properties": {
+              "taskId": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "question": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      }
+    },
+    "error": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "error"
+      ],
+      "properties": {
+        "error": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "code",
+            "message",
+            "path"
+          ],
+          "properties": {
+            "code": {
+              "type": "string"
+            },
+            "message": {
+              "type": "string"
+            },
+            "path": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          }
+        }
+      }
+    }
+  }
+}

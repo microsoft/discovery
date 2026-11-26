@@ -1,0 +1,19 @@
+name: m3gnet
+type: agent
+version: 0.1.0
+associated_tools:
+- agents/m3gnet/tools/m3gnet
+publisher:
+  name: Microsoft
+  contact: discovery-catalog@microsoft.com
+  support_url: https://techcommunity.microsoft.com/category/azure/discussions/microsoft-discovery-discussions
+  party: 1p
+description: Scaffold for Universal graph-based interatomic potential calculations using the legacy M3GNet
+  implementation.
+tags:
+- atomistic
+- molecular-dynamics
+- gnn
+- trained-model
+- gpu
+- python

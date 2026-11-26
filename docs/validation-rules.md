@@ -2,9 +2,14 @@
 
 # Validation rules
 
-Automated checks that run on every pull request touching `agents/` or
-`starter-kits/`. Each rule reports with its ID, so a failure comment
-points straight at the section below.
+For PRs to `main`, **PR Review** runs catalog checks with read-only
+permissions. **PR Review Report** publishes diagnostic feedback separately
+and asynchronously; available rule comments include IDs pointing to the
+sections below. Required checks and source run logs remain authoritative
+if feedback is unavailable.
+
+See the [workflow overview](../.github/workflows/README.md#pull-request-validation-and-feedback)
+for the independent removal gate, reporting boundaries, and review requirements.
 
 Two escape hatches exist, and neither is a way to skip review:
 
@@ -19,20 +24,21 @@ Two escape hatches exist, and neither is a way to skip review:
 
 | Rule | Summary | Applies to | Severity |
 | --- | --- | --- | --- |
-| [POL-008](#pol-008) | Files under agents/ and starter-kits/ must be source code or POL-016-compliant Markdown images, verified by content inspection. | Every changed file | error |
+| [POL-008](#pol-008) | Files under agents/, starter-kits/, and skills/ must be source code or POL-016-compliant Markdown images, verified by content inspection. | Every changed file | error |
 | [POL-014](#pol-014) | Dockerfile base images must be Docker Official Images or come from an approved registry or publisher namespace. | Every changed file | error |
 | [POL-015](#pol-015) | Added files must use an approved extension or filename from the source allowlist. | Every changed file | error |
-| [POL-016](#pol-016) | Images under agents/ or starter-kits/ must be safe Markdown formats, at most 1 MiB, and referenced by Markdown in the same catalog item. | Every changed file | error |
+| [POL-016](#pol-016) | Images under agents/, starter-kits/, or skills/ must be safe Markdown formats, at most 1 MiB, and referenced by Markdown in the same catalog item. | Every changed file | error |
 | [POL-017](#pol-017) | Base image tags should be pinned to an explicit version rather than a floating tag such as :latest. | Every changed file | warning |
 | [POL-018](#pol-018) | Catalog webpage URLs must resolve to reachable public HTML pages. | Whole repository | warning |
 | [POL-019](#pol-019) | Catalog contact email domains must exist and advertise usable mail DNS records. | Whole repository | error |
 | [POL-020](#pol-020) | UTF-8 source text must not contain unsafe or invisible Unicode characters. | Every changed file | error |
+| [POL-022](#pol-022) | Catalog container builds must use Docker-compatible Dockerfile names and must not rely on Podman .in preprocessing. | Every changed file | error |
 | [TAG-001](#tag-001) | Tags declared in metadata.yaml must exist in the controlled tag vocabulary. | Each touched agent folder | error |
 | [TAG-002](#tag-002) | Authors must not declare tags in the CI-computed namespaces (auto:, tier:, party:, capability:). | Each touched agent folder | error |
 
 ## POL-008
 
-Files under agents/ and starter-kits/ must be source code or POL-016-compliant Markdown images, verified by content inspection.
+Files under agents/, starter-kits/, and skills/ must be source code or POL-016-compliant Markdown images, verified by content inspection.
 
 - **Applies to:** Every changed file
 - **Severity:** error
@@ -74,7 +80,7 @@ Further reading: `docs/authoring-guides/agent-authoring-guide.md#approved-file-t
 
 ## POL-016
 
-Images under agents/ or starter-kits/ must be safe Markdown formats, at most 1 MiB, and referenced by Markdown in the same catalog item.
+Images under agents/, starter-kits/, or skills/ must be safe Markdown formats, at most 1 MiB, and referenced by Markdown in the same catalog item.
 
 - **Applies to:** Every changed file
 - **Severity:** error
@@ -82,7 +88,7 @@ Images under agents/ or starter-kits/ must be safe Markdown formats, at most 1 M
 
 **How to fix**
 
-Use PNG, JPEG, GIF, WebP, or SVG; keep the file at or below 1 MiB; and embed it from Markdown in the same agent or starter-kit folder. Re-export the image if its content does not match its extension. For SVG, remove scripts, event handler attributes, javascript: URIs, entity declarations, embedded documents, and remote references — the catalog accepts declarative artwork only.
+Use PNG, JPEG, GIF, WebP, or SVG; keep the file at or below 1 MiB; and embed it from Markdown in the same agent, starter-kit, or skill folder. Re-export the image if its content does not match its extension. For SVG, remove scripts, event handler attributes, javascript: URIs, entity declarations, embedded documents, and remote references — the catalog accepts declarative artwork only.
 
 Further reading: `docs/authoring-guides/agent-authoring-guide.md#images`
 
@@ -140,6 +146,20 @@ UTF-8 source text must not contain unsafe or invisible Unicode characters.
 
 Save the file as valid UTF-8 and remove the reported control, bidirectional, zero-width, private-use, unassigned, noncharacter, replacement, or non-standard separator code point. Normal visible international and scientific text is allowed.
 
+## POL-022
+
+Catalog container builds must use Docker-compatible Dockerfile names and must not rely on Podman .in preprocessing.
+
+- **Applies to:** Every changed file
+- **Severity:** error
+- **Tags:** compatibility, containers
+
+**How to fix**
+
+For a plain Containerfile, rename it to Dockerfile. For Containerfile.in or Dockerfile.in, resolve preprocessing first and commit one rendered Dockerfile. Use the migrate-podman-containerfile skill for a guarded migration.
+
+Further reading: `docs/authoring-guides/podman-to-docker-migration.md`
+
 ## TAG-001
 
 Tags declared in metadata.yaml must exist in the controlled tag vocabulary.
@@ -170,7 +190,7 @@ Further reading: `docs/authoring-guides/agent-authoring-guide.md#tags`
 
 ## Other validation families
 
-The `REL-*`, `STR-*`, `SCH-*`, `DOC-*`, and remaining `POL-*` checks live in
+The `STR-*`, `SCH-*`, `DOC-*`, and remaining `POL-*` checks live in
 `.github/scripts/catalog_validation/`. They run alongside this modular
 engine from the shared PR validation runner. See `docs/validation-rules.csv`
 for the complete source-backed inventory.

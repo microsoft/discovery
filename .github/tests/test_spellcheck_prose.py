@@ -71,16 +71,31 @@ See [teh documentation](https://example.com/teh-url).
 def test_collection_ignores_paths_outside_catalog_or_repo(tmp_path):
     _write(tmp_path, "README.md", "This has teh typo.\n")
     _write(tmp_path, "agents/demo/README.md", "This has a seperate typo.\n")
+    _write(tmp_path, ".github/skills/demo/SKILL.md", "This has teh typo.\n")
 
     fragments = collect_fragments(tmp_path, [
         "README.md",
         "../outside.md",
         "agents/demo/README.md",
         "agents/demo/missing.md",
+        ".github/skills/demo/SKILL.md",
     ])
 
     assert [(fragment.file, fragment.line) for fragment in fragments] == [
         ("agents/demo/README.md", 1),
+    ]
+
+
+def test_skill_prose_is_checked_but_supporting_scripts_are_not(tmp_path):
+    _write(tmp_path, "skills/demo/SKILL.md", "# A seperate workflow\n")
+    _write(tmp_path, "skills/demo/scripts/build.py", "teh_identifier = True\n")
+
+    fragments = collect_fragments(tmp_path, [
+        "skills/demo/SKILL.md", "skills/demo/scripts/build.py",
+    ])
+
+    assert [(fragment.file, fragment.line, fragment.text) for fragment in fragments] == [
+        ("skills/demo/SKILL.md", 1, "A seperate workflow"),
     ]
 
 

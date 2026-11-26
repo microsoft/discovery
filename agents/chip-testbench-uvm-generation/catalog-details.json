@@ -1,0 +1,23 @@
+{
+  "node_awareness": "node-agnostic",
+  "original_tags": [
+    "chip-design",
+    "verification",
+    "testbench-generation",
+    "uvm",
+    "cocotb",
+    "node-agnostic"
+  ],
+  "previous_build": {
+    "containerfile": "Containerfile",
+    "engine": "docker"
+  },
+  "action_examples": {
+    "run": [
+      {
+        "name": "generate_env",
+        "params_json": "{\"scenario\":\"generate_env\",\"dut_top\":\"fifo\",\"style\":\"cocotb\",\"interfaces\":[{\"name\":\"wr\",\"signals\":[\"wr_en\",\"din\"],\"vplan_item\":\"FIFO.write\"},{\"name\":\"rd\",\"signals\":[\"rd_en\",\"dout\"],\"vplan_item\":\"FIFO.read\"}],\"rtl\":\"module fifo(input clk); endmodule\"}"
+      }
+    ]
+  }
+}

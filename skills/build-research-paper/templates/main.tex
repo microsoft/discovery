@@ -1,0 +1,131 @@
+\documentclass[11pt,a4paper]{article}
+
+% ── Packages (order matters: hyperref LAST) ─────────────────────────────────
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+\usepackage{microtype}
+\usepackage{amsmath,amssymb,amsthm}
+\usepackage{mathtools}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{longtable}
+\usepackage{array}
+\usepackage[margin=1in]{geometry}
+\usepackage{algorithm}
+\usepackage{algpseudocode}
+\usepackage{subcaption}
+\usepackage{xcolor}
+\usepackage{natbib}
+\usepackage{multirow}
+\usepackage[hidelinks]{hyperref}   % load BEFORE cleveref (cleveref patches it)
+\usepackage{cleveref}
+\usepackage{doi}                    % render DOI fields as clickable links (after hyperref)
+
+% ── Theorem-like environments ───────────────────────────────────────────────
+\theoremstyle{plain}
+\newtheorem{theorem}{Theorem}
+\newtheorem{proposition}{Proposition}
+\newtheorem{lemma}{Lemma}
+\theoremstyle{remark}
+\newtheorem{remark}{Remark}
+\crefname{proposition}{Proposition}{Propositions}
+\crefname{theorem}{Theorem}{Theorems}
+\crefname{lemma}{Lemma}{Lemmas}
+\crefname{remark}{Remark}{Remarks}
+
+% ── Custom macros (project-specific — edit freely) ──────────────────────────
+% \newcommand{\R}{\mathbb{R}}
+
+% ── Figure placement discipline ─────────────────────────────────────────────
+\usepackage{float}
+
+\title{TODO: Paper Title\\Second Line if Needed}
+\author{First Author\thanks{Affiliation, \texttt{email@example.com}}
+  \and Second Author\thanks{Affiliation}}
+\date{\today}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+TODO: 150–250 word abstract. State the problem, the contribution, the
+evidence, and the significance. Avoid citations here.
+\end{abstract}
+
+\tableofcontents
+\newpage
+
+%=============================================================================
+\section{Introduction}
+\label{sec:intro}
+%=============================================================================
+
+TODO: Motivation, gap, contributions (as a numbered list), roadmap.
+
+Our contributions are:
+\begin{enumerate}
+  \item TODO
+  \item TODO
+  \item TODO
+\end{enumerate}
+
+The remainder of this paper is organized as follows.
+\Cref{sec:background} reviews related work.
+\Cref{sec:methods} presents the approach.
+\Cref{sec:results} reports results.
+\Cref{sec:discussion} discusses threats to validity.
+\Cref{sec:conclusion} concludes.
+
+%=============================================================================
+\section{Background and Related Work}
+\label{sec:background}
+%=============================================================================
+
+TODO. Example citation~\citep{author2024key}.
+
+%=============================================================================
+\section{Methods}
+\label{sec:methods}
+%=============================================================================
+
+TODO.
+
+% Example figure — copy this block for every figure.
+\begin{figure}[t]
+  \centering
+  \includegraphics[width=0.85\textwidth]{figures/fig1_example.pdf}
+  \caption{TODO: caption. Explain what the reader is looking at and what
+    they should take away. Reference the generator script:
+    \texttt{report/generate\_figures.py::plot\_example}.}
+  \label{fig:example}
+\end{figure}
+
+%=============================================================================
+\section{Results}
+\label{sec:results}
+%=============================================================================
+
+TODO.
+
+%=============================================================================
+\section{Discussion}
+\label{sec:discussion}
+%=============================================================================
+
+TODO. Threats to validity, limitations, generalization.
+
+%=============================================================================
+\section{Conclusion}
+\label{sec:conclusion}
+%=============================================================================
+
+TODO.
+
+%=============================================================================
+% Bibliography
+%=============================================================================
+\bibliographystyle{plainnat}
+\bibliography{references}
+
+\end{document}

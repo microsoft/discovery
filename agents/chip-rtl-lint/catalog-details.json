@@ -1,0 +1,15 @@
+{
+  "node_awareness": "node-agnostic",
+  "original_tags": [
+    "rtl",
+    "lint",
+    "style",
+    "verible",
+    "node-agnostic"
+  ],
+  "input_schema_keywords": {
+    "run": {
+      "additionalProperties": false
+    }
+  }
+}

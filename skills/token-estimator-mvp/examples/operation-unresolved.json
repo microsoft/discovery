@@ -1,0 +1,10 @@
+{
+  "contractVersion": "1.2.0",
+  "tasks": [{
+    "id": "launch",
+    "description": "Launch an existing workflow; environment access and permissions are unconfirmed.",
+    "bounded": true,
+    "readiness": "unresolved",
+    "validation": "included"
+  }]
+}

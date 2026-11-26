@@ -24,6 +24,19 @@ payload_text = files("discovery_poll").joinpath("templates/sample_payload.json")
 ## Local Overrides
 Optionally support a user override directory (not yet implemented here) like `poll_templates_local/` searched before packaged templates.
 
+## Tool definition ARM routing
+
+`tooldef/arm_template.json` deploys `Microsoft.Discovery/tools`. Its resource
+properties envelope is shared by the verified tool API versions; the CLI does
+not invent a new resource type or rewrite the definition for GA.
+
+Python deployments explicitly populate `outApiVersion` from
+`ToolDefinitionInputs.api_version`, defaulting to `2026-06-01`. The build command
+exposes `--tool-api-version` for explicit legacy selection. This choice is
+independent of the configured data-plane API used for job submission.
+The packaged template's `2025-07-01-preview` fallback remains unchanged for
+standalone legacy callers; it is not the effective Python deployment default.
+
 
 ## TODO:
 - Add gpu, cpu, mem, and image name selection into tool run

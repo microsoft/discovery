@@ -1,0 +1,319 @@
+{
+ "schema_version": "1.0",
+ "name": "wall_mounted_square_obstacle_channel",
+ "adapter": "openfoam-foundation14",
+ "solver": "incompressibleFluid",
+ "files": {
+  "constant/momentumTransport": "FoamFile\n{\n    format      ascii;\n    class       dictionary;\n    location    \"constant\";\n    object      momentumTransport;\n}\n// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //\n\nsimulationType laminar;\n\n// ************************************************************************* //\n",
+  "constant/physicalProperties": "FoamFile\n{\n    format      ascii;\n    class       dictionary;\n    location    \"constant\";\n    object      physicalProperties;\n}\n// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //\n\nviscosityModel  constant;\n\nnu              1.5e-05;\n\n// ************************************************************************* //\n",
+  "system/blockMeshDict": "FoamFile\n{\n    format      ascii;\n    class       dictionary;\n    location    \"system\";\n    object      blockMeshDict;\n}\n// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //\n\nconvertToMeters 1;\n\nvertices\n(\n    (-0.08 0 -0.5)\n    (0 0 -0.5)\n    (0.01 0 -0.5)\n    (0.22 0 -0.5)\n    (-0.08 0.01 -0.5)\n    (0 0.01 -0.5)\n    (0.01 0.01 -0.5)\n    (0.22 0.01 -0.5)\n    (-0.08 0.04 -0.5)\n    (0 0.04 -0.5)\n    (0.01 0.04 -0.5)\n    (0.22 0.04 -0.5)\n    (-0.08 0 0.5)\n    (0 0 0.5)\n    (0.01 0 0.5)\n    (0.22 0 0.5)\n    (-0.08 0.01 0.5)\n    (0 0.01 0.5)\n    (0.01 0.01 0.5)\n    (0.22 0.01 0.5)\n    (-0.08 0.04 0.5)\n    (0 0.04 0.5)\n    (0.01 0.04 0.5)\n    (0.22 0.04 0.5)\n);\n\nblocks\n(\n    hex (0 1 5 4 12 13 17 16) (70 24 1) simpleGrading (0.1 1 1)\n    hex (4 5 9 8 16 17 21 20) (70 40 1) simpleGrading (0.1 8 1)\n    hex (5 6 10 9 17 18 22 21) (24 40 1) simpleGrading (1 8 1)\n    hex (2 3 7 6 14 15 19 18) (110 24 1) simpleGrading (15 1 1)\n    hex (6 7 11 10 18 19 23 22) (110 40 1) simpleGrading (15 8 1)\n);\n\nedges\n(\n);\n\ndefaultPatch\n{\n    name frontAndBack;\n    type empty;\n}\n\nboundary\n(\n    inlet\n    {\n        type patch;\n        faces\n        (\n            (0 4 16 12)\n            (4 8 20 16)\n        );\n    }\n    outlet\n    {\n        type patch;\n        faces\n        (\n            (3 7 19 15)\n            (7 11 23 19)\n        );\n    }\n    walls\n    {\n        type wall;\n        faces\n        (\n            (0 1 13 12)\n            (2 3 15 14)\n            (8 9 21 20)\n            (9 10 22 21)\n            (10 11 23 22)\n        );\n    }\n    obstacle\n    {\n        type wall;\n        faces\n        (\n            (1 5 17 13)\n            (5 6 18 17)\n            (2 6 18 14)\n        );\n    }\n);\n\nmergePatchPairs\n(\n);\n\n// ************************************************************************* //\n",
+  "system/controlDict": "FoamFile\n{\n    format      ascii;\n    class       dictionary;\n    location    \"system\";\n    object      controlDict;\n}\n// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //\n\nsolver          incompressibleFluid;\n\nstartFrom       startTime;\n\nstartTime       0;\n\nstopAt          endTime;\n\nendTime         1.6;\n\ndeltaT          0.0001;\n\nwriteControl    adjustableRunTime;\n\nwriteInterval   0.02;\n\npurgeWrite      0;\n\nwriteFormat     ascii;\n\nwritePrecision  6;\n\nwriteCompression off;\n\ntimeFormat      general;\n\ntimePrecision   6;\n\nrunTimeModifiable yes;\n\nadjustTimeStep  yes;\n\nmaxCo           1;\n\n// ************************************************************************* //\n",
+  "system/fvSchemes": "FoamFile\n{\n    format      ascii;\n    class       dictionary;\n    location    \"system\";\n    object      fvSchemes;\n}\n// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //\n\nddtSchemes\n{\n    default         Euler;\n}\n\ngradSchemes\n{\n    default         Gauss linear;\n    limited         cellLimited Gauss linear 1;\n}\n\ndivSchemes\n{\n    default             none;\n\n    div(phi,U)          Gauss linearUpwind limited;\n    div((nuEff*dev2(T(grad(U))))) Gauss linear;\n}\n\nlaplacianSchemes\n{\n    default         Gauss linear corrected;\n}\n\ninterpolationSchemes\n{\n    default         linear;\n}\n\nsnGradSchemes\n{\n    default         corrected;\n}\n\n// ************************************************************************* //\n",
+  "system/fvSolution": "FoamFile\n{\n    format      ascii;\n    class       dictionary;\n    location    \"system\";\n    object      fvSolution;\n}\n// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //\n\nsolvers\n{\n    p\n    {\n        solver           GAMG;\n        smoother         DICGaussSeidel;\n        tolerance        1e-7;\n        relTol           0.01;\n    }\n\n    pFinal\n    {\n        $p;\n        relTol          0;\n    }\n\n    U\n    {\n        solver          PBiCGStab;\n        preconditioner  DILU;\n        tolerance       1e-08;\n        relTol          0.1;\n    }\n\n    UFinal\n    {\n        $U;\n        relTol          0;\n    }\n}\n\nPIMPLE\n{\n    nNonOrthogonalCorrectors 0;\n    nCorrectors         2;\n}\n\n// ************************************************************************* //\n",
+  "0/U": "FoamFile\n{\n    format      ascii;\n    class       volVectorField;\n    location    \"0\";\n    object      U;\n}\n// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //\n\ndimensions      [0 1 -1 0 0 0 0];\n\ninternalField   uniform (0.5 0 0);\n\nboundaryField\n{\n    inlet\n    {\n        type            fixedValue;\n        value           uniform (0.5 0 0);\n    }\n    outlet\n    {\n        type            zeroGradient;\n    }\n    walls\n    {\n        type            noSlip;\n    }\n    obstacle\n    {\n        type            noSlip;\n    }\n    frontAndBack\n    {\n        type            empty;\n    }\n}\n\n// ************************************************************************* //\n",
+  "0/p": "FoamFile\n{\n    format      ascii;\n    class       volScalarField;\n    location    \"0\";\n    object      p;\n}\n// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //\n\ndimensions      [0 2 -2 0 0 0 0];\n\ninternalField   uniform 0;\n\nboundaryField\n{\n    inlet\n    {\n        type            zeroGradient;\n    }\n    outlet\n    {\n        type            fixedValue;\n        value           uniform 0;\n    }\n    walls\n    {\n        type            zeroGradient;\n    }\n    obstacle\n    {\n        type            zeroGradient;\n    }\n    frontAndBack\n    {\n        type            empty;\n    }\n}\n\n// ************************************************************************* //\n"
+ },
+ "mesh": [
+  {
+   "executable": "blockMesh"
+  },
+  {
+   "executable": "checkMesh"
+  }
+ ],
+ "diagnostics": {
+  "fields": [
+   {
+    "name": "U",
+    "components": 3,
+    "unit": "m/s"
+   },
+   {
+    "name": "p",
+    "unit": "m^2/s^2"
+   }
+  ],
+  "quantities": [
+   {
+    "name": "Cd_mean",
+    "function": "forceCoeffs",
+    "settings": {
+     "patches": "(obstacle)",
+     "rhoInf": "1.2",
+     "rho": "rhoInf",
+     "magUInf": "0.5",
+     "lRef": "0.01",
+     "Aref": "0.01",
+     "dragDir": "(1 0 0)",
+     "liftDir": "(0 1 0)",
+     "CofR": "(0.005 0.005 0)",
+     "pitchAxis": "(0 0 1)"
+    },
+    "column": "Cd",
+    "statistic": "window_mean",
+    "unit": "1"
+   },
+   {
+    "name": "Cd_span",
+    "function": "forceCoeffs",
+    "settings": {
+     "patches": "(obstacle)",
+     "rhoInf": "1.2",
+     "rho": "rhoInf",
+     "magUInf": "0.5",
+     "lRef": "0.01",
+     "Aref": "0.01",
+     "dragDir": "(1 0 0)",
+     "liftDir": "(0 1 0)",
+     "CofR": "(0.005 0.005 0)",
+     "pitchAxis": "(0 0 1)"
+    },
+    "column": "Cd",
+    "statistic": "window_relative_span",
+    "unit": "1"
+   },
+   {
+    "name": "Cl_mean",
+    "function": "forceCoeffs",
+    "settings": {
+     "patches": "(obstacle)",
+     "rhoInf": "1.2",
+     "rho": "rhoInf",
+     "magUInf": "0.5",
+     "lRef": "0.01",
+     "Aref": "0.01",
+     "dragDir": "(1 0 0)",
+     "liftDir": "(0 1 0)",
+     "CofR": "(0.005 0.005 0)",
+     "pitchAxis": "(0 0 1)"
+    },
+    "column": "Cl",
+    "statistic": "window_mean",
+    "unit": "1"
+   }
+  ],
+  "derived": [
+   {
+    "name": "Fx_per_depth",
+    "op": "scale",
+    "a": "quantity.Cd_mean",
+    "factor": 0.0015,
+    "factor_unit": "N/m",
+    "unit": "N/m"
+   },
+   {
+    "name": "Fy_per_depth",
+    "op": "scale",
+    "a": "quantity.Cl_mean",
+    "factor": 0.0015,
+    "factor_unit": "N/m",
+    "unit": "N/m"
+   }
+  ],
+  "patches": [
+   "inlet",
+   "outlet",
+   "walls",
+   "obstacle"
+  ],
+  "inlet": "inlet",
+  "outlet": "outlet",
+  "impermeable_patches": [
+   "walls",
+   "obstacle"
+  ],
+  "expected_cells": 12480,
+  "dimensions": 2,
+  "target_time": 1.6,
+  "mass_balance": false,
+  "stationarity_window": 0.4,
+  "normalized": false
+ },
+ "contract": {
+  "schema_version": "1.0",
+  "id": "square_obstacle_channel_force",
+  "title": "Force on a 2D wall-mounted square obstacle in a 40 mm channel at 0.5 m/s",
+  "requested_prompt": "A 2D square obstacle (side 10 mm) sits on the floor of a channel 40 mm high carrying air at 0.5 m/s. Report the force on the obstacle per unit depth.",
+  "regime": "transient",
+  "objectives": [
+   {
+    "id": "drag_force",
+    "description": "Measure the time-averaged streamwise (drag) force per unit depth on the wall-mounted square obstacle (10 mm side) in a 40 mm-high channel with 0.5 m/s uniform air inflow (Re_s = U*s/nu ~ 333 based on obstacle side).",
+    "claim": "quantity",
+    "check_ids": [
+     "cd_admissible",
+     "cd_bounded_oscillation"
+    ]
+   },
+   {
+    "id": "lift_force",
+    "description": "Measure the time-averaged wall-normal (lift) force per unit depth on the same obstacle; a non-zero value is physically expected because the obstacle sits on the floor (no top-bottom symmetry) of the blocked channel.",
+    "claim": "quantity",
+    "check_ids": [
+     "cl_admissible"
+    ]
+   },
+   {
+    "id": "mass_conservation",
+    "description": "Verify conservation of mass flux between inlet, outlet and impermeable walls over the simulated unsteady flow, and that the flux monitors remain bounded over the trailing multi-period window.",
+    "claim": "conservation",
+    "check_ids": [
+     "net_flux_balance",
+     "impermeable_walls_sealed",
+     "flux_monitor_bounded"
+    ]
+   }
+  ],
+  "checks": [
+   {
+    "id": "cd_admissible",
+    "metric": "quantity.Cd_mean",
+    "operator": "between",
+    "threshold": [
+     0.0,
+     5.0
+    ],
+    "unit": "1",
+    "category": "admissibility",
+    "rationale": "For a bluff body at Re~O(300), the drag coefficient referenced to frontal area must be a finite, positive, order-1 quantity; values outside [0,5] indicate a divergent solver or a mis-specified force patch/reference area rather than a physical result.",
+    "failure": "hard"
+   },
+   {
+    "id": "cl_admissible",
+    "metric": "quantity.Cl_mean",
+    "operator": "between",
+    "threshold": [
+     -5.0,
+     5.0
+    ],
+    "unit": "1",
+    "category": "admissibility",
+    "rationale": "The wall-normal force coefficient on a wall-mounted obstacle in this low-blockage, laminar regime is expected to be bounded and of comparable magnitude to the drag coefficient; |Cl|>5 would indicate an unphysical or diverging solution.",
+    "failure": "hard"
+   },
+   {
+    "id": "fx_admissible",
+    "metric": "derived.Fx_per_depth",
+    "operator": "between",
+    "threshold": [
+     -0.01,
+     0.01
+    ],
+    "unit": "N/m",
+    "category": "admissibility",
+    "rationale": "Direct consistency bound on the reported streamwise force per unit depth, derived from the same [0,5] admissible Cd range scaled by 0.5*rho*U^2*Aref = 0.0015 N/m; catches unit/scaling errors in the derived force independently of the dimensionless coefficient check.",
+    "failure": "hard"
+   },
+   {
+    "id": "fy_admissible",
+    "metric": "derived.Fy_per_depth",
+    "operator": "between",
+    "threshold": [
+     -0.01,
+     0.01
+    ],
+    "unit": "N/m",
+    "category": "admissibility",
+    "rationale": "Direct consistency bound on the reported wall-normal force per unit depth, derived from the same [-5,5] admissible Cl range scaled by 0.5*rho*U^2*Aref = 0.0015 N/m; catches unit/scaling errors in the derived force independently of the dimensionless coefficient check.",
+    "failure": "hard"
+   },
+   {
+    "id": "cd_bounded_oscillation",
+    "metric": "quantity.Cd_span",
+    "operator": "lt",
+    "threshold": 1.5,
+    "unit": "1",
+    "category": "stationarity",
+    "rationale": "At Re~300 a 2D square bluff body is expected to shed periodic Karman-type vortices, producing a bounded instantaneous Cd oscillation of roughly 10-50% of its mean (consistent with 2D laminar square-cylinder studies, e.g. Sohankar et al. 1998); a relative span below 1.5 over the trailing multi-period window confirms the solution has reached a bounded periodic (or steady) regime rather than still being transient or numerically diverging. This is a bounded-oscillation/numerical-health criterion, not a claim that the instantaneous force itself is constant.",
+    "failure": "incomplete"
+   },
+   {
+    "id": "net_flux_balance",
+    "metric": "conservation.final_net_flux_rel",
+    "operator": "lt",
+    "threshold": 0.02,
+    "unit": "1",
+    "category": "conservation",
+    "rationale": "Incompressible flow carries zero net mass storage at any instant, so the sum of volumetric flux across all boundary patches (inlet+outlet+walls+obstacle) must vanish up to spatial discretization error at every timestep, independent of the flow being unsteady/periodic; 2% is a generous bound given the modest (~12,500-cell) mesh resolution.",
+    "failure": "hard"
+   },
+   {
+    "id": "impermeable_walls_sealed",
+    "metric": "conservation.impermeable_flux_max_rel",
+    "operator": "lt",
+    "threshold": 0.02,
+    "unit": "1",
+    "category": "conservation",
+    "rationale": "The floor/ceiling walls and the obstacle itself are solid no-slip (impermeable) boundaries; any significant net flux measured through them over the run would indicate a leaking boundary condition or a mesh/geometry defect rather than physical flow.",
+    "failure": "hard"
+   },
+   {
+    "id": "flux_monitor_bounded",
+    "metric": "stationarity.monitor_drift_max",
+    "operator": "lt",
+    "threshold": 1.0,
+    "unit": "1",
+    "category": "stationarity",
+    "rationale": "Bounded fluctuation of the inlet/outlet flux monitors over the trailing multi-period window indicates the periodic unsteady solution has reached a repeatable regime; 1.0 (100% relative span) is generous given the outlet flux is itself modulated by vortex shedding, while still catching genuine runaway drift or non-convergence.",
+    "failure": "incomplete"
+   }
+  ],
+  "assumptions": [
+   {
+    "parameter": "inlet_velocity",
+    "value": 0.5,
+    "unit": "m/s",
+    "source": "user",
+    "justification": "Stated directly in the request as the channel inflow speed; applied as a uniform velocity profile at the inlet."
+   },
+   {
+    "parameter": "fluid",
+    "value": "air, rho=1.2 kg/m^3, nu=1.5e-5 m^2/s",
+    "source": "documented_default",
+    "justification": "Standard atmospheric air properties (~20C, 1 atm) used because the request specifies 'air' without stating temperature/pressure."
+   },
+   {
+    "parameter": "regime",
+    "value": "2D laminar transient",
+    "source": "derived",
+    "justification": "Re_s = U*s/nu = 0.5*0.01/1.5e-5 ~= 333 based on the obstacle side length, well within the range where 2D square bluff bodies (confined or not) exhibit unsteady periodic vortex shedding rather than being fully turbulent; no turbulence model is applied and the flow is resolved as transient laminar."
+   },
+   {
+    "parameter": "channel_walls",
+    "value": "floor and ceiling both no-slip solid walls",
+    "source": "documented_default",
+    "justification": "'Channel' denotes a bounded duct; both bounding surfaces are treated as solid no-slip walls, consistent with standard internal-flow terminology."
+   },
+   {
+    "parameter": "domain_extent",
+    "value": "upstream fetch 8*s, downstream fetch 21*s, depth 1 m",
+    "source": "derived",
+    "justification": "Upstream/downstream fetch chosen generously relative to the obstacle size to let the approach flow and wake develop without strong boundary feedback from the inlet/outlet; the domain is given a 1 m span so the OpenFOAM-reported total force is numerically equal to the force per unit depth."
+   },
+   {
+    "parameter": "mesh_cells",
+    "value": 12480,
+    "unit": "1",
+    "source": "derived",
+    "justification": "Graded 5-block structured mesh (~12,480 cells) refined to ~0.42 mm near the obstacle, kept well under the 50,000-cell budget while resolving the obstacle boundary layer and near wake."
+   }
+  ],
+  "limitations": [
+   "Case is strictly 2D (span-wise infinite obstacle); no 3D end effects are represented.",
+   "Flow is laminar (no turbulence model); if the true physical Reynolds number locally exceeds the laminar-to-turbulent transition this would underpredict turbulent mixing in the wake.",
+   "Reported force is a time/phase average over a trailing multi-period window of a periodically unsteady signal, not a steady force; the instantaneous force oscillates about this mean due to vortex shedding.",
+   "No experimental or literature reference value is claimed for this specific confined (25% blockage) wall-mounted geometry; only internal admissibility/bounded-oscillation checks are used."
+  ],
+  "authority": "proposed",
+  "reference": "No external validation claimed; internal admissibility and bounded-oscillation checks only."
+ },
+ "budget": {
+  "max_attempts": 4,
+  "wall_seconds": 1800,
+  "cpus": 2,
+  "memory_mb": 4096,
+  "max_cells": 50000,
+  "max_output_mb": 2048,
+  "mpi_ranks": 1
+ }
+}
